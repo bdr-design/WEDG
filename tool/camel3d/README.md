@@ -9,7 +9,8 @@ photo.
 | 1. Cut-out | (GrabCut, see `segment` in the session notes) | `mask.png` from the photo |
 | 2. Shape | `shape.py` | `camel_hi.npz` (~330k triangles) |
 | 3. Game mesh and textures | `bake.py` | `camel_lod0.blend`, 2K albedo and normal maps |
-| 4. Rig and clips | `rig.py` | `camel_rigged.blend` |
+| 4. Rig and clips | `rig.py` | `camel_rigged.blend` (idle, graze) |
+| 4b. Walk from foot physics | `walk_physics.py` | replaces `walk`, prints slip and contact checks |
 | 5. Export | `export_glb.py` | `camel_wodh_female.glb` |
 | Checks | `render_tex.py`, `render_anim.py` | Cycles renders in desert light |
 
@@ -29,8 +30,19 @@ photo.
   and dark soles. The normal map adds fur grain.
 - **Clips:**
   - `idle` (4 s).
-  - `walk`: a pace, where the two legs of one side move together the way
-    camels walk; 1.2 s per stride, at about 0.8 m/s with no foot slide.
+  - `walk`: built from foot physics, not keyed by hand (`walk_physics.py`).
+    - Each planted foot moves back under the body at exactly the ground
+      speed.
+    - The legs turn about the top of the shoulder blade and the hip joint.
+      The lower legs are solved so the carpus folds forward and the hock
+      back.
+    - The body drops only as far as the planted legs need (an inverted
+      pendulum), shifts over the side carrying it and rolls.
+    - Gait: a lateral-sequence walk close to a pace; the forefoot lands 8%
+      of a stride after the hind foot of the same side.
+    - 0.85 m/s, 1.3 s per stride, 1.1 m stride.
+    - Measured: planted pads slip under 1 mm per frame and stay within
+      2 mm of the ground. The body bobs about 5 cm.
   - `graze` (4 s): the muzzle reaches the ground about 0.75 m in front of
     the forefeet.
 - **Budget:** 40k triangles, 37 bones, 2K textures, 2.1 MB GLB.
