@@ -8,6 +8,7 @@ online play (shared market, live auctions, tournaments) without a rewrite.
 
 ```
 apps/marah/              Flutter app: screens, picks the engine per platform, lifecycle
+packages/marah_world/    (planned, ADR 0005) the 3D world view behind one WorldRenderer interface
 packages/marah_runtime/  runs the engine off the UI thread; view models for screens
 packages/marah_store/    SQLite save on devices: incremental, transactional, backups
 packages/marah_data/     save interface, JSON envelope and migrations (tests, tools)
