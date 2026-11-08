@@ -150,11 +150,15 @@ class Presenter {
     );
   }
 
+  /// Details of a camel the player may look at: their own, one for sale, or
+  /// a stud bull on offer. Anything else is not theirs to inspect.
   CamelDetail? camelDetail(CamelId id) {
     final v = view;
     final c = v.camel(id);
     if (c == null) return null;
     final l = v.listingOf(id);
+    final isStud = v.studs.any((s) => s.bull.id == id);
+    if (!c.isMine && l == null && !isStud) return null;
     return CamelDetail(
       card: card(c, v),
       isMine: c.isMine,
@@ -170,8 +174,8 @@ class Presenter {
       listing: l == null ? null : listing(l, v),
       canSell: c.isMine ? v.canSell(id) : null,
       canBreed: c.isMine && c.sex == Sex.female ? v.canBreed(id) : null,
-      quickSalePrice: c.isMine && v.canSell(id) == null
-          ? v.quickSalePrice(id).value
+      quickSalePrice: v.canSell(id) == null
+          ? v.quickSalePrice(id)?.value
           : null,
     );
   }
@@ -204,7 +208,7 @@ class Presenter {
               for (final c in herd)
                 if (v.canEnter(f.id, r.id, c.id) == null) card(c, v),
             ],
-            results: r.results,
+            results: r.results == null ? null : List.unmodifiable(r.results!),
           ),
       ],
     );

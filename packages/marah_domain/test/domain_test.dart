@@ -4,6 +4,7 @@ import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/src/model/camel.dart';
 import 'package:marah_domain/src/rules/genetics.dart';
 import 'package:marah_domain/src/rules/judging.dart';
+import 'package:marah_domain/src/rules/valuation.dart';
 import 'package:marah_domain/src/sim.dart';
 import 'package:marah_domain/src/world_gen.dart';
 import 'package:marah_domain/testing.dart';
@@ -278,8 +279,9 @@ void main() {
       final g = newGame();
       final v = GameView(g.state, g.me.id);
       final c = v.herd.first;
-      final price = v.quickSalePrice(c.id);
-      expect(price, lessThan(c.estimate.$1 + c.estimate.$2));
+      final price = v.quickSalePrice(c.id)!;
+      final value = Valuation.value(g.state.world.camels[c.id]!, g.today);
+      expect(price.value, lessThan(value.value));
       expect(g.dispatch(QuickSale(g.me.id, c.id)).ok, isTrue);
       expect(GameView(g.state, g.me.id).herd, hasLength(2));
       expectClean(g);
@@ -620,6 +622,48 @@ void main() {
       expect(GameView(g.state, g.me.id).canSell(c.id), isNull);
       final again = g.dispatch(WithdrawEntry(g.me.id, f.id, r.id, c.id)) as Err;
       expect(again.error.code, ErrorCode.notEntered);
+    });
+  });
+  group('Hidden information', () {
+    test('views never reveal floors, others\' offers or exact values', () {
+      final g = newGame(5);
+      final v = GameView(g.state, g.me.id);
+      final theirs = v.market.first;
+      expect(v.offersOn(theirs.id), isEmpty);
+      expect(v.quickSalePrice(theirs.camel.id), isNull);
+
+      // The appraisal range is not centred on the true value.
+      var offCentre = 0;
+      for (final l in v.market.take(20)) {
+        final (lo, hi) = l.camel.estimate;
+        final mid = (lo.value + hi.value) / 2;
+        final value = Valuation.value(
+          g.state.world.camels[l.camel.id]!,
+          g.today,
+        ).value;
+        if ((mid - value).abs() > value * 0.01) offCentre++;
+      }
+      expect(offCentre, greaterThan(10));
+
+      // Another viewer hears a different appraisal of the same camel.
+      final other = GameView(g.state, const OwnerId('someone-else'));
+      final c = theirs.camel.id;
+      expect(other.camel(c)!.estimate, isNot(v.camel(c)!.estimate));
+    });
+
+    test('a mating is only known to the owner until it is confirmed', () {
+      final g = newGame(13)..advanceDays(45);
+      final dam = g.state.world.camels.values.firstWhere(
+        (c) =>
+            c.ownerId == g.me.id &&
+            c.sex == Sex.female &&
+            c.ageYears(g.today) >= 6,
+      )..lastCalvedOn = null;
+      final stud = g.state.world.studs.values.first;
+      expect(g.dispatch(MateWithStud(g.me.id, dam.id, stud.id)).ok, isTrue);
+      expect(GameView(g.state, g.me.id).camel(dam.id)!.awaitingCheck, isTrue);
+      final stranger = GameView(g.state, const OwnerId('someone-else'));
+      expect(stranger.camel(dam.id)!.awaitingCheck, isFalse);
     });
   });
 }

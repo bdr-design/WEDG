@@ -3,6 +3,7 @@ import '../catalog/region.dart';
 import '../common/ids.dart';
 import '../common/money.dart';
 import '../common/result.dart';
+import '../common/rng.dart';
 import '../common/time.dart';
 import '../handlers/handlers.dart' as handlers;
 import '../model/camel.dart';
@@ -18,14 +19,15 @@ import '../sim.dart';
 import '../systems/systems.dart';
 
 /// What one player is allowed to see of a camel: what the eye sees and
-/// what is on record. Breeding values, hidden deviations and an unchecked
-/// pregnancy's outcome are never exposed.
+/// what is on record. Breeding values, hidden deviations, the exact market
+/// value and an unchecked pregnancy's outcome are never exposed.
 class CamelView {
-  CamelView._(this._c, this._today, this._viewer);
+  CamelView._(this._c, this._today, this._viewer, this._seed);
 
   final Camel _c;
   final GameDay _today;
   final OwnerId _viewer;
+  final int _seed;
 
   CamelId get id => _c.id;
   String get name => _c.name;
@@ -51,8 +53,10 @@ class CamelView {
   List<Placing> get placings => List.unmodifiable(_c.placings);
   int get purchasePrice => isMine ? _c.purchasePrice : 0;
 
-  /// Mated and waiting for the check (outcome unknown).
-  bool get awaitingCheck => _c.pregnancy != null && !_c.pregnancy!.confirmed;
+  /// Mated and waiting for the check (outcome unknown). Only the owner
+  /// knows a mating happened.
+  bool get awaitingCheck =>
+      isMine && _c.pregnancy != null && !_c.pregnancy!.confirmed;
   bool get pregnant => _c.pregnancyConfirmed;
   String? get pregnantBy => pregnant ? _c.pregnancy!.sire.name : null;
   GameDay? get dueOn => pregnant ? _c.pregnancy!.dueOn : null;
@@ -61,25 +65,45 @@ class CamelView {
   Map<Trait, double> get looks => Judging.observedAll(_c, _today);
   double get quality => Judging.quality(_c, _today);
 
-  /// What the market would pay: a range, never the exact value.
-  (Riyal, Riyal) get estimate => Valuation.estimate(_c, _today);
+  /// What the market would pay, as this viewer hears it: an appraisal that
+  /// differs from the true value by a few percent (different for each
+  /// viewer and each week), shown as a range around it. The exact value and
+  /// the hidden sire genes behind it cannot be read back from the range.
+  (Riyal, Riyal) get estimate {
+    final value = Valuation.value(_c, _today).value.toDouble();
+    final rng = Rng.keyed(_seed, [
+      'appraise',
+      _viewer.value,
+      _c.id.value,
+      _today.value ~/ 7,
+    ]);
+    final appraisal =
+        value * (1 + clampDouble(rng.normal(sd: 0.06), -0.15, 0.15));
+    return (marketRound(appraisal * 0.9), marketRound(appraisal * 1.1));
+  }
 }
 
+/// A market listing as buyers see it: never the seller's floor price.
 class ListingView {
-  ListingView._(this.listing, this.camel, this.sellerName, this.transport);
-  final Listing listing;
+  ListingView._(Listing listing, this.camel, this.sellerName, this.transport)
+    : id = listing.id,
+      askPrice = listing.askPrice,
+      region = listing.region,
+      expiresOn = listing.expiresOn,
+      listedOn = listing.listedOn,
+      sellerId = listing.sellerId;
+
+  final ListingId id;
+  final Riyal askPrice;
+  final Region region;
+  final GameDay expiresOn;
+  final GameDay listedOn;
+  final OwnerId sellerId;
   final CamelView camel;
   final String sellerName;
 
   /// Trucking it to the viewer's farm.
   final Riyal transport;
-
-  ListingId get id => listing.id;
-  Riyal get askPrice => listing.askPrice;
-  Region get region => listing.region;
-  GameDay get expiresOn => listing.expiresOn;
-  GameDay get listedOn => listing.listedOn;
-  OwnerId get sellerId => listing.sellerId;
 }
 
 class StudView {
@@ -103,7 +127,7 @@ class GameView {
   PlayerState get me => _state.players[viewer]!;
   Sim get _sim => Sim(_state);
 
-  CamelView _view(Camel c) => CamelView._(c, today, viewer);
+  CamelView _view(Camel c) => CamelView._(c, today, viewer, _w.seed);
 
   CamelView? camel(CamelId id) {
     final c = _w.camels[id];
@@ -144,10 +168,14 @@ class GameView {
       Balance.maxBargainsPerBuyer -
       (_w.listings[id]?.bargains[viewer.value] ?? 0);
 
-  List<Offer> offersOn(ListingId id) => [
-    for (final o in _w.offers.values)
-      if (o.listingId == id) o,
-  ];
+  /// Buyers' offers, only on the viewer's own listings.
+  List<Offer> offersOn(ListingId id) {
+    if (_w.listings[id]?.sellerId != viewer) return const [];
+    return [
+      for (final o in _w.offers.values)
+        if (o.listingId == id) o,
+    ];
+  }
 
   int get openOffers => _w.offers.values
       .where((o) => _w.listings[o.listingId]?.sellerId == viewer)
@@ -204,8 +232,12 @@ class GameView {
   int get shepherdsNeeded => CareSystem.shepherdsNeeded(herd.length);
   Riyal get expansionCost => handlers.expansionCost(me);
 
-  Riyal quickSalePrice(CamelId id) =>
-      handlers.quickSalePrice(_w.camels[id]!, _sim);
+  /// What the broker pays now, only for the viewer's own camels.
+  Riyal? quickSalePrice(CamelId id) {
+    final c = _w.camels[id];
+    if (c == null || !c.isAlive || c.ownerId != viewer) return null;
+    return handlers.quickSalePrice(c, _sim);
+  }
 
   Riyal get herdValue => Riyal(
     _w
