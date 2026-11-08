@@ -8,7 +8,23 @@ were re-checked against the sources (marked **checked**). Tags:
 - **[C]** claimed by docs or the maintainer.
 - **[I]** inference.
 
-## Ranking (lightness first, realism second)
+## The owner's criteria (corrected 2026-11-08)
+
+App size does **not** matter to the owner. What matters is smoothness in
+play on a mid-range phone, and realism. The size column below is kept only as
+information.
+
+This puts Unity as a Library back in contention. It was ranked last mainly
+for size and for the memory of a second engine. On the one shared
+measurement (flutter_scene issue #484), Unity URP ran the same heavy scene at
+about 30 fps on a Galaxy A52s, against flutter_scene's 12 fps on that
+phone's OpenGL ES path. Unity also has the most complete realism tooling:
+terrain, LOD groups, baked lighting, cascaded shadows and GPU instancing.
+
+**The open question is smoothness.** Only real mid-range phones answer it.
+The software emulator in CI cannot.
+
+## Ranking as first written (lightness included app size)
 
 | Rank | Option | Added size (arm64) | Runtime model | Budget features | Maturity |
 |---|---|---|---|---|---|
