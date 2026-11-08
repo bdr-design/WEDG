@@ -11,24 +11,28 @@ They are not the game. They run as private claude.ai artifacts.
 
 ## What `world.js` builds
 
-- **The compound:**
-  - An earth berm around it with a gate.
-  - Pens in two rows with pipe rails, mesh panels and gates.
-  - Concrete feeding troughs, and shades inside the pens.
-- **Water and feed:**
-  - An elevated water tank with a supply pipe to the troughs.
-  - A feed hangar, with alfalfa bales and barley sacks outside it.
-- **The owner's area:**
-  - The shepherds' cabin and light poles.
-  - A goat-hair tent with a Sadu rug and a fire pit.
-- **Vehicles:** two pickups and a water tanker.
-- **Trees:** a tamarisk windbreak and palms.
-- **Roads:**
-  - An asphalt road with yellow edge lines.
-  - A graded track to the gate, the farm lanes, and the herd's trail.
-- **The land:**
-  - Patches of grass after the Wasm rain, rimth and arfaj bushes, and stones.
-  - Colour changes in the sand, and dunes on the horizon.
+A camel yard (عزبة), not a farm.
+- **The wall:** corrugated "shinko" sheets on steel posts, with a double
+  gate.
+- **The pens:** two rows with pipe rails, mesh panels, concrete feeding
+  troughs and shades.
+- **The farm room (غرفة العزبة):**
+  - Block walls and a full glass front in bronze frames looking over the
+    pens.
+  - A carpet and floor cushions inside.
+  - Split air conditioners, a roof tank, and a shaded porch with outdoor
+    seating.
+- **Beside the room:** a goat-hair tent with a Sadu rug and a fire pit.
+- **Vehicles:** a car shade with the owner's Land Cruisers: a white LC70
+  single-cab pickup (شاص) and a black LC300. A second LC70 carries alfalfa by
+  the feed shed, and a water tanker stands on the lane.
+- **Water, feed and staff:** an elevated water tank, an open feed shed with
+  bales and sacks, and the shepherds' cabin.
+- **Trees:** a few tamarisks for shade.
+- **Roads:** an asphalt road, a graded track to the gate, the lanes, and the
+  herd's trail.
+- **The land:** grass after the Wasm rain, rimth and arfaj bushes, and
+  stones.
 
 Grass, bushes and tree foliage are crossed alpha cards with textures drawn
 on canvas. Everything that repeats is instanced.
