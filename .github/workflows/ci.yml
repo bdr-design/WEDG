@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.8"
+
+jobs:
+  checks:
+    name: Format, analyze, test, simulate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed packages apps/marah/lib apps/marah/test
+
+      - name: Analyze (infos are errors)
+        run: |
+          (cd packages/marah_domain && dart analyze --fatal-infos)
+          (cd packages/marah_data && dart analyze --fatal-infos)
+          (cd apps/marah && flutter analyze --fatal-infos)
+
+      - name: Domain tests with coverage floor
+        working-directory: packages/marah_domain
+        run: |
+          dart test --coverage=coverage
+          dart pub global activate coverage 1.11.1
+          dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib
+          python3 ../../tool/coverage_floor.py coverage/lcov.info 85
+
+      - name: Save format tests (golden saves must load)
+        working-directory: packages/marah_data
+        run: dart test
+
+      - name: App tests
+        working-directory: apps/marah
+        run: flutter test
+
+      - name: 10-year simulation, invariants every week
+        working-directory: packages/marah_domain
+        run: dart run marah_domain:simulate 10 4
+
+  build-web-android:
+    name: Build web and Android
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Web
+        working-directory: apps/marah
+        run: flutter build web --release --no-web-resources-cdn
+      - name: Android (debug APK)
+        working-directory: apps/marah
+        run: flutter build apk --debug
+
+  build-ios:
+    name: Build iOS (simulator, unsigned)
+    runs-on: macos-latest
+    needs: checks
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - working-directory: apps/marah
+        run: flutter build ios --simulator --debug --no-codesign

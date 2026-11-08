@@ -1,0 +1,215 @@
+import '../catalog/catalog.dart';
+import '../catalog/region.dart';
+import '../common/ids.dart';
+import '../common/money.dart';
+import '../common/result.dart';
+import '../common/time.dart';
+import '../handlers/handlers.dart' as handlers;
+import '../model/camel.dart';
+import '../model/contest.dart';
+import '../model/game_state.dart';
+import '../model/market.dart';
+import '../model/player.dart';
+import '../rules/balance.dart';
+import '../rules/eligibility.dart';
+import '../rules/judging.dart';
+import '../rules/valuation.dart';
+import '../sim.dart';
+import '../systems/systems.dart';
+
+/// What one player is allowed to see of a camel: what the eye sees and
+/// what is on record. Breeding values, hidden deviations and an unchecked
+/// pregnancy's outcome are never exposed.
+class CamelView {
+  CamelView._(this._c, this._today, this._viewer);
+
+  final Camel _c;
+  final GameDay _today;
+  final OwnerId _viewer;
+
+  CamelId get id => _c.id;
+  String get name => _c.name;
+  Sex get sex => _c.sex;
+  ColorCategory get category => _c.category;
+  GameDay get born => _c.born;
+  int get ageDays => _c.ageDays(_today);
+  AgeClass get ageClass => _c.ageClass(_today);
+  String get chip => _c.chip;
+  OwnerId get ownerId => _c.ownerId;
+  bool get isMine => _c.ownerId == _viewer && _c.isAlive;
+  bool get isAlive => _c.isAlive;
+  CamelStatus get status => _c.status;
+  double get condition => _c.condition;
+  HealthStatus get health => _c.health;
+  Illness? get illness => _c.illness;
+  GameDay? get sickSince => _c.sickSince;
+  bool get crossbred => _c.crossbred;
+  ParentRef? get sire => _c.sire;
+  ParentRef? get dam => _c.dam;
+  int get calvings => _c.calvings;
+  GameDay? get lastCalvedOn => _c.lastCalvedOn;
+  List<Placing> get placings => List.unmodifiable(_c.placings);
+  int get purchasePrice => isMine ? _c.purchasePrice : 0;
+
+  /// Mated and waiting for the check (outcome unknown).
+  bool get awaitingCheck => _c.pregnancy != null && !_c.pregnancy!.confirmed;
+  bool get pregnant => _c.pregnancyConfirmed;
+  String? get pregnantBy => pregnant ? _c.pregnancy!.sire.name : null;
+  GameDay? get dueOn => pregnant ? _c.pregnancy!.dueOn : null;
+
+  /// Observed features 0–100 (what judges and buyers see).
+  Map<Trait, double> get looks => Judging.observedAll(_c, _today);
+  double get quality => Judging.quality(_c, _today);
+
+  /// What the market would pay: a range, never the exact value.
+  (Riyal, Riyal) get estimate => Valuation.estimate(_c, _today);
+}
+
+class ListingView {
+  ListingView._(this.listing, this.camel, this.sellerName, this.transport);
+  final Listing listing;
+  final CamelView camel;
+  final String sellerName;
+
+  /// Trucking it to the viewer's farm.
+  final Riyal transport;
+
+  ListingId get id => listing.id;
+  Riyal get askPrice => listing.askPrice;
+  Region get region => listing.region;
+  GameDay get expiresOn => listing.expiresOn;
+  GameDay get listedOn => listing.listedOn;
+  OwnerId get sellerId => listing.sellerId;
+}
+
+class StudView {
+  StudView._(this.stud, this.bull, this.ownerName, this.transport);
+  final StudOffer stud;
+  final CamelView bull;
+  final String ownerName;
+  final Riyal transport;
+}
+
+/// Read-only projection of the game for one player. Screens use this and
+/// commands; they never touch the state directly.
+class GameView {
+  GameView(this._state, this.viewer);
+
+  final GameState _state;
+  final OwnerId viewer;
+
+  WorldState get _w => _state.world;
+  GameDay get today => _w.day;
+  PlayerState get me => _state.players[viewer]!;
+  Sim get _sim => Sim(_state);
+
+  CamelView _view(Camel c) => CamelView._(c, today, viewer);
+
+  CamelView? camel(CamelId id) {
+    final c = _w.camels[id];
+    return c == null ? null : _view(c);
+  }
+
+  List<CamelView> get herd => [
+    for (final c in _w.aliveOwnedBy(viewer)) _view(c),
+  ];
+
+  String ownerName(OwnerId id) =>
+      _state.players[id]?.name ?? _w.owners[id]?.name ?? '';
+
+  List<ListingView> get market => [
+    for (final l in _w.listings.values)
+      if (l.sellerId != viewer) _listing(l),
+  ];
+
+  List<ListingView> get myListings => [
+    for (final l in _w.listings.values)
+      if (l.sellerId == viewer) _listing(l),
+  ];
+
+  ListingView? listingOf(CamelId camel) {
+    final l = _w.listings.values.where((x) => x.camelId == camel).firstOrNull;
+    return l == null ? null : _listing(l);
+  }
+
+  ListingView _listing(Listing l) => ListingView._(
+    l,
+    _view(_w.camels[l.camelId]!),
+    ownerName(l.sellerId),
+    Riyal(handlers.transportToFarm(me, l)),
+  );
+
+  /// Bargaining attempts the viewer has left on a listing.
+  int bargainsLeft(ListingId id) =>
+      Balance.maxBargainsPerBuyer -
+      (_w.listings[id]?.bargains[viewer.value] ?? 0);
+
+  List<Offer> offersOn(ListingId id) => [
+    for (final o in _w.offers.values)
+      if (o.listingId == id) o,
+  ];
+
+  int get openOffers => _w.offers.values
+      .where((o) => _w.listings[o.listingId]?.sellerId == viewer)
+      .length;
+
+  List<StudView> get studs => [
+    for (final s in _w.studs.values)
+      if (_w.camels[s.camelId]?.isAlive ?? false)
+        StudView._(
+          s,
+          _view(_w.camels[s.camelId]!),
+          ownerName(s.ownerId),
+          Riyal(Balance.transportCost(s.region.roadKmTo(me.farm.region), 1)),
+        ),
+  ];
+
+  List<Festival> get festivals =>
+      _w.festivals.values.toList()
+        ..sort((a, b) => a.judgedOn.value - b.judgedOn.value);
+
+  // ------------------------------------------------------------- checks
+
+  bool get breedingSeason => Eligibility.isBreedingSeason(today);
+
+  DomainError? canBreed(CamelId female) {
+    final c = _w.camels[female];
+    return Eligibility.owned(c, viewer) ??
+        Eligibility.femaleCanBreed(c!, today);
+  }
+
+  DomainError? canServe(CamelId bull) {
+    final c = _w.camels[bull];
+    if (c == null) return const DomainError(ErrorCode.notFound);
+    return Eligibility.bullCanServe(c, today);
+  }
+
+  DomainError? canSell(CamelId id) =>
+      Eligibility.canSell(_w, _w.camels[id], viewer);
+
+  DomainError? canEnter(FestivalId f, RoundId r, CamelId c) {
+    final fest = _w.festivals[f];
+    final round = fest?.rounds.where((x) => x.id == r).firstOrNull;
+    if (fest == null || round == null) {
+      return const DomainError(ErrorCode.notFound);
+    }
+    return Eligibility.canEnter(_w, fest, round, _w.camels[c], viewer, today);
+  }
+
+  // ------------------------------------------------------------- money
+
+  Riyal get dailyFeed => UpkeepSystem.dailyFeed(_sim, me);
+  Riyal get monthlyWages =>
+      Riyal(me.farm.shepherds * Balance.shepherdMonthlyWage);
+  int get shepherdsNeeded => CareSystem.shepherdsNeeded(herd.length);
+  Riyal get expansionCost => handlers.expansionCost(me);
+
+  Riyal quickSalePrice(CamelId id) =>
+      handlers.quickSalePrice(_w.camels[id]!, _sim);
+
+  Riyal get herdValue => Riyal(
+    _w
+        .aliveOwnedBy(viewer)
+        .fold<int>(0, (a, c) => a + Valuation.value(c, today).value),
+  );
+}

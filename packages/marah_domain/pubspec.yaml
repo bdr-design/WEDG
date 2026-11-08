@@ -1,0 +1,10 @@
+name: marah_domain
+description: "Game rules and simulation for Marah. Pure Dart, no Flutter, so it can run on the device today and on a server later."
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dev_dependencies:
+  test: ^1.25.0

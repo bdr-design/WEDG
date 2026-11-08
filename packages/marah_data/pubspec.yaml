@@ -1,0 +1,13 @@
+name: marah_data
+description: "Save format for Marah - versioned envelope, migrations and safe loading. Pure Dart."
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  marah_domain: any
+
+dev_dependencies:
+  test: ^1.25.0

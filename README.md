@@ -1,17 +1,19 @@
-# marah
+# مراح (Marah)
 
-لعبة ملاك الإبل والمزاين
+لعبة واقعية لملاك الإبل: العزبة، والسوق، والتلقيح، ومزاين الإبل.
+A realistic camel-owner game for iOS, Android and the web.
 
-## Getting Started
+- Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Decisions: [docs/adr/](docs/adr/)
 
-This project is a starting point for a Flutter application.
+## Develop
 
-A few resources to get you started if this is your first Flutter project:
+Flutter 3.47.8 (Dart 3.13). The repo is a Dart pub workspace.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter pub get                                   # whole workspace
+(cd packages/marah_domain && dart test)           # rules
+(cd packages/marah_data && dart test)             # save format
+(cd apps/marah && flutter test)                   # app
+(cd packages/marah_domain && dart run marah_domain:simulate 10 4)   # 10-year simulation
+```
