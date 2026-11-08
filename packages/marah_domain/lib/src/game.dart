@@ -111,7 +111,6 @@ class Game {
   Result dispatch(Command command) {
     final sim = Sim(state);
     final result = handlers.handle(sim, command);
-    state.world.actionSeq++;
     state.record(result.events);
     return result;
   }

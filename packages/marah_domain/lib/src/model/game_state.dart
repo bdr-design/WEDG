@@ -20,7 +20,6 @@ class WorldState {
     required this.studs,
     required this.festivals,
     required this.plannedUntil,
-    this.actionSeq = 0,
   });
 
   /// Seed for every keyed random stream in this world.
@@ -41,9 +40,6 @@ class WorldState {
   /// Contest seasons are planned up to this day.
   GameDay plannedUntil;
 
-  /// Counts commands applied, so each command draws its own random stream.
-  int actionSeq;
-
   Iterable<Camel> aliveOwnedBy(OwnerId owner) =>
       camels.values.where((c) => c.isAlive && c.ownerId == owner);
 
@@ -58,7 +54,6 @@ class WorldState {
     'studs': [for (final s in studs.values) s.toJson()],
     'festivals': [for (final f in festivals.values) f.toJson()],
     'plannedUntil': plannedUntil.value,
-    'actionSeq': actionSeq,
   };
 
   static WorldState fromJson(Map<String, Object?> j) {
@@ -81,7 +76,6 @@ class WorldState {
         for (final f in list('festivals').map(Festival.fromJson)) f.id: f,
       },
       plannedUntil: GameDay(j['plannedUntil']! as int),
-      actionSeq: j['actionSeq']! as int,
     );
   }
 }
@@ -96,12 +90,15 @@ class GameState {
     required this.startedAtUtcMs,
     this.clockShiftMs = 0,
     this.lastSeenUtcMs,
-    List<DomainEvent>? journal,
-  }) : journal = journal ?? [];
+    Map<String, List<DomainEvent>>? inboxes,
+  }) : inboxes = inboxes ?? {};
 
-  /// How many past events the activity log keeps. New events are always
-  /// returned to the caller; this only bounds the stored history.
-  static const journalLimit = 400;
+  /// How many past events each inbox keeps. New events are always returned
+  /// to the caller; this only bounds the stored history.
+  static const inboxLimit = 400;
+
+  /// Inbox key for world news that belongs to no one.
+  static const publicInbox = '';
 
   final WorldState world;
   final Map<OwnerId, PlayerState> players;
@@ -118,7 +115,12 @@ class GameState {
 
   /// Last real time (UTC ms) the game was brought up to date.
   int? lastSeenUtcMs;
-  final List<DomainEvent> journal;
+
+  /// Each player's news (keyed by owner id), plus public world news.
+  final Map<String, List<DomainEvent>> inboxes;
+
+  List<DomainEvent> inboxOf(OwnerId owner) => inboxes[owner.value] ?? const [];
+  List<DomainEvent> get publicNews => inboxes[publicInbox] ?? const [];
 
   /// The offline clock for this game: one real day is one game week.
   RealTimeClock clock({DateTime Function()? now}) => RealTimeClock(
@@ -131,9 +133,10 @@ class GameState {
   );
 
   void record(Iterable<DomainEvent> events) {
-    journal.addAll(events);
-    if (journal.length > journalLimit) {
-      journal.removeRange(0, journal.length - journalLimit);
+    for (final e in events) {
+      final box = inboxes.putIfAbsent(e.owner?.value ?? publicInbox, () => []);
+      box.add(e);
+      if (box.length > inboxLimit) box.removeRange(0, box.length - inboxLimit);
     }
   }
 
@@ -144,7 +147,10 @@ class GameState {
     'lastSeenUtcMs': lastSeenUtcMs,
     'world': world.toJson(),
     'players': [for (final p in players.values) p.toJson()],
-    'journal': [for (final e in journal) e.toJson()],
+    'inboxes': {
+      for (final e in inboxes.entries)
+        e.key: [for (final ev in e.value) ev.toJson()],
+    },
   };
 
   static GameState fromJson(Map<String, Object?> j) => GameState(
@@ -159,9 +165,12 @@ class GameState {
       ))
         p.id: p,
     },
-    journal: [
-      for (final e in j['journal']! as List<Object?>)
-        DomainEvent.fromJson(e! as Map<String, Object?>),
-    ],
+    inboxes: {
+      for (final e in (j['inboxes']! as Map<String, Object?>).entries)
+        e.key: [
+          for (final ev in e.value! as List<Object?>)
+            DomainEvent.fromJson(ev! as Map<String, Object?>),
+        ],
+    },
   );
 }

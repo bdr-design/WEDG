@@ -84,17 +84,14 @@ Result _buyAt(Sim sim, PlayerState p, Listing l, Riyal price) {
     ..purchasePrice = price.value;
   final sellerName = sim.world.owners[l.sellerId]?.name ?? seller?.name ?? '';
   sim.emit(
-    DomainEvent(
-      EventType.camelBought,
+    CamelBought(
       sim.today,
       owner: p.id,
       camel: c.id,
-      data: {
-        'name': c.name,
-        'price': price.value,
-        'seller': sellerName,
-        'region': l.region.name,
-      },
+      name: c.name,
+      price: price.value,
+      seller: sellerName,
+      region: l.region,
     ),
   );
   return _ok(sim);
@@ -133,24 +130,18 @@ Result _bargain(Sim sim, PlayerState p, Bargain cmd) {
       math.min(l.askPrice.value, math.max(l.reservePrice.value, counter.value)),
     );
     sim.emit(
-      DomainEvent(
-        EventType.bargainCountered,
+      BargainCountered(
         sim.today,
         owner: p.id,
         camel: l.camelId,
-        data: {'listing': l.id.value, 'ask': l.askPrice.value},
+        listing: l.id,
+        ask: l.askPrice.value,
       ),
     );
     return _err(sim, ErrorCode.bargainCountered, {'ask': l.askPrice.value});
   }
   sim.emit(
-    DomainEvent(
-      EventType.bargainRejected,
-      sim.today,
-      owner: p.id,
-      camel: l.camelId,
-      data: {'listing': l.id.value},
-    ),
+    BargainRejected(sim.today, owner: p.id, camel: l.camelId, listing: l.id),
   );
   return _err(sim, ErrorCode.bargainRejected);
 }
@@ -172,12 +163,13 @@ Result _list(Sim sim, PlayerState p, ListForSale cmd) {
   );
   sim.world.listings[l.id] = l;
   sim.emit(
-    DomainEvent(
-      EventType.listingCreated,
+    ListingCreated(
       sim.today,
       owner: p.id,
       camel: c.id,
-      data: {'name': c.name, 'ask': cmd.askPrice, 'listing': l.id.value},
+      name: c.name,
+      ask: cmd.askPrice,
+      listing: l.id,
     ),
   );
   return _ok(sim);
@@ -189,14 +181,7 @@ Result _cancel(Sim sim, PlayerState p, CancelListing cmd) {
   if (l.sellerId != p.id) return _err(sim, ErrorCode.notYourListing);
   sim.world.listings.remove(l.id);
   sim.world.offers.removeWhere((_, o) => o.listingId == l.id);
-  sim.emit(
-    DomainEvent(
-      EventType.listingCancelled,
-      sim.today,
-      owner: p.id,
-      camel: l.camelId,
-    ),
-  );
+  sim.emit(ListingCancelled(sim.today, owner: p.id, camel: l.camelId));
   return _ok(sim);
 }
 
@@ -220,14 +205,7 @@ Result _decline(Sim sim, PlayerState p, DeclineOffer cmd) {
     return _err(sim, ErrorCode.notYourListing);
   }
   sim.world.offers.remove(o.id);
-  sim.emit(
-    DomainEvent(
-      EventType.offerDeclined,
-      sim.today,
-      owner: p.id,
-      camel: l.camelId,
-    ),
-  );
+  sim.emit(OfferDeclined(sim.today, owner: p.id, camel: l.camelId));
   return _ok(sim);
 }
 
@@ -238,9 +216,9 @@ Result _quickSale(Sim sim, PlayerState p, QuickSale cmd) {
   final c = sim.world.camels[cmd.camel];
   final problem = Eligibility.canSell(sim.world, c, p.id);
   if (problem != null) return Err(problem, sim.drain());
-  final rng = sim.rng(['broker', sim.world.actionSeq]);
+  final rng = sim.rng(['broker', c!.id.value]);
   final broker = WorldGen(sim).randomOwner(rng, region: p.farm.region);
-  _sellTo(sim, p, c!, quickSalePrice(c, sim), broker.id, broker.name);
+  _sellTo(sim, p, c, quickSalePrice(c, sim), broker.id, broker.name);
   return _ok(sim);
 }
 
@@ -265,17 +243,14 @@ void _sellTo(
     ..status = CamelStatus.gone
     ..endedOn = sim.today;
   sim.emit(
-    DomainEvent(
-      EventType.camelSold,
+    CamelSold(
       sim.today,
       owner: seller.id,
       camel: c.id,
-      data: {
-        'name': c.name,
-        'price': price.value,
-        'buyer': buyerName,
-        'profit': profit,
-      },
+      name: c.name,
+      price: price.value,
+      buyer: buyerName,
+      profit: profit,
     ),
   );
 }
@@ -333,7 +308,7 @@ Result _mate(
   sim.pay(p, -fee, LedgerCategory.studFee, ref: bull.id.value);
   sim.pay(p, -move, LedgerCategory.transport, ref: female.id.value);
 
-  final rng = sim.rng(['mate', female.id.value, sim.world.actionSeq]);
+  final rng = sim.rng(['mate', female.id.value]);
   var chance = Balance.conceptionRate;
   if (female.condition < 55) chance -= 0.15;
   if (female.condition > 80) chance += 0.05;
@@ -351,17 +326,14 @@ Result _mate(
   );
   bull.lastServiceOn = sim.today;
   sim.emit(
-    DomainEvent(
-      EventType.mated,
+    Mated(
       sim.today,
       owner: p.id,
       camel: female.id,
-      data: {
-        'name': female.name,
-        'sire': bull.name,
-        'checkOn': (sim.today + Balance.pregnancyCheckDays).value,
-        'fee': fee.value,
-      },
+      name: female.name,
+      sire: bull.name,
+      checkOn: (sim.today + Balance.pregnancyCheckDays),
+      fee: fee.value,
     ),
   );
   return _ok(sim);
@@ -378,7 +350,7 @@ Result _treat(Sim sim, PlayerState p, Treat cmd) {
   if (camel.health != HealthStatus.sick || illness == null) {
     return _err(sim, ErrorCode.notSick);
   }
-  final rng = sim.rng(['vet', camel.id.value, sim.world.actionSeq]);
+  final rng = sim.rng(['vet', camel.id.value]);
   final cost = marketRound(
     rng.range(illness.treatMin, illness.treatMax).toDouble(),
   );
@@ -392,12 +364,13 @@ Result _treat(Sim sim, PlayerState p, Treat cmd) {
         sim.today +
         (illness.recoverDays ~/ 2 + rng.range(0, illness.recoverDays ~/ 2));
   sim.emit(
-    DomainEvent(
-      EventType.treated,
+    Treated(
       sim.today,
       owner: p.id,
       camel: camel.id,
-      data: {'name': camel.name, 'illness': illness.name, 'cost': cost.value},
+      name: camel.name,
+      illness: illness,
+      cost: cost.value,
     ),
   );
   return _ok(sim);
@@ -412,27 +385,14 @@ Result _rename(Sim sim, PlayerState p, RenameCamel cmd) {
   final old = c!.name;
   c.name = name;
   sim.emit(
-    DomainEvent(
-      EventType.camelRenamed,
-      sim.today,
-      owner: p.id,
-      camel: c.id,
-      data: {'from': old, 'to': name},
-    ),
+    CamelRenamed(sim.today, owner: p.id, camel: c.id, from: old, to: name),
   );
   return _ok(sim);
 }
 
 Result _feedPlan(Sim sim, PlayerState p, SetFeedPlan cmd) {
   p.farm.feedPlan = cmd.plan;
-  sim.emit(
-    DomainEvent(
-      EventType.feedPlanChanged,
-      sim.today,
-      owner: p.id,
-      data: {'plan': cmd.plan.name},
-    ),
-  );
+  sim.emit(FeedPlanChanged(sim.today, owner: p.id, plan: cmd.plan));
   return _ok(sim);
 }
 
@@ -441,14 +401,7 @@ Result _shepherds(Sim sim, PlayerState p, SetShepherds cmd) {
     return _err(sim, ErrorCode.invalidAmount);
   }
   p.farm.shepherds = cmd.count;
-  sim.emit(
-    DomainEvent(
-      EventType.shepherdsChanged,
-      sim.today,
-      owner: p.id,
-      data: {'count': cmd.count},
-    ),
-  );
+  sim.emit(ShepherdsChanged(sim.today, owner: p.id, count: cmd.count));
   return _ok(sim);
 }
 
@@ -463,11 +416,11 @@ Result _expand(Sim sim, PlayerState p) {
   sim.pay(p, -cost, LedgerCategory.construction);
   p.farm.capacity += Balance.expansionStep;
   sim.emit(
-    DomainEvent(
-      EventType.farmExpanded,
+    FarmExpanded(
       sim.today,
       owner: p.id,
-      data: {'capacity': p.farm.capacity, 'cost': cost.value},
+      capacity: p.farm.capacity,
+      cost: cost.value,
     ),
   );
   return _ok(sim);
@@ -484,12 +437,13 @@ Result _enter(Sim sim, PlayerState p, EnterRound cmd) {
   if (problem != null) return Err(problem, sim.drain());
   r.entries.add(Entry(camelId: c!.id, ownerId: p.id));
   sim.emit(
-    DomainEvent(
-      EventType.entered,
+    Entered(
       sim.today,
       owner: p.id,
       camel: c.id,
-      data: {'name': c.name, 'festival': f.name, 'round': r.id.value},
+      name: c.name,
+      festival: f.name,
+      round: r.id,
     ),
   );
   return _ok(sim);
@@ -503,13 +457,7 @@ Result _withdraw(Sim sim, PlayerState p, WithdrawEntry cmd) {
   r.entries.removeWhere((e) => e.camelId == cmd.camel && e.ownerId == p.id);
   if (r.entries.length == before) return _err(sim, ErrorCode.notEntered);
   sim.emit(
-    DomainEvent(
-      EventType.withdrawn,
-      sim.today,
-      owner: p.id,
-      camel: cmd.camel,
-      data: {'festival': f.name},
-    ),
+    Withdrawn(sim.today, owner: p.id, camel: cmd.camel, festival: f.name),
   );
   return _ok(sim);
 }

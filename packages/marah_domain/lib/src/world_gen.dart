@@ -219,9 +219,7 @@ class WorldGen {
       w.festivals[f.id] = f;
     }
     w.plannedUntil = GameDay.ofDate(DateTime.utc(year + 1, 8, 31));
-    sim.emit(
-      DomainEvent(EventType.seasonPlanned, sim.today, data: {'year': year}),
-    );
+    sim.emit(SeasonPlanned(sim.today, year: year));
   }
 
   List<ContestRound> _rounds(Rng rng, FestivalTier tier) {

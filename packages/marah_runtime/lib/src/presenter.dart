@@ -102,12 +102,14 @@ class Presenter {
   PlayerSnapshot snapshot(int revision) {
     final v = view;
     final me = v.me;
-    final events = <DomainEvent>[];
-    for (var i = state.journal.length - 1; i >= 0; i--) {
-      final e = state.journal[i];
-      if (e.owner == null || e.owner == viewer) events.add(e);
-      if (events.length == recentEventCount) break;
-    }
+    final mine = state.inboxOf(viewer);
+    final public = state.publicNews;
+    final events = [
+      ...mine.skip(
+        mine.length > recentEventCount ? mine.length - recentEventCount : 0,
+      ),
+      ...public.skip(public.length > 10 ? public.length - 10 : 0),
+    ]..sort((a, b) => a.day.value - b.day.value);
     return PlayerSnapshot(
       revision: revision,
       today: v.today,
@@ -144,7 +146,7 @@ class Presenter {
       festivals: [for (final f in v.festivals) festival(f)],
       openOffers: v.openOffers,
       breedingSeason: v.breedingSeason,
-      recentEvents: events.reversed.toList(growable: false),
+      recentEvents: List.unmodifiable(events),
     );
   }
 

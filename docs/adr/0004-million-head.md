@@ -1,7 +1,9 @@
 # ADR 0004: One million camels per player, on the phone
 
-- Status: proposed (owner requirement 2026-11-08: "a million head for one
-  player"); design to be reviewed before implementation
+- Status: superseded on 2026-11-08. The owner first asked for a million
+  head per player, then chose a cap of **10,000 per player**, the size of
+  the largest real holdings (7,000–10,000 head). This record stays as the
+  analysis behind that choice; see "Decision at 10,000" at the end.
 - Evidence: [../research-scale.md](../research-scale.md) (sourced brief with
   measurements), benchmarks in this repo's history (SQLite, 1M rows)
 
@@ -128,3 +130,23 @@ a national-scale holding, not a family farm.
    backup rotation; a 1M-head benchmark in CI.
 4. Management layer (farms, staff, policies) after the owner approves the
    game design.
+
+## Decision at 10,000 (accepted)
+
+The cap of 10,000 head per player keeps every camel individual (name,
+traits, pedigree, simulated daily), which is the heart of a mazayen game,
+and stays light. Measured at 10,000 head with the current engine: 15 ms per
+game day and about 6 MB of save on a desktop CPU.
+
+Kept from the analysis above:
+
+- SQLite as the save (incremental writes, one transaction per command and
+  per day, migrations, backup after a good open), instead of rewriting a
+  6 MB JSON file on every autosave.
+- Screens page through indexed queries; the snapshot carries summaries.
+- Records are never deleted; views never expose hidden values.
+- Performance budgets at 10,000 head, with headroom tested at 20,000.
+
+Not needed at this size: strata, binomial sampling, closed-form body
+condition, and the journal-and-fold write path. Days keep visiting each
+camel, which stays exact and simple.

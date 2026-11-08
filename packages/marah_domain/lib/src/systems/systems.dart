@@ -78,22 +78,15 @@ class UpkeepSystem implements DailySystem {
         final wages = Riyal(p.farm.shepherds * Balance.shepherdMonthlyWage);
         sim.bill(p, -wages, LedgerCategory.wages);
         sim.emit(
-          DomainEvent(
-            EventType.wagesPaid,
+          WagesPaid(
             sim.today,
             owner: p.id,
-            data: {'amount': wages.value, 'shepherds': p.farm.shepherds},
+            amount: wages.value,
+            shepherds: p.farm.shepherds,
           ),
         );
         if (p.cash.isNegative) {
-          sim.emit(
-            DomainEvent(
-              EventType.cashNegative,
-              sim.today,
-              owner: p.id,
-              data: {'cash': p.cash.value},
-            ),
-          );
+          sim.emit(CashNegative(sim.today, owner: p.id, cash: p.cash.value));
         }
       }
     }
@@ -188,12 +181,12 @@ class HealthSystem implements DailySystem {
                 ..illness = illness
                 ..sickSince = sim.today;
               sim.emit(
-                DomainEvent(
-                  EventType.fellSick,
+                FellSick(
                   sim.today,
                   owner: p.id,
                   camel: c.id,
-                  data: {'name': c.name, 'illness': illness.name},
+                  name: c.name,
+                  illness: illness,
                 ),
               );
             }
@@ -205,7 +198,7 @@ class HealthSystem implements DailySystem {
                       (days - Balance.untreatedGraceDays) *
                           Balance.untreatedDeathPerDay,
                 )) {
-              _die(sim, c, 'illness');
+              _die(sim, c, DeathCause.illness);
             } else if (days > Balance.selfRecoveryAfterDays &&
                 rng.chance(Balance.selfRecoveryChance)) {
               _recover(sim, c);
@@ -221,7 +214,7 @@ class HealthSystem implements DailySystem {
                   Balance.oldAgeDeathPerYear *
                       (years - Balance.oldAgeFromYears + 1),
                 ))) {
-          _die(sim, c, 'age');
+          _die(sim, c, DeathCause.age);
         }
       }
     }
@@ -233,34 +226,23 @@ class HealthSystem implements DailySystem {
       ..illness = null
       ..sickSince = null
       ..recoversOn = null;
-    sim.emit(
-      DomainEvent(
-        EventType.recovered,
-        sim.today,
-        owner: c.ownerId,
-        camel: c.id,
-        data: {'name': c.name},
-      ),
-    );
+    sim.emit(Recovered(sim.today, owner: c.ownerId, camel: c.id, name: c.name));
   }
 
-  static void _die(Sim sim, Camel c, String cause) {
+  static void _die(Sim sim, Camel c, DeathCause cause) {
     c
       ..status = CamelStatus.dead
       ..endedOn = sim.today
       ..pregnancy = null;
     releaseCamel(sim, c);
     sim.emit(
-      DomainEvent(
-        EventType.died,
+      Died(
         sim.today,
         owner: c.ownerId,
         camel: c.id,
-        data: {
-          'name': c.name,
-          'cause': cause,
-          'age': c.ageClass(sim.today).name,
-        },
+        name: c.name,
+        cause: cause,
+        age: c.ageClass(sim.today),
       ),
     );
   }
@@ -300,27 +282,24 @@ class BreedingSystem implements DailySystem {
           if (preg.conceived) {
             preg.confirmed = true;
             sim.emit(
-              DomainEvent(
-                EventType.pregnancyConfirmed,
+              PregnancyConfirmed(
                 sim.today,
                 owner: p.id,
                 camel: f.id,
-                data: {
-                  'name': f.name,
-                  'sire': preg.sire.name,
-                  'due': preg.dueOn.value,
-                },
+                name: f.name,
+                sire: preg.sire.name,
+                due: preg.dueOn,
               ),
             );
           } else {
             f.pregnancy = null;
             sim.emit(
-              DomainEvent(
-                EventType.pregnancyFailed,
+              PregnancyFailed(
                 sim.today,
                 owner: p.id,
                 camel: f.id,
-                data: {'name': f.name, 'sire': preg.sire.name},
+                name: f.name,
+                sire: preg.sire.name,
               ),
             );
           }
@@ -346,13 +325,7 @@ class BreedingSystem implements DailySystem {
         (dam.condition < 50 ? Balance.calfLossThinDam : 0);
     if (rng.chance(lossChance)) {
       sim.emit(
-        DomainEvent(
-          EventType.calfLost,
-          sim.today,
-          owner: dam.ownerId,
-          camel: dam.id,
-          data: {'name': dam.name},
-        ),
+        CalfLost(sim.today, owner: dam.ownerId, camel: dam.id, name: dam.name),
       );
       return;
     }
@@ -381,17 +354,14 @@ class BreedingSystem implements DailySystem {
     );
     sim.world.camels[calf.id] = calf;
     sim.emit(
-      DomainEvent(
-        EventType.calfBorn,
+      CalfBorn(
         sim.today,
         owner: dam.ownerId,
         camel: calf.id,
-        data: {
-          'dam': dam.name,
-          'sire': preg.sire.name,
-          'name': calf.name,
-          'sex': sex.name,
-        },
+        dam: dam.name,
+        sire: preg.sire.name,
+        name: calf.name,
+        sex: sex,
       ),
     );
   }
@@ -416,12 +386,11 @@ class MarketSystem implements DailySystem {
       final c = w.camels[l.camelId];
       if (sim.isPlayer(l.sellerId)) {
         sim.emit(
-          DomainEvent(
-            EventType.listingExpired,
+          ListingExpired(
             sim.today,
             owner: l.sellerId,
             camel: l.camelId,
-            data: {'name': c?.name ?? ''},
+            name: c?.name ?? '',
           ),
         );
       } else if (c != null) {
@@ -472,18 +441,15 @@ class MarketSystem implements DailySystem {
         );
         w.offers[o.id] = o;
         sim.emit(
-          DomainEvent(
-            EventType.offerReceived,
+          OfferReceived(
             sim.today,
             owner: l.sellerId,
             camel: c.id,
-            data: {
-              'name': c.name,
-              'buyer': buyer.name,
-              'region': buyer.region.name,
-              'amount': amount.value,
-              'offer': o.id.value,
-            },
+            name: c.name,
+            buyer: buyer.name,
+            region: buyer.region,
+            amount: amount.value,
+            offer: o.id,
           ),
         );
       }
@@ -532,25 +498,18 @@ class ContestSystem implements DailySystem {
       if (f.done) continue;
       if (f.opensOn == sim.today) {
         sim.emit(
-          DomainEvent(
-            EventType.registrationOpened,
+          RegistrationOpened(
             sim.today,
-            data: {
-              'festival': f.id.value,
-              'name': f.name,
-              'tier': f.tier.name,
-              'judgedOn': f.judgedOn.value,
-            },
+            festival: f.id,
+            name: f.name,
+            tier: f.tier,
+            judgedOn: f.judgedOn,
           ),
         );
       }
       if (f.closesOn.daysSince(sim.today) == 3) {
         sim.emit(
-          DomainEvent(
-            EventType.registrationClosingSoon,
-            sim.today,
-            data: {'festival': f.id.value, 'name': f.name},
-          ),
+          RegistrationClosingSoon(sim.today, festival: f.id, name: f.name),
         );
       }
       if (sim.today >= f.judgedOn) _judge(sim, f);
@@ -591,12 +550,12 @@ class ContestSystem implements DailySystem {
         if (c == null || !c.isAlive || c.ownerId != e.ownerId) continue;
         if (c.health == HealthStatus.sick) {
           sim.emit(
-            DomainEvent(
-              EventType.disqualifiedSick,
+            DisqualifiedSick(
               sim.today,
               owner: c.ownerId,
               camel: c.id,
-              data: {'name': c.name, 'festival': f.name},
+              name: c.name,
+              festival: f.name,
             ),
           );
           continue;
@@ -670,20 +629,17 @@ class ContestSystem implements DailySystem {
           prizesByOwner[p.id.value] = (prizesByOwner[p.id.value] ?? 0) + prize;
         }
         sim.emit(
-          DomainEvent(
-            EventType.placed,
+          Placed(
             sim.today,
             owner: c.ownerId,
             camel: c.id,
-            data: {
-              'name': c.name,
-              'festival': f.name,
-              'round': r.id.value,
-              'rank': rank,
-              'of': rows.length,
-              'score': row.score,
-              'prize': prize,
-            },
+            name: c.name,
+            festival: f.name,
+            round: r.id,
+            rank: rank,
+            of: rows.length,
+            score: row.score,
+            prize: prize,
           ),
         );
       }
@@ -693,11 +649,11 @@ class ContestSystem implements DailySystem {
     f.rounds.removeWhere((r) => r.results == null);
     for (final e in prizesByOwner.entries) {
       sim.emit(
-        DomainEvent(
-          EventType.festivalSummary,
+        FestivalSummary(
           sim.today,
           owner: OwnerId(e.key),
-          data: {'festival': f.name, 'prizes': e.value},
+          festival: f.name,
+          prizes: e.value,
         ),
       );
     }

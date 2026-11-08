@@ -172,9 +172,12 @@ void main() {
     test('news keeps coming after the stored history is full', () {
       final g = newGame();
       g.advanceDays(365 * 3);
-      expect(g.state.journal.length, lessThanOrEqualTo(GameState.journalLimit));
+      expect(
+        g.state.inboxOf(g.me.id).length,
+        lessThanOrEqualTo(GameState.inboxLimit),
+      );
       final later = g.advanceDays(31);
-      expect(later.where((e) => e.type == EventType.wagesPaid), isNotEmpty);
+      expect(later.whereType<WagesPaid>(), isNotEmpty);
     });
   });
 
@@ -189,7 +192,7 @@ void main() {
       expect(g.me.cash, cash - l.askPrice - l.transport);
       expect(GameView(g.state, g.me.id).camel(l.camel.id)!.isMine, isTrue);
       expect(g.state.world.listings.containsKey(l.id), isFalse);
-      expect(r.events.single.type, EventType.camelBought);
+      expect(r.events.single, isA<CamelBought>());
       expectClean(g);
     });
 
@@ -340,8 +343,8 @@ void main() {
         expect(gestation, inInclusiveRange(375, 395));
         final events = g.advanceTo(dam.pregnancy!.dueOn);
         expect(dam.calvings, greaterThan(0));
-        final born = events.where((e) => e.type == EventType.calfBorn);
-        final lost = events.where((e) => e.type == EventType.calfLost);
+        final born = events.whereType<CalfBorn>();
+        final lost = events.whereType<CalfLost>();
         expect(born.length + lost.length, 1);
         if (born.isNotEmpty) {
           final calf = g.state.world.camels[born.single.camel]!;
@@ -427,8 +430,8 @@ void main() {
       final cash = g.me.cash.value;
       final events = g.advanceTo(f.judgedOn);
       expect(f.done, isTrue);
-      final placed = events.singleWhere((e) => e.type == EventType.placed);
-      final rank = placed.data['rank']! as int;
+      final placed = events.whereType<Placed>().single;
+      final rank = placed.rank;
       expect(rank, lessThanOrEqualTo(3), reason: 'an elite camel should place');
       expect(strong.placings.single.rank, rank);
       final prize = ContestRules.prizes(f.tier, r.age)[rank - 1];
@@ -466,7 +469,7 @@ void main() {
         ..illness = Illness.lameness
         ..sickSince = g.today;
       final events = g.advanceDays(1);
-      expect(events.any((e) => e.type == EventType.disqualifiedSick), isTrue);
+      expect(events.whereType<DisqualifiedSick>(), isNotEmpty);
       expect(r.results!.any((row) => row.camelId == c.id), isFalse);
     });
   });
