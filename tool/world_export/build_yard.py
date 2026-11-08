@@ -355,6 +355,20 @@ def drape_rect(x0, x1, z0, z1, off):
     return Soup(tp, tn)
 
 
+def face_up(s):
+    """Ground decals are drawn one-sided, so every triangle must be wound to face up (+y);
+    its shading normals are made to point up too."""
+    e1, e2 = s.tp[:, 1] - s.tp[:, 0], s.tp[:, 2] - s.tp[:, 0]
+    down = np.cross(e1, e2)[:, 1] < 0
+    o = [0, 2, 1]
+    tp, tuv = s.tp.copy(), None if s.tuv is None else s.tuv.copy()
+    tp[down] = tp[down][:, o]
+    if tuv is not None: tuv[down] = tuv[down][:, o]
+    tn = s.tn.copy(); tn[down] = tn[down][:, o]
+    tn[tn[..., 1] < 0] *= -1
+    return Soup(tp, tn, tuv)
+
+
 decal_soups = []
 by_kind = {}
 for s, ex in groups.pop(('ground', 'decal')):
@@ -383,7 +397,9 @@ rd = drape_rect(-3000, 3000, ROADZ - 4.5, ROADZ + 4.5, 0.08)
 u = (ROADZ + 4.5 - rd.tp[..., 2]) / 9.0; v = (3000 - rd.tp[..., 0]) / 40.0
 decal_soups.append(Soup(rd.tp, rd.tn, np.stack([(G + np.clip(u, 0, 1) * 64) / DW, 1 - v], axis=-1)))
 n_road = len(rd)
-# 6 the room's glass front, last
+# every ground decal faces up (the material is one-sided)
+decal_soups = [face_up(x) for x in decal_soups]
+# 6 the room's glass front, last (upright panes: their winding is left as built)
 for s in by_kind['glass']:
     decal_soups.append(Soup(s.tp, s.tn, solid_uv('glass', len(s))))
 
@@ -525,7 +541,8 @@ for kind in ('grass', 'bush', 'stone'):
     fields = ['x', 'z', 'yaw', 'scale', 'r', 'g', 'b'] if kind == 'stone' else ['x', 'z', 'yaw', 'scale_xz', 'scale_y', 'r', 'g', 'b']
     out['kinds'][kind] = {'glb': GLB_NAME[kind], 'count': start, 'y': ys.pop(), 'fields': fields, 'cell_size': {'grass': 25, 'bush': 80, 'stone': 25}[kind],
                           'cells_fields': ['x', 'z', 'first', 'count'], 'cells': cells, 'bands': K['bands'],
-                          'cast_shadow': ('when d < %g' % K['shadowDist']) if K['cast'] else False, 'data': rows}
+                          # cells within this distance of the shadow focus (the view target, snapped to 4 m) cast shadows
+                          'cast_shadow': {'within_m': K['shadowDist'], 'from': 'shadow_focus'} if K['cast'] else False, 'data': rows}
 for kind in ('tamarisk_trunk', 'tamarisk_clump'):
     K = SC[kind]; rows = []
     for inst in K['inst']:

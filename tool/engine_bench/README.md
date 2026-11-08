@@ -67,12 +67,21 @@ the same files.
 
 | File | What it holds |
 |---|---|
-| `yard.glb` | Every fixed object of the yard and the grazing camp: walls, pens, shades, troughs, room, tent and its furnishings, tank, feed shed, cabin, the water tanker, and the roads draped on the terrain. Merged into 5 materials (a colour palette texture, textiles, walls, mesh panels, ground decals), so it is about 5 draws. 37k triangles, 1.5 MB. No lights and no physical materials. |
-| `yard_scatter.json` with `grass_tuft.glb`, `bush.glb`, `stone.glb`, `tamarisk_clump.glb`, `tamarisk_trunk.glb` | Ground cover and trees as instance data: position, yaw, scale and a linear-RGB tint per instance. Grouped in cells, with the prototype's distance bands (draw all, part or none of a cell's instances by distance) and shadow flags. 42,000 grass tufts, 1,500 bushes, 2,600 stones (8 triangles each), plus the tamarisks. |
+| `yard.glb` | Every fixed object of the yard and the grazing camp: walls, pens, shades, troughs, room, tent and its furnishings, tank, feed shed, cabin, the water tanker, and the roads draped on the terrain. Merged into 5 materials (a colour palette texture, textiles, walls, mesh panels, ground decals) in 7 primitives, so it is 7 draws. 37k triangles, 1.5 MB. No lights and no physical materials. |
+| `yard_scatter.json` with `grass_tuft.glb`, `bush.glb`, `stone.glb`, `tamarisk_clump.glb`, `tamarisk_trunk.glb` | Ground cover and trees as instance data: position, yaw, scale and a linear-RGB tint per instance. Grouped in cells, with the prototype's distance bands (draw all, part or none of a cell's instances by distance). Bushes cast shadows when their cell is within `cast_shadow.within_m` of the shadow focus, which is the view target snapped to 4 m. 42,000 grass tufts, 1,500 bushes, 2,600 stones (8 triangles each), plus the tamarisks. |
 | `vehicles.json` | Each vehicle: the model GLB (`assets_src/vehicles/*_mobile.glb`, 12k triangles), position, yaw and tint. Also the caravan rig at the camp. |
 
 **Frame:** x east, y up, z south, in metres from the yard, the same as
 `terrain.glb`.
+
+**For the engine:**
+- **Ground cover draws.** Gather the visible part of every cell into one
+  instanced draw per kind. One draw per cell, as the prototype does, would be
+  hundreds of draws.
+- **Ground decals.** They are one-sided and wound to face up.
+- **Vehicles.** The caravan and tractor appear both in `vehicles` (world
+  placements) and in `rigs` (how they are coupled). Place them from
+  `vehicles` only.
 
 **Not in the files:**
 - **The ground's look up close.** The prototype multiplies the satellite
@@ -80,6 +89,16 @@ the same files.
   material, done in the engine.
 - **The final colours of grass and trees.** They depend on the engine's sky
   and ambient light.
+
+**Known issues, to fix in the engine's terrain:**
+- **Buried road:** parts of the 3 km road, 1.4–2.2 km east and beyond
+  2.9 km, are buried. There the coarsest terrain ring, which is only sunk by
+  6 m, rises up to 21 m above the finer ring. The fix is to drop the coarse
+  triangles inside a finer ring and close the seam with skirts, instead of
+  sinking them.
+- **Scatter format:** the scatter JSON (2.3 MB, 787 KB compressed) can be
+  packed into a binary of 9–10 bytes per instance (about 0.48 MB) once the
+  engine reads it.
 
 **Checked:** loading only these files in a plain three.js page
 (`tool/world_export/verify.html`) gives the same yard as the prototype from

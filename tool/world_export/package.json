@@ -1,15 +1,9 @@
 {
-  "name": "tools",
-  "version": "1.0.0",
-  "description": "",
-  "main": "run_export.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "name": "marah-world-export",
+  "private": true,
+  "description": "Exports the prototype yard into engine-neutral files (see README.md).",
   "dependencies": {
-    "gltf-validator": "^2.0.0-dev.3.10"
+    "gltf-validator": "2.0.0-dev.3.10",
+    "playwright": "1.63.0"
   }
 }

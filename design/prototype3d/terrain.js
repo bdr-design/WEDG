@@ -57,7 +57,9 @@ export async function buildTerrain(scene, renderer, sandTex) {
   // 4 x 4 km around the yard at 50 m, 12 x 12 km at 100 m (Aban al-Asmar), the whole 70 km area at about 550 m
   const inside = (r) => (x, z) => (Math.abs(x) < r && Math.abs(z) < r ? 6 : 0);
   grid(-2000, 2000, -2000, 2000, 80, 80);
-  grid(-6000, 6000, -6000, 6000, 120, 120, inside(1900));
-  grid(meta.xWest, meta.xEast, meta.zNorth, meta.zSouth, 128, 121, inside(5700));
+  // sink every coarse vertex inside the finer ring (its edge vertices included), so no band of the
+  // two surfaces lies at the same height and flickers
+  grid(-6000, 6000, -6000, 6000, 120, 120, inside(1999));
+  grid(meta.xWest, meta.xEast, meta.zNorth, meta.zSouth, 128, 121, inside(5999));
   return { meta, heightAt };
 }

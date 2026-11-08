@@ -75,9 +75,9 @@ const tamariskTexture = () => canvasTex(256, 256, (g, w, h) => {
 
 // ------------------------------------------------------------ layout (real metres)
 // meshes laid on the ground that must follow the real terrain beyond the flat yard
-const DRAPE = [];
+export const DRAPE = [];
 // ground cover is cut into cells; each cell draws all, part or none of its instances by distance
-const SCATTER = [];
+export const SCATTER = [];
 function scatterCells(geo, mat, items, { cell = 25, bands, cast = false, receive = true, shadowDist = 0 }) {
   const buckets = new Map();
   for (const it of items) {
@@ -100,7 +100,7 @@ function scatterCells(geo, mat, items, { cell = 25, bands, cast = false, receive
   return group;
 }
 // bands: [[distance, share of instances drawn], ...], nothing beyond the last band
-export function updateScatter(cam) {
+export function updateScatter(cam, shadowCenter = cam) {
   for (const c of SCATTER) {
     const d = Math.hypot(cam.x - c.x, cam.z - c.z, cam.y * 0.5);
     let share = 0;
@@ -108,7 +108,7 @@ export function updateScatter(cam) {
     const n = Math.round(c.n * share);
     c.m.visible = n > 0;
     c.m.count = n;
-    if (c.cast) c.m.castShadow = d < c.shadowDist;     // only cells near the camera cast shadows
+    if (c.cast) c.m.castShadow = Math.hypot(shadowCenter.x - c.x, shadowCenter.z - c.z) < c.shadowDist;   // only cells inside the shadow area cast
   }
 }
 export function drapeOnTerrain(heightAt) {
@@ -168,7 +168,7 @@ export function buildWorld(scene, renderer, sandTex) {
     for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${200 + rand() * 40},${170 + rand() * 40},${80 + rand() * 30},${0.35 + rand() * 0.4})`; g.save(); g.translate(rand() * w, rand() * h); g.rotate(rand() * 6.28); g.fillRect(0, 0, 6 + rand() * 8, 1.2); g.restore(); }
     for (let i = 0; i < 220; i++) { g.fillStyle = `rgba(45,30,18,${0.4 + rand() * 0.4})`; g.beginPath(); g.ellipse(rand() * w, rand() * h, 2 + rand() * 2, 1.5 + rand() * 1.5, rand() * 3, 0, 6.28); g.fill(); }
   });
-  penFloor.wrapS = penFloor.wrapT = THREE.RepeatWrapping;
+  penFloor.name = 'penFloor'; penFloor.wrapS = penFloor.wrapT = THREE.RepeatWrapping;
   for (const p of Object.values(LAYOUT.pens)) {
     const t = penFloor.clone(); t.needsUpdate = true; t.repeat.set((p.x1 - p.x0) / 6, (p.z1 - p.z0) / 6);
     const m = new THREE.Mesh(new THREE.PlaneGeometry(p.x1 - p.x0, p.z1 - p.z0).rotateX(-Math.PI / 2),
@@ -183,7 +183,7 @@ export function buildWorld(scene, renderer, sandTex) {
     g.fillStyle = '#e9c341'; g.fillRect(3, 0, 2, h); g.fillRect(w - 5, 0, 2, h);
     g.fillStyle = '#efefe8'; for (let y = 0; y < h; y += 64) g.fillRect(w / 2 - 1, y, 2, 30);
   });
-  asphaltTex.wrapT = THREE.RepeatWrapping;
+  asphaltTex.name = 'asphalt'; asphaltTex.wrapT = THREE.RepeatWrapping;
   // the road runs 6 km east-west and follows the real ground (draped once the terrain loads)
   const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 6000, 1, 600).rotateX(-Math.PI / 2).rotateY(Math.PI / 2).translate(0, 0.08, LAYOUT.roadZ),
     new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.92 }));
@@ -197,7 +197,7 @@ export function buildWorld(scene, renderer, sandTex) {
     for (const x of [w * 0.28, w * 0.72]) { const gr = g.createLinearGradient(x - 8, 0, x + 8, 0); gr.addColorStop(0, 'rgba(70,48,28,0)'); gr.addColorStop(0.5, 'rgba(70,48,28,0.55)'); gr.addColorStop(1, 'rgba(70,48,28,0)'); g.fillStyle = gr; g.fillRect(x - 8, 0, 16, h); }
     for (let i = 0; i < 600; i++) { g.fillStyle = `rgba(255,240,220,${rand() * 0.15})`; g.fillRect(rand() * w, rand() * h, 2, 2); }
   });
-  trackTex.wrapT = THREE.RepeatWrapping;
+  trackTex.name = 'track'; trackTex.wrapT = THREE.RepeatWrapping;
   const ribbon = (pts, width) => {
     const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => V(x, 0, z)));
     const n = Math.max(8, Math.round(curve.getLength() / 2)), pos = [], uv = [], idx = [];
@@ -219,7 +219,7 @@ export function buildWorld(scene, renderer, sandTex) {
   // ---------- the camel yard wall: corrugated "shinko" sheets on steel posts, a double gate
   {
     const sheet = canvasTex(256, 64, (g, w, h) => { g.fillStyle = '#d9cfbd'; g.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 8) { const gr = g.createLinearGradient(x, 0, x + 8, 0); gr.addColorStop(0, 'rgba(0,0,0,0.10)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.16)'); gr.addColorStop(1, 'rgba(0,0,0,0.10)'); g.fillStyle = gr; g.fillRect(x, 0, 8, h); } for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(150,110,70,${rand() * 0.12})`; g.fillRect(rand() * w, h - rand() * 18, 3 + rand() * 6, 2); } });
-    sheet.wrapS = THREE.RepeatWrapping;
+    sheet.name = 'sheet'; sheet.wrapS = THREE.RepeatWrapping;
     const C = LAYOUT.compound, G = LAYOUT.gate, H = 2.1;
     const wallSeg = (ax, az, bx, bz) => {
       const len = Math.hypot(bx - ax, bz - az), t = sheet.clone(); t.needsUpdate = true; t.repeat.set(len / 4, 1);
@@ -242,7 +242,7 @@ export function buildWorld(scene, renderer, sandTex) {
 
   // ---------- pens: galvanized pipe, mesh panels, gates, troughs, shades
   const meshTex = canvasTex(128, 128, (g, w, h) => { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(190,195,198,1)'; g.lineWidth = 2.2; for (let i = 0; i <= w; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); } });
-  meshTex.wrapS = meshTex.wrapT = THREE.RepeatWrapping;
+  meshTex.name = 'mesh'; meshTex.wrapS = meshTex.wrapT = THREE.RepeatWrapping;
   const panelMat = new THREE.MeshStandardMaterial({ map: meshTex, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.7, roughness: 0.45 });
   const posts = [], rails = [], panels = [];
   const penFence = (p, gateSide) => {
@@ -274,6 +274,7 @@ export function buildWorld(scene, renderer, sandTex) {
   }
   // feeding troughs (concrete) with alfalfa along the south fence of the big pens
   const hayTex = canvasTex(128, 64, (g, w, h) => { g.fillStyle = '#9da34f'; g.fillRect(0, 0, w, h); for (let i = 0; i < 500; i++) { g.strokeStyle = `rgba(${120 + rand() * 90},${130 + rand() * 70},${50 + rand() * 30},0.7)`; g.beginPath(); const x = rand() * w, y = rand() * h; g.moveTo(x, y); g.lineTo(x + 5 + rand() * 9, y + (rand() - 0.5) * 3); g.stroke(); } });
+  hayTex.name = 'hay';
   const concrete = new THREE.MeshStandardMaterial({ color: '#bdb5a8', roughness: 0.95 });
   for (const p of [LAYOUT.pens.main, LAYOUT.pens.young, LAYOUT.pens.calves]) {
     const len = (p.x1 - p.x0) * 0.6, cx = (p.x0 + p.x1) / 2 - (p.x1 - p.x0) * 0.12, cz = p.z1 - 0.9;
@@ -343,7 +344,7 @@ export function buildWorld(scene, renderer, sandTex) {
   {
     const room = new THREE.Group(); room.position.set(6, 0, 6.5);
     const blocks = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#e4d8c3'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(150,130,105,0.35)'; g.lineWidth = 1; for (let y = 0; y < h; y += 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let x = (y / 16) % 2 ? 0 : 20; x < w; x += 40) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 16); g.stroke(); } } });
-    blocks.wrapS = blocks.wrapT = THREE.RepeatWrapping; blocks.repeat.set(3, 1.2);
+    blocks.name = 'blocks'; blocks.wrapS = blocks.wrapT = THREE.RepeatWrapping; blocks.repeat.set(3, 1.2);
     const wallMat = new THREE.MeshStandardMaterial({ map: blocks, roughness: 0.92 });
     const W = 10, D = 5.5, H = 3.2;
     const plinth = new THREE.Mesh(new THREE.BoxGeometry(W + 0.6, 0.35, D + 0.6), concrete); plinth.position.y = 0.17; plinth.receiveShadow = true; room.add(plinth);
@@ -360,6 +361,7 @@ export function buildWorld(scene, renderer, sandTex) {
     for (const y of [0.4, 0.35 + H - 0.05]) { const tr = new THREE.Mesh(new THREE.BoxGeometry(W, 0.1, 0.1), frameMat); tr.position.set(0, y, -D / 2); room.add(tr); }
     // inside, seen through the glass: a carpet and floor cushions along the walls
     const carpet = canvasTex(128, 64, (g, w, h) => { g.fillStyle = '#7a1f1c'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d8b46a'; g.lineWidth = 3; g.strokeRect(6, 6, w - 12, h - 12); g.fillStyle = '#1e2d4a'; g.beginPath(); g.ellipse(w / 2, h / 2, 26, 14, 0, 0, 6.28); g.fill(); });
+    carpet.name = 'carpet';
     const rugIn = new THREE.Mesh(new THREE.PlaneGeometry(W - 1, D - 1).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: carpet, roughness: 1 })); rugIn.position.set(0, 0.37, 0); room.add(rugIn);
     const cushion = new THREE.MeshStandardMaterial({ color: '#8b2620', roughness: 0.9 });
     const seat = new THREE.Mesh(new RoundedBoxGeometry(W - 1.2, 0.22, 0.7, 2, 0.06), cushion); seat.position.set(0, 0.48, D / 2 - 0.55); room.add(seat);
@@ -381,6 +383,7 @@ export function buildWorld(scene, renderer, sandTex) {
   // ---------- the owner's majlis: goat-hair tent, Sadu rug, fire pit
   {
     const wool = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#1c1916'; g.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 32) { g.fillStyle = 'rgba(120,105,90,0.35)'; g.fillRect(x, 0, 2, h); } for (let i = 0; i < 3000; i++) { g.fillStyle = `rgba(255,255,255,${rand() * 0.04})`; g.fillRect(rand() * w, rand() * h, 1, 2); } });
+    wool.name = 'wool';
     const L = 12, D = 5.5, H = 2.3, E = 1.35;
     const v = [-L / 2, E, -D / 2, L / 2, E, -D / 2, L / 2, H, 0, -L / 2, E, -D / 2, L / 2, H, 0, -L / 2, H, 0, -L / 2, H, 0, L / 2, H, 0, L / 2, E, D / 2, -L / 2, H, 0, L / 2, E, D / 2, -L / 2, E, D / 2,
       -L / 2, 0, -D / 2, L / 2, 0, -D / 2, L / 2, E, -D / 2, -L / 2, 0, -D / 2, L / 2, E, -D / 2, -L / 2, E, -D / 2, -L / 2, 0, -D / 2, -L / 2, E, -D / 2, -L / 2, H, 0, -L / 2, 0, -D / 2, -L / 2, H, 0, -L / 2, 0, 0,
@@ -390,6 +393,7 @@ export function buildWorld(scene, renderer, sandTex) {
     g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals();
     const tent = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: wool, roughness: 1, side: THREE.DoubleSide })); tent.position.set(-12, 0, 7); tent.rotation.y = Math.PI; tent.castShadow = tent.receiveShadow = true; scene.add(tent);
     const sadu = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 18, w, 10); c.fillRect(0, h - 28, w, 10); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } c.fillStyle = '#efe6d6'; for (let x = 12; x < w; x += 24) { c.beginPath(); c.moveTo(x - 5, 64); c.lineTo(x, 54); c.lineTo(x + 5, 64); c.lineTo(x, 74); c.fill(); } });
+    sadu.name = 'sadu';
     const rug = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.4).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: sadu, roughness: 1 })); rug.position.set(-12, 0.04, 2.6); rug.receiveShadow = true; scene.add(rug);
     const stones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.16, 0), new THREE.MeshStandardMaterial({ color: '#6f6559', roughness: 1 }), 10);
     for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; stones.setMatrixAt(i, M4().makeTranslation(-12 + Math.cos(a) * 0.55, 0.08, 0.6 + Math.sin(a) * 0.55)); } scene.add(stones);
@@ -412,9 +416,10 @@ export function buildWorld(scene, renderer, sandTex) {
       for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(0,0,0,${rand() * 0.06})`; g.fillRect(rand() * w, rand() * h, 1, 1); }
     });
     const rugs = [[rugTex('#7d1d1b', '#d9b25e', '#1f2f52'), 0, -0.6, 5.2, 3.0], [rugTex('#5e1a2a', '#e3c27a', '#7d1d1b'), -3.6, 0.2, 3.6, 3.8], [rugTex('#1f2f52', '#d9b25e', '#7d1d1b'), 3.6, 0.2, 3.6, 3.8]];
+    rugs.forEach(([t], i) => { t.name = 'rug' + i; });
     for (const [tex, x, z, w, d] of rugs) { const r = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 1 })); r.position.set(x, 0.03 + rand() * 0.004, z); r.receiveShadow = true; T.add(r); }
     const cushTex = canvasTex(128, 32, (g, w, h) => { g.fillStyle = '#8c2420'; g.fillRect(0, 0, w, h); g.fillStyle = '#d6ad55'; for (let x = 0; x < w; x += 16) { g.beginPath(); g.moveTo(x, h / 2); g.lineTo(x + 8, 4); g.lineTo(x + 16, h / 2); g.lineTo(x + 8, h - 4); g.fill(); } g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2); });
-    cushTex.wrapS = THREE.RepeatWrapping; cushTex.repeat.set(6, 1);
+    cushTex.name = 'cushion'; cushTex.wrapS = THREE.RepeatWrapping; cushTex.repeat.set(6, 1);
     const cush = new THREE.MeshStandardMaterial({ map: cushTex, roughness: 0.95 });
     const seat = new THREE.Mesh(new RoundedBoxGeometry(L - 1.2, 0.16, 0.75, 2, 0.05), cush); seat.position.set(0, 0.1, -D / 2 + 0.55); T.add(seat);
     const back = new THREE.Mesh(new RoundedBoxGeometry(L - 1.2, 0.5, 0.2, 2, 0.06), cush); back.position.set(0, 0.42, -D / 2 + 0.22); T.add(back);
@@ -423,6 +428,7 @@ export function buildWorld(scene, renderer, sandTex) {
     for (let x = -L / 2 + 1.4; x < L / 2 - 1; x += 1.25) { const r = new THREE.Mesh(roll, cush); r.position.set(x, 0.29, -D / 2 + 0.75); T.add(r); }
     // the Sadu curtain (القاطع) closing the far end
     const saduCurtain = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 20, w, 9); c.fillRect(0, h - 29, w, 9); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } });
+    saduCurtain.name = 'curtain';
     const qt = new THREE.Mesh(new THREE.PlaneGeometry(D - 0.4, 1.9), new THREE.MeshStandardMaterial({ map: saduCurtain, roughness: 1, side: THREE.DoubleSide })); qt.position.set(L / 2 - 1.4, 0.95, 0); qt.rotation.y = Math.PI / 2; T.add(qt);
     // the hearth (وجار) with embers, the brass dallahs, a thermos, cups and dates
     const hearth = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.9), new THREE.MeshStandardMaterial({ color: '#8a7b68', roughness: 1 })); hearth.position.set(0, 0.09, D / 2 - 1.2); T.add(hearth);
@@ -544,7 +550,7 @@ export function buildWorld(scene, renderer, sandTex) {
       k++;
     }
     scene.add(scatterCells(g, new THREE.MeshStandardMaterial({ map: bushTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
-      { cell: 80, cast: true, shadowDist: 110, bands: [[120, 1], [260, 0.5], [450, 0.25]] }));
+      { cell: 80, cast: true, shadowDist: 120, bands: [[120, 1], [260, 0.5], [450, 0.25]] }));
     // stones: 8 triangles each (they are a few centimetres across), only near the camera
     const sg = new THREE.OctahedronGeometry(0.12, 0); sg.scale(1, 0.5, 1.25);
     const stones = [];

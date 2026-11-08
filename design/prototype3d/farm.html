@@ -1,81 +1,182 @@
 <title>عزبة الصفوة</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=Alexandria:wght@500;600;700&display=swap">
 <style>
-  /* One screen: the 3D world is the game; glass controls sit only on the edges. */
+  /* Layout: the 3D yard is the whole screen and the map is the menu. A status strip on top, two
+     camera buttons in the bottom end corner, and a context card at the bottom only while a camel or
+     the followed herd is picked. Places on the map are tappable tags (or their 3D objects); a tap
+     docks the place's card (at the bottom in portrait, on the start side in landscape) and glides
+     the camera so the place stays in view. Far places (the market, the festival) sit on the
+     horizon in their real direction, or on the screen edge with an arrow when out of view.
+     No backdrop-filter anywhere: a blurred panel re-blurs the live 3D canvas every frame. */
   :root {
-    --ground: #b98a5e;
-    --glass: rgba(22, 16, 12, 0.52);
-    --glass-line: rgba(255, 255, 255, 0.16);
-    --ink: #fffaf2;
-    --ink-soft: rgba(255, 250, 242, 0.82);
-    --saffron: #e0a93b;
-    --on-saffron: #1b1410;
-    --live: #7fd08a;
-    --font-ui: 'IBM Plex Sans Arabic', 'Geeza Pro', 'Segoe UI', Tahoma, sans-serif;
+    --kohl: rgba(18, 21, 28, 0.9);           /* glass: cool ink against the warm sand */
+    --kohl-deep: rgba(18, 21, 28, 0.96);
+    --line: rgba(255, 255, 255, 0.13);
+    --ink: #f5f2ec;
+    --ink-2: rgba(245, 242, 236, 0.68);
+    --ink-3: rgba(245, 242, 236, 0.45);
+    --najdi: #34bcaa;                         /* the turquoise of Najdi doors */
+    --on-najdi: #05221d;
+    --sadu: #c8402f;                          /* Sadu red, only in the crest */
+    --good: #8fd47f; --warn: #f2b54c; --bad: #f06a5d;
+    --display: 'Alexandria', 'Readex Pro', 'Geeza Pro', Tahoma, sans-serif;
+    --ui: 'Readex Pro', 'Geeza Pro', 'Segoe UI', Tahoma, sans-serif;
+    --r-island: 20px;
+    --gap: 10px;
+    --edge-t: calc(10px + env(safe-area-inset-top, 0px));
+    --edge-b: calc(12px + env(safe-area-inset-bottom, 0px));
+    --edge-r: max(12px, env(safe-area-inset-right, 0px));
+    --edge-l: max(12px, env(safe-area-inset-left, 0px));
     color-scheme: dark;
   }
   html, body { height: 100%; }
-  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-ui); overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #b98a5e; color: var(--ink); font-family: var(--ui); overflow: hidden; -webkit-tap-highlight-color: transparent; }
   #stage { position: fixed; inset: 0; }
   #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-  .glass { background: var(--glass); -webkit-backdrop-filter: blur(16px) saturate(150%); backdrop-filter: blur(16px) saturate(150%); border: 1px solid var(--glass-line); }
-  button { font: inherit; color: var(--ink); cursor: pointer; }
-  button:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
-  .top { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 8px; pointer-events: none; }
+  [hidden] { display: none !important; }
+  button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+  button:focus-visible { outline: 2px solid var(--najdi); outline-offset: 2px; }
+  .glass { background: var(--kohl); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 4px 14px rgba(0, 0, 0, 0.22); }
+  .num { font-variant-numeric: tabular-nums; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  svg.i.fill { fill: currentColor; stroke: none; }
+  svg.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- status strip */
+  .top { position: fixed; top: var(--edge-t); right: var(--edge-r); left: var(--edge-l); display: flex; align-items: center; gap: var(--gap); pointer-events: none; }
   .top > * { pointer-events: auto; }
-  .round { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; flex: none; }
-  .pill { height: 44px; padding: 0 14px; border-radius: 22px; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
-  .pill b { font-size: 13px; line-height: 1.25; }
-  .pill span { font-size: 11px; line-height: 1.25; color: var(--ink-soft); }
-  .cash { flex-direction: row; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .cash span { font-size: 11px; font-weight: 500; }
-  .grow { flex: 1; }
-  .side { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; }
-  .side button { height: 44px; padding: 0 14px; border-radius: 22px; font-size: 13px; font-weight: 600; }
-  .side button[aria-pressed="true"] { background: var(--saffron); color: var(--on-saffron); border-color: transparent; }
-  .sheet { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); max-width: 560px; margin-inline: auto; padding: 10px 12px 10px 14px; border-radius: 22px; display: flex; align-items: center; gap: 12px; box-sizing: border-box; }
-  .dot { width: 10px; height: 10px; border-radius: 10px; background: var(--live); box-shadow: 0 0 0 4px rgba(127, 208, 138, 0.25); flex: none; }
-  .sheet .txt { flex: 1; min-width: 0; }
-  .sheet .t1 { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sheet .t2 { font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sheet .act { height: 38px; padding: 0 14px; border-radius: 19px; border: 0; background: var(--ink); color: var(--on-saffron); font-size: 12px; font-weight: 700; flex: none; }
-  .sheet .ghost { background: transparent; color: var(--ink); border: 1px solid var(--glass-line); }
+  .farm { display: flex; align-items: center; gap: 10px; height: 48px; padding-inline: 6px 14px; border-radius: 24px; min-width: 0; }
+  .crest { width: 36px; height: 36px; border-radius: 18px; flex: none; display: grid; place-items: center; background: #0d1016; overflow: hidden; }
+  .farm .t { min-width: 0; display: grid; overflow: hidden; }
+  .farm b { font-family: var(--display); font-weight: 600; font-size: 16px; line-height: 1.15; white-space: nowrap; }
+  .farm small { font-size: 11.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spacer { flex: 1; }
+  .money { display: flex; align-items: center; gap: 6px; height: 48px; padding-inline: 10px; border-radius: 24px; margin-inline-start: auto; flex: none; }
+  .money b { font-family: var(--display); font-weight: 600; font-size: 17px; letter-spacing: 0.01em; }
+  .money small { font-size: 11px; color: var(--ink-2); }
+  .money svg { color: var(--warn); }
+
+  /* ---------- camera views: two buttons in the bottom end corner; in portrait they ride above a docked card (--dock) */
+  .views { position: fixed; left: var(--edge-l); bottom: calc(var(--edge-b) + var(--dock, 0px)); display: flex; gap: 4px; padding: 4px; border-radius: 28px; }
+  .views button { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; color: var(--ink-2); transition: background 0.2s, color 0.2s; }
+  .views button[aria-pressed="true"] { background: var(--najdi); color: var(--on-najdi); }
+  .views button:hover { color: var(--ink); }
+
+  /* ---------- context card: the camel you picked, or the herd you follow */
+  .card { position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; padding: 12px; border-radius: var(--r-island); display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; box-sizing: border-box; }
+  .card[hidden] { display: none; }
+  .avatar { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); grid-row: span 2; }
+  .avatar i { width: 26px; height: 26px; border-radius: 13px; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35); }
+  .card .t1 { font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1.2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .acts { grid-row: span 2; display: flex; gap: 6px; align-items: center; }
+  .card .sub { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; font-size: 12px; color: var(--ink-2); }
+  .chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(255, 255, 255, 0.09); color: var(--ink); font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .chip .d { width: 7px; height: 7px; border-radius: 4px; background: var(--good); }
+  .chip.walk .d { background: var(--najdi); }
+  .chip.idle .d { background: var(--ink-3); }
+  .note { flex-basis: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .primary { height: 44px; padding: 0 16px; border-radius: 20px; background: var(--najdi); color: var(--on-najdi); font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .primary.on { background: var(--ink); color: #12151c; }
+  .icon-btn { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); color: var(--ink-2); }
+
+  /* ---------- the place card, docked: at the bottom between the gutters (on the start side in landscape) */
+  .pop { position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; max-height: min(34vh, 290px); border-radius: 20px; background: var(--kohl-deep); display: flex; flex-direction: column; overflow: hidden; z-index: 5; }
+  .pop header { display: flex; align-items: center; gap: 10px; padding: 12px 10px 8px 12px; }
+  .pop .ttl { flex: 1; min-width: 0; display: grid; gap: 1px; }
+  .pop h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1.25; }
+  .pop .ttl small { font-size: 12px; color: var(--ink-2); }
+  .pop .body { overflow-y: auto; padding: 4px 6px 4px; overscroll-behavior: contain; }
+  .pop .acts { display: flex; gap: 8px; padding: 8px 12px 12px; }
+  .ghost { height: 44px; padding: 0 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.1); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .band { height: 5px; flex: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='6'%3E%3Cpath d='M0 6 6 0 12 6z' fill='%2334bcaa'/%3E%3Cpath d='M3 6 6 3 9 6z' fill='%23f5f2ec'/%3E%3C/svg%3E") repeat-x; opacity: 0.55; }
+  .hint { margin: 4px 8px 8px; font-size: 11px; color: var(--ink-3); }
+  .row { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 12px; align-items: center; padding: 9px 8px; border-radius: 14px; text-align: start; box-sizing: border-box; }
+  button.row:hover { background: rgba(255, 255, 255, 0.06); }
+  .row .lead { grid-column: 1; grid-row: span 2; width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .row .lead i { width: 20px; height: 20px; border-radius: 10px; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.3); }
+  .row b { font-weight: 600; font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row > span { grid-column: 2; font-size: 12px; color: var(--ink-2); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .end { grid-row: 1 / span 2; grid-column: 3; font-size: 12px; font-weight: 600; text-align: end; }
+  .row .end.warn { color: var(--warn); } .row .end.bad { color: var(--bad); } .row .end.good { color: var(--good); }
+  .group { margin: 10px 8px 4px; font-size: 11px; font-weight: 600; color: var(--ink-3); letter-spacing: 0.02em; }
+
+  /* ---------- labels over the world */
   #labels { position: fixed; inset: 0; pointer-events: none; }
-  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; border-radius: 9px; font-size: 11px; font-weight: 600; white-space: nowrap; will-change: transform; }
-  .lbl.warn { color: #ffe3a3; }
+  .lbl { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding-inline: 10px 14px; box-sizing: border-box; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; will-change: transform; background: rgba(15, 18, 25, 0.7); border: 1px solid var(--line); color: var(--ink); pointer-events: auto; }
+  .lbl::after { content: ""; position: absolute; left: calc(50% + var(--tail, 0px)); bottom: -5px; width: 8px; height: 8px; margin-left: -4px; background: inherit; transform: rotate(45deg); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .lbl:hover, .lbl.on { background: var(--najdi); color: var(--on-najdi); border-color: transparent; }
+  .lbl::before { content: ""; position: absolute; inset: -3px -2px; }        /* 44 px tap target around a 40 px tag */
+  .lbl.place { border-color: rgba(52, 188, 170, 0.7); }
+  .lbl .arr { display: none; width: 14px; height: 14px; flex: none; }
+  .lbl.edge .arr { display: block; }
+  .lbl.edge::after { display: none; }
+  .lbl .ic { width: 16px; height: 16px; stroke-width: 2; color: var(--najdi); }
+  .lbl.warn .ic { color: var(--warn); }
+  .lbl:hover .ic, .lbl.on .ic { color: inherit; }
+  .lbl.far { font-family: var(--display); }
+
+  /* ---------- loading */
   .status { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
   .status[hidden] { display: none; }
-  .status p { margin: 0; padding: 10px 16px; border-radius: 14px; font-size: 14px; }
-  @media (max-width: 370px) { .pill span { display: none; } }
+  .status p { margin: 0; padding: 12px 18px; border-radius: 16px; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+
+  /* ---------- landscape phones: the context card clears the camera buttons, the place card docks on the start side under the strip */
+  @media (orientation: landscape) and (max-height: 600px) {
+    :root { --edge-t: calc(8px + env(safe-area-inset-top, 0px)); --edge-b: calc(10px + env(safe-area-inset-bottom, 0px)); }
+    .farm, .money { height: 42px; }
+    .crest { width: 32px; height: 32px; }
+    .views { bottom: var(--edge-b); }
+    .card { right: var(--edge-r); left: calc(var(--edge-l) + 120px); max-width: 440px; }
+    .pop { top: calc(var(--edge-t) + 50px); bottom: auto; left: auto; width: min(340px, 42vw); margin: 0; max-height: calc(100% - var(--edge-t) - 50px - var(--edge-b)); }
+  }
+  @media (max-width: 359px) { .farm small { display: none; } }
+  body.carded .views { display: none; }          /* portrait: the place card takes the bottom; the map keeps the rest */
+  @media (orientation: landscape) and (max-height: 600px) { body.carded .views { display: flex; } }
+  @media (prefers-reduced-motion: reduce) { .views button { transition: none; } }
 </style>
 
 <div id="stage" aria-label="عزبة الصفوة ثلاثية الأبعاد: الحلال يسرح في المرعى جنب الشبوك. اسحب للف الكاميرا، وقرّب بإصبعين، واضغط على ناقة لتختارها."></div>
-<div id="labels" aria-hidden="true"></div>
+<div id="labels" dir="rtl" lang="ar" role="group" aria-label="أماكن العزبة على الخريطة"></div>
 
 <div class="top" dir="rtl">
-  <button class="round glass" type="button" aria-label="خريطة المملكة">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20V6.5z"></path><path d="M9 4v13.5M15 6.5V20"></path></svg>
-  </button>
-  <div class="pill glass"><b>عزبة الصفوة</b><span id="clock">أبانات، القصيم · العصر 4:12</span></div>
-  <div class="grow"></div>
-  <div class="pill glass cash">486,300 <span>ريال</span></div>
+  <div class="farm glass">
+    <span class="crest" aria-hidden="true">
+      <svg width="36" height="36" viewBox="0 0 36 36"><path d="M0 26 6 18 12 26 18 18 24 26 30 18 36 26V36H0z" fill="#34bcaa"/><path d="M0 26 6 18 12 26z M12 26 18 18 24 26z M24 26 30 18 36 26z" fill="#c8402f" opacity=".9"/><path d="M18 6c-2.6 0-3.6 2.2-3.6 4.1 0 1.2.5 2.3 1.2 3.1l-3.7 1.2c-1 .3-1.6 1.2-1.6 2.2v1.4h15.4v-1.4c0-1-.6-1.9-1.6-2.2l-3.7-1.2c.7-.8 1.2-1.9 1.2-3.1C21.6 8.2 20.6 6 18 6z" fill="#f5f2ec"/></svg>
+    </span>
+    <div class="t"><b>عزبة الصفوة</b><small class="num" aria-label="8 نوفمبر، العصر 3:20، موسم الوسم">8 نوفمبر · العصر 3:20 · الوسم</small></div>
+  </div>
+  <div class="money glass" aria-label="الرصيد 486,300 ريال">
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7"/><path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg>
+    <b class="num">486,300</b><small>ريال</small>
+  </div>
 </div>
 
-<div class="side" dir="rtl">
-  <button id="cam-drone" class="glass" type="button" aria-pressed="true">درون</button>
-  <button id="cam-near" class="glass" type="button" aria-pressed="false">قريب</button>
-  <button id="cam-room" class="glass" type="button" aria-pressed="false">الغرفة</button>
-  <button id="cam-camp" class="glass" type="button" aria-pressed="false">المسراح</button>
-  <button id="cam-hill" class="glass" type="button" aria-pressed="false">الجبل</button>
+<div class="views glass" dir="rtl" role="group" aria-label="زاوية الكاميرا">
+  <button id="cam-drone" type="button" aria-pressed="true" aria-label="درون"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.5"/></svg></button>
+  <button id="cam-near" type="button" aria-pressed="false" aria-label="قريب"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
 </div>
 
-<div class="sheet glass" dir="rtl" aria-live="polite">
-  <span class="dot" aria-hidden="true"></span>
-  <div class="txt"><div class="t1" id="s1">الحلال يسرح · 20 راس</div><div class="t2" id="s2">في المسراح، 330 م عن العزبة · رمث وعرفج</div></div>
-  <button id="s-clear" class="act ghost" type="button" hidden>إلغاء</button>
-  <button id="s-act" class="act" type="button">تابع القطيع</button>
-</div>
+<section class="card glass" id="card" dir="rtl" aria-live="polite" hidden>
+  <span class="avatar" id="c-avatar" aria-hidden="true"></span>
+  <div class="t1" id="s1">الحلال يسرح</div>
+  <div class="acts">
+    <button id="s-act" class="primary" type="button">تابع القطيع</button>
+    <button id="s-clear" class="icon-btn" type="button" aria-label="إغلاق" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="sub" id="s2"></div>
+</section>
+
+<section class="pop" id="pop" dir="rtl" hidden role="dialog" aria-labelledby="pop-title" tabindex="-1">
+  <header>
+    <div class="ttl"><h2 id="pop-title"></h2><small id="pop-sub"></small></div>
+    <button class="icon-btn" id="pop-close" type="button" aria-label="إغلاق"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </header>
+  <div class="band" aria-hidden="true"></div>
+  <div class="body" id="pop-body"></div>
+  <div class="acts" id="pop-acts"></div>
+</section>
 
 <div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p></div>
 
@@ -329,44 +430,273 @@ class Camel {
     const every = d < 48 ? 1 : d < 150 ? 2 : 4;
     if (this.frame % every === 0) { this.mixer.update(this.animDt); this.animDt = 0; }
     if (this.clip === 'walk' && this.li < 2 && this.speed > 0.2) {
-      this.feet.forEach((f, i) => {
-        const w = f.getWorldPosition(tmpV);
+      for (let i = 0; i < this.feet.length; i++) {
+        const w = this.feet[i].getWorldPosition(tmpV);
         const down = w.y < 0.07 * (this.scale || 1);
         if (down && !this.contact[i]) footfall(w, h, d < 60);
         this.contact[i] = down;
-      });
+      }
     }
   }
 }
 const tmpV = new THREE.Vector3(), tmpTo = new THREE.Vector3(), tmpAway = new THREE.Vector3(), UPV = new THREE.Vector3(0, 1, 0);
 
 const NAMES = ['الصفوة', 'هدلا', 'نجلا', 'الغالية', 'الهيلة', 'المزيونة', 'صيته', 'شهلا', 'عفرا', 'غرسة', 'ريمة', 'وضحى', 'دبلة', 'العنود', 'شيخة', 'مزون', 'الجوهرة', 'سمحة', 'زينة', 'حصة'];
-const AGES = ['ثنية', 'رباع', 'سديس', 'حقة', 'لقية', 'جذعة', 'فاطر'];
+const AGES = ['ثنية', 'رباعية', 'سديسة', 'حقة', 'لقية', 'جذعة', 'فاطر'];
 const coatsOut = ['wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'homr', 'homr', 'homr', 'homr', 'majaheem', 'majaheem', 'shaqh', 'shaqh'];
 
 // ------------------------------------------------------------ labels over the world
 const labelLayer = $('labels');
 const P = LAYOUT.pens, mid = (p, y) => new THREE.Vector3((p.x0 + p.x1) / 2, y, (p.z0 + p.z1) / 2);
-const labels = [
-  ['شبك النوق · 2', mid(P.main, 2.6)], ['المفاريد', mid(P.young, 2.4)], ['الحيران · 6', mid(P.calves, 2.4)],
-  ['مزعل', mid(P.bull, 2.6)], ['العزل · مزنة', mid(P.sick, 2.4)],
-  ['الماء 62% · 8 أيام', new THREE.Vector3(30, 7.6, -40), 'warn'], ['العلف 13 يوم', new THREE.Vector3(32, 4.6, -21)],
-  ['غرفة العزبة', new THREE.Vector3(6, 4.6, 6.5)], ['كرفان الراعي', new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22)], ['بيت الشعر', new THREE.Vector3(-12, 3.0, 7)], ['البوابة', new THREE.Vector3(24, 2.6, 15)],
-  ['أبان الأسمر · 1225 م', new THREE.Vector3(6413, 520, -885), 'far'], ['أبان الأحمر · 1309 م', new THREE.Vector3(-11344, 610, 35151), 'far'],
-].map(([text, p, cls]) => { const el = document.createElement('div'); el.className = 'lbl glass' + (cls && cls !== 'far' ? ' ' + cls : ''); el.textContent = text; labelLayer.appendChild(el); return { el, p, far: cls === 'far' }; });
-const proj = new THREE.Vector3();
-function placeLabels() {
-  const w = stage.clientWidth, h = stage.clientHeight;
+let pop = null;          // the open place card
+const row = ({ lead = '', title, sub = '', end = '', cls = '', btn = false, data = '' }) =>
+  `<${btn ? 'button type="button"' : 'div'} class="row" ${data}><span class="lead">${lead}</span><b>${title}</b><span>${sub}</span><em class="end ${cls}" style="font-style:normal">${end}</em></${btn ? 'button' : 'div'}>`;
+const GRAZE_MID = new THREE.Vector3((LAYOUT.graze.x0 + LAYOUT.graze.x1) / 2, 3.2, (LAYOUT.graze.z0 + LAYOUT.graze.z1) / 2);
+// far places in their real direction from the yard (25.81 N, 42.90 E), placed on the horizon:
+// Buraydah's camel market is about 57 km north and 107 km east (122 km, east-north-east); the big
+// festival ground at Al-Sayahid, north-east of Riyadh, lies about 465 km east and a little south
+const toward = (east, south) => new THREE.Vector3(east, 0, south).normalize().multiplyScalar(6000).setY(420);
+const water = { pct: 62, days: 8, ordered: false };
+const inPenOf = (pen) => camels.filter((c) => c.pen === pen);
+const camelRows = (list) => list.map((c) => row({ btn: true, data: `data-camel="${camels.indexOf(c)}"`, lead: `<i style="background:${COAT_HEX[c.coat]}"></i>`, title: esc(c.name), sub: `${COATS[c.coat].name} · ${esc(c.age)}`, end: stateWord(c) })).join('');
+const closer = (pl) => ({ label: 'قرّب', run: () => glideTo(pl, 36) });
+const pen = (key, name, rect, sub, cls) => ({ key, rect, cls, icon: 'pen', p: mid(rect, 2.6), max: 280,
+  text: () => `${name} · ${inPenOf(rect).length}`,
+  open() { const list = inPenOf(rect); return { title: name, sub: `${list.length} راس · ${sub}`, html: camelRows(list), actions: [closer(this)] }; } });
+const PLACES = [
+  pen('main', 'شبك النوق', P.main, 'المظلات والحوض'),
+  pen('young', 'المفاريد', P.young, 'مفاريد هالسنة'),
+  pen('calves', 'الحيران', P.calves, 'ينتظرون أمهاتهم من المرعى'),
+  pen('bull', 'شبك الفحل', P.bull, 'موسم الضراب'),
+  pen('sick', 'العزل', P.sick, 'جرب يعدي · باقي 12 يوم علاج', 'warn'),
+  { key: 'graze', icon: 'herd', p: GRAZE_MID, max: 900, text: () => `المسراح · ${camels.filter((c) => c.home === 'graze').length}`,
+    open() { const list = camels.filter((c) => c.home === 'graze');
+      return { title: 'الحلال يسرح', sub: `${list.length} راس · 330 م عن العزبة · رمث وعرفج`, html: camelRows(list),
+        actions: [{ label: 'تابع القطيع', primary: true, run: () => { closePop(); followTheHerd(); view('near'); } }] }; } },
+  // water and feed reach 220 m: the default drone view is 140 m from the tank, and its warning must show there
+  { key: 'water', icon: 'water', p: new THREE.Vector3(30, 7.6, -40), max: 280, cls: () => (water.ordered ? '' : 'warn'),
+    text: () => (water.ordered ? `الماء ${water.pct}٪ · الوايت جاي` : `الماء ${water.pct}٪ · ${water.days} أيام`),
+    open() { return { title: 'خزان الماء', sub: water.ordered ? `${water.pct}٪ · طلبت وايت، في الطريق` : `${water.pct}٪ · يكفي ${water.days} أيام`,
+      actions: water.ordered ? [closer(this)] : [{ label: 'اطلب وايت', primary: true, run: () => { water.ordered = true; refreshLabels(); openPlace(this, true); } }, closer(this)] }; } },
+  { key: 'feed', icon: 'feed', p: new THREE.Vector3(32, 4.6, -21), max: 280, text: () => 'العلف 13 يوم',
+    open() { return { title: 'مخزن العلف', sub: 'يكفي 13 يوم · شعير وبرسيم', actions: [closer(this)] }; } },
+  { key: 'room', icon: 'room', p: new THREE.Vector3(6, 4.6, 6.5), max: 280, text: () => 'غرفة العزبة',
+    open() { return { title: 'غرفة العزبة', sub: 'واجهة زجاج على الشبوك · جلسة ومكيفات', actions: [{ label: 'ادخل', primary: true, run: () => { closePop(); view('room'); } }] }; } },
+  { key: 'tent', icon: 'tent', p: new THREE.Vector3(-12, 3.0, 7), max: 280, text: () => 'بيت الشعر',
+    open() { return { title: 'بيت الشعر', sub: 'دلال وتمر · الضو شابّ', actions: [closer(this)] }; } },
+  { key: 'gate', icon: 'gate', p: new THREE.Vector3(24, 2.6, 15), max: 280, text: () => 'البوابة',
+    open() { return { title: 'البوابة', sub: 'الطريق للمسراح 330 م', actions: [closer(this)] }; } },
+  { key: 'camp', icon: 'camp', p: new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22), max: 600, text: () => 'كرفان الراعي',
+    open() { return { title: 'كرفان الراعي', sub: 'على تريلة · في المسراح', actions: [{ label: 'روح له', primary: true, run: () => { closePop(); view('camp'); } }] }; } },
+  { key: 'asmar', icon: 'mountain', p: new THREE.Vector3(6413, 520, -885), min: 900, cls: 'far', text: () => 'أبان الأسمر · 1225 م',
+    open() { return { title: 'أبان الأسمر', sub: '1225 م · 6.4 كم شرق العزبة', actions: [{ label: 'منظر الجبل', primary: true, run: () => { closePop(); view('hill'); } }] }; } },
+  { key: 'ahmar', icon: 'mountain', p: new THREE.Vector3(-11344, 610, 35151), min: 900, cls: 'far', text: () => 'أبان الأحمر · 1309 م',
+    open() { return { title: 'أبان الأحمر', sub: '1309 م · 37 كم جنوب غرب العزبة' }; } },
+  // example prices from the bands in GDD §6: slaughter and hiqq 3-6k, maqani 10-40k, select fardiyat 60-100k
+  { key: 'market', icon: 'market', p: toward(107, -57), edge: true, cls: 'place', text: () => 'حراج الإبل · بريدة 122 كم',
+    open() { const L = [['حقة وضحاء', 'القصيم · بريدة', '5,000'], ['جذعة شقحاء مقانية', 'حائل', '33,500'], ['لقية حمراء مقانية', 'الرس', '18,000'], ['ثنية مجاهيم فردية مميزة', 'الخرج', '85,000']];
+      return { title: 'حراج الإبل · بريدة', sub: '122 كم خط مستقيم شرق شمال شرق', html: '<p class="hint">أمثلة لشكل العرض. الأسعار الحقيقية يحسبها محرك اللعبة.</p>' +
+        L.map(([t, w, pr]) => row({ lead: HERD_ICON, title: t, sub: w, end: `<span class="num">${pr}</span> ريال` })).join('') }; } },
+  // generic names only, no official festival names (GDD §7); rounds in the Saudi system
+  { key: 'mazayen', icon: 'festival', p: toward(460, 30), edge: true, cls: 'place', text: () => 'المزاين · الصياهد 465 كم',
+    open() { const L = [['فردي دق · وضح', 'التسجيل يقفل بعد 3 أيام', 'مفتوح'], ['مفاريد البكار · مجاهيم', 'بعد 9 أيام', ''], ['جمل 30 متن · شقح', 'بعد 14 يوم', '']];
+      const cup = `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS.festival}</svg>`;
+      return { title: 'مزاين الصياهد', sub: 'حوالي 465 كم شرق العزبة · من ديسمبر لأوائل يناير', html: '<p class="hint">أمثلة لشكل العرض. المواعيد الحقيقية من تقويم اللعبة.</p>' +
+        L.map(([t, w, e]) => row({ lead: cup, title: t, sub: w, end: e, cls: 'good' })).join('') }; } },
+];
+// category icons for the tags (24 px grid, drawn with the stroke of svg.i; the herd is a filled camel)
+const ICONS = {
+  pen: '<path d="M4 5v15M12 5v15M20 5v15M4 9h16M4 15h16"/>',
+  water: '<path d="M12 3.5S6 10.1 6 14a6 6 0 0 0 12 0c0-3.9-6-10.5-6-10.5z"/>',
+  feed: '<rect x="3" y="7" width="18" height="11" rx="2"/><path d="M8 7v11M16 7v11"/>',
+  room: '<path d="M3 20h18M5 20V9h14v11"/><path d="M8 20v-6h8v6M12 14v6"/><path d="M3 9h18"/>',
+  tent: '<path d="M2 18h20M3.5 18 7 9l5 2.5L17 9l3.5 9"/><path d="M10 18v-4h4v4"/>',
+  gate: '<path d="M4 21V5M20 21V5M4 7l6 3v9l-6-2M20 7l-6 3v9l6-2"/>',
+  camp: '<rect x="2" y="8" width="13" height="8" rx="1.5"/><path d="M15 11h3.5l2.5 3v2h-6"/><circle cx="6" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/>',
+  mountain: '<path d="M2 19l7-11 4 6 3-4 6 9z"/><path d="M7.5 10.5 9 12l1.5-1.5"/>',
+  market: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+  festival: '<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M12 14v3M8.5 20h7l-1-3h-5z"/>',
+  herd: '<path d="M2.6 12.6c0-1.9 1.3-3 3-3.1.9-2.6 2.5-4 4.3-4 1.9 0 3.2 1.6 3.8 3.7.8.2 1.6-.1 2.1-.9l1.9-3.4c.4-.8 1.3-1.2 2.2-1l1.6.4c.5.1.5.8 0 1l-1.3.4-2.2 5.2c-.4 1-1.100 1.8-2 2.3v5.6h-1.5l-.3-4.9c-1.9.5-4.4.5-6.2 0l-.4 4.9H6.1l-.2-5.5c-1.9-.4-3.3-1.4-3.3-2.7z"/>',
+};
+const tagIcon = (k) => `<svg class="i ic${k === 'herd' ? ' fill' : ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+const ARROW = '<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// invisible boxes over the places, so tapping the building or the pen itself opens its card
+const PLACE_BOXES = { water: [30, 4, -40, 5, 8, 5], feed: [32, 2, -24, 9, 4, 10], room: [6, 2, 4, 14, 4.5, 8], tent: [-12, 1.6, 6, 9, 3.2, 7],
+  gate: [24, 1.2, 14, 9, 2.6, 2], camp: [LAYOUT.camp.x - 2, 2, LAYOUT.camp.z - 22, 16, 4, 6] };
+const placeHits = [];
+{
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  for (const pl of PLACES) {
+    let b = PLACE_BOXES[pl.key];
+    if (!b && pl.rect) b = [(pl.rect.x0 + pl.rect.x1) / 2, 1.2, (pl.rect.z0 + pl.rect.z1) / 2, pl.rect.x1 - pl.rect.x0, 2.4, pl.rect.z1 - pl.rect.z0];
+    if (!b) continue;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(b[3], b[4], b[5]), hitMat);
+    m.position.set(b[0], b[1], b[2]); m.userData.place = pl; m.updateMatrixWorld(); placeHits.push(m);
+  }
+}
+let finger = null;
+addEventListener('pointerdown', (e) => { finger = [e.clientX, e.clientY]; }, true);
+const labels = PLACES.map((pl) => {
+  const el = document.createElement('button'); el.type = 'button';
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const r = el.getBoundingClientRect();
+    if (finger && (finger[0] < r.left || finger[0] > r.right || finger[1] < r.top || finger[1] > r.bottom) && tapWorld(finger[0], finger[1])) return;
+    openPlace(pl);
+  });
+  labelLayer.appendChild(el); pl.el = el; return pl;
+});
+const order = labels.slice();      // labels by collision priority, set in refreshLabels
+function refreshLabels() {
   for (const l of labels) {
+    const cls = typeof l.cls === 'function' ? l.cls() : l.cls;
+    l.warn = cls === 'warn';
+    l.el.className = 'lbl' + (cls ? ' ' + cls : '') + (l.isEdge ? ' edge' : '') + (pop && pop.place === l ? ' on' : '');
+    l.el.innerHTML = `${tagIcon(l.icon)}<span>${l.text()}</span>${l.edge ? ARROW : ''}`;
+    l.el.setAttribute('aria-label', l.text());
+    if (l.edge) { l.arrow = l.el.querySelector('.arr'); l.ang = null; }    // the new arrow starts unrotated
+    if (!l.vis) l.el.style.display = '';
+  }
+  // half sizes, measured here when the text changes and never per frame; an edge pill also carries
+  // its arrow (14 px and a 6 px gap), so its half width counts that even while it sits on the horizon
+  for (const l of labels) { l.hw = (l.el.offsetWidth + (l.edge && !l.isEdge ? 20 : 0)) / 2 + 2; l.hh = l.el.offsetHeight / 2 + 2; }
+  for (const l of labels) if (!l.vis) l.el.style.display = 'none';
+  // when tags overlap, the earlier one wins: the open place, warnings and far places, pens, the rest
+  for (const l of labels) l.rank = pop && pop.place === l ? 0 : l.warn || l.edge || l.min ? 1 : l.rect ? 2 : 3;
+}
+refreshLabels();
+document.fonts.ready.then(refreshLabels);
+// the free map between the HUD pieces, in px; measured on resize and when a card opens or closes
+const hud = { w: 1, h: 1, x0: 0, x1: 1, y0: 0, y1: 1 };
+const LANDSCAPE = matchMedia('(orientation: landscape) and (max-height: 600px)');
+function measureHud() {
+  const card = $('card'), popEl = $('pop'), side = LANDSCAPE.matches;
+  // in portrait the camera buttons ride above the card docked at the bottom
+  const docked = side ? null : !popEl.hidden ? popEl : !card.hidden ? card : null;
+  document.documentElement.style.setProperty('--dock', docked ? `${docked.offsetHeight + 8}px` : '0px');
+  const top = document.querySelector('.top').getBoundingClientRect();
+  hud.w = stage.clientWidth; hud.h = stage.clientHeight;
+  hud.x0 = top.left; hud.x1 = top.right; hud.y0 = top.bottom + 6;
+  // the camera buttons count only while shown (they step aside for a docked card in portrait)
+  const vr = document.querySelector('.views').getBoundingClientRect();
+  let bottom = vr.height ? vr.top : hud.h - 12;
+  if (!card.hidden) bottom = Math.min(bottom, card.getBoundingClientRect().top);
+  if (!popEl.hidden) { const r = popEl.getBoundingClientRect(); if (side) hud.x1 = r.left - 6; else bottom = Math.min(bottom, r.top); }
+  hud.y1 = bottom - 6;
+}
+measureHud();
+addEventListener('resize', measureHud);
+const proj = new THREE.Vector3(), shown = [];
+function placeLabels() {
+  const { w, h, x0, x1, y0, y1 } = hud, ox = (x0 + x1) / 2, oy = (y0 + y1) / 2;
+  shown.length = 0;
+  // by priority, and nearer first within a priority (insertion sort: 16 tags, no allocation)
+  for (const l of order) l.d2 = camera.position.distanceToSquared(l.p);
+  for (let i = 1; i < order.length; i++) {
+    const l = order[i]; let j = i - 1;
+    while (j >= 0 && (order[j].rank > l.rank || (order[j].rank === l.rank && order[j].d2 > l.d2))) { order[j + 1] = order[j]; j--; }
+    order[j + 1] = l;
+  }
+  for (let i = 0; i < order.length; i++) {
+    const l = order[i];
     proj.copy(l.p).project(camera);
-    const dist = camera.position.distanceTo(l.p);
-    const vis = proj.z < 1 && Math.abs(proj.x) < 1.05 && Math.abs(proj.y) < 1.05 && (l.far ? dist > 900 : dist < 140);
-    if (vis !== l.vis) { l.el.style.display = vis ? '' : 'none'; l.vis = vis; }
+    const behind = proj.z > 1, px = behind ? -proj.x : proj.x, py = behind ? -proj.y : proj.y;
+    let x = (px * 0.5 + 0.5) * w, y = (-py * 0.5 + 0.5) * h, edge = false, vis;
+    // a tag stands above its point; it fits when its centre is inside the free map shrunk by its half size
+    const dx = x - ox, dy = y - l.hh - oy;
+    const k = Math.max(Math.abs(dx) / Math.max(1, (x1 - x0) / 2 - l.hw), Math.abs(dy) / Math.max(1, (y1 - y0) / 2 - l.hh), 1e-6);
+    if (l.edge) {
+      // always shown: on the horizon when in view, otherwise on the edge of the free map pointing the way
+      vis = true;
+      if (behind || k > 1) {
+        edge = true; x = ox + dx / k; y = oy + dy / k;
+        const ang = Math.atan2(dy, dx);
+        if (Math.abs(ang - (l.ang ?? 9)) > 0.02) { l.arrow.style.transform = `rotate(${ang}rad)`; l.ang = ang; }
+      }
+    } else {
+      const dist = Math.sqrt(l.d2);
+      const open = pop && pop.place === l;
+      // a tag whose point is on the map but whose pill would cross a side slides inward to stay whole
+      const inside = !behind && x > x0 && x < x1 && y > y0 && y < y1;
+      vis = inside && (open || ((!l.min || dist > l.min) && (!l.max || dist < l.max)));
+      if (vis) { const cx = Math.min(Math.max(x, x0 + l.hw), x1 - l.hw); l.tail = x - cx; x = cx; if (y - 2 * l.hh < y0) vis = false; }
+    }
+    x = Math.round(x); y = Math.round(y);
     if (vis) {
-      const x = Math.round((proj.x * 0.5 + 0.5) * w), y = Math.round((-proj.y * 0.5 + 0.5) * h);
-      if (x !== l.x || y !== l.y) { l.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`; l.x = x; l.y = y; }
+      const rx0 = x - l.hw, rx1 = x + l.hw, ry0 = edge ? y - l.hh : y - 2 * l.hh, ry1 = edge ? y + l.hh : y;
+      let ny0 = ry0, ny1 = ry1;
+      // a far place is never hidden by a collision: it steps inward (down from the top, up from the bottom) up to three times
+      for (let tries = 0; tries < (l.edge ? 4 : 1); tries++) {
+        let free = true;
+        for (let j = 0; j < shown.length && free; j++) { const o = shown[j]; free = rx0 >= o.rx1 || o.rx0 >= rx1 || ny0 >= o.ry1 || o.ry0 >= ny1; }
+        if (free) { vis = true; break; }
+        vis = false;
+        const step = (y < oy ? 1 : -1) * (2 * l.hh + 4); ny0 += step; ny1 += step; y += step;
+      }
+      if (vis) { l.rx0 = rx0; l.rx1 = rx1; l.ry0 = ny0; l.ry1 = ny1; shown.push(l); }
+    }
+    if (vis !== l.vis) { l.el.style.display = vis ? '' : 'none'; l.vis = vis; }
+    if (edge !== l.isEdge) { l.isEdge = edge; l.el.classList.toggle('edge', edge); l.x = null; }
+    if (vis && (x !== l.x || y !== l.y)) {
+      l.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, ${edge ? '-50%' : '-100%'})`; l.x = x; l.y = y;
+      const t = edge ? 0 : Math.round(Math.max(-l.hw + 14, Math.min(l.hw - 14, l.tail || 0)));
+      if (t !== l.t) { l.el.style.setProperty('--tail', t + 'px'); l.t = t; }
     }
   }
+}
+
+// ------------------------------------------------------------ the place card, docked; the camera glides to keep the place in view
+function openPlace(pl, keep) {
+  if (pop && pop.place === pl && !keep) return closePop();
+  const c = pl.open();
+  $('pop-title').textContent = c.title; $('pop-sub').textContent = c.sub || '';
+  $('pop-body').innerHTML = c.html || ''; $('pop-body').hidden = !c.html;
+  const acts = $('pop-acts'); acts.innerHTML = '';
+  for (const a of c.actions || []) { const b = document.createElement('button'); b.type = 'button'; b.className = a.primary ? 'primary' : 'ghost'; b.textContent = a.label; b.addEventListener('click', a.run); acts.appendChild(b); }
+  acts.hidden = !acts.children.length;
+  showHerd();                    // one card at a time: the place card replaces a picked camel or a follow
+  pop = { place: pl };
+  $('pop').hidden = false; document.body.classList.add('carded');
+  refreshLabels(); measureHud();
+  $('pop').focus({ preventScroll: true });
+  if (!keep) glideTo(pl);
+}
+function closePop() {
+  if (!pop) return;
+  const back = pop.place.el; pop = null; $('pop').hidden = true; document.body.classList.remove('carded'); refreshLabels(); measureHud();
+  if ($('pop').contains(document.activeElement) || document.activeElement === document.body) back.focus({ preventScroll: true });
+}
+addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (pop) closePop(); else if (!$('card').hidden) showHerd(); });
+$('pop-close').addEventListener('click', closePop);
+$('pop-body').addEventListener('click', (e) => {
+  const r = e.target.closest('[data-camel]'); if (!r) return;
+  const c = camels[+r.dataset.camel];
+  closePop(); follow = c; showCamel(c); view('near');
+});
+// the glide: the target slides and the camera keeps its angle (or turns toward a far place); no allocation per frame
+const ease = { k: 1, t0: new THREE.Vector3(), t1: new THREE.Vector3(), o0: new THREE.Vector3(), o1: new THREE.Vector3(), yaw: 0 };
+const EASE_S = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1e-3 : 0.6;
+const aim = new THREE.Vector3();
+function glideTo(pl, dist) {
+  // where the place should sit: 30% down the screen in portrait (the card docks below it),
+  // in the left third in landscape (the card docks on the right)
+  const side = LANDSCAPE.matches;
+  aim.set(side ? -0.5 : 0, side ? 0 : 0.4, 0.5).unproject(camera).sub(camera.position).normalize();
+  ease.t0.copy(controls.target); ease.t1.copy(controls.target); ease.yaw = 0;
+  ease.o0.copy(camera.position).sub(controls.target); ease.o1.copy(ease.o0);
+  if (pl.edge || pl.min) {
+    // far away: turn the view about the target toward it; the horizon stays where it is
+    const a = Math.atan2(pl.p.x - camera.position.x, pl.p.z - camera.position.z) - Math.atan2(aim.x, aim.z);
+    ease.yaw = Math.atan2(Math.sin(a), Math.cos(a));
+  } else {
+    // in the yard: keep the camera as far from the place as it is now (closer for «قرّب»), put the place
+    // on the chosen line of sight, and keep the target at its height by scaling the camera offset
+    const d = Math.min(dist ?? Infinity, camera.position.distanceTo(pl.p));
+    const k = THREE.MathUtils.clamp((pl.p.y - d * aim.y - ease.t0.y) / ease.o0.y, 0.1, 1.5);
+    ease.o1.copy(ease.o0).multiplyScalar(k);
+    ease.t1.copy(pl.p).addScaledVector(aim, -d).sub(ease.o1);
+  }
+  ease.k = 0;
 }
 
 // ------------------------------------------------------------ camera, selection, HUD
@@ -374,7 +704,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.minDistance = 4; controls.maxDistance = 9000;
 controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
 let follow = null, followHerd = false;
-function herdCenter() { const c = new THREE.Vector3(); let n = 0; for (const k of camels) if (k.home === 'graze') { c.add(k.root.position); n++; } return c.multiplyScalar(1 / Math.max(1, n)); }
+const herdC = new THREE.Vector3();
+function herdCenter() { herdC.set(0, 0, 0); let n = 0; for (const k of camels) if (k.home === 'graze') { herdC.add(k.root.position); n++; } return herdC.multiplyScalar(1 / Math.max(1, n)); }
 function view(kind) {
   if (kind === 'hill') {
     // up high over the yard: Aban al-Asmar ahead, Wadi al-Rumah and Aban al-Ahmar beyond
@@ -391,56 +722,88 @@ function view(kind) {
     controls.target.set(12, 1.4, 5);
     camera.position.set(25, 6, -17);
   } else {
-    const tgt = follow ? follow.root.position.clone() : kind === 'near' ? herdCenter() : new THREE.Vector3(30, 0, -18);
-    const off = kind === 'near' ? new THREE.Vector3(7, 3.2, 9) : new THREE.Vector3(-104, 40, 66);
+    const tgt = follow ? follow.root.position : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
+    const off = kind === 'near' ? tmpTo.set(7, 3.2, 9) : LANDSCAPE.matches || innerWidth > innerHeight ? tmpTo.set(-104, 40, 66) : tmpTo.set(-150, 78, 112);
     controls.target.copy(tgt).setY(1);
     camera.position.copy(controls.target).add(off);
   }
-  for (const [id, k] of [['cam-drone', 'drone'], ['cam-near', 'near'], ['cam-room', 'room'], ['cam-camp', 'camp'], ['cam-hill', 'hill']]) $(id).setAttribute('aria-pressed', String(kind === k));
+  for (const [id, k] of [['cam-drone', 'drone'], ['cam-near', 'near']]) $(id).setAttribute('aria-pressed', String(kind === k));
+  ease.k = 1;                                    // a camera button wins over a glide in progress
+  closePop();
+  if (!follow && !followHerd) { if (selected) showCamel(selected); else hideCard(); }
 }
 $('cam-drone').addEventListener('click', () => view('drone'));
 $('cam-near').addEventListener('click', () => view('near'));
-$('cam-room').addEventListener('click', () => view('room'));
-$('cam-camp').addEventListener('click', () => view('camp'));
-$('cam-hill').addEventListener('click', () => view('hill'));
 
 const STATE = { graze: 'ترعى', walk: 'تمشي', idle: 'واقفة' };
+const COAT_HEX = { wodh: '#f4f1ea', shaqh: '#ead7b5', homr: '#a8694a', majaheem: '#2c2622' };
+const HERD_ICON = '<svg class="i fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.6 12.6c0-1.9 1.3-3 3-3.1.9-2.6 2.5-4 4.3-4 1.9 0 3.2 1.6 3.8 3.7.8.2 1.6-.1 2.1-.9l1.9-3.4c.4-.8 1.3-1.2 2.2-1l1.6.4c.5.1.5.8 0 1l-1.3.4-2.2 5.2c-.4 1-1.1 1.8-2 2.3v5.6h-1.5l-.3-4.9c-1.9.5-4.4.5-6.2 0l-.4 4.9H6.1l-.2-5.5c-1.9-.4-3.3-1.4-3.3-2.7z"/></svg>';
+const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const STATE_M = { graze: 'يرعى', walk: 'يمشي', idle: 'واقف' };
+const stateWord = (c, mode = c.mode) => (c.male ? STATE_M : STATE)[mode];
+const stateChip = (c) => `<span class="chip ${c.mode}" id="c-state"><span class="d"></span>${stateWord(c)}</span>`;
 let selectedRing = null;
+function hideCard() { $('card').hidden = true; measureHud(); }
+// clears the pick and the follow; the card goes away (the map is the menu)
 function showHerd() {
-  follow = null; followHerd = false;
-  $('s1').textContent = `الحلال يسرح · ${camels.filter((c) => c.home === 'graze').length} راس`;
-  $('s2').textContent = 'في المسراح، 330 م عن العزبة · رمث وعرفج';
-  $('s-act').textContent = 'تابع القطيع'; $('s-clear').hidden = true;
+  follow = null; followHerd = false; selected = null;
   if (selectedRing) selectedRing.visible = false;
+  hideCard();
+}
+// the herd card, while the camera follows the grazing herd
+function followTheHerd() {
+  follow = null; selected = null; followHerd = true;
+  if (selectedRing) selectedRing.visible = false;
+  const n = camels.filter((c) => c.home === 'graze').length;
+  $('c-avatar').innerHTML = HERD_ICON;
+  $('s1').textContent = 'الحلال يسرح';
+  $('s2').innerHTML = `<span class="chip num">${n} راس</span><span class="chip">المسراح · 330 م</span><span>رمث وعرفج</span>`;
+  $('s-act').textContent = 'وقف المتابعة'; $('s-act').classList.add('on'); $('s-clear').hidden = true;
+  $('card').hidden = false; measureHud();
 }
 function showCamel(c) {
-  $('s1').textContent = `${c.name} · ${COATS[c.coat].name} ${c.age}`;
-  $('s2').textContent = `${STATE[c.mode]} · ${c.note}`;
-  $('s-act').textContent = follow === c ? 'وقف المتابعة' : 'تابعها'; $('s-clear').hidden = false;
+  $('c-avatar').innerHTML = `<i style="background:${COAT_HEX[c.coat]}"></i>`;
+  $('s1').textContent = c.name;
+  $('s2').innerHTML = `<span class="chip">${COATS[c.coat].name}</span><span class="chip">${esc(c.age)}</span>${stateChip(c)}<span class="note">${esc(c.note)}</span>`;
+  lastS2 = c.mode;
+  const on = follow === c;
+  $('s-act').textContent = on ? 'وقف المتابعة' : 'تابعها'; $('s-act').classList.toggle('on', on); $('s-clear').hidden = false;
   if (!selectedRing) {
-    selectedRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.7, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#e0a93b', transparent: true, opacity: 0.9, depthWrite: false }));
+    selectedRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.7, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#34bcaa', transparent: true, opacity: 0.95, depthWrite: false }));
     selectedRing.renderOrder = 2; scene.add(selectedRing);
   }
   selectedRing.visible = true; selected = c;
+  $('card').hidden = false; measureHud();
 }
 let selected = null;
 $('s-act').addEventListener('click', () => {
   if (selected) { follow = follow === selected ? null : selected; showCamel(selected); if (follow) view('near'); }
-  else { followHerd = !followHerd; $('s-act').textContent = followHerd ? 'وقف المتابعة' : 'تابع القطيع'; if (followHerd) view('near'); }
+  else if (followHerd) showHerd();
 });
-$('s-clear').addEventListener('click', () => { selected = null; showHerd(); });
+$('s-clear').addEventListener('click', () => showHerd());
+
+
 
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let downAt = null;
-renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; ease.k = 1; });
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
-  const r = renderer.domElement.getBoundingClientRect();
-  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-  ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(camels.map((c) => c.hit), false)[0];
-  if (hit) showCamel(hit.object.userData.camel);
+  if (!tapWorld(e.clientX, e.clientY)) closePop();
 });
+const camelHits = [];
+// what a tap at (x, y) hits in the world: a camel first, then a place; true when it hit something
+function tapWorld(x, y) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  camelHits.length = 0; for (const c of camels) camelHits.push(c.hit);
+  const hit = ray.intersectObjects(camelHits, false)[0];
+  if (hit) { closePop(); follow = null; followHerd = false; showCamel(hit.object.userData.camel); return true; }
+  const at = ray.intersectObjects(placeHits, false)[0];
+  if (at) { openPlace(at.object.userData.place); return true; }
+  return false;
+}
 
 // ------------------------------------------------------------ load and run
 Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
@@ -454,13 +817,14 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   }
   const inPen = (spec) => camels.push(new Camel(T, { home: 'pen', ...spec }));
   const big = LAYOUT.pens.main, c = (p) => [(p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2];
-  inPen({ name: 'الهيفاء', coat: 'wodh', age: 'سديس', x: -20, z: -34, heading: 1.2, pen: big, note: 'قريبة ولادة، بقت بالشبك' });
+  inPen({ name: 'الهيفاء', coat: 'wodh', age: 'سديسة', x: -20, z: -34, heading: 1.2, pen: big, note: 'قريبة ولادة، بقت بالشبك' });
   inPen({ name: 'ظبية', coat: 'homr', age: 'فاطر', x: -10, z: -38, heading: -2, pen: big, note: 'كبيرة، ترتاح بالظل' });
-  inPen({ name: 'مزعل', coat: 'wodh', age: 'فحل سديس', x: c(LAYOUT.pens.bull)[0], z: c(LAYOUT.pens.bull)[1], heading: 0.6, scale: 1.08, pen: LAYOUT.pens.bull, note: 'فحل العزبة · موسم الضراب' });
+  inPen({ name: 'مزعل', male: true, coat: 'wodh', age: 'فحل سديس', x: c(LAYOUT.pens.bull)[0], z: c(LAYOUT.pens.bull)[1], heading: 0.6, scale: 1.08, pen: LAYOUT.pens.bull, note: 'فحل العزبة · موسم الضراب' });
   inPen({ name: 'مزنة', coat: 'majaheem', age: 'ثنية', x: c(LAYOUT.pens.sick)[0], z: c(LAYOUT.pens.sick)[1], heading: 2.4, pen: LAYOUT.pens.sick, note: 'جرب · تحت العلاج باقي 12 يوم' });
-  for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى' });
+  for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, male: true, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى' });
   for (let i = 0; i < 4; i++) inPen({ name: ['ريم', 'غزيل', 'نوف', 'جود'][i], coat: i === 2 ? 'shaqh' : 'wodh', age: 'مفرودة', x: R(1, 15), z: R(-42, -28), heading: R(0, 6.28), scale: 0.82, pen: LAYOUT.pens.young, note: 'مفاريد هالسنة' });
   $('status').hidden = true;
+  refreshLabels();
   showHerd();
 }).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
 
@@ -500,14 +864,21 @@ function tick() {
   // follow without stealing the viewer's control of the angle
   const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
   if (tgt) { const delta = tmpTo.copy(tgt).setY(1.1).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }
-  if (selected && selectedRing) { selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z); const t = `${STATE[selected.mode]} · ${selected.note}`; if (t !== lastS2) { $('s2').textContent = t; lastS2 = t; } }
+  if (selected && selectedRing) { selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z); if (selected.mode !== lastS2) { const ch = $('c-state'); if (ch) ch.outerHTML = stateChip(selected); lastS2 = selected.mode; } }
   if (printsLive > 0) {
     let live = 0;
-    prints.forEach((p, i) => { if (p.age > 70) return; p.age += dt; live++; printMesh.setColorAt(i, fade.setScalar(0.55 * Math.max(0, 1 - p.age / 70))); if (p.age > 70) printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); });
+    for (let i = 0; i < PRINTS; i++) { const p = prints[i]; if (p.age > 70) continue; p.age += dt; live++; printMesh.setColorAt(i, fade.setScalar(0.55 * Math.max(0, 1 - p.age / 70))); if (p.age > 70) printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); }
     printMesh.instanceColor.needsUpdate = true; printMesh.instanceMatrix.needsUpdate = true; printsLive = live;
   }
   for (const d of dust) if (d.s.visible) { d.age += dt; const k = d.age / 1.5; d.s.scale.setScalar(0.35 + k * 1.1); d.s.position.y = 0.12 + k * 0.25; d.s.material.opacity = 0.42 * Math.max(0, 1 - k); if (k > 1) d.s.visible = false; }
-  updateScatter(camera.position);
+  if (ease.k < 1) {
+    ease.k = Math.min(1, ease.k + dt / EASE_S);
+    const e = ease.k * ease.k * (3 - 2 * ease.k);
+    controls.target.lerpVectors(ease.t0, ease.t1, e);
+    tmpAway.lerpVectors(ease.o0, ease.o1, e).applyAxisAngle(UPV, ease.yaw * e);
+    camera.position.copy(controls.target).add(tmpAway);
+  }
+  updateScatter(camera.position, sun.target.position);
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk
   sunFocus.set(Math.round(controls.target.x / 4) * 4, 0, Math.round(controls.target.z / 4) * 4);
