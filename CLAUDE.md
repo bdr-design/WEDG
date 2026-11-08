@@ -4,10 +4,11 @@ These are the owner's standing rules for this project. Follow them in every sess
 
 ## How we work
 
-- **Agents in every step.** Independent agents take part in building, reviewing,
-  fixing and checking the fix. Nothing is shown to the owner or committed as
-  done until an independent agent has reviewed it, and each finding has been
-  re-measured or reproduced before it is acted on.
+- **Claude builds everything itself; agents only review.**
+  - Do not hand building or fixing to agents.
+  - Independent review agents check every piece of work, and every fix,
+    before it is shown to the owner or committed as done.
+  - Re-measure or reproduce each finding before acting on it.
 - **Show the design before adopting it.** Present screenshots or a published
   prototype. Decisions that are the owner's (layout rules, scope, trade-offs
   between realism and weight) are asked, not assumed.
