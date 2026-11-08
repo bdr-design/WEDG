@@ -1,0 +1,46 @@
+name: bench_flutter_scene
+description: "Engine benchmark for ADR 0005: the flutter_scene (Flutter GPU / Impeller) candidate."
+publish_to: 'none'
+version: 1.0.0+1
+
+# Standalone on purpose: this app is NOT a member of the repo's pub workspace
+# (no `resolution: workspace`), so its dependencies never touch the game's.
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Pinned to an exact version (ADR 0005): minor releases can break the API.
+  flutter_scene: 0.24.3
+  # Used by hook/build.dart (the flutter_scene model importer).
+  hooks: ^2.0.0
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: false
+  assets:
+    # flutter_scene's build hook (hook/build.dart) converts assets/*.glb into
+    # .fsceneb files here at build time; loadScene() finds them by source path.
+    - flutter_scene_generated/
+    - path: flutter_scene_generated/metal_ios/
+      platforms:
+        - ios
+    - path: flutter_scene_generated/metal_desktop/
+      platforms:
+        - macos
+    - path: flutter_scene_generated/opengl_es_vulkan/
+      platforms:
+        - android
+        - linux
+        - windows
+    - path: flutter_scene_generated/opengl_es/
+      platforms:
+        - web
