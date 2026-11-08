@@ -12,6 +12,7 @@ photo.
 | 4. Rig and clips | `rig.py` | `camel_rigged.blend` (idle, graze) |
 | 4b. Walk from foot physics | `walk_physics.py` | replaces `walk`, prints slip and contact checks |
 | 5. Export | `export_glb.py` | `camel_wodh_female.glb` |
+| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 618 KB), `_lod2.glb` (1.5k triangles, 512 px, 264 KB); same skeleton and clips |
 | Checks | `render_tex.py`, `render_anim.py` | Cycles renders in desert light |
 
 ## How each step works
@@ -61,4 +62,4 @@ blendenv/bin/python shape.py && blendenv/bin/python bake.py && blendenv/bin/pyth
 - The couch-down, lying and stand-up clips.
 - The bull, the calf and the majaheem body.
 - The other four light coats as textures on the same mesh.
-- LOD1 and LOD2.
+- Impostors for distant crowds.
