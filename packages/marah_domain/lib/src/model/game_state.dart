@@ -93,6 +93,7 @@ class GameState {
     required this.world,
     required this.players,
     required this.startedOn,
+    required this.startedAtUtcMs,
     List<DomainEvent>? journal,
   }) : journal = journal ?? [];
 
@@ -103,7 +104,21 @@ class GameState {
   final WorldState world;
   final Map<OwnerId, PlayerState> players;
   final GameDay startedOn;
+
+  /// Real time (UTC, ms since epoch) when the game started. With
+  /// [startedOn] it anchors the offline real-time clock (ADR 0001).
+  final int startedAtUtcMs;
   final List<DomainEvent> journal;
+
+  /// The offline clock for this game: one real day is one game week.
+  RealTimeClock clock({DateTime Function()? now}) => RealTimeClock(
+    anchorReal: DateTime.fromMillisecondsSinceEpoch(
+      startedAtUtcMs,
+      isUtc: true,
+    ),
+    anchorDay: startedOn,
+    now: now,
+  );
 
   void record(Iterable<DomainEvent> events) {
     journal.addAll(events);
@@ -114,6 +129,7 @@ class GameState {
 
   Map<String, Object?> toJson() => {
     'startedOn': startedOn.value,
+    'startedAtUtcMs': startedAtUtcMs,
     'world': world.toJson(),
     'players': [for (final p in players.values) p.toJson()],
     'journal': [for (final e in journal) e.toJson()],
@@ -121,6 +137,7 @@ class GameState {
 
   static GameState fromJson(Map<String, Object?> j) => GameState(
     startedOn: GameDay(j['startedOn']! as int),
+    startedAtUtcMs: j['startedAtUtcMs']! as int,
     world: WorldState.fromJson(j['world']! as Map<String, Object?>),
     players: {
       for (final p in (j['players']! as List<Object?>).map(

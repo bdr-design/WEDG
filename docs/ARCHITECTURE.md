@@ -7,14 +7,15 @@ online play (shared market, live auctions, tournaments) without a rewrite.
 ## Layers
 
 ```
-apps/marah/              Flutter app: screens, platform storage, app lifecycle
+apps/marah/              Flutter app: screens, picks the engine per platform, lifecycle
+packages/marah_runtime/  runs the engine off the UI thread; view models for screens
 packages/marah_data/     save format: versioned envelope, migrations, safe store
 packages/marah_domain/   rules and simulation, pure Dart (no Flutter)
 docs/                    this file, ADRs, game design, realism sources
 tool/                    benchmarks and CI helpers
 ```
 
-Dependencies point down only: app → data → domain. The domain package does
+Dependencies point down only: app → runtime → data → domain. The domain package does
 not import Flutter, so the same rules can run in a worker isolate today and
 in a Dart service on a server later.
 
@@ -52,9 +53,16 @@ Rules of the road:
 `SaveStore` never overwrites a save it could not read, keeps the previous
 good save, and serialises writes. See ADR 0003.
 
-## Threading
+## Threading (`packages/marah_runtime`)
 
-Nothing heavy runs on the UI thread. See ADR 0002 (worker isolate).
+Nothing heavy runs on the UI thread (ADR 0002):
+
+- iOS and Android: one long-lived worker isolate owns the game, the saves
+  and the clock timers. The UI sends commands and receives ready-made
+  `PlayerSnapshot`s; it never decodes JSON or computes views.
+- Web: the same `EngineCore` runs time-sliced (about 1 ms per slice,
+  scheduled between frames).
+- Screens talk only to `EngineClient`.
 
 ## Quality gates (CI)
 
@@ -64,10 +72,11 @@ Every push runs, and must pass:
 2. `analyze --fatal-infos` with strict casts, inference and raw types
 3. domain tests with a line-coverage floor of 85%
 4. save-format tests: saves from released versions must load forever
-5. app tests
-6. a 10-year simulation of four worlds with a scripted player, checking the
+5. runtime tests (core, real worker isolate, atomic files, web slicing)
+6. app tests
+7. a 10-year simulation of four worlds with a scripted player, checking the
    invariants every game week
-7. builds: web, Android (debug APK) and iOS (simulator, unsigned)
+8. builds: web, Android (debug APK) and iOS (simulator, unsigned)
 
 ## Online later
 

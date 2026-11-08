@@ -33,6 +33,7 @@ jobs:
         run: |
           (cd packages/marah_domain && dart analyze --fatal-infos)
           (cd packages/marah_data && dart analyze --fatal-infos)
+          (cd packages/marah_runtime && dart analyze --fatal-infos)
           (cd apps/marah && flutter analyze --fatal-infos)
 
       - name: Domain tests with coverage floor
@@ -45,6 +46,10 @@ jobs:
 
       - name: Save format tests (golden saves must load)
         working-directory: packages/marah_data
+        run: dart test
+
+      - name: Runtime tests (worker isolate, web slicing, files)
+        working-directory: packages/marah_runtime
         run: dart test
 
       - name: App tests

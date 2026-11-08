@@ -32,6 +32,7 @@ class Game {
     required Region region,
     required ColorCategory favourite,
     GameDay? startDay,
+    DateTime? startedAt,
   }) {
     final ids = IdGenerator(worldSeed: seed & 0x7FFFFFFF);
     final start = startDay ?? GameDay.ofDate(DateTime.utc(2026, 10));
@@ -65,6 +66,9 @@ class Game {
       world: world,
       players: {playerId: player},
       startedOn: start,
+      startedAtUtcMs: (startedAt ?? DateTime.now())
+          .toUtc()
+          .millisecondsSinceEpoch,
     );
     final sim = Sim(state);
     sim.pay(player, const Riyal(Balance.startingCash), LedgerCategory.opening);

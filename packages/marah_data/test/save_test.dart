@@ -13,6 +13,7 @@ Game sampleGame() {
     farmName: 'عزبة الاختبار',
     region: Region.hail,
     favourite: ColorCategory.wodh,
+    startedAt: DateTime.utc(2026, 11, 8),
   );
   final bot = Bot(g);
   for (var i = 0; i < 8; i++) {

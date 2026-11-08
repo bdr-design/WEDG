@@ -1,0 +1,14 @@
+name: marah_runtime
+description: "Runs the Marah engine off the UI thread - worker isolate on iOS and Android, time-sliced on the web - and hands screens ready-made view models."
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  marah_data: any
+  marah_domain: any
+
+dev_dependencies:
+  test: ^1.25.0

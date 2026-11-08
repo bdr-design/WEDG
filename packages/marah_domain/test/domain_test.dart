@@ -15,6 +15,7 @@ Game newGame([int seed = 42]) => Game.create(
   farmName: 'عزبة الصفوة',
   region: Region.qassim,
   favourite: ColorCategory.majaheem,
+  startedAt: DateTime.utc(2026, 11, 8),
 );
 
 String snapshot(Game g) => jsonEncode(g.state.toJson());
