@@ -84,7 +84,8 @@ export const LAYOUT = {
     sick: { x0: -5, x1: 3, z0: -20, z1: -12, name: 'العزل' },
     spare: { x0: 5, x1: 13, z0: -20, z1: -12, name: '' },
   },
-  graze: { x0: -64, x1: 10, z0: 26, z1: 74 },
+  graze: { x0: -300, x1: -170, z0: 196, z1: 292 },
+  camp: { x: -232, z: 248 },
   roadZ: 112,
 };
 const inCompound = (x, z, m = 0) => x > LAYOUT.compound.x0 - m && x < LAYOUT.compound.x1 + m && z > LAYOUT.compound.z0 - m && z < LAYOUT.compound.z1 + m;
@@ -189,7 +190,7 @@ export function buildWorld(scene, renderer, sandTex) {
   ribbon([[24, 10], [24, 40], [27, 70], [30, 95], [30, LAYOUT.roadZ - 4]], 6);
   ribbon([[24, 14], [24, -2], [10, -3], [-34, -3]], 5);
   ribbon([[24, -3], [36, -3], [37, -30], [36, -48]], 5);
-  ribbon([[18, 22], [-8, 30], [-30, 42], [-52, 50]], 3.4);   // the herd's daily trail to the pasture
+  ribbon([[24, 18], [0, 60], [-60, 120], [-130, 170], [-196, 226], [-226, 244]], 3.6);   // the track out to the grazing ground (about 330 m)
 
   // ---------- the camel yard wall: corrugated "shinko" sheets on steel posts, a double gate
   {
@@ -373,6 +374,99 @@ export function buildWorld(scene, renderer, sandTex) {
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(ropes, 3)); scene.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: '#cbb994' })));
   }
 
+  // ---------- inside the goat-hair tent: carpets, floor cushions, the hearth and the coffee set
+  {
+    const T = new THREE.Group(); T.position.set(-12, 0, 7); T.rotation.y = Math.PI; scene.add(T);
+    const L = 12, D = 5.5, H = 2.3, E = 1.35;
+    const wood = new THREE.MeshStandardMaterial({ color: '#7a5a3a', roughness: 0.85 });
+    for (const x of [-4, 0, 4]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, H, 8), wood); p.position.set(x, H / 2, 0); T.add(p); }
+    for (const x of [-6, -3, 0, 3, 6]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, E, 8), wood); p.position.set(x, E / 2, D / 2); T.add(p); }
+    const rugTex = (bg, fg, mid) => canvasTex(256, 128, (g, w, h) => {
+      g.fillStyle = bg; g.fillRect(0, 0, w, h); g.strokeStyle = fg; g.lineWidth = 6; g.strokeRect(8, 8, w - 16, h - 16);
+      g.lineWidth = 2; g.strokeRect(18, 18, w - 36, h - 36);
+      g.fillStyle = mid; for (let i = 0; i < 5; i++) { const cx = 40 + i * 44; g.beginPath(); g.moveTo(cx, 40); g.lineTo(cx + 16, 64); g.lineTo(cx, 88); g.lineTo(cx - 16, 64); g.fill(); }
+      for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(0,0,0,${rand() * 0.06})`; g.fillRect(rand() * w, rand() * h, 1, 1); }
+    });
+    const rugs = [[rugTex('#7d1d1b', '#d9b25e', '#1f2f52'), 0, -0.6, 5.2, 3.0], [rugTex('#5e1a2a', '#e3c27a', '#7d1d1b'), -3.6, 0.2, 3.6, 3.8], [rugTex('#1f2f52', '#d9b25e', '#7d1d1b'), 3.6, 0.2, 3.6, 3.8]];
+    for (const [tex, x, z, w, d] of rugs) { const r = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 1 })); r.position.set(x, 0.03 + rand() * 0.004, z); r.receiveShadow = true; T.add(r); }
+    const cushTex = canvasTex(128, 32, (g, w, h) => { g.fillStyle = '#8c2420'; g.fillRect(0, 0, w, h); g.fillStyle = '#d6ad55'; for (let x = 0; x < w; x += 16) { g.beginPath(); g.moveTo(x, h / 2); g.lineTo(x + 8, 4); g.lineTo(x + 16, h / 2); g.lineTo(x + 8, h - 4); g.fill(); } g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2); });
+    cushTex.wrapS = THREE.RepeatWrapping; cushTex.repeat.set(6, 1);
+    const cush = new THREE.MeshStandardMaterial({ map: cushTex, roughness: 0.95 });
+    const seat = new THREE.Mesh(new RoundedBoxGeometry(L - 1.2, 0.16, 0.75, 2, 0.05), cush); seat.position.set(0, 0.1, -D / 2 + 0.55); T.add(seat);
+    const back = new THREE.Mesh(new RoundedBoxGeometry(L - 1.2, 0.5, 0.2, 2, 0.06), cush); back.position.set(0, 0.42, -D / 2 + 0.22); T.add(back);
+    for (const sx of [-1, 1]) { const ss = new THREE.Mesh(new RoundedBoxGeometry(0.75, 0.16, D - 1.6, 2, 0.05), cush); ss.position.set(sx * (L / 2 - 0.55), 0.1, 0.2); T.add(ss); const sb = new THREE.Mesh(new RoundedBoxGeometry(0.2, 0.45, D - 1.6, 2, 0.06), cush); sb.position.set(sx * (L / 2 - 0.22), 0.38, 0.2); T.add(sb); }
+    const roll = new THREE.CylinderGeometry(0.11, 0.11, 0.55, 14).rotateX(Math.PI / 2);
+    for (let x = -L / 2 + 1.4; x < L / 2 - 1; x += 1.25) { const r = new THREE.Mesh(roll, cush); r.position.set(x, 0.29, -D / 2 + 0.75); T.add(r); }
+    // the Sadu curtain (القاطع) closing the far end
+    const saduCurtain = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 20, w, 9); c.fillRect(0, h - 29, w, 9); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } });
+    const qt = new THREE.Mesh(new THREE.PlaneGeometry(D - 0.4, 1.9), new THREE.MeshStandardMaterial({ map: saduCurtain, roughness: 1, side: THREE.DoubleSide })); qt.position.set(L / 2 - 1.4, 0.95, 0); qt.rotation.y = Math.PI / 2; T.add(qt);
+    // the hearth (وجار) with embers, the brass dallahs, a thermos, cups and dates
+    const hearth = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.9), new THREE.MeshStandardMaterial({ color: '#8a7b68', roughness: 1 })); hearth.position.set(0, 0.09, D / 2 - 1.2); T.add(hearth);
+    const embers = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#2a1d14', emissive: '#ff5a1f', emissiveIntensity: 0.9, roughness: 1 })); embers.position.set(0, 0.185, D / 2 - 1.2); T.add(embers);
+    const brass = new THREE.MeshStandardMaterial({ color: '#caa14c', metalness: 1, roughness: 0.28 });
+    const dallahProfile = [[0, 0], [0.075, 0], [0.08, 0.015], [0.06, 0.05], [0.05, 0.09], [0.066, 0.13], [0.072, 0.16], [0.06, 0.19], [0.035, 0.22], [0.03, 0.25], [0.046, 0.27], [0.03, 0.3], [0.012, 0.33], [0.006, 0.36], [0, 0.37]].map(([r, y]) => new THREE.Vector2(r, y));
+    const dallahGeo = new THREE.LatheGeometry(dallahProfile, 24);
+    const spout = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(0.05, 0.15, 0), V(0.11, 0.2, 0), V(0.15, 0.29, 0), V(0.18, 0.32, 0)]), 12, 0.012, 8);
+    const handle = new THREE.TorusGeometry(0.07, 0.008, 6, 16, Math.PI); handle.rotateZ(-Math.PI / 2); handle.translate(-0.07, 0.18, 0);
+    for (const [x, z, s] of [[-0.3, D / 2 - 1.25, 1], [0.05, D / 2 - 1.05, 0.85], [0.35, D / 2 - 1.3, 0.75]]) {
+      const d = new THREE.Group(); d.add(new THREE.Mesh(dallahGeo, brass), new THREE.Mesh(spout, brass), new THREE.Mesh(handle, brass));
+      d.position.set(x, 0.18, z); d.scale.setScalar(s); d.rotation.y = rand() * 6.28; T.add(d);
+    }
+    const thermos = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.065, 0.32, 16), new THREE.MeshStandardMaterial({ color: '#c9c9cc', metalness: 0.9, roughness: 0.25 })); thermos.position.set(0.9, 0.19, D / 2 - 1.6); T.add(thermos);
+    const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.015, 32), brass); tray.position.set(-0.9, 0.04, D / 2 - 1.7); T.add(tray);
+    const cup = new THREE.CylinderGeometry(0.025, 0.02, 0.045, 12);
+    for (let i = 0; i < 6; i++) { const c = new THREE.Mesh(cup, new THREE.MeshStandardMaterial({ color: '#f4f1ea', roughness: 0.3 })); const a = i / 6 * 6.283; c.position.set(-0.9 + Math.cos(a) * 0.15, 0.07, D / 2 - 1.7 + Math.sin(a) * 0.15); T.add(c); }
+    const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 8, 0, 6.283, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#d8d2c6', roughness: 0.4, side: THREE.DoubleSide })); bowl.position.set(-1.4, 0.15, D / 2 - 1.3); T.add(bowl);
+    const date = new THREE.SphereGeometry(0.018, 8, 6); date.scale(1, 1, 1.6);
+    for (let i = 0; i < 14; i++) { const d = new THREE.Mesh(date, new THREE.MeshStandardMaterial({ color: '#4a2412', roughness: 0.5 })); d.position.set(-1.4 + R(-0.07, 0.07), 0.08 + R(0, 0.02), D / 2 - 1.3 + R(-0.07, 0.07)); T.add(d); }
+    const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.22, 12), new THREE.MeshStandardMaterial({ color: '#f7d58a', emissive: '#ffb54a', emissiveIntensity: 0.8, transparent: true, opacity: 0.9 })); lantern.position.set(-2, H - 0.45, 0); T.add(lantern);
+    const glow = new THREE.PointLight('#ffb070', 3, 7, 2); glow.position.set(0, 0.6, D / 2 - 1.2); T.add(glow);
+    T.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = n.geometry.type !== 'PlaneGeometry'; } });
+  }
+
+  // ---------- the grazing ground (مسراح), ~330 m out: the shepherd's caravan on a trailer and its tractor unit
+  {
+    const C = LAYOUT.camp, camp = new THREE.Group(); camp.position.set(C.x - 2, 0, C.z - 22); camp.rotation.y = 0.35; scene.add(camp);
+    const dark = new THREE.MeshStandardMaterial({ color: '#232323', roughness: 0.7 });
+    const paintW = new THREE.MeshPhysicalMaterial({ color: '#f2f2ef', roughness: 0.35, clearcoat: 0.6 });
+    const red = new THREE.MeshPhysicalMaterial({ color: '#9e1f1b', roughness: 0.3, clearcoat: 0.8 });
+    const tire = new THREE.MeshStandardMaterial({ color: '#191919', roughness: 0.9 });
+    const rim = new THREE.MeshStandardMaterial({ color: '#c8cbcd', metalness: 0.9, roughness: 0.3 });
+    const wheelSet = (g, x, z, r = 0.52) => { const t = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.32, 20).rotateX(Math.PI / 2), tire); t.position.set(x, r, z); g.add(t); const h = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.34, 12).rotateX(Math.PI / 2), rim); h.position.copy(t.position); g.add(h); };
+    // flatbed semi-trailer, 12 m
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(12, 0.22, 2.5), new THREE.MeshStandardMaterial({ color: '#5a5a58', metalness: 0.6, roughness: 0.5 })); deck.position.set(0, 1.42, 0); camp.add(deck);
+    for (const z of [-0.5, 0.5]) { const beam = new THREE.Mesh(new THREE.BoxGeometry(12, 0.35, 0.18), dark); beam.position.set(0, 1.15, z); camp.add(beam); }
+    for (const x of [-5.2, -4.0, -2.8]) for (const z of [-1.0, -0.62, 0.62, 1.0]) wheelSet(camp, x, z, 0.5);
+    for (const z of [-0.8, 0.8]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.12), dark); leg.position.set(3.2, 0.55, z); camp.add(leg); }
+    // the caravan on the deck: windows, door with steps, air conditioner, water tank
+    const car = new THREE.Mesh(new RoundedBoxGeometry(8.2, 2.6, 2.45, 2, 0.08), new THREE.MeshStandardMaterial({ color: '#f0eee8', roughness: 0.6 })); car.position.set(-0.6, 1.53 + 1.3, 0); camp.add(car);
+    const win = new THREE.MeshStandardMaterial({ color: '#28323a', roughness: 0.12, metalness: 0.3 });
+    for (const x of [-3.6, -1.2, 1.6]) for (const z of [1.235, -1.235]) { const w2 = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.75), win); w2.position.set(x, 3.15, z); if (z < 0) w2.rotation.y = Math.PI; camp.add(w2); }
+    const door = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.95), new THREE.MeshStandardMaterial({ color: '#8a979c', roughness: 0.5 })); door.position.set(0.3, 2.6, 1.236); camp.add(door);
+    for (let i = 0; i < 3; i++) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.32), dark); st.position.set(0.3, 0.42 + i * 0.4, 1.5 + (2 - i) * 0.3); camp.add(st); }
+    const acu = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.35, 0.8), new THREE.MeshStandardMaterial({ color: '#d4d6d6', roughness: 0.5 })); acu.position.set(-2.5, 4.35, 0); camp.add(acu);
+    const wt = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.9, 20), new THREE.MeshStandardMaterial({ color: '#e9e5dc', roughness: 0.55 })); wt.position.set(2.3, 4.6, 0); camp.add(wt);
+    // the tractor unit (راس التريلة) coupled at the front
+    const head = new THREE.Group(); head.position.set(6.6, 0, 0); camp.add(head);
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.4, 1.0), dark); chassis.position.set(0, 0.95, 0); head.add(chassis);
+    const cab = new THREE.Mesh(new RoundedBoxGeometry(2.3, 2.5, 2.5, 3, 0.18), red); cab.position.set(1.9, 2.3, 0); head.add(cab);
+    const ws = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 1.0), win); ws.position.set(3.06, 2.75, 0); ws.rotation.y = Math.PI / 2; head.add(ws);
+    for (const z of [1.255, -1.255]) { const sw = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.7), win); sw.position.set(2.4, 2.8, z); if (z < 0) sw.rotation.y = Math.PI; head.add(sw); }
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.8, 1.7), dark); grille.position.set(3.06, 1.55, 0); head.add(grille);
+    const bump = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 2.5), dark); bump.position.set(3.1, 0.75, 0); head.add(bump);
+    for (const z of [-1.0, 1.0]) { const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 16).rotateZ(Math.PI / 2), rim); tank.position.set(0.3, 0.95, z); head.add(tank); }
+    const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.6, 10), rim); stack.position.set(0.7, 3.4, -1.1); head.add(stack);
+    wheelSet(head, 2.3, 1.05); wheelSet(head, 2.3, -1.05);
+    for (const x of [-1.2, -2.4]) for (const z of [-1.05, -0.68, 0.68, 1.05]) wheelSet(head, x, z, 0.5);
+    camp.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+    // at the camp: a portable trough the tanker fills, bales on the ground, the shepherd's mat and fire
+    const troughCamp = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 0.7), metal); troughCamp.position.set(C.x - 16, 0.25, C.z - 6); troughCamp.castShadow = true; scene.add(troughCamp);
+    const wcamp = new THREE.Mesh(new THREE.PlaneGeometry(5.85, 0.55).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#3d5b57', roughness: 0.05 })); wcamp.position.set(C.x - 16, 0.46, C.z - 6); scene.add(wcamp);
+    const bl = new THREE.InstancedMesh(new THREE.BoxGeometry(1.0, 0.42, 0.5), new THREE.MeshStandardMaterial({ map: hayTex, roughness: 1 }), 12);
+    for (let i = 0; i < 12; i++) bl.setMatrixAt(i, M4().makeTranslation(C.x + 10 + (i % 4) * 1.05, 0.21 + Math.floor(i / 8) * 0.42, C.z - 8 + Math.floor(i / 4) % 2 * 0.52));
+    bl.castShadow = true; scene.add(bl);
+  }
+
   // ---------- vehicles: the owner's Land Cruisers and the water tanker
   const paint = new THREE.MeshPhysicalMaterial({ color: '#f1f1ee', roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.2 });
   const glass = new THREE.MeshStandardMaterial({ color: '#1e252b', roughness: 0.08, metalness: 0.4 });
@@ -477,7 +571,7 @@ export function buildWorld(scene, renderer, sandTex) {
     const col = new THREE.Color(); let k = 0, tries = 0;
     while (k < n && tries < 700000) {
       tries++;
-      const x = R(-200, 200), z = R(-170, 210);
+      const far = rand() < 0.42, x = far ? LAYOUT.camp.x + R(-110, 110) : R(-190, 190), z = far ? LAYOUT.camp.z + R(-100, 100) : R(-170, 200);
       if (inCompound(x, z, 5) || Math.abs(z - LAYOUT.roadZ) < 9 || (Math.abs(x - 27) < 5 && z > 10 && z < LAYOUT.roadZ)) continue;
       if (rand() > grassDensity(x, z)) continue;
       const s = R(0.6, 1.5);
@@ -492,7 +586,7 @@ export function buildWorld(scene, renderer, sandTex) {
     const n = 1500, m = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ map: bushTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), n), c = new THREE.Color();
     let k = 0;
     while (k < n) {
-      const x = R(-300, 300), z = R(-260, 300);
+      const far = rand() < 0.35, x = far ? LAYOUT.camp.x + R(-120, 120) : R(-300, 300), z = far ? LAYOUT.camp.z + R(-110, 110) : R(-260, 300);
       if (inCompound(x, z, 6) || Math.abs(z - LAYOUT.roadZ) < 10) continue;
       const s = R(0.45, 1.25);
       m.setMatrixAt(k, M4().compose(V(x, -0.03, z), new THREE.Quaternion().setFromAxisAngle(UP, R(0, 6.28)), V(s, s * R(0.65, 1.0), s)));

@@ -66,11 +66,12 @@
   <button id="cam-drone" class="glass" type="button" aria-pressed="true">درون</button>
   <button id="cam-near" class="glass" type="button" aria-pressed="false">قريب</button>
   <button id="cam-room" class="glass" type="button" aria-pressed="false">الغرفة</button>
+  <button id="cam-camp" class="glass" type="button" aria-pressed="false">المسراح</button>
 </div>
 
 <div class="sheet glass" dir="rtl" aria-live="polite">
   <span class="dot" aria-hidden="true"></span>
-  <div class="txt"><div class="t1" id="s1">الحلال يسرح · 20 راس</div><div class="t2" id="s2">المرعى رمث وعرفج · زين بعد مطر الوسم</div></div>
+  <div class="txt"><div class="t1" id="s1">الحلال يسرح · 20 راس</div><div class="t2" id="s2">في المسراح، 330 م عن العزبة · رمث وعرفج</div></div>
   <button id="s-clear" class="act ghost" type="button" hidden>إلغاء</button>
   <button id="s-act" class="act" type="button">تابع القطيع</button>
 </div>
@@ -282,7 +283,7 @@ const labels = [
   ['شبك النوق · 2', mid(P.main, 2.6)], ['المفاريد', mid(P.young, 2.4)], ['الحيران · 6', mid(P.calves, 2.4)],
   ['مزعل', mid(P.bull, 2.6)], ['العزل · مزنة', mid(P.sick, 2.4)],
   ['الماء 62% · 8 أيام', new THREE.Vector3(30, 7.6, -40), 'warn'], ['العلف 13 يوم', new THREE.Vector3(32, 4.6, -21)],
-  ['غرفة العزبة', new THREE.Vector3(6, 4.6, 6.5)], ['بيت الشعر', new THREE.Vector3(-12, 3.0, 7)], ['البوابة', new THREE.Vector3(24, 2.6, 15)],
+  ['غرفة العزبة', new THREE.Vector3(6, 4.6, 6.5)], ['كرفان الراعي', new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22)], ['بيت الشعر', new THREE.Vector3(-12, 3.0, 7)], ['البوابة', new THREE.Vector3(24, 2.6, 15)],
 ].map(([text, p, cls]) => { const el = document.createElement('div'); el.className = 'lbl glass' + (cls ? ' ' + cls : ''); el.textContent = text; labelLayer.appendChild(el); return { el, p }; });
 const proj = new THREE.Vector3();
 function placeLabels() {
@@ -302,7 +303,11 @@ controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
 let follow = null, followHerd = false;
 function herdCenter() { const c = new THREE.Vector3(); let n = 0; for (const k of camels) if (k.home === 'graze') { c.add(k.root.position); n++; } return c.multiplyScalar(1 / Math.max(1, n)); }
 function view(kind) {
-  if (kind === 'room') {
+  if (kind === 'camp') {
+    follow = null; followHerd = false;
+    controls.target.set(LAYOUT.camp.x + 3, 1.2, LAYOUT.camp.z - 16);
+    camera.position.set(LAYOUT.camp.x + 30, 21, LAYOUT.camp.z + 28);
+  } else if (kind === 'room') {
     // from the pens side, looking at the glass front, the porch and the cars
     follow = null; followHerd = false;
     controls.target.set(12, 1.4, 5);
@@ -313,18 +318,19 @@ function view(kind) {
     controls.target.copy(tgt).setY(1);
     camera.position.copy(controls.target).add(off);
   }
-  for (const [id, k] of [['cam-drone', 'drone'], ['cam-near', 'near'], ['cam-room', 'room']]) $(id).setAttribute('aria-pressed', String(kind === k));
+  for (const [id, k] of [['cam-drone', 'drone'], ['cam-near', 'near'], ['cam-room', 'room'], ['cam-camp', 'camp']]) $(id).setAttribute('aria-pressed', String(kind === k));
 }
 $('cam-drone').addEventListener('click', () => view('drone'));
 $('cam-near').addEventListener('click', () => view('near'));
 $('cam-room').addEventListener('click', () => view('room'));
+$('cam-camp').addEventListener('click', () => view('camp'));
 
 const STATE = { graze: 'ترعى', walk: 'تمشي', idle: 'واقفة' };
 let selectedRing = null;
 function showHerd() {
   follow = null; followHerd = false;
   $('s1').textContent = `الحلال يسرح · ${camels.filter((c) => c.home === 'graze').length} راس`;
-  $('s2').textContent = 'المرعى رمث وعرفج · زين بعد مطر الوسم';
+  $('s2').textContent = 'في المسراح، 330 م عن العزبة · رمث وعرفج';
   $('s-act').textContent = 'تابع القطيع'; $('s-clear').hidden = true;
   if (selectedRing) selectedRing.visible = false;
 }

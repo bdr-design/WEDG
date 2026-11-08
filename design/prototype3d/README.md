@@ -22,12 +22,19 @@ A camel yard (عزبة), not a farm.
   - A carpet and floor cushions inside.
   - Split air conditioners, a roof tank, and a shaded porch with outdoor
     seating.
-- **Beside the room:** a goat-hair tent with a Sadu rug and a fire pit.
+- **Beside the room:** a goat-hair tent.
+  - Wooden poles, carpets, and floor cushions and rolls along the walls.
+  - A Sadu curtain (القاطع), and a hearth with glowing embers.
+  - Three brass dallahs, a thermos, a tray of cups, dates and a lantern.
+  - A Sadu rug and a fire pit outside.
 - **Vehicles:** a car shade with the owner's Land Cruisers: a white LC70
   single-cab pickup (شاص) and a black LC300. A second LC70 carries alfalfa by
   the feed shed, and a water tanker stands on the lane.
 - **Water, feed and staff:** an elevated water tank, an open feed shed with
   bales and sacks, and the shepherds' cabin.
+- **The grazing ground (مسراح):** about 330 m out along a track.
+  - The shepherd's caravan on a flatbed trailer, coupled to its tractor unit.
+  - A portable trough, bales, and the herd grazing.
 - **Trees:** a few tamarisks for shade.
 - **Roads:** an asphalt road, a graded track to the gate, the lanes, and the
   herd's trail.
