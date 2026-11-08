@@ -12,8 +12,8 @@ photo.
 | 4. Rig and clips | `rig.py` | `camel_rigged.blend` (idle, graze) |
 | 4b. Walk from foot physics | `walk_physics.py` | replaces `walk`, prints slip and contact checks |
 | 5. Export | `export_glb.py` | `camel_wodh_female.glb` |
-| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 618 KB), `_lod2.glb` (1.5k triangles, 512 px, 264 KB); same skeleton and clips |
-| Checks | `render_tex.py`, `render_anim.py` | Cycles renders in desert light |
+| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 611 KB), `_lod2.glb` (1.5k triangles, 512 px, 267 KB); same skeleton and clips |
+| Checks | `render_tex.py`, `render_anim.py`, `feet_closeup.py`, `feet_clay.py`, `feet_walk.py` | Cycles renders in desert light; close-ups of the lower legs standing, untextured and through a stride |
 
 ## How each step works
 
@@ -21,14 +21,30 @@ photo.
   - The body, neck and head are the photo's outline inflated sideways, with
     real camel widths per region (barrel, narrow hump ridge, narrow neck and
     head).
-  - The legs, knees, fetlocks, two-toed foot pads, ears, chest pad, lower lip
-    and tail are tapered tubes and ellipsoids at real proportions.
+  - The legs, knees, ears, chest pad, lower lip and tail are tapered tubes
+    and ellipsoids at real proportions.
+  - **Lower legs and feet**, matched to the photo:
+    - The cannon is a slim bone with the flexor tendons behind it, so it is
+      deeper than wide (about 10 × 7 cm).
+    - A rounded fetlock, then the pastern running forward and down into the
+      pad.
+    - A broad cushion with a flat sole, about 26 × 17 cm on the forefeet and
+      92% of that behind.
+    - Two toes side by side with a cleft between them and a nail over the
+      front of each.
+    - The rig's pastern and foot bones follow the same points, so the pad
+      rolls onto the toes at push-off and curls in the swing.
   - Everything is joined with a smooth union and meshed with marching cubes.
   - Scale: 443 px = 1 m, so the hump is 2.05 m above the ground.
 - **Textures:** the photo is projected from the side onto side-facing skin.
   The top, bottom, front and legs get a coat built from the photo's own
-  colours, with dust toward the feet, calluses on the knees and chest pad,
-  and dark soles. The normal map adds fur grain.
+  colours.
+  - The lower legs stay white, with a light cream stain above the pad.
+  - Grey nails, calluses on the knees and chest pad, and a leathery sole
+    underneath.
+  - A short-range ambient-occlusion bake darkens the toe cleft, nail rims and
+    joint creases.
+  - The normal map adds fur grain.
 - **Clips:**
   - `idle` (4 s).
   - `walk`: built from foot physics and checked against Muybridge's camel
@@ -53,7 +69,7 @@ photo.
       of the ground while planted.
   - `graze` (4 s): the muzzle reaches the ground about 0.75 m in front of
     the forefeet.
-- **Budget:** 40k triangles, 37 bones, 2K textures, 2.1 MB GLB.
+- **Budget:** 40k triangles, 37 bones, 2K textures, 2.0 MB GLB.
 
 ## Running it
 

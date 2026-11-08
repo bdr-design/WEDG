@@ -6,7 +6,7 @@ own colour statistics on top, bottom, front and the legs. Calluses on the
 knees and chest pad, dust toward the feet, dark soles.
 Normal map: fine fur grain plus skin folds taken from the photo.
 """
-import sys, os
+import sys, os, json
 sys.path.insert(0, os.getcwd())
 import bpy
 from blend_common import reset, mesh_from_npz
@@ -33,6 +33,20 @@ bpy.ops.mesh.select_all(action='SELECT')
 bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.004)
 bpy.ops.object.mode_set(mode='OBJECT')
 print('tris', len(ob.data.polygons))
+
+# short-range ambient occlusion: darkens the toe cleft, nail rims and joint creases
+sc.world = bpy.data.worlds.new('AO')
+sc.world.light_settings.distance = 0.06
+aom = bpy.data.materials.new('AOBake')
+aom.use_nodes = True
+ao_img = bpy.data.images.new('camel_ao', TEX, TEX, is_data=True)
+ao_node = aom.node_tree.nodes.new('ShaderNodeTexImage')
+ao_node.image = ao_img
+aom.node_tree.nodes.active = ao_node
+ob.data.materials.append(aom)
+sc.cycles.samples = 64
+bpy.ops.object.bake(type='AO', margin=8)
+ob.data.materials.clear()
 
 
 def lin(c):
@@ -127,14 +141,14 @@ coat = ramp.outputs[0]
 dust = N.new('ShaderNodeMix')
 dust.data_type = 'RGBA'
 dust.blend_type = 'MULTIPLY'
-L.new(mrange(sep.outputs['Z'], 0.45, 0.05), dust.inputs['Factor'])
+L.new(math('MULTIPLY', mrange(sep.outputs['Z'], 0.30, 0.04), 0.85), dust.inputs['Factor'])
 L.new(coat, dust.inputs['A'])
-dust.inputs['B'].default_value = lin((205, 180, 150))
+dust.inputs['B'].default_value = lin((226, 206, 176))
 sole = N.new('ShaderNodeMix')
 sole.data_type = 'RGBA'
-L.new(mrange(sep.outputs['Z'], 0.035, 0.012), sole.inputs['Factor'])
+L.new(math('MULTIPLY', mrange(sep.outputs['Z'], 0.016, 0.006), mrange(nsep.outputs['Z'], -0.2, -0.6)), sole.inputs['Factor'])
 L.new(dust.outputs['Result'], sole.inputs['A'])
-sole.inputs['B'].default_value = lin((70, 62, 55))
+sole.inputs['B'].default_value = lin((120, 110, 100))
 # calluses: front knees and the chest pad
 cal = N.new('ShaderNodeMix')
 cal.data_type = 'RGBA'
@@ -147,13 +161,48 @@ pad = math('MULTIPLY', mrange(nsep.outputs['Z'], -0.3, -0.75),
 L.new(math('MAXIMUM', knee, math('MULTIPLY', pad, mrange(sep.outputs['Z'], 1.15, 0.95))), cal.inputs['Factor'])
 L.new(sole.outputs['Result'], cal.inputs['A'])
 cal.inputs['B'].default_value = lin((158, 148, 136))
+# nails: grey horn caps on the front of each toe (centres from shape.py)
+feet = json.load(open('feet.json'))
+nail = None
+for nx, ny, nz, ns in feet['nails']:
+    off = N.new('ShaderNodeVectorMath')
+    off.operation = 'SUBTRACT'
+    L.new(tc.outputs['Object'], off.inputs[0])
+    off.inputs[1].default_value = (nx, ny, nz)
+    sc_ = N.new('ShaderNodeVectorMath')
+    sc_.operation = 'DIVIDE'
+    L.new(off.outputs[0], sc_.inputs[0])
+    sc_.inputs[1].default_value = tuple(r * ns for r in feet['nail_r'])
+    ln = N.new('ShaderNodeVectorMath')
+    ln.operation = 'LENGTH'
+    L.new(sc_.outputs[0], ln.inputs[0])
+    m_ = mrange(ln.outputs['Value'], 1.07, 1.0)
+    nail = m_ if nail is None else math('MAXIMUM', nail, m_)
+nmix = N.new('ShaderNodeMix')
+nmix.data_type = 'RGBA'
+L.new(nail, nmix.inputs['Factor'])
+L.new(cal.outputs['Result'], nmix.inputs['A'])
+ntone = N.new('ShaderNodeMix')
+ntone.data_type = 'RGBA'
+L.new(mrange(sep.outputs['Z'], 0.075, 0.015), ntone.inputs['Factor'])
+ntone.inputs['A'].default_value = lin((176, 172, 166))
+ntone.inputs['B'].default_value = lin((112, 108, 104))
+L.new(ntone.outputs['Result'], nmix.inputs['B'])
 # final blend: photo on the sides of body/neck/head
 fin = N.new('ShaderNodeMix')
 fin.data_type = 'RGBA'
 L.new(w_photo, fin.inputs['Factor'])
-L.new(cal.outputs['Result'], fin.inputs['A'])
+L.new(nmix.outputs['Result'], fin.inputs['A'])
 L.new(photo.outputs['Color'], fin.inputs['B'])
-L.new(fin.outputs['Result'], emit.inputs['Color'])
+aot = N.new('ShaderNodeTexImage')
+aot.image = ao_img
+aomul = N.new('ShaderNodeMix')
+aomul.data_type = 'RGBA'
+aomul.blend_type = 'MULTIPLY'
+aomul.inputs['Factor'].default_value = 0.75
+L.new(fin.outputs['Result'], aomul.inputs['A'])
+L.new(aot.outputs['Color'], aomul.inputs['B'])
+L.new(aomul.outputs['Result'], emit.inputs['Color'])
 # bake target
 img = bpy.data.images.new('camel_albedo', TEX, TEX)
 tnode = N.new('ShaderNodeTexImage')

@@ -161,20 +161,66 @@ HIND = [j(1210, 430, 0.15), j(1180, 560, 0.19), j(1205, 665, 0.17), j(1224, 765,
 HIND_R = [0.16, 0.12, 0.085, 0.062, 0.043, 0.05, 0.047]
 joints = {'front': FRONT, 'hind': HIND}
 
+def smax(a, b, k):
+    return -smin(-a, -b, k)
+
+
+def foot(c, s, side):
+    """Pad, two toes with nails, pastern and fetlock below the fetlock point c.
+
+    A camel stands on a broad cushion: the pastern runs forward and down from
+    the fetlock into the pad, the two toes lie side by side at the front with
+    a cleft between them and a nail on top of each, and the sole is flat.
+    """
+    o = np.array([c[0], c[1], 0.0])                    # ground under the fetlock
+    loc = lambda x, y, z: o + np.array([x * s, y * s * side, z * s])
+    lo, hi = o - np.array([0.16, 0.16, 0.05]), o + np.array([0.30, 0.16, 0.26])
+
+    def sdf(q):
+        d = ellipsoid(q, loc(0.05, 0, 0.045), np.array([0.115, 0.088, 0.064]) * s)       # the cushion
+        for t in (-1, 1):
+            d = smin(d, ellipsoid(q, loc(0.116, t * 0.042, 0.036), np.array([0.078, 0.046, 0.039]) * s), 0.02)
+        # cleft between the toes, deeper toward the front
+        d = smax(d, -ellipsoid(q, loc(0.21, 0, 0.04), np.array([0.11, 0.008, 0.07]) * s), 0.005)
+        d = smax(d, -ellipsoid(q, loc(0.20, 0, 0.095), np.array([0.07, 0.02, 0.045]) * s), 0.012)
+        # nails: caps over the front and top of each toe
+        for t in (-1, 1):
+            d = smin(d, ellipsoid(q, loc(0.168, t * 0.042, 0.042), np.array([0.033, 0.028, 0.038]) * s), 0.002)
+        # pastern into the pad, fetlock knob and the rounded back of the fetlock
+        d = smin(d, round_cone(q, loc(0.0, 0, c[2] / s), loc(0.055, 0, 0.088), 0.05 * s, 0.058 * s), 0.03)
+        d = smin(d, ellipsoid(q, loc(-0.004, 0, c[2] / s), np.array([0.056, 0.048, 0.05]) * s), 0.025)
+        d = smin(d, ellipsoid(q, loc(-0.034, 0, c[2] / s - 0.05), np.array([0.04, 0.04, 0.065]) * s), 0.025)
+        return smax(d, -q[:, 2], 0.01)                  # flat sole on the ground
+    add(sdf, lo, hi, 0.02)
+    return [list(loc(0.168, t * 0.042, 0.042)) + [s] for t in (-1, 1)]
+
+
+def cannon(top, fet, r_top, r_bot, side):
+    """Slim cannon bone with the flexor tendons behind it: deeper than wide."""
+    a, b = top.copy(), fet.copy()
+    a[1] *= side
+    b[1] *= side
+    fw = np.array([1.0, 0, 0])
+    for off, r1, r2 in ((0.012, r_top, r_bot), (-0.025, r_top * 0.78, r_bot * 0.8)):
+        aa, bb = a + fw * off, b + fw * off
+        if off < 0:
+            aa = aa + np.array([0, 0, -0.05])
+        add(lambda q, aa=aa, bb=bb, r1=r1, r2=r2: round_cone(q, aa, bb, r1, r2),
+            np.minimum(aa, bb) - 0.12, np.maximum(aa, bb) + 0.12, 0.03)
+
+
+nails = []
 for side in (1, -1):
-    chain(FRONT, FRONT_R, 0.07, side)
-    chain(HIND, HIND_R, 0.09, side)
-    for (u, scale) in ((672, 1.0), (1180, 0.92)):
-        c = j(u, 1014, 0.15 if u < 900 else 0.14)
+    chain(FRONT[:4], FRONT_R[:4], 0.07, side)
+    chain(HIND[:4], HIND_R[:4], 0.09, side)
+    cannon(FRONT[3], FRONT[5], 0.038, 0.033, side)
+    cannon(HIND[3], HIND[5], 0.036, 0.031, side)
+    for fet, scale in ((FRONT[5], 1.0), (HIND[5], 0.92)):
+        c = fet.copy()
         c[1] *= side
-        c[2] = 0.022
-        add(lambda q, c=c, s=scale: ellipsoid(q, c, np.array([0.10, 0.08, 0.022]) * s), c - 0.25, c + 0.25, 0.025)
-        for toe in (-1, 1):
-            tc = c + np.array([0.075 * scale, toe * 0.046 * scale, 0.0])
-            add(lambda q, tc=tc, s=scale: ellipsoid(q, tc, np.array([0.068, 0.037, 0.024]) * s), tc - 0.15, tc + 0.15, 0.012)
-    # bony knees (carpus) and fetlocks
-    for (u, v, r, y) in ((707, 798, np.array([0.06, 0.062, 0.07]), 0.155), (696, 952, np.array([0.05, 0.05, 0.045]), 0.15),
-                         (1222, 765, np.array([0.06, 0.05, 0.065]), 0.15), (1205, 952, np.array([0.048, 0.048, 0.042]), 0.14)):
+        nails += foot(c, scale, side)
+    # bony knees (carpus) and hocks
+    for (u, v, r, y) in ((707, 798, np.array([0.06, 0.062, 0.07]), 0.155), (1222, 765, np.array([0.06, 0.05, 0.065]), 0.15)):
         c = j(u, v, y * side)
         c[0] += 0.012
         add(lambda q, c=c, r=r: ellipsoid(q, c, r), c - 0.2, c + 0.2, 0.03)
@@ -204,4 +250,5 @@ verts, faces, normals, _ = measure.marching_cubes(F, 0.0, spacing=(VOX, VOX, VOX
 verts += np.array([xs[0], ys[0], zs[0]])
 np.savez_compressed('camel_hi.npz', verts=verts.astype(np.float32), faces=faces.astype(np.int32))
 json.dump({k: [list(map(float, p)) for p in v] for k, v in joints.items()}, open('joints.json', 'w'))
+json.dump({'nails': [list(map(float, p)) for p in nails], 'nail_r': [0.033, 0.028, 0.038]}, open('feet.json', 'w'))
 print('verts', len(verts), 'faces', len(faces), 'bbox', verts.min(0).round(3), verts.max(0).round(3))
