@@ -76,6 +76,41 @@ const tamariskTexture = () => canvasTex(256, 256, (g, w, h) => {
 // ------------------------------------------------------------ layout (real metres)
 // meshes laid on the ground that must follow the real terrain beyond the flat yard
 const DRAPE = [];
+// ground cover is cut into cells; each cell draws all, part or none of its instances by distance
+const SCATTER = [];
+function scatterCells(geo, mat, items, { cell = 25, bands, cast = false, receive = true, shadowDist = 0 }) {
+  const buckets = new Map();
+  for (const it of items) {
+    const key = Math.floor(it.x / cell) + ',' + Math.floor(it.z / cell);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(it);
+  }
+  const group = new THREE.Group();
+  for (const list of buckets.values()) {
+    // shuffle so that any prefix is an even sample of the cell
+    for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+    const m = new THREE.InstancedMesh(geo, mat, list.length);
+    let cx = 0, cz = 0;
+    list.forEach((it, i) => { m.setMatrixAt(i, it.m); if (it.c) m.setColorAt(i, it.c); cx += it.x; cz += it.z; });
+    m.castShadow = cast; m.receiveShadow = receive;
+    m.computeBoundingSphere();
+    group.add(m);
+    SCATTER.push({ m, n: list.length, x: cx / list.length, z: cz / list.length, bands, cast, shadowDist });
+  }
+  return group;
+}
+// bands: [[distance, share of instances drawn], ...], nothing beyond the last band
+export function updateScatter(cam) {
+  for (const c of SCATTER) {
+    const d = Math.hypot(cam.x - c.x, cam.z - c.z, cam.y * 0.5);
+    let share = 0;
+    for (const [dist, k] of c.bands) if (d < dist) { share = k; break; }
+    const n = Math.round(c.n * share);
+    c.m.visible = n > 0;
+    c.m.count = n;
+    if (c.cast) c.m.castShadow = d < c.shadowDist;     // only cells near the camera cast shadows
+  }
+}
 export function drapeOnTerrain(heightAt) {
   for (const m of DRAPE) {
     const p = m.geometry.attributes.position;
@@ -105,7 +140,7 @@ export const LAYOUT = {
 const inCompound = (x, z, m = 0) => x > LAYOUT.compound.x0 - m && x < LAYOUT.compound.x1 + m && z > LAYOUT.compound.z0 - m && z < LAYOUT.compound.z1 + m;
 
 export function buildWorld(scene, renderer, sandTex) {
-  const aniso = renderer.capabilities.getMaxAnisotropy();
+  const aniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
   sandTex.anisotropy = aniso;
   const metal = new THREE.MeshStandardMaterial({ color: '#aeb2b4', metalness: 0.85, roughness: 0.38 });
 
@@ -153,10 +188,10 @@ export function buildWorld(scene, renderer, sandTex) {
   const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 6000, 1, 600).rotateX(-Math.PI / 2).rotateY(Math.PI / 2).translate(0, 0.08, LAYOUT.roadZ),
     new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.92 }));
   asphaltTex.repeat.set(1, 6000 / 40);
-  road.receiveShadow = true; scene.add(road); DRAPE.push(road);
+  road.receiveShadow = true; road.userData.keep = true; scene.add(road); DRAPE.push(road);
   const shoulder = new THREE.Mesh(new THREE.PlaneGeometry(6000, 15, 600, 1).rotateX(-Math.PI / 2).translate(0, 0.05, LAYOUT.roadZ),
     new THREE.MeshStandardMaterial({ color: '#a98463', roughness: 1, transparent: true, opacity: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }));
-  scene.add(shoulder); DRAPE.push(shoulder);
+  shoulder.userData.keep = true; scene.add(shoulder); DRAPE.push(shoulder);
   const trackTex = canvasTex(64, 256, (g, w, h) => {
     g.fillStyle = 'rgba(120,86,56,0.55)'; g.fillRect(0, 0, w, h);
     for (const x of [w * 0.28, w * 0.72]) { const gr = g.createLinearGradient(x - 8, 0, x + 8, 0); gr.addColorStop(0, 'rgba(70,48,28,0)'); gr.addColorStop(0.5, 'rgba(70,48,28,0.55)'); gr.addColorStop(1, 'rgba(70,48,28,0)'); g.fillStyle = gr; g.fillRect(x - 8, 0, 16, h); }
@@ -319,7 +354,7 @@ export function buildWorld(scene, renderer, sandTex) {
     for (const sz of [-1, 1]) { const pp = parapet.clone(); pp.position.set(0, 0.35 + H + 0.45, sz * (D + 0.5) / 2); room.add(pp); }
     // the glass front: tinted panes in bronze aluminium frames
     const frameMat = new THREE.MeshStandardMaterial({ color: '#3a3027', metalness: 0.6, roughness: 0.35 });
-    const glassMat = new THREE.MeshPhysicalMaterial({ color: '#a9bcc2', roughness: 0.04, metalness: 0.1, transparent: true, opacity: 0.32, envMapIntensity: 1.6 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: '#a9bcc2', roughness: 0.04, metalness: 0.1, transparent: true, opacity: 0.32, envMapIntensity: 1.6 });
     const pane = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.3, H - 0.2), glassMat); pane.position.set(0, 0.35 + H / 2, -D / 2); pane.rotation.y = Math.PI; room.add(pane);
     for (let i = 0; i <= 4; i++) { const mu = new THREE.Mesh(new THREE.BoxGeometry(0.08, H, 0.1), frameMat); mu.position.set(-W / 2 + 0.15 + i * (W - 0.3) / 4, 0.35 + H / 2, -D / 2); room.add(mu); }
     for (const y of [0.4, 0.35 + H - 0.05]) { const tr = new THREE.Mesh(new THREE.BoxGeometry(W, 0.1, 0.1), frameMat); tr.position.set(0, y, -D / 2); room.add(tr); }
@@ -408,8 +443,7 @@ export function buildWorld(scene, renderer, sandTex) {
     const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 8, 0, 6.283, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#d8d2c6', roughness: 0.4, side: THREE.DoubleSide })); bowl.position.set(-1.4, 0.15, D / 2 - 1.3); T.add(bowl);
     const date = new THREE.SphereGeometry(0.018, 8, 6); date.scale(1, 1, 1.6);
     for (let i = 0; i < 14; i++) { const d = new THREE.Mesh(date, new THREE.MeshStandardMaterial({ color: '#4a2412', roughness: 0.5 })); d.position.set(-1.4 + R(-0.07, 0.07), 0.08 + R(0, 0.02), D / 2 - 1.3 + R(-0.07, 0.07)); T.add(d); }
-    const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.22, 12), new THREE.MeshStandardMaterial({ color: '#f7d58a', emissive: '#ffb54a', emissiveIntensity: 0.8, transparent: true, opacity: 0.9 })); lantern.position.set(-2, H - 0.45, 0); T.add(lantern);
-    const glow = new THREE.PointLight('#ffb070', 3, 7, 2); glow.position.set(0, 0.6, D / 2 - 1.2); T.add(glow);
+    const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.22, 12), new THREE.MeshStandardMaterial({ color: '#f7d58a', emissive: '#ffb54a', emissiveIntensity: 1.6, transparent: true, opacity: 0.95 })); lantern.position.set(-2, H - 0.45, 0); T.add(lantern);
     T.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = n.geometry.type !== 'PlaneGeometry'; } });
   }
 
@@ -425,54 +459,13 @@ export function buildWorld(scene, renderer, sandTex) {
   }
 
   // ---------- vehicles: the owner's Land Cruisers and the water tanker
-  const paint = new THREE.MeshPhysicalMaterial({ color: '#f1f1ee', roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.2 });
+  const paint = new THREE.MeshStandardMaterial({ color: '#f1f1ee', roughness: 0.3 });
   const glass = new THREE.MeshStandardMaterial({ color: '#1e252b', roughness: 0.08, metalness: 0.4 });
   const rubber = new THREE.MeshStandardMaterial({ color: '#1b1a19', roughness: 0.9 });
   const steel = new THREE.MeshStandardMaterial({ color: '#c9ccce', metalness: 0.9, roughness: 0.25 });
   const wheel = (grp, x, z, r = 0.38, w = 0.28) => { const t = new THREE.Mesh(new THREE.CylinderGeometry(r, r, w, 20).rotateX(Math.PI / 2), rubber); t.position.set(x, r, z); t.castShadow = true; grp.add(t); const h = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.55, w + 0.02, 12).rotateX(Math.PI / 2), steel); h.position.copy(t.position); grp.add(h); };
   const blackTrim = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.6 });
   const lamp = new THREE.MeshStandardMaterial({ color: '#f4f1e6', emissive: '#fff4cf', emissiveIntensity: 0.25, roughness: 0.1 });
-  const paintOf = (c, gloss = 0.32) => new THREE.MeshPhysicalMaterial({ color: c, roughness: gloss, clearcoat: 0.8, clearcoatRoughness: 0.15 });
-  const box = (g, geo, mat, x, y, z, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.z = rz; g.add(m); return m; };
-  // Land Cruiser 70 single-cab pickup ("شاص"): boxy, flat hood, round lamps, snorkel
-  const lc70 = (x, z, rot, color, load) => {
-    const g = new THREE.Group(), p = paintOf(color);
-    box(g, new RoundedBoxGeometry(5.18, 0.5, 1.8, 2, 0.06), p, 0, 0.82, 0);
-    box(g, new RoundedBoxGeometry(1.55, 0.36, 1.8, 2, 0.06), p, 1.78, 1.24, 0);
-    box(g, new RoundedBoxGeometry(1.5, 0.92, 1.8, 2, 0.07), p, 0.38, 1.52, 0);
-    box(g, new THREE.BoxGeometry(0.06, 0.62, 1.62), glass, 1.14, 1.62, 0, -0.08);
-    for (const s of [-1, 1]) box(g, new THREE.BoxGeometry(1.05, 0.5, 0.04), glass, 0.3, 1.66, s * 0.905);
-    box(g, new THREE.BoxGeometry(0.06, 0.34, 1.0), blackTrim, 2.57, 1.08, 0);
-    for (const s of [-1, 1]) { const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 16).rotateZ(Math.PI / 2), lamp); hl.position.set(2.59, 1.1, s * 0.66); g.add(hl); }
-    box(g, new THREE.BoxGeometry(0.16, 0.2, 1.95), steel, 2.62, 0.72, 0);
-    box(g, new THREE.BoxGeometry(0.12, 0.16, 1.9), blackTrim, -2.62, 0.7, 0);
-    for (const s of [-1, 1]) box(g, new THREE.BoxGeometry(2.1, 0.5, 0.05), p, -1.5, 1.27, s * 0.88);
-    box(g, new THREE.BoxGeometry(0.05, 0.5, 1.8), p, -2.56, 1.27, 0);
-    const sn = box(g, new THREE.BoxGeometry(0.1, 1.0, 0.1), blackTrim, 1.2, 1.55, 0.98); sn.rotation.z = -0.08;
-    box(g, new THREE.BoxGeometry(0.25, 0.08, 0.12), blackTrim, 1.28, 2.06, 0.98);
-    for (const s of [-1, 1]) box(g, new THREE.BoxGeometry(0.06, 0.16, 0.22), blackTrim, 1.0, 1.55, s * 1.02);
-    for (const [wx, wz] of [[1.62, 0.8], [1.62, -0.8], [-1.55, 0.8], [-1.55, -0.8]]) { wheel(g, wx, wz, 0.4, 0.3); box(g, new THREE.BoxGeometry(0.95, 0.1, 0.24), blackTrim, wx, 0.86, Math.sign(wz) * 0.94); }
-    if (load) for (let i = 0; i < 3; i++) box(g, new THREE.BoxGeometry(0.5, 0.42, 1.0), new THREE.MeshStandardMaterial({ map: hayTex, roughness: 1 }), -1.0 - i * 0.55, 1.3, 0);
-    g.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
-    g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g);
-  };
-  // Land Cruiser 300 (GXR/VXR): a big boxy SUV with a tall glasshouse and roof rails
-  const lc300 = (x, z, rot, color) => {
-    const g = new THREE.Group(), p = paintOf(color, 0.22);
-    box(g, new RoundedBoxGeometry(4.95, 0.78, 1.96, 3, 0.12), p, 0, 0.92, 0);
-    box(g, new RoundedBoxGeometry(1.45, 0.24, 1.92, 2, 0.08), p, 1.72, 1.32, 0, -0.06);
-    box(g, new RoundedBoxGeometry(3.15, 0.72, 1.88, 3, 0.12), p, -0.42, 1.6, 0);
-    box(g, new RoundedBoxGeometry(3.05, 0.5, 1.9, 2, 0.1), glass, -0.36, 1.66, 0);
-    box(g, new RoundedBoxGeometry(2.95, 0.08, 1.8, 2, 0.04), p, -0.45, 1.98, 0);
-    for (const s of [-1, 1]) box(g, new THREE.BoxGeometry(2.6, 0.05, 0.05), steel, -0.45, 2.06, s * 0.78);
-    box(g, new THREE.BoxGeometry(0.06, 0.46, 1.3), blackTrim, 2.47, 1.0, 0);
-    box(g, new THREE.BoxGeometry(0.07, 0.52, 1.36), steel, 2.465, 1.0, 0).scale.set(1, 1, 1);
-    for (const s of [-1, 1]) box(g, new THREE.BoxGeometry(0.05, 0.08, 0.36), lamp, 2.47, 1.24, s * 0.72);
-    box(g, new THREE.BoxGeometry(0.1, 0.18, 1.9), blackTrim, 2.48, 0.62, 0);
-    for (const [wx, wz] of [[1.55, 0.86], [1.55, -0.86], [-1.45, 0.86], [-1.45, -0.86]]) wheel(g, wx, wz, 0.42, 0.3);
-    g.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
-    g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g);
-  };
   // the car shade by the room, the owner's two Land Cruisers under it
   {
     const cs = new THREE.Group(); cs.position.set(16.5, 0, 6.5);
@@ -522,37 +515,41 @@ export function buildWorld(scene, renderer, sandTex) {
   // ---------- grass after the Wasm rain, shrubs, stones
   {
     const tuft = cardCluster(0.66, 0.5, 3, true);
-    const n = 42000, gm = new THREE.InstancedMesh(tuft, new THREE.MeshStandardMaterial({ map: grassTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), n);
-    const col = new THREE.Color(); let k = 0, tries = 0;
+    const n = 42000, items = [];
+    let k = 0, tries = 0;
     while (k < n && tries < 700000) {
       tries++;
       const far = rand() < 0.42, x = far ? LAYOUT.camp.x + R(-110, 110) : R(-190, 190), z = far ? LAYOUT.camp.z + R(-100, 100) : R(-170, 200);
       if (inCompound(x, z, 5) || Math.abs(z - LAYOUT.roadZ) < 9 || (Math.abs(x - 27) < 5 && z > 10 && z < LAYOUT.roadZ)) continue;
       if (rand() > grassDensity(x, z)) continue;
       const s = R(0.6, 1.5);
-      gm.setMatrixAt(k, M4().compose(V(x, 0, z), new THREE.Quaternion().setFromAxisAngle(UP, R(0, 6.28)), V(s, s * R(0.7, 1.3), s)));
-      gm.setColorAt(k, col.setHSL(0.13 + R(-0.02, 0.05), 0.18, 0.86 + R(-0.08, 0.08)));
+      items.push({ x, z, m: M4().compose(V(x, 0, z), new THREE.Quaternion().setFromAxisAngle(UP, R(0, 6.28)), V(s, s * R(0.7, 1.3), s)),
+        c: new THREE.Color().setHSL(0.13 + R(-0.02, 0.05), 0.18, 0.86 + R(-0.08, 0.08)) });
       k++;
     }
-    gm.count = k; gm.receiveShadow = true; scene.add(gm);
+    // every tuft up close, a thinning sample further out, none past 260 m (the sand texture carries the colour)
+    scene.add(scatterCells(tuft, new THREE.MeshStandardMaterial({ map: grassTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
+      { bands: [[45, 1], [90, 0.45], [160, 0.2], [260, 0.08]] }));
   }
   {
     const g = cardCluster(1.2, 1.0, 3, true);
-    const n = 1500, m = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ map: bushTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), n), c = new THREE.Color();
+    const n = 1500, items = [];
     let k = 0;
     while (k < n) {
       const far = rand() < 0.35, x = far ? LAYOUT.camp.x + R(-120, 120) : R(-300, 300), z = far ? LAYOUT.camp.z + R(-110, 110) : R(-260, 300);
       if (inCompound(x, z, 6) || Math.abs(z - LAYOUT.roadZ) < 10) continue;
       const s = R(0.45, 1.25);
-      m.setMatrixAt(k, M4().compose(V(x, -0.03, z), new THREE.Quaternion().setFromAxisAngle(UP, R(0, 6.28)), V(s, s * R(0.65, 1.0), s)));
-      m.setColorAt(k, c.setHSL(0.12 + R(-0.02, 0.04), 0.1, 0.82 + R(-0.1, 0.1)));
+      items.push({ x, z, m: M4().compose(V(x, -0.03, z), new THREE.Quaternion().setFromAxisAngle(UP, R(0, 6.28)), V(s, s * R(0.65, 1.0), s)),
+        c: new THREE.Color().setHSL(0.12 + R(-0.02, 0.04), 0.1, 0.82 + R(-0.1, 0.1)) });
       k++;
     }
-    m.castShadow = m.receiveShadow = true; scene.add(m);
-    const sg = new THREE.DodecahedronGeometry(0.12, 0); sg.scale(1, 0.55, 1.2);
-    const stones = new THREE.InstancedMesh(sg, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1 }), 2600);
-    for (let i = 0; i < 2600; i++) { const x = R(-200, 200), z = R(-180, 220), s = R(0.5, 2.2); stones.setMatrixAt(i, M4().compose(V(x, 0.02, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, R(0, 6), 0)), V(s, s, s))); stones.setColorAt(i, c.setHSL(0.07, 0.18, 0.34 + R(-0.08, 0.1))); }
-    stones.receiveShadow = true; scene.add(stones);
+    scene.add(scatterCells(g, new THREE.MeshStandardMaterial({ map: bushTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
+      { cell: 80, cast: true, shadowDist: 110, bands: [[120, 1], [260, 0.5], [450, 0.25]] }));
+    // stones: 8 triangles each (they are a few centimetres across), only near the camera
+    const sg = new THREE.OctahedronGeometry(0.12, 0); sg.scale(1, 0.5, 1.25);
+    const stones = [];
+    for (let i = 0; i < 2600; i++) { const x = R(-200, 200), z = R(-180, 220), s = R(0.5, 2.2); stones.push({ x, z, m: M4().compose(V(x, 0.02, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, R(0, 6), 0)), V(s, s, s)), c: new THREE.Color().setHSL(0.07, 0.18, 0.34 + R(-0.08, 0.1)) }); }
+    scene.add(scatterCells(sg, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1 }), stones, { bands: [[40, 1], [90, 0.35]] }));
   }
 }
 

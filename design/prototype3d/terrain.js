@@ -25,7 +25,7 @@ export async function buildTerrain(scene, renderer, sandTex) {
     return (a * (1 - fu) + b * fu) * (1 - fv) + (c * (1 - fu) + d * fu) * fv;
   };
   const sat = await new THREE.TextureLoader().loadAsync('terrain_sat.jpg');
-  sat.colorSpace = THREE.SRGBColorSpace; sat.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  sat.colorSpace = THREE.SRGBColorSpace; sat.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
 
   // satellite colour, with the owner's sand photo blended in close to the camera for ground detail
   const mat = new THREE.MeshStandardMaterial({ map: sat, roughness: 1 });
@@ -53,9 +53,11 @@ export async function buildTerrain(scene, renderer, sandTex) {
     g.computeVertexNormals();
     const m = new THREE.Mesh(g, mat); m.receiveShadow = true; scene.add(m); return m;
   };
-  // detailed ring of 12 x 12 km around the yard (50 m), the whole 70 km area coarser (270 m)
-  const R = 6000;
-  grid(-R, R, -R, R, 240, 240);
-  grid(meta.xWest, meta.xEast, meta.zNorth, meta.zSouth, 256, 242, (x, z) => (Math.abs(x) < R - 300 && Math.abs(z) < R - 300 ? 6 : 0));
+  // three rings, each tucked a few metres under the finer one inside it (about 73k triangles in all):
+  // 4 x 4 km around the yard at 50 m, 12 x 12 km at 100 m (Aban al-Asmar), the whole 70 km area at about 550 m
+  const inside = (r) => (x, z) => (Math.abs(x) < r && Math.abs(z) < r ? 6 : 0);
+  grid(-2000, 2000, -2000, 2000, 80, 80);
+  grid(-6000, 6000, -6000, 6000, 120, 120, inside(1900));
+  grid(meta.xWest, meta.xEast, meta.zNorth, meta.zSouth, 128, 121, inside(5700));
   return { meta, heightAt };
 }

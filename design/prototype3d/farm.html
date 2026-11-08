@@ -91,7 +91,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { buildWorld, LAYOUT, VEHICLES, drapeOnTerrain } from './world.js';
+import { buildWorld, LAYOUT, VEHICLES, drapeOnTerrain, updateScatter } from './world.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildTerrain } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
@@ -102,12 +103,12 @@ const R = (a, b) => a + (b - a) * rand();
 
 // ------------------------------------------------------------ renderer, sky, light
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));   // sharp enough on a phone, far fewer pixels than 2x or 3x
 renderer.setSize(stage.clientWidth, stage.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.AgXToneMapping;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -133,7 +134,7 @@ scene.environmentIntensity = 0.34;
 
 const sun = new THREE.DirectionalLight('#ffdcae', 4.4);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(1536, 1536);
 Object.assign(sun.shadow.camera, { left: -72, right: 72, top: 72, bottom: -72, near: 1, far: 320 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
@@ -141,7 +142,33 @@ scene.add(sun, sun.target);
 // ------------------------------------------------------------ the world (ground, roads, farm, trees, grass)
 const sand = new THREE.TextureLoader().load('sand.jpg');
 sand.colorSpace = THREE.SRGBColorSpace; sand.wrapS = sand.wrapT = THREE.RepeatWrapping;
+const before = scene.children.length;
 buildWorld(scene, renderer, sand);
+mergeStatic(scene.children.slice(before));
+function mergeStatic(roots) {
+  const groups = new Map(), drop = [];
+  scene.updateMatrixWorld(true);
+  for (const r of roots) r.traverse((o) => {
+    if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || Array.isArray(o.material) || o.material.transparent || o.userData.keep) return;
+    const g = o.geometry, attrs = Object.keys(g.attributes).sort().join(',');
+    if (g.morphAttributes && Object.keys(g.morphAttributes).length) return;
+    const key = [o.material.uuid, o.castShadow, o.receiveShadow, attrs, !!g.index].join('|');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(o);
+  });
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const geos = list.map((o) => { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); return g; });
+    const merged = mergeGeometries(geos, false);
+    if (!merged) continue;
+    const m = new THREE.Mesh(merged, list[0].material);
+    m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow;
+    scene.add(m);
+    for (const o of list) drop.push(o);
+    geos.forEach((g) => g.dispose());
+  }
+  for (const o of drop) o.removeFromParent();
+}
 const terrainReady = buildTerrain(scene, renderer, sand).then((t) => { drapeOnTerrain(t.heightAt); return t; });
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
@@ -154,14 +181,21 @@ const printTex = canvasTex(64, 96, (g, w, h) => {
   toe(w * 0.33, h * 0.5); toe(w * 0.67, h * 0.5);
 });
 const printGeo = new THREE.PlaneGeometry(0.2, 0.3).rotateX(-Math.PI / 2);
-const prints = Array.from({ length: 260 }, () => { const m = new THREE.Mesh(printGeo, new THREE.MeshBasicMaterial({ map: printTex, transparent: true, depthWrite: false, opacity: 0 })); m.visible = false; m.renderOrder = 1; scene.add(m); return { m, age: 0 }; });
-let printNext = 0;
+const printMat = new THREE.MeshBasicMaterial({ map: printTex, transparent: true, depthWrite: false });
+printMat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', '#if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )\n diffuseColor.a *= vColor.r;\n#endif'); };
+const PRINTS = 260, printMesh = new THREE.InstancedMesh(printGeo, printMat, PRINTS);
+printMesh.renderOrder = 1; printMesh.frustumCulled = false; scene.add(printMesh);
+const prints = Array.from({ length: PRINTS }, () => ({ age: 999, x: 0, z: 0, h: 0 }));
+const printM = new THREE.Matrix4(), printQ = new THREE.Quaternion(), printP = new THREE.Vector3(), printS = new THREE.Vector3(1, 1, 1), fade = new THREE.Color();
+for (let i = 0; i < PRINTS; i++) { printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); printMesh.setColorAt(i, fade.setScalar(0)); }
+let printNext = 0, printsLive = 0;
 const dustTex = canvasTex(64, 64, (g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 2, w / 2, w / 2, w / 2); gr.addColorStop(0, 'rgba(226,200,160,0.9)'); gr.addColorStop(1, 'rgba(226,200,160,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); });
 const dust = Array.from({ length: 90 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dustTex, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; scene.add(s); return { s, age: 9 }; });
 let dustNext = 0;
 function footfall(pos, heading, near) {
-  const p = prints[printNext++ % prints.length];
-  p.m.position.set(pos.x, 0.015, pos.z); p.m.rotation.y = heading; p.m.visible = true; p.age = 0;
+  const i = printNext++ % PRINTS, p = prints[i];
+  p.age = 0; printsLive = PRINTS;
+  printMesh.setMatrixAt(i, printM.compose(printP.set(pos.x, 0.015, pos.z), printQ.setFromAxisAngle(UPV, heading), printS));
   if (near) { const d = dust[dustNext++ % dust.length]; d.s.position.set(pos.x, 0.12, pos.z); d.s.visible = true; d.age = 0; }
 }
 
@@ -181,6 +215,7 @@ async function loadLod(file) {
   return new GLTFLoader().parseAsync(bin.buffer, '');
 }
 const coatMats = new Map();
+const SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 function coatMaterial(src, lod, coat) {
   const key = lod + coat;
   if (!coatMats.has(key)) { const m = src.clone(); m.color.set(COATS[coat].tint); if (coat === 'majaheem') m.roughness = 0.78; coatMats.set(key, m); }
@@ -195,39 +230,49 @@ class Camel {
     this.root.rotation.y = spec.heading;
     this.root.scale.setScalar(spec.scale || 1);
     scene.add(this.root);
+    // one skeleton and one mixer drive all three detail levels; the 8k mesh casts the shadow even when the 40k one is shown
+    const rig = SkeletonUtils.clone(t[0].scene);
+    rig.rotation.y = -Math.PI / 2; this.root.add(rig);
+    let skel = null; rig.traverse((n) => { if (n.isSkinnedMesh && !skel) skel = n.skeleton; });
+    this.mixer = new THREE.AnimationMixer(rig);
+    this.acts = {}; for (const c of t[0].animations) this.acts[c.name] = this.mixer.clipAction(c);
+    this.feet = ['ffootL', 'ffootR', 'hfootL', 'hfootR'].map((n) => rig.getObjectByName(n)).filter(Boolean);
+    const sameBones = (a) => a.bones.length === skel.bones.length && a.bones.every((b, i) => b.name === skel.bones[i].name);
+    const sphere = new THREE.Sphere(new THREE.Vector3(0, 1.1, 0), 2.6);     // covers every pose, for culling
     this.lods = t.map((tpl, li) => {
-      const o = SkeletonUtils.clone(tpl.scene);
-      o.rotation.y = -Math.PI / 2;
-      o.traverse((n) => { if (n.isMesh) { n.castShadow = li < 2; n.receiveShadow = li === 0; n.material = coatMaterial(n.material, li, spec.coat); n.frustumCulled = false; } });
-      o.visible = false;
-      this.root.add(o);
-      const mixer = new THREE.AnimationMixer(o);
-      const acts = {}; for (const c of tpl.animations) acts[c.name] = mixer.clipAction(c);
-      const feet = ['ffootL', 'ffootR', 'hfootL', 'hfootR'].map((n) => o.getObjectByName(n)).filter(Boolean);
-      return { o, mixer, acts, feet };
+      const o = li === 0 ? rig : SkeletonUtils.clone(tpl.scene);
+      if (li > 0) { o.rotation.y = -Math.PI / 2; this.root.add(o); }
+      const meshes = [];
+      o.traverse((n) => {
+        if (!n.isMesh) return;
+        if (li > 0 && n.isSkinnedMesh && sameBones(n.skeleton)) n.bind(skel, n.bindMatrix);
+        n.castShadow = li === 1; n.receiveShadow = li === 0; n.material = coatMaterial(n.material, li, spec.coat);
+        n.boundingSphere = sphere.clone(); n.visible = false; meshes.push(n);
+      });
+      return { o, meshes };
     });
-    this.li = -1; this.clip = null; this.speed = 0; this.timer = R(2, 9);
+    // shadow stand-in: the 8k mesh, invisible on screen (writes no colour or depth) but cast into the shadow map
+    this.shadow = this.lods[1].meshes.map((m) => { const c = m.clone(); c.material = SHADOW_ONLY; c.visible = false; c.castShadow = true; c.receiveShadow = false; m.parent.add(c); return c; });
+    this.li = -1; this.clip = null; this.speed = 0; this.timer = R(2, 9); this.animDt = 0; this.frame = Math.floor(R(0, 4));
     this.mode = spec.home === 'graze' ? 'graze' : 'idle';
     this.target = null; this.contact = [true, true, true, true];
     const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.3, 3.0), new THREE.MeshBasicMaterial({ visible: false }));
     hit.position.y = 1.1; hit.userData.camel = this; this.root.add(hit); this.hit = hit;
     this.setLod(2); this.play(this.mode === 'graze' ? 'graze' : 'idle', 0);
-    this.lod().acts[this.clip].time = R(0, 3);
+    this.acts[this.clip].time = R(0, 3);
   }
-  lod() { return this.lods[this.li]; }
   setLod(i) {
     if (i === this.li) return;
-    const prev = this.li >= 0 ? this.lod() : null;
-    const t = prev && this.clip ? prev.acts[this.clip].time : 0;
-    if (prev) { prev.o.visible = false; prev.mixer.stopAllAction(); }
-    this.li = i; const L = this.lod(); L.o.visible = true;
-    if (this.clip) { const a = L.acts[this.clip]; a.reset().play(); a.time = t; a.timeScale = this.clip === 'walk' ? Math.max(0.25, this.speed / SPEED) : 1; }
+    if (this.li >= 0) for (const m of this.lods[this.li].meshes) m.visible = false;
+    this.li = i;
+    for (const m of this.lods[i].meshes) m.visible = true;
+    for (const m of this.shadow) m.visible = i === 0;
   }
   play(name, fade = 0.5) {
     if (this.clip === name) return;
-    const L = this.lod(), next = L.acts[name];
+    const next = this.acts[name];
     next.reset().play();
-    if (this.clip && fade > 0) L.acts[this.clip].crossFadeTo(next, fade, false); else if (this.clip) L.acts[this.clip].stop();
+    if (this.clip && fade > 0) this.acts[this.clip].crossFadeTo(next, fade, false); else if (this.clip) this.acts[this.clip].stop();
     this.clip = name;
   }
   pickTarget() {
@@ -245,9 +290,9 @@ class Camel {
     if (this.mode !== 'walk' && this.timer <= 0) { this.mode = 'walk'; this.target = this.pickTarget(); this.play('walk'); }
     let want = 0;
     if (this.mode === 'walk') {
-      const to = this.target.clone().sub(pos); const dist = to.length();
+      const to = tmpTo.copy(this.target).sub(pos); const dist = to.length();
       // keep a camel's length from the others
-      for (const o of camels) { if (o === this) continue; const d = pos.distanceTo(o.root.position); if (d < 2.6 && d > 0.01) to.add(pos.clone().sub(o.root.position).multiplyScalar((2.6 - d) * 1.5)); }
+      for (const o of camels) { if (o === this) continue; const d = pos.distanceTo(o.root.position); if (d < 2.6 && d > 0.01) to.add(tmpAway.copy(pos).sub(o.root.position).multiplyScalar((2.6 - d) * 1.5)); }
       const desired = Math.atan2(to.x, to.z);
       let dh = desired - this.root.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh));
       const turn = THREE.MathUtils.degToRad(16) * dt;      // a walking camel turns in a wide arc, not on the spot
@@ -261,11 +306,13 @@ class Camel {
     pos.x += Math.sin(h) * this.speed * dt; pos.z += Math.cos(h) * this.speed * dt;
     const d = camPos.distanceTo(pos);
     this.setLod(d < LOD_D[0] ? 0 : d < LOD_D[1] ? 1 : 2);
-    const L = this.lod();
-    if (this.clip === 'walk') L.acts.walk.timeScale = Math.max(0.25, this.speed / SPEED);
-    L.mixer.update(d > 140 ? dt : dt);
+    if (this.clip === 'walk') this.acts.walk.timeScale = Math.max(0.25, this.speed / SPEED);
+    // full rate up close, every 2nd frame past 48 m, every 4th past 150 m (the time adds up, so the pace is unchanged)
+    this.animDt += dt; this.frame++;
+    const every = d < 48 ? 1 : d < 150 ? 2 : 4;
+    if (this.frame % every === 0) { this.mixer.update(this.animDt); this.animDt = 0; }
     if (this.clip === 'walk' && this.li < 2 && this.speed > 0.2) {
-      L.feet.forEach((f, i) => {
+      this.feet.forEach((f, i) => {
         const w = f.getWorldPosition(tmpV);
         const down = w.y < 0.07 * (this.scale || 1);
         if (down && !this.contact[i]) footfall(w, h, d < 60);
@@ -274,7 +321,7 @@ class Camel {
     }
   }
 }
-const tmpV = new THREE.Vector3();
+const tmpV = new THREE.Vector3(), tmpTo = new THREE.Vector3(), tmpAway = new THREE.Vector3(), UPV = new THREE.Vector3(0, 1, 0);
 
 const NAMES = ['الصفوة', 'هدلا', 'نجلا', 'الغالية', 'الهيلة', 'المزيونة', 'صيته', 'شهلا', 'عفرا', 'غرسة', 'ريمة', 'وضحى', 'دبلة', 'العنود', 'شيخة', 'مزون', 'الجوهرة', 'سمحة', 'زينة', 'حصة'];
 const AGES = ['ثنية', 'رباع', 'سديس', 'حقة', 'لقية', 'جذعة', 'فاطر'];
@@ -297,8 +344,11 @@ function placeLabels() {
     proj.copy(l.p).project(camera);
     const dist = camera.position.distanceTo(l.p);
     const vis = proj.z < 1 && Math.abs(proj.x) < 1.05 && Math.abs(proj.y) < 1.05 && (l.far ? dist > 900 : dist < 140);
-    l.el.style.display = vis ? '' : 'none';
-    if (vis) l.el.style.transform = `translate(${(proj.x * 0.5 + 0.5) * w}px, ${(-proj.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
+    if (vis !== l.vis) { l.el.style.display = vis ? '' : 'none'; l.vis = vis; }
+    if (vis) {
+      const x = Math.round((proj.x * 0.5 + 0.5) * w), y = Math.round((-proj.y * 0.5 + 0.5) * h);
+      if (x !== l.x || y !== l.y) { l.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`; l.x = x; l.y = y; }
+    }
   }
 }
 
@@ -422,15 +472,21 @@ loadVehicles().catch(() => {});
 
 view('drone');
 const clock = new THREE.Clock();
+let lastS2 = '';
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   for (const c of camels) c.update(dt, camera.position);
   // follow without stealing the viewer's control of the angle
   const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
-  if (tgt) { const want = tgt.clone().setY(1.1), delta = want.sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }
-  if (selected && selectedRing) { selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z); $('s2').textContent = `${STATE[selected.mode]} · ${selected.note}`; }
-  for (const p of prints) if (p.m.visible) { p.age += dt; p.m.material.opacity = 0.55 * Math.max(0, 1 - p.age / 70); if (p.age > 70) p.m.visible = false; }
+  if (tgt) { const delta = tmpTo.copy(tgt).setY(1.1).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }
+  if (selected && selectedRing) { selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z); const t = `${STATE[selected.mode]} · ${selected.note}`; if (t !== lastS2) { $('s2').textContent = t; lastS2 = t; } }
+  if (printsLive > 0) {
+    let live = 0;
+    prints.forEach((p, i) => { if (p.age > 70) return; p.age += dt; live++; printMesh.setColorAt(i, fade.setScalar(0.55 * Math.max(0, 1 - p.age / 70))); if (p.age > 70) printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); });
+    printMesh.instanceColor.needsUpdate = true; printMesh.instanceMatrix.needsUpdate = true; printsLive = live;
+  }
   for (const d of dust) if (d.s.visible) { d.age += dt; const k = d.age / 1.5; d.s.scale.setScalar(0.35 + k * 1.1); d.s.position.y = 0.12 + k * 0.25; d.s.material.opacity = 0.42 * Math.max(0, 1 - k); if (k > 1) d.s.visible = false; }
+  updateScatter(camera.position);
   const focus = controls.target;
   sun.position.copy(focus).addScaledVector(sunDir, 160); sun.target.position.copy(focus);
   controls.update();

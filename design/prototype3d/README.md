@@ -56,6 +56,21 @@ A camel yard (عزبة), not a farm.
 Grass, bushes and tree foliage are crossed alpha cards with textures drawn
 on canvas. Everything that repeats is instanced.
 
+## Weight on a phone
+
+A performance review measured this page at a phone viewport. The fixes are
+in the code, and the numbers are in
+[ADR 0005](../../docs/adr/0005-3d-world.md#measured-budget-from-the-threejs-prototype-2026-11-08).
+- **Ground cover:** in cells that thin out with distance.
+- **Terrain:** three rings of detail.
+- **Camels:** culled off screen, with one skeleton for all three detail
+  levels and a lighter shadow mesh.
+- **Animation:** slower updates far away.
+- **Draw calls:** the yard's fixed objects are merged, and footprints are
+  instanced.
+- **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)
+  and a 2048 px satellite image.
+
 Each page loads its models as `lod0.json`, `lod1.json` and `lod2.json`. Each
 file holds `{"glb": "<base64>"}` from `assets_src/camels/*.glb`, because
 artifacts do not serve `.glb`. The ground is `sand.jpg`, a 1024 px copy of
