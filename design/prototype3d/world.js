@@ -74,6 +74,15 @@ const tamariskTexture = () => canvasTex(256, 256, (g, w, h) => {
 });
 
 // ------------------------------------------------------------ layout (real metres)
+// meshes laid on the ground that must follow the real terrain beyond the flat yard
+const DRAPE = [];
+export function drapeOnTerrain(heightAt) {
+  for (const m of DRAPE) {
+    const p = m.geometry.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + heightAt(p.getX(i), p.getZ(i)));
+    p.needsUpdate = true; m.geometry.computeVertexNormals(); m.geometry.computeBoundingSphere();
+  }
+}
 export const VEHICLES = [
   { model: 'shas', x: 14.4, z: 6.8, rot: Math.PI / 2 },
   { model: 'suv', x: 18.6, z: 6.8, rot: Math.PI / 2 },
@@ -111,34 +120,7 @@ export function buildWorld(scene, renderer, sandTex) {
     if (inCompound(x, z, 2)) c.multiplyScalar(0.9);
     return c;
   };
-  {
-    const size = 640, seg = 200;
-    const g = new THREE.PlaneGeometry(size, size, seg, seg); g.rotateX(-Math.PI / 2);
-    const p = g.attributes.position, uv = g.attributes.uv, col = new Float32Array(p.count * 3);
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), z = p.getZ(i);
-      uv.setXY(i, x / 22, z / 22);
-      const c = tint(x, z); col.set([c.r, c.g, c.b], i * 3);
-      p.setY(i, (fbm(x / 70, z / 70) - 0.5) * 0.6 * THREE.MathUtils.smoothstep(Math.hypot(x, z + 10), 70, 180));
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
-    const near = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: sandTex, vertexColors: true, roughness: 1 }));
-    near.receiveShadow = true; scene.add(near);
-  }
-  {
-    const size = 4000, seg = 180;
-    const g = new THREE.PlaneGeometry(size, size, seg, seg); g.rotateX(-Math.PI / 2);
-    const p = g.attributes.position, uv = g.attributes.uv;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), z = p.getZ(i), r = Math.hypot(x, z);
-      const far = THREE.MathUtils.smoothstep(r, 300, 1000);
-      p.setY(i, -0.4 + far * (fbm(x / 160, z / 100) * 34 + noise2(x / 45, z / 35) * 6));
-      uv.setXY(i, x / 22, z / 22);
-    }
-    g.computeVertexNormals();
-    const far = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: sandTex, color: '#f1e3cf', roughness: 1 }));
-    far.receiveShadow = true; scene.add(far);
-  }
+  // the ground itself is the real terrain (terrain.js); only decals and dressing are added here
   // compacted ground inside the compound and in the pens
   const dirt = (x0, z0, x1, z1, color, opacity) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2),
@@ -166,13 +148,15 @@ export function buildWorld(scene, renderer, sandTex) {
     g.fillStyle = '#e9c341'; g.fillRect(3, 0, 2, h); g.fillRect(w - 5, 0, 2, h);
     g.fillStyle = '#efefe8'; for (let y = 0; y < h; y += 64) g.fillRect(w / 2 - 1, y, 2, 30);
   });
-  asphaltTex.wrapT = THREE.RepeatWrapping; asphaltTex.repeat.set(1, 3000 / 40);
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 3000).rotateX(-Math.PI / 2).rotateY(Math.PI / 2),
+  asphaltTex.wrapT = THREE.RepeatWrapping;
+  // the road runs 6 km east-west and follows the real ground (draped once the terrain loads)
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 6000, 1, 600).rotateX(-Math.PI / 2).rotateY(Math.PI / 2).translate(0, 0.08, LAYOUT.roadZ),
     new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.92 }));
-  road.position.set(0, 0.06, LAYOUT.roadZ); road.receiveShadow = true; scene.add(road);
-  const shoulder = new THREE.Mesh(new THREE.PlaneGeometry(3000, 15).rotateX(-Math.PI / 2),
+  asphaltTex.repeat.set(1, 6000 / 40);
+  road.receiveShadow = true; scene.add(road); DRAPE.push(road);
+  const shoulder = new THREE.Mesh(new THREE.PlaneGeometry(6000, 15, 600, 1).rotateX(-Math.PI / 2).translate(0, 0.05, LAYOUT.roadZ),
     new THREE.MeshStandardMaterial({ color: '#a98463', roughness: 1, transparent: true, opacity: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }));
-  shoulder.position.set(0, 0.04, LAYOUT.roadZ); scene.add(shoulder);
+  scene.add(shoulder); DRAPE.push(shoulder);
   const trackTex = canvasTex(64, 256, (g, w, h) => {
     g.fillStyle = 'rgba(120,86,56,0.55)'; g.fillRect(0, 0, w, h);
     for (const x of [w * 0.28, w * 0.72]) { const gr = g.createLinearGradient(x - 8, 0, x + 8, 0); gr.addColorStop(0, 'rgba(70,48,28,0)'); gr.addColorStop(0.5, 'rgba(70,48,28,0.55)'); gr.addColorStop(1, 'rgba(70,48,28,0)'); g.fillStyle = gr; g.fillRect(x - 8, 0, 16, h); }

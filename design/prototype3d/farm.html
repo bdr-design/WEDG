@@ -57,7 +57,7 @@
   <button class="round glass" type="button" aria-label="خريطة المملكة">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20V6.5z"></path><path d="M9 4v13.5M15 6.5V20"></path></svg>
   </button>
-  <div class="pill glass"><b>عزبة الصفوة</b><span id="clock">القصيم · العصر 4:12 م</span></div>
+  <div class="pill glass"><b>عزبة الصفوة</b><span id="clock">أبانات، القصيم · العصر 4:12</span></div>
   <div class="grow"></div>
   <div class="pill glass cash">486,300 <span>ريال</span></div>
 </div>
@@ -67,6 +67,7 @@
   <button id="cam-near" class="glass" type="button" aria-pressed="false">قريب</button>
   <button id="cam-room" class="glass" type="button" aria-pressed="false">الغرفة</button>
   <button id="cam-camp" class="glass" type="button" aria-pressed="false">المسراح</button>
+  <button id="cam-hill" class="glass" type="button" aria-pressed="false">الجبل</button>
 </div>
 
 <div class="sheet glass" dir="rtl" aria-live="polite">
@@ -90,7 +91,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { buildWorld, LAYOUT, VEHICLES } from './world.js';
+import { buildWorld, LAYOUT, VEHICLES, drapeOnTerrain } from './world.js';
+import { buildTerrain } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -109,12 +111,13 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2('#d6bf9f', 0.0042);
-const camera = new THREE.PerspectiveCamera(40, stage.clientWidth / stage.clientHeight, 0.3, 4000);
+scene.fog = new THREE.FogExp2('#d9c6a8', 0.000042);
+const camera = new THREE.PerspectiveCamera(40, stage.clientWidth / stage.clientHeight, 0.5, 90000);
 
-const sunDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 27), THREE.MathUtils.degToRad(252));
+// a November afternoon: the sun low in the south-west
+const sunDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 24), THREE.MathUtils.degToRad(300));
 function makeSky() {
-  const s = new Sky(); s.scale.setScalar(3000);
+  const s = new Sky(); s.scale.setScalar(80000);
   const u = s.material.uniforms;
   u.turbidity.value = 6.5; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.008; u.mieDirectionalG.value = 0.82;
   u.sunPosition.value.copy(sunDir);
@@ -139,6 +142,7 @@ scene.add(sun, sun.target);
 const sand = new THREE.TextureLoader().load('sand.jpg');
 sand.colorSpace = THREE.SRGBColorSpace; sand.wrapS = sand.wrapT = THREE.RepeatWrapping;
 buildWorld(scene, renderer, sand);
+const terrainReady = buildTerrain(scene, renderer, sand).then((t) => { drapeOnTerrain(t.heightAt); return t; });
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
@@ -284,13 +288,15 @@ const labels = [
   ['مزعل', mid(P.bull, 2.6)], ['العزل · مزنة', mid(P.sick, 2.4)],
   ['الماء 62% · 8 أيام', new THREE.Vector3(30, 7.6, -40), 'warn'], ['العلف 13 يوم', new THREE.Vector3(32, 4.6, -21)],
   ['غرفة العزبة', new THREE.Vector3(6, 4.6, 6.5)], ['كرفان الراعي', new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22)], ['بيت الشعر', new THREE.Vector3(-12, 3.0, 7)], ['البوابة', new THREE.Vector3(24, 2.6, 15)],
-].map(([text, p, cls]) => { const el = document.createElement('div'); el.className = 'lbl glass' + (cls ? ' ' + cls : ''); el.textContent = text; labelLayer.appendChild(el); return { el, p }; });
+  ['أبان الأسمر · 1225 م', new THREE.Vector3(6413, 520, -885), 'far'], ['أبان الأحمر · 1309 م', new THREE.Vector3(-11344, 610, 35151), 'far'],
+].map(([text, p, cls]) => { const el = document.createElement('div'); el.className = 'lbl glass' + (cls && cls !== 'far' ? ' ' + cls : ''); el.textContent = text; labelLayer.appendChild(el); return { el, p, far: cls === 'far' }; });
 const proj = new THREE.Vector3();
 function placeLabels() {
   const w = stage.clientWidth, h = stage.clientHeight;
   for (const l of labels) {
     proj.copy(l.p).project(camera);
-    const vis = proj.z < 1 && Math.abs(proj.x) < 1.05 && Math.abs(proj.y) < 1.05 && camera.position.distanceTo(l.p) < 140;
+    const dist = camera.position.distanceTo(l.p);
+    const vis = proj.z < 1 && Math.abs(proj.x) < 1.05 && Math.abs(proj.y) < 1.05 && (l.far ? dist > 900 : dist < 140);
     l.el.style.display = vis ? '' : 'none';
     if (vis) l.el.style.transform = `translate(${(proj.x * 0.5 + 0.5) * w}px, ${(-proj.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
   }
@@ -298,12 +304,17 @@ function placeLabels() {
 
 // ------------------------------------------------------------ camera, selection, HUD
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; controls.minDistance = 4; controls.maxDistance = 260;
+controls.enableDamping = true; controls.minDistance = 4; controls.maxDistance = 9000;
 controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
 let follow = null, followHerd = false;
 function herdCenter() { const c = new THREE.Vector3(); let n = 0; for (const k of camels) if (k.home === 'graze') { c.add(k.root.position); n++; } return c.multiplyScalar(1 / Math.max(1, n)); }
 function view(kind) {
-  if (kind === 'camp') {
+  if (kind === 'hill') {
+    // up high over the yard: Aban al-Asmar ahead, Wadi al-Rumah and Aban al-Ahmar beyond
+    follow = null; followHerd = false;
+    controls.target.set(2600, 120, -500);
+    camera.position.set(-1500, 620, 1300);
+  } else if (kind === 'camp') {
     follow = null; followHerd = false;
     controls.target.set(LAYOUT.camp.x + 3, 1.2, LAYOUT.camp.z - 16);
     camera.position.set(LAYOUT.camp.x + 30, 21, LAYOUT.camp.z + 28);
@@ -313,17 +324,18 @@ function view(kind) {
     controls.target.set(12, 1.4, 5);
     camera.position.set(25, 6, -17);
   } else {
-    const tgt = follow ? follow.root.position.clone() : kind === 'near' ? herdCenter() : new THREE.Vector3(-2, 0, 2);
-    const off = kind === 'near' ? new THREE.Vector3(7, 3.2, 9) : new THREE.Vector3(34, 46, 78);
+    const tgt = follow ? follow.root.position.clone() : kind === 'near' ? herdCenter() : new THREE.Vector3(30, 0, -18);
+    const off = kind === 'near' ? new THREE.Vector3(7, 3.2, 9) : new THREE.Vector3(-104, 40, 66);
     controls.target.copy(tgt).setY(1);
     camera.position.copy(controls.target).add(off);
   }
-  for (const [id, k] of [['cam-drone', 'drone'], ['cam-near', 'near'], ['cam-room', 'room'], ['cam-camp', 'camp']]) $(id).setAttribute('aria-pressed', String(kind === k));
+  for (const [id, k] of [['cam-drone', 'drone'], ['cam-near', 'near'], ['cam-room', 'room'], ['cam-camp', 'camp'], ['cam-hill', 'hill']]) $(id).setAttribute('aria-pressed', String(kind === k));
 }
 $('cam-drone').addEventListener('click', () => view('drone'));
 $('cam-near').addEventListener('click', () => view('near'));
 $('cam-room').addEventListener('click', () => view('room'));
 $('cam-camp').addEventListener('click', () => view('camp'));
+$('cam-hill').addEventListener('click', () => view('hill'));
 
 const STATE = { graze: 'ترعى', walk: 'تمشي', idle: 'واقفة' };
 let selectedRing = null;

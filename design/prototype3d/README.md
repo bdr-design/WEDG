@@ -7,7 +7,19 @@ They are not the game. They run as private claude.ai artifacts.
 |---|---|
 | `farm.html` | A farm in Qassim at real scale, with the herd grazing and walking, LODs, footprints and dust, labels and the glass HUD. Tap a camel to follow it. |
 | `world.js` | The world for `farm.html`. Details below. |
+| `terrain.js` | Builds the real terrain around the yard from `terrain/` (made by `tool/terrain3d/make_terrain.py`). |
 | `camel.html` | One camel, its clips and two camera presets. |
+
+## Where the yard is
+
+The yard stands on a real plain in western Qassim (25.8148 N, 42.9015 E,
+765 m).
+- **Aban al-Asmar** (1225 m) is 6.4 km to the east, and **Aban al-Ahmar**
+  (1309 m) is 37 km to the south-west.
+- **Wadi al-Rumah** runs between them, with Nafud sand to the west.
+- **Data:** the 70 × 66 km terrain uses 30 m elevation (AWS Terrain Tiles)
+  and a cloud-free Sentinel-2 scene from 2026-01-17 (NASA HLS). The owner's
+  sand photo is blended in close to the camera.
 
 ## What `world.js` builds
 
