@@ -90,7 +90,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { buildWorld, LAYOUT } from './world.js';
+import { buildWorld, LAYOUT, VEHICLES } from './world.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -384,6 +384,29 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   $('status').hidden = true;
   showHerd();
 }).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
+
+// ------------------------------------------------------------ vehicles built from the owner's photos
+async function loadVehicles() {
+  const names = ['shas', 'suv', 'tractor', 'caravan'];
+  const models = Object.fromEntries(await Promise.all(names.map(async (n) => [n, (await loadLod(`veh_${n}.json`)).scene])));
+  const make = (name, tint) => {
+    const o = models[name].clone(true);
+    o.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; if (tint) { n.material = n.material.clone(); n.material.color.set(tint); } } });
+    return o;
+  };
+  const hay = new THREE.MeshStandardMaterial({ color: '#b3a256', roughness: 1 });
+  for (const v of VEHICLES) {
+    const o = make(v.model, v.tint);
+    o.position.set(v.x, 0, v.z); o.rotation.y = v.rot; scene.add(o);
+    if (v.hay) for (let i = 0; i < 3; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 1.0), hay); b.position.set(-0.9 - i * 0.6, 1.4, 0); b.castShadow = true; o.add(b); }
+  }
+  // at the grazing camp: the caravan on its flatbed, coupled to the tractor unit
+  const C = LAYOUT.camp, rig = new THREE.Group();
+  rig.position.set(C.x - 2, 0, C.z - 22); rig.rotation.y = 0.35; scene.add(rig);
+  rig.add(make('caravan'));
+  const head = make('tractor'); head.position.set(6.85, 0, 0); rig.add(head);
+}
+loadVehicles().catch(() => {});
 
 view('drone');
 const clock = new THREE.Clock();

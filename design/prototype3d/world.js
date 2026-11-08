@@ -74,6 +74,11 @@ const tamariskTexture = () => canvasTex(256, 256, (g, w, h) => {
 });
 
 // ------------------------------------------------------------ layout (real metres)
+export const VEHICLES = [
+  { model: 'shas', x: 14.4, z: 6.8, rot: Math.PI / 2 },
+  { model: 'suv', x: 18.6, z: 6.8, rot: Math.PI / 2 },
+  { model: 'shas', x: 29.6, z: -14.2, rot: -Math.PI / 2 + 0.12, tint: '#e2d3b4', hay: true },
+];
 export const LAYOUT = {
   compound: { x0: -40, x1: 44, z0: -52, z1: 14 }, gate: { x0: 20, x1: 28 },
   pens: {
@@ -426,39 +431,7 @@ export function buildWorld(scene, renderer, sandTex) {
 
   // ---------- the grazing ground (مسراح), ~330 m out: the shepherd's caravan on a trailer and its tractor unit
   {
-    const C = LAYOUT.camp, camp = new THREE.Group(); camp.position.set(C.x - 2, 0, C.z - 22); camp.rotation.y = 0.35; scene.add(camp);
-    const dark = new THREE.MeshStandardMaterial({ color: '#232323', roughness: 0.7 });
-    const paintW = new THREE.MeshPhysicalMaterial({ color: '#f2f2ef', roughness: 0.35, clearcoat: 0.6 });
-    const red = new THREE.MeshPhysicalMaterial({ color: '#9e1f1b', roughness: 0.3, clearcoat: 0.8 });
-    const tire = new THREE.MeshStandardMaterial({ color: '#191919', roughness: 0.9 });
-    const rim = new THREE.MeshStandardMaterial({ color: '#c8cbcd', metalness: 0.9, roughness: 0.3 });
-    const wheelSet = (g, x, z, r = 0.52) => { const t = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.32, 20).rotateX(Math.PI / 2), tire); t.position.set(x, r, z); g.add(t); const h = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.34, 12).rotateX(Math.PI / 2), rim); h.position.copy(t.position); g.add(h); };
-    // flatbed semi-trailer, 12 m
-    const deck = new THREE.Mesh(new THREE.BoxGeometry(12, 0.22, 2.5), new THREE.MeshStandardMaterial({ color: '#5a5a58', metalness: 0.6, roughness: 0.5 })); deck.position.set(0, 1.42, 0); camp.add(deck);
-    for (const z of [-0.5, 0.5]) { const beam = new THREE.Mesh(new THREE.BoxGeometry(12, 0.35, 0.18), dark); beam.position.set(0, 1.15, z); camp.add(beam); }
-    for (const x of [-5.2, -4.0, -2.8]) for (const z of [-1.0, -0.62, 0.62, 1.0]) wheelSet(camp, x, z, 0.5);
-    for (const z of [-0.8, 0.8]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.12), dark); leg.position.set(3.2, 0.55, z); camp.add(leg); }
-    // the caravan on the deck: windows, door with steps, air conditioner, water tank
-    const car = new THREE.Mesh(new RoundedBoxGeometry(8.2, 2.6, 2.45, 2, 0.08), new THREE.MeshStandardMaterial({ color: '#f0eee8', roughness: 0.6 })); car.position.set(-0.6, 1.53 + 1.3, 0); camp.add(car);
-    const win = new THREE.MeshStandardMaterial({ color: '#28323a', roughness: 0.12, metalness: 0.3 });
-    for (const x of [-3.6, -1.2, 1.6]) for (const z of [1.235, -1.235]) { const w2 = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.75), win); w2.position.set(x, 3.15, z); if (z < 0) w2.rotation.y = Math.PI; camp.add(w2); }
-    const door = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.95), new THREE.MeshStandardMaterial({ color: '#8a979c', roughness: 0.5 })); door.position.set(0.3, 2.6, 1.236); camp.add(door);
-    for (let i = 0; i < 3; i++) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.32), dark); st.position.set(0.3, 0.42 + i * 0.4, 1.5 + (2 - i) * 0.3); camp.add(st); }
-    const acu = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.35, 0.8), new THREE.MeshStandardMaterial({ color: '#d4d6d6', roughness: 0.5 })); acu.position.set(-2.5, 4.35, 0); camp.add(acu);
-    const wt = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.9, 20), new THREE.MeshStandardMaterial({ color: '#e9e5dc', roughness: 0.55 })); wt.position.set(2.3, 4.6, 0); camp.add(wt);
-    // the tractor unit (راس التريلة) coupled at the front
-    const head = new THREE.Group(); head.position.set(6.6, 0, 0); camp.add(head);
-    const chassis = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.4, 1.0), dark); chassis.position.set(0, 0.95, 0); head.add(chassis);
-    const cab = new THREE.Mesh(new RoundedBoxGeometry(2.3, 2.5, 2.5, 3, 0.18), red); cab.position.set(1.9, 2.3, 0); head.add(cab);
-    const ws = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 1.0), win); ws.position.set(3.06, 2.75, 0); ws.rotation.y = Math.PI / 2; head.add(ws);
-    for (const z of [1.255, -1.255]) { const sw = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.7), win); sw.position.set(2.4, 2.8, z); if (z < 0) sw.rotation.y = Math.PI; head.add(sw); }
-    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.8, 1.7), dark); grille.position.set(3.06, 1.55, 0); head.add(grille);
-    const bump = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 2.5), dark); bump.position.set(3.1, 0.75, 0); head.add(bump);
-    for (const z of [-1.0, 1.0]) { const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 16).rotateZ(Math.PI / 2), rim); tank.position.set(0.3, 0.95, z); head.add(tank); }
-    const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.6, 10), rim); stack.position.set(0.7, 3.4, -1.1); head.add(stack);
-    wheelSet(head, 2.3, 1.05); wheelSet(head, 2.3, -1.05);
-    for (const x of [-1.2, -2.4]) for (const z of [-1.05, -0.68, 0.68, 1.05]) wheelSet(head, x, z, 0.5);
-    camp.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+    const C = LAYOUT.camp;
     // at the camp: a portable trough the tanker fills, bales on the ground, the shepherd's mat and fire
     const troughCamp = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 0.7), metal); troughCamp.position.set(C.x - 16, 0.25, C.z - 6); troughCamp.castShadow = true; scene.add(troughCamp);
     const wcamp = new THREE.Mesh(new THREE.PlaneGeometry(5.85, 0.55).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#3d5b57', roughness: 0.05 })); wcamp.position.set(C.x - 16, 0.46, C.z - 6); scene.add(wcamp);
@@ -526,9 +499,7 @@ export function buildWorld(scene, renderer, sandTex) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const pst = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.7, 8), metal); pst.position.set(sx * 4.2, 1.35, sz * 3.2); pst.castShadow = true; cs.add(pst); }
     scene.add(cs);
   }
-  lc70(14.4, 6.8, Math.PI / 2, '#f3f3f0', false);
-  lc300(18.6, 6.8, Math.PI / 2, '#151617');
-  lc70(29.6, -14.2, -Math.PI / 2 + 0.12, '#d9c8a6', true);
+  // the vehicles themselves are photo-built models placed by the page (see VEHICLES)
   {
     const g = new THREE.Group();
     const cab = new THREE.Mesh(new RoundedBoxGeometry(2.2, 2.3, 2.4, 3, 0.15), paint); cab.position.set(3.1, 1.75, 0); g.add(cab);
