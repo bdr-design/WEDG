@@ -54,9 +54,9 @@ jobs:
         working-directory: ${{ steps.app.outputs.dir }}
         run: |
           flutter pub get
-          flutter build apk --release --split-per-abi
+          flutter build apk --release --split-per-abi --target-platform android-arm64
           ls -l build/app/outputs/flutter-apk/
-          SIZE=$(stat -c %s build/app/outputs/flutter-apk/app-arm64-v8a-release.apk)
+          SIZE=$(stat -c %s build/app/outputs/flutter-apk/app-arm64-v8a-release.apk 2>/dev/null || stat -c %s build/app/outputs/flutter-apk/app-release.apk)
           echo "BENCH_SIZE {\"app\":\"${{ matrix.app }}\",\"arm64_apk_bytes\":$SIZE}" | tee -a "$RUNNER_TEMP/bench.txt"
 
       - name: Emulator build (x86_64)
