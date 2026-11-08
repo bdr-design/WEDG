@@ -1,0 +1,292 @@
+# Realism brief: Saudi camel-owner game (مزاين الإبل)
+
+**Method and limits.** Every WebFetch failed with ENOTFOUND (saudipedia.com and en.wikipedia.org are blocked in this session), so I stopped fetching and worked only from the text of search results. "(confirmed [n])" means source n says it in that text. I could not open and check the pages themselves. "(uncertain)" means it was not found, comes from a weak source, or sources disagree. To check the official rules, allow kacf.camelclub.gov.sa, spa.gov.sa and saudipedia.com.
+
+---
+
+## 1. Colour families
+
+- **Top-level split:** المجاهيم are the dark/black camels. المغاتير is the umbrella name for the light colours (confirmed [1][2][3]).
+- **Festival colours are six:** المجاهيم، الوضح، الشعل، الصفر، الحمر، الشقح. At the 9th King Abdulaziz Camel Festival (2024), سيف الملك، شلفا ولي العهد، نخبة النخبة، الفحل المنتج and الطبع ran all six colours. بيرق الموحد ran only four: مجاهيم، وضح، شعل، صفر. The 2019 edition followed the same pattern: بيرق المؤسس had 4 colours and سيف الملك had 6 (confirmed [4]).
+- **مغاتير is not a contest class.** It is a heading that covers وضح، شقح، شعل، صفر، حمر, and each of those competes as its own colour (confirmed [2][3]). One source says there are "six main colours" used in judging (confirmed [5]). I did not find the exact phrase "ألوان الموروث ستة" (uncertain).
+- **"الملونة":** no evidence that it is an official festival category (uncertain).
+- **"الأصايل" is a separate track, not a colour group.** مزاين الهجن الأصايل has its own classes: محليات، مهجنات، حرائر، سواحل, each split into دق/جل (confirmed [6][7]). The 2018 rules barred hybrid and imported camels from every category. The 2024 edition had مهجنات classes, so the rules have changed (confirmed [4][8]).
+- **هجيج groups in 2024:** (حمر، شقح، وضح) and (شعل، صفر، حبش) (confirmed [4]). What "حبش" means is unclear (uncertain).
+
+What each colour looks like:
+- **مجاهيم:** black in several shades. Large frame, heavy bone, high milk yield. Also called "Najdi" camels. The most prized shade is غرابي (jet black) (confirmed [2][3][9]).
+- **وضح:** bright pure white. The most prestigious of the مغاتير (confirmed [1][2]).
+- **شقح:** less white than وضح, often mixed into وضح herds, and sits between وضح and شعل in colour (confirmed [1][2]). One source says light brown (conflicting).
+- **شعل:** red-blond mix. Northern breeders treat it as its own strain. Less hair than وضح (confirmed [1][2]). Other sources say dark brown (conflicting).
+- **صفر:** yellowish sand or molasses colour, dense wool (confirmed [1][2]). Other descriptions: "yellow with a black hump tip" or "beige with black shoulders" (conflicting).
+- **حمر:** reddish, medium size, low milk yield (confirmed [2]).
+
+## 2. Ages, rounds and group contests
+
+**Age names.** The order of the names is agreed. The year boundaries differ by about a year between sources.
+
+| Age | Name (male / female) |
+|---|---|
+| 0–6 months | حوار / حوارة |
+| 6–12 months | مخلول |
+| 1–2 years | مفرود / مفرودة (also فصيل) |
+| 2–3 years | حق / حقة |
+| 3–4 years | لقي / لقية |
+| 4–5 years | جذع / جذعة |
+| 5–6 years | ثني / ثنية |
+| 6–7 years | رباع / رباعية |
+| 7–8 years | سديس / سديسة |
+| 8–10 years | فاطر (female) |
+| 10–20 years | ناب / عود / ثلب |
+| 20+ years | هرش (male) |
+
+(confirmed [10][11])
+
+- Some lists swap the order and put لقي at 2 and حق at 3 (conflicting [12]).
+- Classical fiqh puts حق in the 4th year (confirmed [13]).
+- Hail's Camel Path puts فاطر/هرش after 10 years (confirmed [10]).
+- A young male is قعود and a young female is بكرة (confirmed [12]).
+- In husbandry, حائل means a female that did not conceive (confirmed [14]). In contests, الحول/الحيل (singular حايل) means camels over 6 years old (confirmed [15]).
+
+**Rounds at the King Abdulaziz Camel Festival:**
+- **الفردي** is judged by colour, split into **دق** and **جل**:
+  - دق: from after مفرود up to جذعة.
+  - جل: a she-camel from her second calf up to middle age.
+  - A جذعة entered in دق that grows her adult incisors (أثنت) after registration can be moved to جل (confirmed [16]).
+- Other classes: مفاريد القعدان، مفاريد البكار، دق القعدان، دق البكار، الفحل وإنتاجه / الفحل المنتج (confirmed [4]). الفحل results are announced only after DNA tests confirm the offspring are his (confirmed [17]).
+- **Rounds named for each age year** are a UAE/Qatar format: المفاريد، الحقايق، اللقايا، الإيذاع/الجذاع، الثنايا، الحول, written as "شوط الحقايق", "أشواط الثنايا" (confirmed [15][18]).
+- **الحيل / الزمول** appear mainly in هجن racing ("رموز حيل", "رموز زمول") (confirmed [19]).
+- I found no Saudi mazayen round called "شوط الفحول" (uncertain).
+
+**Group contests:**
+- **الجمل** is a group class counted in متن (head).
+  - In 2020: بيرق المؤسس went down to 80 (from 100, except حمر/شقح), سيف الملك went up to 60 (from 50), شلفا ولي العهد went up to 40 (from 30). The microchip became the only ownership document recognised (confirmed [20]).
+  - Groups of 20, 30, 50 and 100 also exist (confirmed [21]).
+- **المنقية** is the owner's picked herd (الخيار), shown as one group. Its size depends on the round (15, 20 or 30) (confirmed [22]).
+  - The top title is منقية الجزيرة, with جائزة الشداد. In 2024 it was won by شماخات الشقح (Ibrahim Al-Muhaidib), and the prize was a private jet (confirmed [23][24]).
+- **الهجيج:** 15 she-camels per منقية run with no lead camel. The first herd to finish an 18–20 km course wins (confirmed [25]).
+- **الطبع:** tests how the herd answers its owner's call and handles narrow paths (confirmed [25]).
+- **شوط البداوة:** 40 head, aged مفرودة or older. Entrants cannot also enter فردي or جمل (confirmed [8]).
+- **الشلل:** not found as a festival term (uncertain).
+- **البيرق** means banner/flag and is the top group title.
+  - In Saudi Arabia, بيرق المؤسس/الموحد is the largest group class (confirmed [4][20]).
+  - At Al Dhafra (UAE), "الجمل 30" is called شوط البيرق and the winner gets the flag (confirmed [26]).
+
+## 3. Judging criteria and integrity
+
+**Points system.** I found no published Camel Club table of points per body part (uncertain). In one edition the head of judging said a points system was still "under study" (confirmed [27]). For comparison, Al Dhafra (UAE) uses 100 points: head and neck 25, hump/upper body 20, front 15, rear 10, general appearance 30 (confirmed [28]; UAE, not Saudi).
+
+**Judging stages in 2019:**
+1. Check of brand (وسم) and witness (شاهد)
+2. Check for hybrids, colour and age by teeth
+3. Preliminary judging
+4. Tampering experts
+5. Medical committee
+6. Final judging
+
+A monitoring committee rates the judges (confirmed [27][25]). Results are final, with no appeal (confirmed [29]). The Camel Club has trained 25 judges using reference models (confirmed [30]).
+
+**What judges look for:**
+- **Head:** large. Some say about half of beauty is in the head (uncertain: secondhand quote from a festival medical official).
+- **Nose (خشم/عرنون):** large and high. In مغاتير, a prominent nose and a forward-set face (confirmed [9][31]).
+- **Lips:** long and hanging down over the teeth. مجاهيم lips are long and drooping (confirmed [31][32]).
+- **Ears:** مجاهيم should have long ears set high and forward. مغاتير should have short ears set back (confirmed [9][31]).
+- **Neck:** long, lean (جرداء) and set high. مجاهيم necks carry little flesh (confirmed [9][31][32]).
+- **Withers, back and height:** مغاتير should have a prominent غارب, a back sloping toward the hip, and tall height (confirmed [31]).
+- **Bone and feet:** مجاهيم should have heavy bone and wide, round feet (confirmed [31][32]).
+- **Coat:** مجاهيم should have strong colour and dense wool. The colour must be pure (صافي) (confirmed [31][8]).
+
+**Integrity rules:**
+- **Checks:** every camel gets a clinical exam, plus ultrasound, X-ray, thermal imaging, lab, bacterial and hormone tests. Botox is the most common cheat, followed by fillers (silicone oil, hyaluronic acid) and numbing agents (confirmed [33]).
+- **Fines per camel:**
+  - Filler, Botox or hormones: up to SAR 100,000
+  - Stretching the lip: up to SAR 50,000
+  - Filing teeth, cutting the tail or dyeing: up to SAR 30,000
+
+  (confirmed [33])
+- **Bans:** cheaters are excluded from the current edition and at least 5 future editions (confirmed [27]).
+- **Past cases:** in 2021 there were 147 tampering cases and 43 camels were disqualified (confirmed [34]). In 2018, 12 were disqualified for Botox (confirmed [35]).
+
+## 4. Festival calendar and structure
+
+**King Abdulaziz Camel Festival:**
+- **Where:** الصياهد (King Abdulaziz equestrian field), in the الدهناء area northeast of Riyadh (confirmed [36]).
+- **When:** it runs December to early January.
+  - 9th edition: 1 Dec 2024 to 3 Jan 2025 (confirmed [36]; another source says it ran to 12 Jan, conflicting).
+  - 10th edition: 1 Dec 2025 to 3 Jan 2026 (confirmed [37][38]).
+  - 7th edition (2022): 45 days and 1.8 million visitors (confirmed [39]).
+  - The 10th edition's prize ceremony was held in August 2026 for 250+ owners (confirmed [40]).
+- **Total prize money:**
+  - 2021: SAR 250m (confirmed [41])
+  - 2022: about SAR 300m (confirmed [39])
+  - 9th edition: about SAR 200m for camel races alone (confirmed [36])
+  - 10th edition: not found in an official source (uncertain; a non-official site says over SAR 300m [38])
+- **Prizes per round (racing side, 6th/8th editions):**
+  - General rounds: SAR 150k for first place
+  - رموز rounds: SAR 700k for بكار, SAR 500k for قعدان
+  - زمول: SAR 1.5m
+  - حيل: SAR 3m
+
+  (confirmed [19])
+- **Prizes per round (beauty side):** the first prize for الفحل وإنتاجه was raised to SAR 1m (confirmed [42]). Other first prizes were not found (uncertain). I could not confirm car prizes in Saudi Arabia. Omani contests award a car plus a بيرق (confirmed [26]).
+- **Registration rules:**
+  - Registering online is required (confirmed [43]).
+  - The Ministry of Environment, Water and Agriculture (MEWA) microchip is the only ownership document. The قسم and وسم requirements were dropped, except for كأس النادي (confirmed [20]).
+  - Each owner may enter one جمل class and one فردي class, cannot change colour or class after registration closes, and cannot enter a فردي camel that is also in a جمل round (confirmed [8]).
+  - Age is checked by teeth on site. Late registration costs a fee and closes 72 hours before the round (confirmed [43]).
+  - Non-Saudis may take part (confirmed [44]), and an Iraqi owner has won (confirmed [45]).
+  - Residency rules: not found (uncertain).
+  - A women's beauty contest has existed since 2022 (confirmed [46]).
+- **Other events:**
+  - Camel Club regional festival, Tabuk: June, 11 days, SAR 13m in prizes, SAR 29m in sales (confirmed [47]).
+  - Hail camel auction (Al-Qaid): late September to October, 10 days. The 17th edition sold over SAR 45m (confirmed [48]).
+  - Al Dhafra (UAE): 27 Oct 2026 to 13 Jan 2027, 383 rounds, AED 97.2m (confirmed [49]).
+  - Qatar Camel Festival (Lbuseir): January to 10 Feb 2026 (confirmed [50]).
+  - Oman: mazayen held in December and February (confirmed [50]).
+
+## 5. Market reality
+
+- **Size of the market:** about 1.8 million camels worth over SAR 50bn (confirmed [51]).
+- **Ordinary prices:**
+  - Eid 1447: SAR 4,400–6,000 (uncertain, weak source [52])
+  - 2019 حراج: حقايق for slaughter SAR 3–4k, مقاني SAR 10–40k, رحول (trained lead camel) SAR 2,500–8,000 (confirmed [53])
+  - Older figure: a 110 kg حاشي fell from about SAR 4,500 to 3,000 (confirmed [54])
+- **Good mazayen camels:**
+  - Festival حراج 2024: مقاني from SAR 15k up, some فرديات at SAR 60k–100k (confirmed [55])
+  - 6th-edition market: SAR 20k–100k per head, daily deals SAR 0.8–1m (confirmed [56])
+  - Sales platforms: SAR 2k–550k per head (confirmed [56])
+  - Al-Jouf auction: SAR 5k–1m (confirmed [57])
+- **Records:**
+  - Single camel at auction: SAR 7m (confirmed [51])
+  - Others: SAR 3.5m and SAR 1.7m (Buraidah) (confirmed [58][59])
+  - A herd rented for SAR 20m for 48 hours (2021) (confirmed [60])
+  - SAR 90m for 20 she-camels (uncertain [61])
+  - Crown Prince festival (racing): average SAR 4.5m per camel in the Hil/Zamoul class (confirmed [62])
+- **How the market works:**
+  - The festival market has rows of pens (شبوك) as a display area and five حراج auction platforms (confirmed [56]).
+  - MEWA camel-trading rules (published in Umm Al-Qura, 25 Sep 2026):
+    - Auctions must record the camel, owner, seller, buyer, price and payment method.
+    - Barter must be contracted electronically.
+    - Ownership moves through the approved platform, using the chip serial and passport number.
+    - The vet health certificate comes through "نما".
+    - Stressed, sick or unvaccinated camels cannot be sold.
+    - Moving camels needs ministry approval.
+    - When a lease ends, the camel returns to the owner's record.
+
+    (confirmed [63][64])
+  - Broker's commission (السعي): there is no fixed legal percentage. It is agreed between the parties and follows custom (confirmed [65]). A 2.5% rate was found only for real estate (uncertain for camels; use it as a game assumption).
+
+## 6. Husbandry
+
+- **Breeding season:** early November to late April (Al-Jouf records) (confirmed [66]). The rut runs late October to April (confirmed [67]).
+- **Pregnancy:** average 377.5 days, range 356–410 (confirmed [66]). Another study gives about 390 days (confirmed [68]).
+- **First breeding:**
+  - Females: first mating at about 39.75 months (~3.3 years) (confirmed [68]). First calf at about 54–55 months (confirmed [66]).
+  - Males: traditionally not used before 5 years, fully fertile at about 6 (confirmed [67]).
+  - One bull per 50–80 females (confirmed [69]).
+- **Calving interval:** 22.6–23.5 months. It drops to about 15 months if the female is mated within 3 months of calving (confirmed [66]).
+- **Weaning:** at 1–2 years, after 10–18 months of nursing (uncertain, weak source). The name مفرود at 1 year matches traditional separation from the mother (confirmed [11]).
+- **Feed:**
+  - Dry-matter intake is 1.6–1.7% of body weight voluntarily, and 2.2–3.4 kg per 100 kg on farms (confirmed [70]). That works out to about 8–17 kg a day for a 500 kg camel (my calculation).
+  - Barley and alfalfa are the standard feeds (confirmed [71]).
+  - A 50 kg barley bag had an official cap of SAR 44 + VAT (about 49.35 with VAT). Retail is about SAR 60, and prices are now set by the market (confirmed [72]).
+  - Daily feed cost per head: not found (uncertain).
+- **Water:** a nursing camel needs about 37–46 L a day. A camel can drink 107 L in 10 minutes and can go about 17 days without water in winter but about 7 in summer (confirmed [73]).
+- **Labour:**
+  - Shepherd wage SAR 1,500 a month (Sharurah owners). Moving camp costs about SAR 4,000 (confirmed [74]).
+  - Recruitment ads offer SAR 1,000–1,400 plus housing and food (confirmed [75]).
+  - Camels per herder: not found (uncertain).
+- **Diseases:**
+  - جدري (camelpox): found across the Kingdom. 8% in Taif, peaking July to September (confirmed [76][77]).
+  - الجرب (mange) and القراع (ringworm), worse when herds crowd together in winter (confirmed [14][78]).
+  - المثقبيات / السرا / الدباب (Trypanosoma evansi): 11.25% in Taif (confirmed [76][14]). One source also lists الهيام as a parasite disease (conflicting).
+  - البروسيلا (brucellosis): 4.3% in small herds, 8.6% in intensive farms (confirmed [79]).
+  - MERS (confirmed [80]).
+  - Selenium/copper deficiency (confirmed [78]).
+  - Vet costs: not found (uncertain).
+- **Lifespan:** about 40 years (weak source [81]). Names run to هرش after 20 years (confirmed [11]).
+
+---
+
+## Sources
+1. https://saudipedia.com/en/list-of-the-colors-of-the-maghateer-camels-in-saudi-arabia
+2. https://www.al-madina.com/article/915613
+3. https://sabq.org/saudia/nvtdws
+4. https://saudipedia.com/ar/ما-الفئات-المشاركة-في-مهرجان-الملك-عبدالعزيز-للإبل-2024؟
+5. https://ajel.sa/local/1bgbyyn89b
+6. https://sabq.org/article/2n4YB77
+7. https://www.okaz.com.sa/youth/na/1704754
+8. https://www.sayidaty.net/node/658586 ; https://ajel.sa/sports/v5nbrlc1b9 (the search summary did not say which of the two)
+9. https://www.okaz.com.sa/article/373281
+10. https://sabq.org/article/0sQnOFT
+11. https://saudipedia.com/قائمة-أسماء-الإبل-وفق-أعمارها
+12. https://x.com/saudistuff/status/2004904597567992173
+13. https://en.tohed.com/hadith/abu-dawud/chapter/205/sub/7108/
+14. https://saudipedia.com/تربية-الإبل-في-السعودية ; https://saudipedia.com/ar/ما-الأسماء-الخاصة-بإناث-الإبل-في-السعودية؟
+15. https://www.aletihad.ae/news/الرياضي/4453177
+16. https://www.spa.gov.sa/1883168
+17. https://sabq.org/article/8_nZOae
+18. https://qna.org.qa/ar-QA/News-Area/Special-News/2022-11/27/0095-كأس-العالم-fifa-قطر-2022-شوطان-قويان-للحقايق-واللقايا-في-بطولة-مزاين-كأس-العالم-للإبل
+19. https://www.okaz.com.sa/ampArticle/2093344 ; https://aawsat.com/node/4758216
+20. https://www.aleqt.com/2020/08/26/article_1906346.html
+21. https://sabq.org/article/7N5QkGH
+22. https://ar.wikipedia.org/wiki/مهرجان_الملك_عبد_العزيز_للإبل_4 ; https://www.spa.gov.sa/N2018488
+23. https://finanzen.net/nachricht/aktien/shamikhat-al-sheqah-owned-by-ibrahim-al-muhaidib-claims-al-shaddad-award-and-the-title-of-munqiyat-al-jazeera-14119680
+24. https://gulfnews.com/world/gulf/saudi/saudi-arabia-announces-private-jet-prize-for-camel-competition-winner-1.1732891820543
+25. https://saudipedia.com/ar/مهرجان-الملك-عبدالعزيز-للإبل-2019
+26. https://www.alkhaleej.ae/2021-01-03/بصمة-تراثية-جميلة-في-مزاينة-الإبل-بالظفرة ; https://www.omandaily.om/article/1207001
+27. https://www.al-madina.com/article/700192
+28. https://qz.com/quartzy/1439208/how-to-judge-a-camel-beauty-pageant-the-four-point-guide
+29. https://www.al-madina.com/article/662315
+30. https://sabq.org/article/BWirnYE
+31. https://sabq.org/article/5iuhwSx
+32. https://saudipedia.com/ar/قائمة-صفات-الإبل-المجاهيم-في-السعودية
+33. https://www.alwatan.com.sa/article/1094890
+34. https://gulfnews.com/world/gulf/saudi/saudi-arabia-over-40-camels-barred-from-beauty-contest-over-botox-facelifts-1.84287550
+35. https://www.thenationalnews.com/world/gcc/saudi-camel-beauty-festival-12-entrants-disqualified-for-botox-use-1.698068
+36. https://saudipedia.com/en/article/4418/culture/festivals/king-abdulaziz-camel-festival-2024
+37. https://spa.gov.sa/N2456510
+38. https://kacf.camelclub.gov.sa/Home/FestivalEditions?FestivalId=2 ; https://miqatona.com/holidays/king-abdulaziz-camel-festival-saudi
+39. https://gulfnews.com/world/gulf/saudi/saudi-arabias-flagship-camel-pageant-draws-18m-visitors-1.93636747
+40. https://sabq.org/article/pvfjynw
+41. https://www.alarabiya.net/saudi-today/2021/12/27/بجوائز-250-مليون-انطلاق-فعاليات-مهرجان-الملك-عبدالعزيز-للابل-اليوم
+42. https://www.eremnews.com/entertainment/2087227
+43. https://sabq.org/article/4nAK8MR ; https://slaati.com/2017/01/03/p679233.html
+44. https://www.saudigazette.com.sa/article/171375
+45. https://www.arabnews.pk/node/2229306
+46. https://www.arabnews.com/node/2000761/amp
+47. https://gulfnews.com/world/gulf/saudi/watch-sr29m-deals-cut-at-1st-saudi-provincial-camel-pageant-1.96656442
+48. https://tradearabia.com/News/489023/17th-Hail-Camel-Auction-concludes-with-%2412m-in-sales
+49. https://www.wam.ae/en/article/c132qw2-under-patronage-uae-president-20th-dhafra-festival
+50. https://www.qatar-tribune.com/article/213327/nation/qatar-camel-festival-2026-to-start-today ; https://www.omanobserver.om/article/1175348
+51. https://gulfnews.com/world/gulf/saudi/watch-camel-fetches-sr7m-in-saudi-arabia-1.86749161
+52. https://dalylsaudi.com/news455948.html
+53. https://slaati.com/2019/02/17/p1331021.html
+54. https://www.alriyadh.com/1132789
+55. https://www.aleqt.com/2024/12/19/article_2754450.html
+56. https://ajel.sa/local/ptksh8
+57. https://ajel.sa/local/o5d0vdmo9h ; https://ajel.sa/economy/166ywsvls5
+58. https://gulfnews.com/world/gulf/saudi/watch-video-camel-fetches-sr35-million-in-saudi-arabia-1.92693224
+59. https://gulfnews.com/world/gulf/saudi/watch-video-camel-fetches-sr17-million-at-auction-1.90971869
+60. https://gulfnews.com/world/gulf/saudi/in-largest-camel-rental-deal-saudi-man-leases-his-camel-for-sr20m-for-just-two-days-1.84538255
+61. https://www.alquds.co.uk/?p=1792381
+62. https://alriyadhdaily.com/article/94870207bf5d483aac798ef3331621e6
+63. https://www.mewa.gov.sa/ar/MediaCenter/News/Pages/saudi-moawa-camel-trading-regulations.aspx
+64. https://sabq.org/article/x0h5daa
+65. https://islamqa.info/ar/answers/13960
+66. https://link.springer.com/doi/10.1007/s11250-010-9529-y
+67. https://www.ivis.org/library/theriogenology-camelidae-anatomy-physiology-pathology-and-artificial-breeding/puberty-and-sexual-maturity
+68. https://search.emarefa.net/detail/BIM-590021 ; https://search.emarefa.net/en/detail/BIM-240815-mating-behavioural-aspects-of-one-humped-camel-camelus-drome
+69. https://aminer.org/pub/5ce2d0b7ced107d4c63acd24/evaluation-of-mating-and-the-causes-of-noises-at-night-in-small
+70. https://lrrd.org/lrrd24/8/laam24134.htm
+71. https://www.zawya.com/en/business/saudi-arabia-needs-to-hike-animal-feed-production-dv4u24n5
+72. https://www.alwatan.com.sa/article/1075450 ; https://www.al-madina.com/article/730585
+73. https://docs.eaap.org/2019/theater/64/1400_Nagy.pdf
+74. https://www.alwatan.com.sa/ampArticle/1069130
+75. https://beoe.gov.pk/foreign-jobs/4583023
+76. https://avmj.journals.ekb.eg/article_171038.html
+77. https://weqaa-pro.prx.ejadtech.sa/en/jdry-lbl
+78. https://www.sfda.gov.sa/en/node/5411
+79. https://mail.meddocsonline.org/journal-of-veterinary-medicine-and-animal-sciences/Prevalence-and-control-of-brucellosis-in-saudi-camel-herds.pdf
+80. https://www.frontiersin.org/articles/10.3389/fvets.2022.915475
+81. https://ultimateungulate.com/Artiodactyla/Camelus_dromedarius.html
