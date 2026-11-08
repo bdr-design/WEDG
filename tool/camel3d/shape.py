@@ -54,7 +54,7 @@ H0, W0 = m.shape
 uu0, vv0 = np.meshgrid(np.arange(W0), np.arange(H0))
 thin = ((uu0 < 600) & (vv0 < 520)).astype(np.float32)
 thin = cv2.GaussianBlur(thin, (0, 0), 30)
-R = (1 - thin) * ndimage.maximum_filter(D, size=161) + thin * ndimage.maximum_filter(D, size=61)
+R = (1 - thin) * ndimage.maximum_filter(D, size=441) + thin * ndimage.maximum_filter(D, size=61)   # wider than the half-depth: round, not lemon-shaped
 R = ndimage.gaussian_filter(R, 22)
 R = np.maximum(R, D)
 inside = np.sqrt(np.clip(D * (2 * R - D), 0, None))
@@ -69,8 +69,8 @@ head = (uu < 330) & (vv < 230)
 S[neck] = 0.58
 S[head] = 0.62
 S[(uu < 175) & (vv < 230)] = 0.50                  # muzzle
-S[(vv < 250) & (uu > 760) & (uu < 1080)] = 0.53    # hump is a narrow ridge
-S[(uu > 1110)] = 0.555                             # hips and thighs are narrow (about 48 cm)
+S[(vv < 250) & (uu > 760) & (uu < 1080)] = 0.62    # hump
+S[(uu > 1160)] = 0.555                             # rump and thighs are narrow
 S = cv2.GaussianBlur(S, (0, 0), 28)
 T = np.where(m > 0, inside * S, -outside)          # half-width; negative outside
 T = ndimage.gaussian_filter(T, 1.5)
@@ -167,11 +167,11 @@ def j(u, v, y):
 
 
 # joints in image space for the bind pose (both legs of a pair side by side)
-FRONT = [j(700, 520, 0.17), j(702, 610, 0.17), j(706, 700, 0.165), j(704, 800, 0.155),
+FRONT = [j(700, 520, 0.17), j(702, 590, 0.17), j(706, 700, 0.165), j(704, 800, 0.155),
          j(698, 885, 0.15), j(694, 955, 0.15), j(688, 995, 0.15)]
 FRONT_R = [0.12, 0.088, 0.066, 0.066, 0.046, 0.054, 0.05]
-HIND = [j(1210, 430, 0.135), j(1180, 560, 0.175), j(1205, 665, 0.16), j(1224, 765, 0.15),
-        j(1214, 870, 0.145), j(1204, 955, 0.14), j(1196, 995, 0.14)]
+HIND = [j(1210, 430, 0.135), j(1180, 560, 0.175), j(1205, 665, 0.15), j(1224, 765, 0.125),
+        j(1214, 870, 0.13), j(1204, 955, 0.14), j(1196, 995, 0.14)]
 HIND_R = [0.16, 0.12, 0.085, 0.062, 0.043, 0.05, 0.047]
 joints = {'front': FRONT, 'hind': HIND}
 
@@ -179,7 +179,7 @@ def smax(a, b, k):
     return -smin(-a, -b, k)
 
 
-def foot(c, s, side):
+def foot(c, s, side, sx=1.0):
     """Pad, two toes with nails, pastern and fetlock below the fetlock point c.
 
     A camel stands on a broad cushion: the pastern runs forward and down from
@@ -187,26 +187,27 @@ def foot(c, s, side):
     a cleft between them and a nail on top of each, and the sole is flat.
     """
     o = np.array([c[0], c[1], 0.0])                    # ground under the fetlock
-    loc = lambda x, y, z: o + np.array([x * s, y * s * side, z * s])
+    loc = lambda x, y, z: o + np.array([x * s * sx, y * s * side, z * s])
+    L = np.array([sx, 1.0, 1.0])                        # foot length scale
     lo, hi = o - np.array([0.16, 0.16, 0.05]), o + np.array([0.30, 0.16, 0.26])
 
     def sdf(q):
-        d = ellipsoid(q, loc(0.05, 0, 0.045), np.array([0.115, 0.088, 0.064]) * s)       # the cushion
+        d = ellipsoid(q, loc(0.05, 0, 0.032), np.array([0.12, 0.094, 0.058]) * s * L)       # the cushion
         for t in (-1, 1):
-            d = smin(d, ellipsoid(q, loc(0.116, t * 0.042, 0.036), np.array([0.078, 0.046, 0.039]) * s), 0.02)
+            d = smin(d, ellipsoid(q, loc(0.12, t * 0.044, 0.026), np.array([0.085, 0.05, 0.03]) * s * L), 0.02)
         # cleft between the toes, deeper toward the front
-        d = smax(d, -ellipsoid(q, loc(0.21, 0, 0.04), np.array([0.11, 0.008, 0.07]) * s), 0.005)
-        d = smax(d, -ellipsoid(q, loc(0.20, 0, 0.095), np.array([0.07, 0.02, 0.045]) * s), 0.012)
+        d = smax(d, -ellipsoid(q, loc(0.21, 0, 0.04), np.array([0.11, 0.008, 0.07]) * s * L), 0.005)
+        d = smax(d, -ellipsoid(q, loc(0.20, 0, 0.095), np.array([0.07, 0.02, 0.045]) * s * L), 0.012)
         # nails: caps over the front and top of each toe
         for t in (-1, 1):
-            d = smin(d, ellipsoid(q, loc(0.168, t * 0.042, 0.042), np.array([0.033, 0.028, 0.038]) * s), 0.002)
+            d = smin(d, ellipsoid(q, loc(0.178, t * 0.044, 0.03), np.array([0.04, 0.027, 0.032]) * s * L), 0.006)
         # pastern into the pad, fetlock knob and the rounded back of the fetlock
         d = smin(d, round_cone(q, loc(0.0, 0, c[2] / s), loc(0.055, 0, 0.088), 0.05 * s, 0.058 * s), 0.03)
-        d = smin(d, ellipsoid(q, loc(-0.004, 0, c[2] / s), np.array([0.056, 0.048, 0.05]) * s), 0.025)
-        d = smin(d, ellipsoid(q, loc(-0.034, 0, c[2] / s - 0.05), np.array([0.04, 0.04, 0.065]) * s), 0.025)
+        d = smin(d, ellipsoid(q, loc(-0.004, 0, c[2] / s), np.array([0.064, 0.052, 0.055]) * s * L), 0.025)
+        d = smin(d, ellipsoid(q, loc(-0.045, 0, c[2] / s - 0.05), np.array([0.045, 0.042, 0.07]) * s * L), 0.025)
         return smax(d, -q[:, 2], 0.01)                  # flat sole on the ground
     add(sdf, lo, hi, 0.02)
-    return [list(loc(0.168, t * 0.042, 0.042)) + [s] for t in (-1, 1)]
+    return [list(loc(0.178, t * 0.044, 0.03)) + [s] for t in (-1, 1)]
 
 
 def cannon(top, fet, r_top, r_bot, side):
@@ -215,11 +216,11 @@ def cannon(top, fet, r_top, r_bot, side):
     a[1] *= side
     b[1] *= side
     fw = np.array([1.0, 0, 0])
-    for off, r1, r2 in ((0.012, r_top, r_bot), (-0.025, r_top * 0.78, r_bot * 0.8)):
+    for off, r1, r2 in ((0.012, r_top, r_bot), (-0.02, r_top * 0.72, r_bot * 0.75)):
         aa, bb = a + fw * off, b + fw * off
         if off < 0:
             aa = aa + np.array([0, 0, -0.05])
-        add(lambda q, aa=aa, bb=bb, r1=r1, r2=r2: flat_cone(q, aa, bb, r1, r2, 1.12),
+        add(lambda q, aa=aa, bb=bb, r1=r1, r2=r2: round_cone(q, aa, bb, r1, r2),
             np.minimum(aa, bb) - 0.12, np.maximum(aa, bb) + 0.12, 0.03)
 
 
@@ -227,30 +228,43 @@ nails = []
 for side in (1, -1):
     chain(FRONT[:4], FRONT_R[:4], 0.06, side, flats=[1.25, 1.5, 1.4])
     chain(HIND[:4], HIND_R[:4], 0.08, side, flats=[1.45, 1.55, 1.35])
-    cannon(FRONT[3], FRONT[5], 0.038, 0.033, side)
-    cannon(HIND[3], HIND[5], 0.036, 0.031, side)
-    for fet, scale in ((FRONT[5], 1.0), (HIND[5], 0.92)):
+    cannon(FRONT[3], FRONT[5], 0.031, 0.028, side)
+    cannon(HIND[3], HIND[5], 0.029, 0.026, side)
+    for fet, scale, sx in ((FRONT[5], 1.0, 0.91), (HIND[5], 0.92, 0.90)):
         c = fet.copy()
         c[1] *= side
-        nails += foot(c, scale, side)
+        nails += foot(c, scale, side, sx)
     # bony knees (carpus) and hocks
-    for (u, v, r, y) in ((707, 798, np.array([0.06, 0.05, 0.07]), 0.155), (1222, 765, np.array([0.06, 0.045, 0.065]), 0.15)):
+    for (u, v, r, y) in ((707, 798, np.array([0.06, 0.05, 0.07]), 0.155), (1222, 765, np.array([0.06, 0.045, 0.065]), 0.125)):
         c = j(u, v, y * side)
         c[0] += 0.012
         add(lambda q, c=c, r=r: ellipsoid(q, c, r), c - 0.2, c + 0.2, 0.03)
+    hk = np.array([-0.97, 0.19 * side, 1.60])
+    add(lambda q, c=hk: ellipsoid(q, c, np.array([0.07, 0.05, 0.05])), hk - 0.15, hk + 0.15, 0.04)
     # ears: short, set back and to the side
     e0 = w(340, 96)
     e0[1] = 0.055 * side
     e1 = w(362, 60)
-    e1[1] = 0.095 * side
-    add(lambda q, a=e0, b=e1: round_cone(q, a, b, 0.036, 0.013), np.minimum(e0, e1) - 0.1, np.maximum(e0, e1) + 0.1, 0.035)
+    e1[1] = 0.12 * side
+    add(lambda q, a=e0, b=e1: flat_cone(q, a, b, 0.036, 0.024, 2.0), np.minimum(e0, e1) - 0.1, np.maximum(e0, e1) + 0.1, 0.035)
 
 # fuller drooping lower lip
 lp = w(124, 176)
 add(lambda q: ellipsoid(q, lp, np.array([0.04, 0.034, 0.055])), lp - 0.15, lp + 0.15, 0.03)
 # chest pad (sternal callosity) under the brisket
-cp = w(640, 588)
-add(lambda q: ellipsoid(q, cp, np.array([0.13, 0.11, 0.07])), cp - 0.3, cp + 0.3, 0.05)
+cp = w(675, 590)
+add(lambda q: smax(ellipsoid(q, cp, np.array([0.12, 0.09, 0.055])), 0.93 - q[:, 2], 0.02), cp - 0.3, cp + 0.3, 0.05)
+# the thighs part below the vulva (about 1.36 m), so the hind legs are not one block
+hg = 0.10 * np.clip((1.36 - P[:, 2]) / 0.36, 0, 1)
+gap = np.maximum.reduce([np.abs(P[:, 1]) - hg, P[:, 2] - 1.36, P[:, 0] + 1.0, -P[:, 2] + 0.2])
+F = smax(F, -gap, 0.03)
+# udder between the thighs (Wadh she-camel: about 25 cm long), four teats about 5 cm
+ud = np.array([-1.0, 0.0, 1.05])
+add(lambda q: ellipsoid(q, ud, np.array([0.12, 0.09, 0.08])), ud - 0.25, ud + 0.25, 0.04)
+for tx in (-0.045, 0.045):
+    for ty in (-0.035, 0.035):
+        ta, tb = ud + np.array([tx, ty, -0.06]), ud + np.array([tx, ty, -0.125])
+        add(lambda q, a=ta, b=tb: round_cone(q, a, b, 0.012, 0.009), np.minimum(ta, tb) - 0.05, np.maximum(ta, tb) + 0.05, 0.01)
 # tail with the hair tuft
 tail = [w(1292, 420), w(1300, 520), w(1306, 610), w(1310, 700)]
 for i, r in enumerate([(0.035, 0.03), (0.03, 0.026), (0.03, 0.038)]):

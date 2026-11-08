@@ -12,7 +12,7 @@ photo.
 | 4. Rig and clips | `rig.py` | `camel_rigged.blend` (idle, graze) |
 | 4b. Walk from foot physics | `walk_physics.py` | replaces `walk`, prints slip and contact checks |
 | 5. Export | `export_glb.py` | `camel_wodh_female.glb` |
-| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 599 KB), `_lod2.glb` (1.5k triangles, 512 px, 261 KB); same skeleton and clips |
+| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 625 KB), `_lod2.glb` (1.5k triangles, 512 px, 269 KB); same skeleton and clips |
 | Checks | `render_tex.py`, `render_anim.py`, `feet_closeup.py`, `feet_clay.py`, `feet_walk.py`, `body_views.py`, `ortho_compare.py` | Cycles renders in desert light; close-ups of the lower legs standing, untextured and through a stride; front, rear and three-quarter views; a side view at the photo's own scale to lay over it |
 
 ## How each step works
@@ -21,24 +21,30 @@ photo.
   - The body, neck and head are the photo's outline inflated sideways, with
     real camel widths per region (barrel, narrow hump ridge, narrow neck and
     head).
-    - The barrel is about 57 cm wide and the hips about 48 cm, which gives
-      an adult she-camel's heart girth of about 2.2 m.
+    - The barrel is about 57 cm wide and round in section (the radius
+      window is wider than the body's half-depth, so the belly and hump are
+      not keeled). Heart girth about 2.2 m, as measured on Wadh she-camels.
+    - The thighs part below the vulva, with the udder and four teats
+      between them, and the hook bones show at the top of the hips.
+    - The chest pad sits between the forelegs with a flat underside.
+    - Small rounded ears, flat and turned out.
   - **Legs, matched to the photo at every height:**
     - Forearm about 17 cm deep below the elbow and 13–15 cm at mid
       forearm; gaskin 19 cm under the stifle and 14 cm at the hock.
     - Flat from the side: the leg tubes are squeezed sideways about their own
       axis, so a forearm is about 10 cm wide from the front and a gaskin
       about 13 cm.
-    - The hind legs sit a little closer in, as a camel's do.
+    - The hind legs sit a little closer in, with the hocks closer together
+      than the feet.
   - The legs, knees, ears, chest pad, lower lip and tail are tapered tubes
     and ellipsoids at real proportions.
   - **Lower legs and feet**, matched to the photo:
     - The cannon is a slim bone with the flexor tendons behind it, so it is
-      deeper than wide (about 10 × 7 cm).
-    - A rounded fetlock, then the pastern running forward and down into the
-      pad.
-    - A broad cushion with a flat sole, about 26 × 17 cm on the forefeet and
-      92% of that behind.
+      deeper than wide (about 8.5 × 6 cm in front, 8 × 5 cm behind).
+    - The fetlock flares to about 13.5 cm, then the pastern runs forward and
+      down into the pad.
+    - A broad, low cushion with a flat sole that spreads at the ground,
+      about 24 × 19 cm on the forefeet and 22 × 17 cm behind.
     - Two toes side by side with a cleft between them and a nail over the
       front of each.
     - The rig's pastern and foot bones follow the same points, so the pad
@@ -59,26 +65,37 @@ photo.
   - `walk`: built from foot physics and checked against Muybridge's camel
     walking (*Animal Locomotion* plate 737, 1887; in
     `assets_src/reference/`).
-    - **Footfalls:** a lateral-sequence walk close to a pace. A planted foot
-      moves back at exactly the ground speed. At the end of the stance the
-      heel lifts while the toes stay down.
-    - **Forelimb:** while it carries weight, the forearm and cannon form one
-      straight column with the carpus locked. The shoulder blade turns with
-      the stride, and the shoulder and elbow take up the length. In the
-      swing the carpus folds about 78° and the pastern curls.
-    - **Hind limb:** the thigh swings about the hip, and the hock folds back.
+    - **Footfalls:** a lateral-sequence walk close to a pace. The hind foot
+      lands first and the forefoot of the same side about 12% of a stride
+      later. Each foot is down for 65% of the stride. A planted foot moves
+      back at exactly the ground speed. At the end of the stance the heel
+      lifts while the toes stay down, and the roll fades out over the first
+      quarter of the swing.
+    - **Forelimb:** the shoulder joint sits forward of the elbow, as in the
+      photo. While the leg carries weight, the forearm and cannon form one
+      straight column with the carpus locked. The shoulder blade takes 60%
+      of the swing, and the shoulder and elbow take up the length, with the
+      elbow behind the shoulder. In the swing the carpus folds forward about
+      78°, the cannon trails back, and the fetlock flexes so the toe trails
+      and the sole faces back.
+    - **Hind limb:** the thigh swings about the hip, and the hock points
+      back in every frame.
     - **Joint accuracy:** the legs splay slightly, so each joint is re-aimed
       until the fetlock lands within 2 mm of its target.
-    - **Body:** carried at the height the planted legs allow, with a 1.2 cm
-      bob, a sideways shift over the supporting side and a roll. The neck and
-      head counter the bob.
+    - **Swing height:** the sole clears the ground by about 7 cm in front
+      and 6 cm behind. The height comes from the folded carpus and hock.
+    - **Body:** it vaults over the planted legs, rising at mid-stance and
+      dipping at the change of support (about 4 cm). It shifts over the side
+      carrying the weight, and the neck and head counter the bob.
+    - **Checked** with `gait_measure.py` (joint bend directions, footfalls,
+      side shift) and `sole_clear.py` (lowest point of each foot's mesh).
     - **Weight:** the pads spread under load.
     - **Pace:** 1.15 m/s (about 4 km/h), 1.45 s and 1.67 m per stride.
     - **Measured:** the toes slip under 2 mm per frame and stay within 2 mm
       of the ground while planted.
   - `graze` (4 s): the muzzle reaches the ground about 0.75 m in front of
     the forefeet.
-- **Budget:** 40k triangles, 37 bones, 2K textures, 2.0 MB GLB.
+- **Budget:** 40k triangles, 37 bones, 2K textures, 2.1 MB GLB.
 
 ## Running it
 

@@ -24,14 +24,15 @@ from mathutils import Vector
 
 SPEED = float(os.environ.get('SPEED', '1.15'))     # m/s, about 4 km/h
 CYCLE = float(os.environ.get('CYCLE', '1.45'))     # s per stride
-DUTY = 0.62
+DUTY = float(os.environ.get('DUTY', '0.65'))   # feet down about two thirds of the stride
 FPS = 30
 FRAMES = round(CYCLE * FPS)
 STRIDE = SPEED * CYCLE
-PHASE = {'hind.L': 0.0, 'fore.L': 0.08, 'hind.R': 0.5, 'fore.R': 0.58}
-LIFT = {'fore': 0.20, 'hind': 0.15}
+PHASE = {'hind.L': 0.0, 'fore.L': -0.12, 'hind.R': 0.5, 'fore.R': 0.38}   # + = earlier; fore lands after the hind of its side
+LIFT = {'fore': 0.12, 'hind': 0.10}   # sole clears the ground by about 7 and 6 cm at mid-swing
 ROLL = {'fore': 0.035, 'hind': 0.045}
-CENTER = {'fore': -0.05, 'hind': -0.04}
+CENTER = {'fore': float(os.environ.get('CF', '0.05')), 'hind': -0.04}   # stance window relative to the pivot
+SCAP = float(os.environ.get('SCAP', '0.6'))   # share of the leg's swing taken by the shoulder blade
 CARPUS = math.radians(78)    # carpus fold at mid-swing
 CURL = {'fore': math.radians(55), 'hind': math.radians(42)}   # pastern curl at mid-swing
 
@@ -99,7 +100,7 @@ def two_bone(A, F, l1, l2, apex):
     if apex == 0:
         J = min(cands, key=lambda q: q.z)
     else:
-        J = max(cands, key=lambda q: -(q - A).cross(F - A).y * apex)
+        J = max(cands, key=lambda q: (q - A).cross(F - A).y * apex)
     J.y = A.y
     return J
 
@@ -122,6 +123,9 @@ for leg, c in CH.items():
 for leg, r in REST.items():
     chain = (r['lu'] if leg.startswith('fore') else 0) + (pb[CH[leg]['pivot']].bone.length if leg.startswith('fore') else r['lu']) + r['la'] + r['lb']
     r['reach'] = min(r['R'] * (1.012 if leg.startswith('fore') else 1.045), chain * 0.985)
+    if leg.startswith('fore'):
+        # shoulder joint to fetlock: the upper arm, forearm and cannon, kept from locking fully straight
+        r['reach_s'] = min((r['F'] - head(CH[leg]['upper'])).length * 1.03, (r['lu'] + r['la'] + r['lb']) * 0.985)
     print('REACH', leg, round(r['R'], 3), round(chain, 3), round(r['reach'], 3))
 HIP_TO_SHOULDER = (REST['fore.L']['P'] - head('hips')).length
 
@@ -138,7 +142,7 @@ def foot_plan(ph):
         return STRIDE * DUTY * (0.5 - k), 0.0, 0.0, smoothstep(0.62, 1.0, k), k
     k = (ph - DUTY) / (1 - DUTY)
     ease = 0.5 - 0.5 * math.cos(math.pi * k)
-    return STRIDE * DUTY * (-0.5 + ease), math.sin(math.pi * k ** 0.8), k, 0.0, 0.0
+    return STRIDE * DUTY * (-0.5 + ease), math.sin(math.pi * k ** 0.8), k, 1.0 - smoothstep(0.0, 0.25, k), 0.0
 
 
 # ---- how low the body must ride for every planted leg to reach its foot
@@ -153,12 +157,24 @@ for f in range(FRAMES):
         legs[leg] = (dx + (REST[leg]['P'].x - REST[leg]['F'].x) + CENTER[kind], lift, k, roll, ks)
     nd = {'fore': 0.0, 'hind': 0.0}
     for leg, (dx, lift, _, roll, _) in legs.items():
-        if lift:
-            continue
+        if lift and not roll:
+            continue                                    # free in the air (a leg still rolling off counts)
         r, kind = REST[leg], leg.split('.')[0]
-        horiz = r['F'].x + dx - r['P'].x
-        fz = r['F'].z + ROLL[kind] * roll
-        nd[kind] = max(nd[kind], (r['P'].z - fz) - math.sqrt(max(r['reach'] ** 2 - horiz * horiz, 0)))
+        Fx = r['F'].x + dx + 0.035 * roll
+        fz = r['F'].z + LIFT[kind] * lift + ROLL[kind] * roll
+        if kind == 'fore':
+            # the chain starts at the shoulder joint, which moves as the shoulder blade turns with the stride
+            c = CH[leg]
+            ang = swing_angle(r['F'] - r['P'], Vector((Fx, r['F'].y, fz)) - r['P'])
+            pb[c['pivot']].rotation_euler = (SCAP * ang, 0, 0)
+            update()
+            S = head(c['upper'])
+            pb[c['pivot']].rotation_euler = (0, 0, 0)
+            update()
+            horiz, top, reach = Fx - S.x, S.z, r['reach_s']
+        else:
+            horiz, top, reach = Fx - r['P'].x, r['P'].z, r['reach']
+        nd[kind] = max(nd[kind], (top - fz) - math.sqrt(max(reach ** 2 - horiz * horiz, 0)))
     for kind in nd:
         need[kind].append(nd[kind])
     left = sum(1 for l, v in legs.items() if l.endswith('L') and not v[1])
@@ -174,10 +190,16 @@ def smooth(vals, n=4):
     return out
 
 
-# a steady carriage at the lowest height the stride needs, plus a gentle bob
+# the body vaults over the planted legs: it rides as high as they allow, so it rises at mid-stance
+# and dips at the change of support; VAULT keeps part of the steady carriage to soften the bob
+VAULT = 0.45
 base = {k: max(v) + 0.004 for k, v in need.items()}
-bob = [0.012 * (0.5 + 0.5 * math.cos(4 * math.pi * (f / FRAMES) - 0.6)) for f in range(FRAMES)]
-drop = {k: [base[k] + bob[f] for f in range(FRAMES)] for k in base}
+drop = {}
+for k, v in need.items():
+    d = [n + (1 - VAULT) * (base[k] - n) for n in v]
+    for _ in range(3):
+        d = [max(a, n + 0.002) for a, n in zip(smooth(d, 3), v)]
+    drop[k] = d
 shift = smooth(shift)
 
 deform = [p for p in pb if p.bone.use_deform]
@@ -191,7 +213,7 @@ for f in range(FRAMES):
         p.scale = (1, 1, 1)
     dh, df = drop['hind'][f], drop['fore'][f]
     pitch = math.asin(max(-0.2, min(0.2, (df - dh) / HIP_TO_SHOULDER)))
-    pb['hips'].location = (-0.035 * shift[f], 0.0, -dh)
+    pb['hips'].location = (0.035 * shift[f], 0.0, -dh)
     pb['hips'].rotation_euler = (-pitch, math.radians(-3.2 * shift[f]), 0)
     pb['neck1'].rotation_euler = (math.radians(3.0 * math.cos(4 * math.pi * t + 0.5)), 0, math.radians(2.0 * shift[f]))
     pb['neck3'].rotation_euler = (math.radians(-1.6 * math.cos(4 * math.pi * t + 1.1)), 0, 0)
@@ -208,7 +230,7 @@ for f in range(FRAMES):
         swing = math.sin(math.pi * min(1.0, k * 1.1)) if lift else 0.0
         ang = swing_angle(r['F'] - r['P'], F - head(c['pivot']))
         if kind == 'fore':
-            turn(c['pivot'], 0.4 * ang)                     # the shoulder blade takes part of the swing
+            turn(c['pivot'], SCAP * ang)                    # the shoulder blade takes part of the swing
         else:
             turn(c['upper'], ang)                           # thigh swings about the hip
         # the legs splay a little, so aim, measure the miss and re-aim until the fetlock lands on target
@@ -234,6 +256,15 @@ for f in range(FRAMES):
                 break
             aim += miss
         Fw = tail(c['b'])
+        if lift and k < 0.35:
+            # early swing: start from the stance solution (toe still aimed at the ground) and blend into the fold
+            Tw = Vector((T.x, Fw.y, T.z))
+            Pd = two_bone(Fw, Tw, r['lp'], r['lf'], 0)
+            align(c['pastern'], Pd - Fw)
+            align(c['foot'], Vector((Tw.x, Pd.y, Tw.z)) - tail(c['pastern']))
+            stance_pose = (pb[c['pastern']].rotation_euler[0], pb[c['foot']].rotation_euler[0])
+        else:
+            stance_pose = None
         if lift == 0:
             # pastern and pad between the fetlock and the planted toes; the heel lifts as the pad rolls
             Tw = Vector((T.x, Fw.y, T.z))
@@ -253,9 +284,15 @@ for f in range(FRAMES):
             update()
         else:
             align(c['pastern'], r['dp'])
-            turn(c['pastern'], CURL[kind] * swing)
+            turn(c['pastern'], -CURL[kind] * swing)          # the fetlock flexes: toe trails, sole faces back
             align(c['foot'], r['df'])
-            turn(c['foot'], 0.55 * CURL[kind] * swing)
+            turn(c['foot'], -0.55 * CURL[kind] * swing)
+            if stance_pose:
+                w = smoothstep(0.0, 0.35, k)
+                for bn, a0 in zip((c['pastern'], c['foot']), stance_pose):
+                    e = pb[bn].rotation_euler
+                    pb[bn].rotation_euler = (a0 + (e[0] - a0) * w, e[1], e[2])
+                    update()
         fw[leg] = (tail(c['foot']).copy(), tail(c['pastern']).copy(), tail(c['b']).copy(), F)
     row = {}
     for p in deform:
@@ -282,7 +319,7 @@ for leg in PHASE:
             clear.append(min(toe.z, padp.z))
     report[leg] = dict(toe_slip_mm_per_frame=round(slip * 1000, 1), planted_toe_height_mm=[round(min(toe_z) * 1000, 1), round(max(toe_z) * 1000, 1)],
                        swing_clearance_mm=round(max(clear) * 1000), fetlock_error_mm=round(ferr * 1000, 1))
-report['carriage_drop_mm'] = {k: round(base[k] * 1000) for k in base}
+report['carriage_drop_mm'] = {k: [round(min(drop[k]) * 1000), round(max(drop[k]) * 1000)] for k in drop}
 report['stride_m'] = round(STRIDE, 2)
 report['speed_mps'] = SPEED
 print(json.dumps(report, indent=1))
