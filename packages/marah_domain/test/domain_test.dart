@@ -479,4 +479,143 @@ void main() {
       }
     });
   });
+  group('Farm and listing commands', () {
+    test('cancel a listing and decline an offer', () {
+      final g = newGame(5);
+      final c = GameView(g.state, g.me.id).herd.first;
+      g.dispatch(ListForSale(g.me.id, c.id, c.estimate.$1.value));
+      final l = GameView(g.state, g.me.id).myListings.single;
+      Offer? offer;
+      for (var i = 0; i < 40 && offer == null; i++) {
+        g.advanceDays(1);
+        offer = g.state.world.offers.values.firstOrNull;
+      }
+      expect(g.dispatch(DeclineOffer(g.me.id, offer!.id)).ok, isTrue);
+      expect(g.state.world.offers.containsKey(offer.id), isFalse);
+      expect(g.dispatch(CancelListing(g.me.id, l.id)).ok, isTrue);
+      expect(GameView(g.state, g.me.id).myListings, isEmpty);
+      expect(GameView(g.state, g.me.id).canSell(c.id), isNull);
+      expectClean(g);
+    });
+
+    test('cannot cancel or accept on someone else\'s listing', () {
+      final g = newGame();
+      final other = GameView(g.state, g.me.id).market.first;
+      final r = g.dispatch(CancelListing(g.me.id, other.id)) as Err;
+      expect(r.error.code, ErrorCode.notYourListing);
+    });
+
+    test('rename, feed plan, shepherds and expansion', () {
+      final g = newGame();
+      final c = GameView(g.state, g.me.id).herd.first;
+      expect(g.dispatch(RenameCamel(g.me.id, c.id, '  الغالية ')).ok, isTrue);
+      expect(GameView(g.state, g.me.id).camel(c.id)!.name, 'الغالية');
+      expect(
+        (g.dispatch(RenameCamel(g.me.id, c.id, '')) as Err).error.code,
+        ErrorCode.invalidName,
+      );
+
+      expect(g.dispatch(SetFeedPlan(g.me.id, FeedPlan.premium)).ok, isTrue);
+      expect(g.me.farm.feedPlan, FeedPlan.premium);
+
+      expect(g.dispatch(SetShepherds(g.me.id, 3)).ok, isTrue);
+      expect(
+        (g.dispatch(SetShepherds(g.me.id, 0)) as Err).error.code,
+        ErrorCode.invalidAmount,
+      );
+
+      final cash = g.me.cash;
+      final cost = GameView(g.state, g.me.id).expansionCost;
+      expect(g.dispatch(ExpandFarm(g.me.id)).ok, isTrue);
+      expect(g.me.cash, cash - cost);
+      expect(
+        g.me.farm.capacity,
+        Balance.startingCapacity + Balance.expansionStep,
+      );
+      expectClean(g);
+    });
+
+    test('a better feed plan raises body condition over weeks', () {
+      final cheap = newGame(8);
+      final rich = newGame(8);
+      cheap.dispatch(SetFeedPlan(cheap.me.id, FeedPlan.economy));
+      rich.dispatch(SetFeedPlan(rich.me.id, FeedPlan.premium));
+      cheap.advanceDays(90);
+      rich.advanceDays(90);
+      double avg(Game g) {
+        final h = GameView(g.state, g.me.id).herd;
+        return h.map((c) => c.condition).reduce((a, b) => a + b) / h.length;
+      }
+
+      expect(avg(rich), greaterThan(avg(cheap) + 15));
+    });
+
+    test('commands about camels you do not own are refused', () {
+      final g = newGame();
+      final theirs = GameView(g.state, g.me.id).market.first.camel.id;
+      for (final cmd in <Command>[
+        Treat(g.me.id, theirs),
+        RenameCamel(g.me.id, theirs, 'x'),
+        ListForSale(g.me.id, theirs, 5000),
+        QuickSale(g.me.id, theirs),
+      ]) {
+        final r = g.dispatch(cmd) as Err;
+        expect(r.error.code, ErrorCode.notYourCamel, reason: '$cmd');
+      }
+    });
+  });
+
+  group('Own bull and withdrawal', () {
+    test('mating with your own bull costs nothing but needs a mature bull', () {
+      final g = newGame(13)..advanceDays(45);
+      final sim = Sim(g.state);
+      final bull = WorldGen(sim).makeCamel(
+        sim.rng(['own-bull']),
+        owner: g.me.id,
+        mean: 60,
+        category: ColorCategory.majaheem,
+        sex: Sex.male,
+        ageDays: 9 * 365,
+      );
+      final young = WorldGen(sim).makeCamel(
+        sim.rng(['young-bull']),
+        owner: g.me.id,
+        mean: 60,
+        category: ColorCategory.majaheem,
+        sex: Sex.male,
+        ageDays: 3 * 365,
+      );
+      final dam = g.state.world.camels.values.firstWhere(
+        (c) =>
+            c.ownerId == g.me.id &&
+            c.sex == Sex.female &&
+            c.ageYears(g.today) >= 6,
+      )..lastCalvedOn = null;
+      final r1 = g.dispatch(MateWithOwnBull(g.me.id, dam.id, young.id)) as Err;
+      expect(r1.error.code, ErrorCode.tooYoungToBreed);
+      final cash = g.me.cash;
+      expect(g.dispatch(MateWithOwnBull(g.me.id, dam.id, bull.id)).ok, isTrue);
+      expect(g.me.cash, cash);
+      final again =
+          g.dispatch(MateWithOwnBull(g.me.id, dam.id, bull.id)) as Err;
+      expect(again.error.code, ErrorCode.awaitingPregnancyCheck);
+    });
+
+    test('withdrawing frees the camel for sale', () {
+      final g = newGame(21);
+      final f = g.state.world.festivals.values.first;
+      final r = f.rounds.first;
+      final c = camelFor(g, f, r);
+      g.advanceTo(f.opensOn);
+      g.dispatch(EnterRound(g.me.id, f.id, r.id, c.id));
+      expect(
+        GameView(g.state, g.me.id).canSell(c.id)?.code,
+        ErrorCode.enteredInContest,
+      );
+      expect(g.dispatch(WithdrawEntry(g.me.id, f.id, r.id, c.id)).ok, isTrue);
+      expect(GameView(g.state, g.me.id).canSell(c.id), isNull);
+      final again = g.dispatch(WithdrawEntry(g.me.id, f.id, r.id, c.id)) as Err;
+      expect(again.error.code, ErrorCode.notEntered);
+    });
+  });
 }
