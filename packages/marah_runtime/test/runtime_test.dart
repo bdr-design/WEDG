@@ -118,24 +118,123 @@ void main() {
       },
     );
 
-    test('a broken save is reported, never replaced, and the previous one '
-        'can be restored', () async {
+    test('a broken save is reported, never replaced, and the last good '
+        'one can be restored', () async {
       final e = core();
       await e.newGame(params);
       await e.dispatch(SetShepherds(e.game!.me.id, 2));
-      await e.flush();
       await e.close();
+      final ok = core(); // a successful open proves the save readable
+      expect(await ok.open(), isA<GameOpened>());
+      await ok.close();
       backend.data['marah.save'] = '{broken';
 
       final b = core();
-      final status = await b.open();
-      expect(status, isA<GameOpenFailed>());
-      await b.dispatch(const SetShepherds(OwnerId('x'), 3));
+      expect(await b.open(), isA<GameOpenFailed>());
+      expect(backend.data['marah.save.broken'], '{broken');
       await b.flush();
       expect(backend.data['marah.save'], '{broken');
       expect(await b.openPrevious(), isA<GameOpened>());
-      expect(b.game, isNotNull);
+      expect(b.game!.me.farm.shepherds, 2);
       await b.close();
+    });
+
+    test(
+      'a failed save is reported, retried, and never stops later saves',
+      () async {
+        final flaky = FlakyBackend();
+        final e = EngineCore(
+          store: SaveStore(flaky),
+          emit: pushes.add,
+          now: now.call,
+        );
+        await e.newGame(params);
+        flaky.failWrites = true;
+        await e.dispatch(SetShepherds(e.game!.me.id, 5));
+        await e.flush();
+        final failed = pushes.whereType<SaveStatus>().last;
+        expect(failed.ok, isFalse);
+        flaky.failWrites = false;
+        await e.flush();
+        expect(pushes.whereType<SaveStatus>().last.ok, isTrue);
+        final again = EngineCore(store: SaveStore(flaky), emit: (_) {});
+        await again.open();
+        expect(again.game!.me.farm.shepherds, 5);
+        await e.close();
+      },
+    );
+
+    test(
+      'unreadable bytes open as a failure with a backup, not a crash',
+      () async {
+        final flaky = FlakyBackend()..data['marah.save'] = 'bytes';
+        flaky.failReads = true;
+        final e = EngineCore(store: SaveStore(flaky), emit: (_) {});
+        expect(await e.open(), isA<GameOpenFailed>());
+        expect(flaky.data['marah.save.broken'], 'bytes');
+        await e.close();
+      },
+    );
+
+    test(
+      'device clock moved back: the world keeps going from where it was',
+      () async {
+        final e = core();
+        await e.newGame(params);
+        now.advance(const Duration(days: 2));
+        await e.resume();
+        final day = e.game!.today;
+        now.advance(const Duration(days: -5)); // clock set back
+        await e.resume();
+        expect(e.game!.today, day);
+        now.advance(const Duration(days: 1));
+        await e.resume();
+        expect(e.game!.today, day + 7);
+        await e.close();
+      },
+    );
+
+    test('a huge forward jump is capped and reported', () async {
+      final e = core();
+      await e.newGame(params);
+      final start = e.game!.today;
+      now.advance(const Duration(days: 3 * 365));
+      await e.resume();
+      expect(e.game!.today, start + 365);
+      expect(
+        pushes.whereType<CatchUpCapped>().single.skippedDays,
+        3 * 365 * 7 - 365,
+      );
+      now.advance(const Duration(days: 1));
+      await e.resume();
+      expect(e.game!.today, start + 365 + 7);
+      await e.close();
+    });
+
+    test('steady play still autosaves within the maximum wait', () async {
+      final e = EngineCore(
+        store: SaveStore(backend),
+        emit: pushes.add,
+        now: DateTime.now,
+        autosaveDelay: const Duration(milliseconds: 80),
+        autosaveMaxWait: const Duration(milliseconds: 200),
+      );
+      await e.newGame(params);
+      final me = e.game!.me.id;
+      final before = backend.data['marah.save'];
+      for (var i = 0; i < 12; i++) {
+        await e.dispatch(SetShepherds(me, 1 + i % 3));
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+      }
+      expect(backend.data['marah.save'], isNot(before));
+      await e.close();
+    });
+
+    test('a closed engine refuses work', () async {
+      final e = core();
+      await e.newGame(params);
+      await e.close();
+      expect(e.flush(), throwsStateError);
     });
 
     test('details for a camel and a festival', () async {
@@ -151,6 +250,24 @@ void main() {
       expect(fest.rounds.first.prizes, hasLength(10));
       await e.close();
     });
+  });
+
+  group('Client streams', () {
+    test(
+      'a listener that subscribes late still gets the latest snapshot',
+      () async {
+        final client = InlineEngineClient(
+          (emit) => EngineCore(store: SaveStore(MemoryBackend()), emit: emit),
+        );
+        await client.newGame(params);
+        final late = await client.snapshots.first.timeout(
+          const Duration(seconds: 2),
+        );
+        expect(late.herd, hasLength(3));
+        expect(client.latest, same(late));
+        await client.dispose();
+      },
+    );
   });
 
   group('Time slicing (web path)', () {
@@ -217,7 +334,10 @@ void main() {
       final snap = await first.timeout(const Duration(seconds: 10));
       expect(snap.herd, hasLength(3));
 
-      final next = client.snapshots.first;
+      // Snapshots replay the latest to new listeners: wait for a newer one.
+      final next = client.snapshots.firstWhere(
+        (s) => s.revision > snap.revision,
+      );
       final camel = snap.herd.first;
       final r = await client.dispatch(
         RenameCamel(snap.playerId, camel.id, 'الغالية'),
@@ -229,7 +349,7 @@ void main() {
       await client.pause();
       await client.dispose();
       expect(File('${dir.path}/marah.save').existsSync(), isTrue);
-      expect(File('${dir.path}/marah.save.tmp').existsSync(), isFalse);
+      expect(dir.listSync().where((f) => f.path.endsWith('.tmp')), isEmpty);
 
       final again = await IsolateEngineClient.spawn(saveDirectory: dir.path);
       expect(await again.open(), isA<GameOpened>());
@@ -243,7 +363,21 @@ void main() {
       // No game yet: a detail request returns null rather than throwing.
       expect(await client.camelDetail(const CamelId('none')), isNull);
       await client.dispose();
-      await expectLater(client.flush(), throwsStateError);
+      await expectLater(client.flush(), throwsA(isA<EngineStopped>()));
+    });
+  });
+
+  group('Worker shutdown', () {
+    test('a request racing dispose fails instead of hanging', () async {
+      final dir = await Directory.systemTemp.createTemp('marah_race');
+      final client = await IsolateEngineClient.spawn(saveDirectory: dir.path);
+      await client.newGame(params);
+      final racing = client.resume();
+      await client.dispose();
+      await racing
+          .timeout(const Duration(seconds: 5))
+          .catchError((Object _) {});
+      await dir.delete(recursive: true);
     });
   });
 
@@ -260,4 +394,21 @@ void main() {
       await dir.delete(recursive: true);
     });
   });
+}
+
+class FlakyBackend extends MemoryBackend {
+  bool failWrites = false;
+  bool failReads = false;
+
+  @override
+  Future<void> write(String key, String value) async {
+    if (failWrites) throw const FileSystemException('disk full');
+    await super.write(key, value);
+  }
+
+  @override
+  Future<String?> read(String key) async {
+    if (failReads) throw const FormatException('bad utf-8');
+    return super.read(key);
+  }
 }

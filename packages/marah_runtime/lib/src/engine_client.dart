@@ -9,11 +9,18 @@ import 'view_models.dart';
 /// The only way the UI talks to the game. Every call is asynchronous and
 /// all work happens away from the UI thread (see ADR 0002).
 abstract interface class EngineClient {
-  /// The latest state of the player's world, after every change.
+  /// The latest state of the player's world. A new listener immediately
+  /// receives the most recent snapshot, then every later one.
   Stream<PlayerSnapshot> get snapshots;
+
+  /// The most recent snapshot, if any.
+  PlayerSnapshot? get latest;
 
   /// Progress while a long absence is being caught up.
   Stream<CatchUpProgress> get progress;
+
+  /// Saving problems and recoveries, skipped absences, and engine failure.
+  Stream<Push> get notices;
 
   Future<OpenStatus> open();
   Future<OpenStatus> openPrevious();
@@ -32,29 +39,54 @@ abstract interface class EngineClient {
   Future<void> dispose();
 }
 
+class EngineStopped implements Exception {
+  const EngineStopped(this.reason);
+  final String reason;
+  @override
+  String toString() => 'EngineStopped: $reason';
+}
+
 /// Shared stream plumbing for client implementations.
 mixin PushStreams {
   final _snapshots = StreamController<PlayerSnapshot>.broadcast();
   final _progress = StreamController<CatchUpProgress>.broadcast();
-  int _lastRevision = 0;
+  final _notices = StreamController<Push>.broadcast();
+  PlayerSnapshot? _latest;
 
-  Stream<PlayerSnapshot> get snapshots => _snapshots.stream;
+  PlayerSnapshot? get latest => _latest;
+
+  Stream<PlayerSnapshot> get snapshots => Stream.multi((c) {
+    final last = _latest;
+    if (last != null) c.add(last);
+    final sub = _snapshots.stream.listen(c.add, onDone: c.close);
+    c.onCancel = sub.cancel;
+  });
+
   Stream<CatchUpProgress> get progress => _progress.stream;
+  Stream<Push> get notices => _notices.stream;
 
   void deliver(Push p) {
     switch (p) {
       case SnapshotPush(:final snapshot):
-        if (snapshot.revision <= _lastRevision) return; // stale
-        _lastRevision = snapshot.revision;
-        _snapshots.add(snapshot);
+        final last = _latest;
+        if (last != null && snapshot.revision <= last.revision) return;
+        _latest = snapshot;
+        if (!_snapshots.isClosed) _snapshots.add(snapshot);
       case CatchUpProgress():
-        _progress.add(p);
+        if (!_progress.isClosed) _progress.add(p);
+      case SaveStatus() || CatchUpCapped() || EngineDown():
+        if (!_notices.isClosed) _notices.add(p);
     }
+  }
+
+  void notice(Push p) {
+    if (!_notices.isClosed) _notices.add(p);
   }
 
   Future<void> closeStreams() async {
     await _snapshots.close();
     await _progress.close();
+    await _notices.close();
   }
 }
 

@@ -2,12 +2,16 @@ import 'package:marah_domain/marah_domain.dart';
 
 import 'save_codec.dart';
 
-/// Raw text storage for one save slot (device key-value store, a file, or a
-/// server later). Implementations live in the app.
+/// Raw text storage for one save slot (device files, the browser's storage,
+/// or a server later). Implementations live in the runtime and the app.
 abstract interface class SaveBackend {
   Future<String?> read(String key);
   Future<void> write(String key, String value);
   Future<void> delete(String key);
+
+  /// Copies whatever is stored under [from] to [to], byte for byte, even if
+  /// it is not valid text. Does nothing if [from] does not exist.
+  Future<void> copy(String from, String to);
 }
 
 /// What the app gets when it opens the game.
@@ -25,20 +29,22 @@ final class Opened extends OpenResult {
   final int migratedFrom;
 }
 
-/// The save exists but could not be read. It has been copied to a backup
-/// key and is left untouched; the app must ask the player what to do.
+/// The save exists but could not be read. A byte-for-byte copy is kept as
+/// `<slot>.broken`, the slot is locked, and the player decides what to do.
 final class OpenFailed extends OpenResult {
   const OpenFailed(this.problem, this.detail);
   final LoadProblem problem;
   final String detail;
 }
 
-/// Loads and saves one game safely:
+/// Loads and saves one game safely.
 ///
-/// * a save that fails to load is copied to a backup and never overwritten
-///   unless the player explicitly starts over;
-/// * every write keeps the previous good save as `.prev`;
-/// * writes are serialised so two saves never interleave.
+/// * A save that cannot be read is copied to `.broken` and never
+///   overwritten: saving is locked until the player restores or starts over.
+/// * `.prev` holds the last save that was **proven readable** (rotated when
+///   a save loads successfully), not simply the previous write.
+/// * Each write is independent: one failed write (full disk) never stops
+///   later ones, and the error reaches the caller.
 class SaveStore {
   SaveStore(this.backend, {this.slot = 'marah.save', SaveCodec? codec})
     : codec = codec ?? const SaveCodec();
@@ -53,51 +59,82 @@ class SaveStore {
   bool _locked = false;
   Future<void> _queue = Future.value();
 
+  bool get locked => _locked;
+
   Future<OpenResult> open() async {
-    final raw = await backend.read(slot);
+    final String? raw;
+    try {
+      raw = await backend.read(slot);
+    } on Object catch (e) {
+      // Unreadable bytes (bad encoding, I/O error): keep them, lock, report.
+      return _fail(LoadProblem.corrupt, 'read failed: $e');
+    }
     if (raw == null) return const NoSave();
     final result = codec.decode(raw);
     switch (result) {
       case Loaded(:final state, :final migratedFrom):
+        // This save is proven readable: it becomes the fallback.
+        await backend.copy(slot, _prev);
         return Opened(state, migratedFrom: migratedFrom);
       case LoadFailed(:final problem, :final detail):
-        await backend.write(_broken, raw);
-        _locked = true;
+        return _fail(problem, detail);
+    }
+  }
+
+  /// Reports that a loaded save could not be used (for example the
+  /// simulation failed on it). Backs it up and locks saving.
+  Future<OpenFailed> reject(String detail) =>
+      _fail(LoadProblem.corrupt, detail);
+
+  Future<OpenFailed> _fail(LoadProblem problem, String detail) async {
+    _locked = true;
+    try {
+      await backend.copy(slot, _broken);
+    } on Object {
+      // Even the backup failed; saving stays locked so nothing is lost.
+    }
+    return OpenFailed(problem, detail);
+  }
+
+  /// Saves the game. Ignored while a broken save awaits the player's
+  /// decision. Completes with an error if this write fails; later writes
+  /// still run.
+  Future<void> save(GameState state) {
+    if (_locked) return Future.value();
+    final text = codec.encode(state);
+    final job = _queue
+        .catchError((Object _) {})
+        .then((_) => backend.write(slot, text));
+    _queue = job.catchError((Object _) {});
+    return job;
+  }
+
+  /// Restores the last save that was proven readable. The restored text is
+  /// written to the slot before anything else changes.
+  Future<OpenResult> openPrevious() async {
+    final String? raw;
+    try {
+      raw = await backend.read(_prev);
+    } on Object catch (e) {
+      return OpenFailed(LoadProblem.corrupt, 'read failed: $e');
+    }
+    if (raw == null) return const NoSave();
+    final result = codec.decode(raw);
+    switch (result) {
+      case Loaded(:final state, :final migratedFrom):
+        await backend.write(slot, raw);
+        _locked = false;
+        return Opened(state, migratedFrom: migratedFrom);
+      case LoadFailed(:final problem, :final detail):
         return OpenFailed(problem, detail);
     }
   }
 
-  /// Saves the game. Ignored while a broken save is waiting for the
-  /// player's decision, so it can never be overwritten by accident.
-  Future<void> save(GameState state) {
-    if (_locked) return Future.value();
-    final text = codec.encode(state);
-    return _queue = _queue.then((_) async {
-      final current = await backend.read(slot);
-      if (current != null) await backend.write(_prev, current);
-      await backend.write(slot, text);
-    });
-  }
-
-  /// Tries the previous good save after a failed open.
-  Future<OpenResult> openPrevious() async {
-    final raw = await backend.read(_prev);
-    if (raw == null) return const NoSave();
-    final result = codec.decode(raw);
-    return switch (result) {
-      Loaded(:final state, :final migratedFrom) => Opened(
-        state,
-        migratedFrom: migratedFrom,
-      ),
-      LoadFailed(:final problem, :final detail) => OpenFailed(problem, detail),
-    };
-  }
-
-  /// The player chose to start over. The broken save stays in its backup.
+  /// The player chose to start over. The broken copy and the last good
+  /// save stay where they are.
   Future<void> startOver() async {
     _locked = false;
     await backend.delete(slot);
-    await backend.delete(_prev);
   }
 
   /// Waits for pending writes (call when the app goes to the background).
@@ -116,4 +153,10 @@ class MemoryBackend implements SaveBackend {
 
   @override
   Future<void> delete(String key) async => data.remove(key);
+
+  @override
+  Future<void> copy(String from, String to) async {
+    final v = data[from];
+    if (v != null) data[to] = v;
+  }
 }

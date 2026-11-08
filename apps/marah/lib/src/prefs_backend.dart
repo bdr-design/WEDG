@@ -17,4 +17,11 @@ class PrefsBackend implements SaveBackend {
 
   @override
   Future<void> delete(String key) async => (await _prefs).remove(key);
+
+  @override
+  Future<void> copy(String from, String to) async {
+    final prefs = await _prefs;
+    final v = prefs.getString(from);
+    if (v != null) await prefs.setString(to, v);
+  }
 }

@@ -31,6 +31,7 @@ class IsolateEngineClient with PushStreams implements EngineClient {
   final Map<int, Completer<Object?>> _pending = {};
   int _nextId = 0;
   bool _dead = false;
+  bool _closing = false;
 
   /// Starts the worker. [saveDirectory] is an app-private folder resolved on
   /// the UI isolate (path_provider) and passed in as a plain string.
@@ -70,22 +71,26 @@ class IsolateEngineClient with PushStreams implements EngineClient {
       case Failure(:final id, :final error, :final stack):
         _pending
             .remove(id)
-            ?.completeError(StateError(error), StackTrace.fromString(stack));
+            ?.completeError(EngineFailure(error), StackTrace.fromString(stack));
       case Pushed(:final push):
         deliver(push);
     }
   }
 
   void _fail(String why) {
+    if (_dead) return;
     _dead = true;
     for (final c in _pending.values) {
-      c.completeError(StateError(why));
+      c.completeError(EngineStopped(why));
     }
     _pending.clear();
+    if (!_closing) notice(EngineDown(why));
   }
 
   Future<T> _ask<T>(Request Function(int id) build) {
-    if (_dead) return Future.error(StateError('engine stopped'));
+    if (_dead || _closing) {
+      return Future.error(const EngineStopped('engine stopped'));
+    }
     final id = ++_nextId;
     final c = Completer<Object?>();
     _pending[id] = c;
@@ -120,19 +125,25 @@ class IsolateEngineClient with PushStreams implements EngineClient {
 
   @override
   Future<void> dispose() async {
+    if (_closing) return;
+    EngineFailure? shutdownError;
     if (!_dead) {
       try {
         await _ask<void>(ShutdownReq.new);
-      } on StateError {
+      } on EngineFailure catch (e) {
+        shutdownError = e; // the final save failed: report it below
+      } on EngineStopped {
         // Already gone.
       }
     }
-    _dead = true;
+    _closing = true;
+    _fail('disposed');
     _inbox.close();
     _errors.close();
     _exits.close();
     _isolate.kill(priority: Isolate.beforeNextEvent);
     await closeStreams();
+    if (shutdownError != null) throw shutdownError;
   }
 }
 
@@ -189,4 +200,12 @@ Future<Object?> _handle(EngineCore core, Request message) async {
       await core.close();
   }
   return null;
+}
+
+/// The worker answered a request with an error.
+class EngineFailure implements Exception {
+  const EngineFailure(this.message);
+  final String message;
+  @override
+  String toString() => 'EngineFailure: $message';
 }

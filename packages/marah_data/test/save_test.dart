@@ -42,7 +42,13 @@ void main() {
     test('save written by version $version still loads', () {
       final file = File(path);
       if (!file.existsSync()) {
-        // First run creates the fixture for the current version.
+        // Fixtures are created on purpose only, never by a passing test.
+        if (Platform.environment['MARAH_WRITE_FIXTURES'] != '1') {
+          fail(
+            'missing fixture $path (set MARAH_WRITE_FIXTURES=1 to create '
+            'one for the current version)',
+          );
+        }
         if (version != SaveCodec.currentVersion) {
           fail('missing fixture for old version $version');
         }
@@ -102,17 +108,44 @@ void main() {
       expect(backend.data['marah.save'], '{broken');
     });
 
-    test('keeps the previous good save', () async {
+    test('the fallback is the last save that loaded, and restores', () async {
       final backend = MemoryBackend();
       final store = SaveStore(backend);
       final g = sampleGame();
       await store.save(g.state);
-      g.advanceDays(3);
+      expect(backend.data['marah.save.prev'], isNull);
+      final good = backend.data['marah.save'];
+      expect(await SaveStore(backend).open(), isA<Opened>());
+      expect(backend.data['marah.save.prev'], good);
+
+      backend.data['marah.save'] = '{broken';
+      final again = SaveStore(backend);
+      expect(await again.open(), isA<OpenFailed>());
+      final restored = await again.openPrevious() as Opened;
+      expect(restored.state.world.day, g.today);
+      expect(backend.data['marah.save'], good);
+      expect(again.locked, isFalse);
+    });
+
+    test('one failed write does not stop later writes', () async {
+      final backend = _FlakyBackend();
+      final store = SaveStore(backend);
+      final g = sampleGame();
+      backend.failNext = true;
+      await expectLater(store.save(g.state), throwsA(isA<StateError>()));
       await store.save(g.state);
       await store.flush();
-      expect(backend.data['marah.save.prev'], isNotNull);
-      final prev = await store.openPrevious() as Opened;
-      expect(prev.state.world.day, g.today - 3);
+      expect(backend.data['marah.save'], isNotNull);
+    });
+
+    test('unreadable bytes are backed up and saving is locked', () async {
+      final backend = _FlakyBackend()..data['marah.save'] = 'x';
+      backend.failReads = true;
+      final store = SaveStore(backend);
+      expect(await store.open(), isA<OpenFailed>());
+      expect(backend.data['marah.save.broken'], 'x');
+      await store.save(sampleGame().state);
+      expect(backend.data['marah.save'], 'x');
     });
 
     test('start over clears the slot but keeps the broken backup', () async {
@@ -127,4 +160,24 @@ void main() {
       expect(await store.open(), isA<Opened>());
     });
   });
+}
+
+class _FlakyBackend extends MemoryBackend {
+  bool failNext = false;
+  bool failReads = false;
+
+  @override
+  Future<void> write(String key, String value) async {
+    if (failNext) {
+      failNext = false;
+      throw StateError('disk full');
+    }
+    await super.write(key, value);
+  }
+
+  @override
+  Future<String?> read(String key) async {
+    if (failReads) throw const FormatException('bad utf-8');
+    return super.read(key);
+  }
 }

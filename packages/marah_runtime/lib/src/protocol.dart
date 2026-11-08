@@ -58,6 +58,28 @@ final class CatchUpProgress extends Push {
   final int total;
 }
 
+/// Whether the latest change is safely on disk. Sent when this changes
+/// (a save fails, or saving recovers), so the UI can warn the player.
+final class SaveStatus extends Push {
+  const SaveStatus({required this.ok, this.error});
+  final bool ok;
+  final String? error;
+}
+
+/// The player was away longer than the catch-up limit; [skippedDays] game
+/// days were not simulated (the world waited for them).
+final class CatchUpCapped extends Push {
+  const CatchUpCapped(this.skippedDays);
+  final int skippedDays;
+}
+
+/// The engine stopped (the worker died). Pending and later calls fail with
+/// `EngineStopped`; the app can start a new engine from the last save.
+final class EngineDown extends Push {
+  const EngineDown(this.reason);
+  final String reason;
+}
+
 // ----------------------------------------------------------- isolate wire
 
 /// UI → worker. Each request has an id; the worker answers with a [Reply]
