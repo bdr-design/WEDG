@@ -15,6 +15,9 @@ dependencies:
     sdk: flutter
   # Pinned to an exact version (ADR 0005): minor releases can break the API.
   flutter_scene: 0.24.3
+  # Read once to tell Impeller's Vulkan and OpenGL ES backends apart.
+  flutter_gpu:
+    sdk: flutter
   # Used by hook/build.dart (the flutter_scene model importer).
   hooks: ^2.0.0
   vector_math: ^2.1.4

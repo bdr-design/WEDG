@@ -1,18 +1,20 @@
 name: bench_thermion
-description: "Engine benchmark candidate: Thermion (Google Filament) for Marah (ADR 0005)."
+description: "Engine benchmark candidate for Marah (ADR 0005): Thermion, i.e. Google Filament for Flutter."
 publish_to: 'none'
 version: 1.0.0+1
 
-# Standalone app: deliberately NOT part of the repo's pub workspace.
+# Standalone app: deliberately NOT a member of the repo's pub workspace.
 environment:
   sdk: ^3.13.0
 
 dependencies:
   flutter:
     sdk: flutter
+  # Pinned exactly: Thermion is pre-1.0 and its native API changes between
+  # minor versions. thermion_dart 0.6.1 bundles Filament v1.77.2.
   thermion_flutter: 0.6.1
   thermion_dart: 0.6.1
-  vector_math: ^2.1.4
+  logging: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -23,3 +25,15 @@ flutter:
   assets:
     - assets/terrain.glb
     - assets/camel_lod1.glb
+
+# Options read by thermion_dart's native build hook (hook/build.dart).
+hooks:
+  user_defines:
+    thermion_dart:
+      # Thermion always uses Filament's OpenGL ES backend on Android, so
+      # compile its helper materials for OpenGL only instead of the default
+      # Vulkan + OpenGL pair (about 0.66 MB less native code per ABI). This
+      # does not touch Filament's glTF ubershaders, which come prebuilt.
+      materials:
+        backends:
+          android: [opengl]

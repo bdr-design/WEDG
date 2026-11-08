@@ -5,8 +5,14 @@ plugins {
 }
 
 android {
-    namespace = "com.marah.bench.bench_thermion"
+    namespace = "com.marah.bench.thermion"
     compileSdk = flutter.compileSdkVersion
+    // Thermion's Android plugin (thermion_flutter) builds its JNI shim with
+    // NDK 28.2.13676358, the same as Flutter 3.47's default; keep them equal
+    // so Gradle does not need a second NDK. The Filament/Thermion native
+    // library itself is compiled by thermion_dart's Dart build hook with the
+    // NDK that the Flutter tool finds (ANDROID_NDK_HOME, else the newest one
+    // in the SDK).
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -15,24 +21,17 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.marah.bench.bench_thermion"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.marah.bench.thermion"
+        // Thermion needs API 22+; Flutter's default (24) is above that.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Benchmark build: signed with the debug key so it installs.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
