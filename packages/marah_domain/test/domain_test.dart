@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:marah_domain/marah_domain.dart';
-import 'package:marah_domain/src/model/camel.dart';
+import 'package:marah_domain/persistence.dart';
 import 'package:marah_domain/src/rules/genetics.dart';
 import 'package:marah_domain/src/rules/judging.dart';
 import 'package:marah_domain/src/rules/valuation.dart';
@@ -664,6 +664,94 @@ void main() {
       expect(GameView(g.state, g.me.id).camel(dam.id)!.awaitingCheck, isTrue);
       final stranger = GameView(g.state, const OwnerId('someone-else'));
       expect(stranger.camel(dam.id)!.awaitingCheck, isFalse);
+    });
+  });
+  group('Save change detection', () {
+    test('every camel field that can change is in mutableFields()', () {
+      // Fields fixed at birth; everything else must be tracked.
+      const fixed = {
+        'id',
+        'sex',
+        'cat',
+        'born',
+        'chip',
+        'genes',
+        'env',
+        'sire',
+        'dam',
+        'crossbred',
+      };
+      final g = newGame(13)..advanceDays(45);
+      final c = g.state.world.camels.values.firstWhere(
+        (c) => c.ownerId == g.me.id && c.sex == Sex.female,
+      );
+      final stud = g.state.world.studs.values.first;
+      c
+        ..lastCalvedOn = null
+        ..placings.add(
+          Placing(
+            festivalId: const FestivalId('f'),
+            festivalName: 'x',
+            roundId: const RoundId('r'),
+            rank: 1,
+            of: 2,
+            day: g.today,
+            tier: 1,
+            prize: 1,
+          ),
+        );
+      g.dispatch(MateWithStud(g.me.id, c.id, stud.id));
+      final base = c.toJson();
+      final before = c.mutableFields();
+      Object? changed(Object? v) => switch (v) {
+        null => 1,
+        final int i => i + 1,
+        final double d => d + 1,
+        final bool b => !b,
+        final String s => '${s}x',
+        final List<Object?> l => [...l, ...l],
+        final Map<String, Object?> m => {
+          for (final e in m.entries) e.key: changed(e.value),
+        },
+        _ => v,
+      };
+      for (final key in base.keys) {
+        if (fixed.contains(key)) continue;
+        final json = Map<String, Object?>.of(base);
+        json[key] = switch (key) {
+          'status' => 'dead',
+          'health' => 'sick',
+          'illness' => 'mange',
+          'owner' || 'lastPlayerOwner' => 'someone-else',
+          'placings' => [
+            ...base['placings']! as List<Object?>,
+            ...(base['placings']! as List<Object?>),
+          ],
+          'pregnancy' => {
+            ...(base['pregnancy']! as Map<String, Object?>),
+            'conceived':
+                !((base['pregnancy']! as Map<String, Object?>)['conceived']!
+                    as bool),
+          },
+          _ => changed(base[key]),
+        };
+        final after = Camel.fromJson(json).mutableFields();
+        expect(
+          after,
+          isNot(equals(before)),
+          reason: 'field "$key" is not tracked',
+        );
+      }
+    });
+
+    test('save scalars cover everything that is not a collection', () {
+      final g = newGame()..advanceDays(10);
+      final full = g.state.toJson().keys.toSet();
+      final scalars = g.state.scalarsToJson().keys.toSet();
+      expect(scalars.union(GameState.collectionKeys), full);
+      final wFull = g.state.world.toJson().keys.toSet();
+      final wScalars = g.state.world.scalarsToJson().keys.toSet();
+      expect(wScalars.union(WorldState.collectionKeys), wFull);
     });
   });
 }

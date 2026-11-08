@@ -80,6 +80,19 @@ final class StateRecovered extends Push {
   final String reason;
 }
 
+/// The fallback copy of the save could not be refreshed (for example the
+/// phone is nearly full). The live save is fine; the older fallback is kept.
+final class BackupWarning extends Push {
+  const BackupWarning();
+}
+
+/// The same bug happened again and again: the world is stopped at the last
+/// good save until the app is updated or restarted. [reason] is for logs.
+final class EngineHalted extends Push {
+  const EngineHalted(this.reason);
+  final String reason;
+}
+
 /// The engine stopped (the worker died). Pending and later calls fail with
 /// `EngineStopped`; the app can start a new engine from the last save.
 final class EngineDown extends Push {

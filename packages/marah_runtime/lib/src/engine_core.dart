@@ -29,9 +29,8 @@ class EngineCore {
     DateTime Function()? now,
     Yielder? yielder,
     this.sliceBudget = const Duration(milliseconds: 6),
-    this.autosaveDelay = const Duration(milliseconds: 1500),
-    this.autosaveMaxWait = const Duration(seconds: 10),
     this.maxCatchUpDays = 365,
+    this.maxRecoveriesPerDay = 2,
   }) : _now = now ?? DateTime.now,
        _yield = yielder ?? _defaultYield;
 
@@ -45,11 +44,9 @@ class EngineCore {
   /// How long catch-up runs before yielding.
   final Duration sliceBudget;
 
-  /// Quiet time after a change before saving...
-  final Duration autosaveDelay;
-
-  /// ...but never longer than this after the first unsaved change.
-  final Duration autosaveMaxWait;
+  /// After this many recoveries on the same game day the engine stops the
+  /// world instead of looping on the same bug.
+  final int maxRecoveriesPerDay;
 
   /// The most game days simulated in one catch-up (365 ≈ 52 real days).
   /// Longer absences, or a device clock moved far forward, are skipped:
@@ -59,9 +56,10 @@ class EngineCore {
   Game? _game;
   int _revision = 0;
   PlayerSnapshot? _last;
-  Timer? _autosave;
-  DateTime? _dirtySince;
   Timer? _nextDay;
+  bool _halted = false;
+  int _recoveryDay = -1;
+  int _recoveries = 0;
   Timer? _retry;
   int _retryStep = 0;
   bool _saveOk = true;
@@ -105,19 +103,28 @@ class EngineCore {
     }
   });
 
-  /// Brings a loaded game up to date. If the simulation itself fails on
-  /// this save, the save is backed up and locked instead of being lost.
+  /// Brings a loaded game up to date and saves it; only then is the save
+  /// proven good and copied as the fallback. If this version of the game
+  /// fails on the save (a bug), nothing is changed or locked.
   Future<OpenStatus> _start(GameState state) async {
     _game = Game(state);
+    _halted = false;
     try {
       await _catchUpNow();
-      return const GameOpened();
     } on Object catch (e) {
       _game = null;
       _cancelTimers();
-      final failed = await store.reject('could not resume: $e');
-      return GameOpenFailed(failed.problem, failed.detail);
+      return GameOpenFailed(LoadProblem.engineError, 'could not resume: $e');
     }
+    if (_game == null) {
+      return const GameOpenFailed(
+        LoadProblem.engineError,
+        'could not resume: the world stopped',
+      );
+    }
+    await _saveNow();
+    if (_saveOk && !await store.markGood()) emit(const BackupWarning());
+    return const GameOpened();
   }
 
   Future<void> newGame(NewGameParams p) => _serial(() async {
@@ -130,8 +137,10 @@ class EngineCore {
       favourite: p.favourite,
       startedAt: now,
     )..state.lastSeenUtcMs = now.toUtc().millisecondsSinceEpoch;
+    _halted = false;
     await store.startOver();
     await _saveNow();
+    if (_saveOk && !await store.markGood()) emit(const BackupWarning());
     _publish();
     _scheduleNextDay();
   });
@@ -181,8 +190,10 @@ class EngineCore {
       return const Err(DomainError(ErrorCode.internalError));
     }
     if (r.events.isNotEmpty) {
+      // Saved before the player hears it worked (about 11 ms at 10k head),
+      // so a later recovery never loses an acknowledged command.
+      await _saveNow();
       _publish();
-      _scheduleAutosave();
     }
     return r;
   });
@@ -205,17 +216,34 @@ class EngineCore {
   Future<void> catchUp() => _serial(_catchUpNow);
 
   /// A bug left the in-memory game half-changed: throw it away and reload
-  /// the last save, which is always a consistent state.
+  /// the last save, which is always consistent. If the same day keeps
+  /// failing, stop the world instead of looping.
   Future<void> _recover(Object error) async {
     _cancelTimers();
+    final day = _game?.today.value ?? -1;
     _game = null;
+    if (day == _recoveryDay) {
+      _recoveries++;
+    } else {
+      _recoveryDay = day;
+      _recoveries = 1;
+    }
     emit(StateRecovered('$error'));
     final r = await store.open();
-    if (r is Opened) {
-      _game = Game(r.state);
-      _publish();
-      _scheduleNextDay();
+    if (r is! Opened) {
+      _halted = true;
+      emit(EngineHalted('could not reload the last save: $r'));
+      return;
     }
+    _game = Game(r.state);
+    if (_recoveries > maxRecoveriesPerDay) {
+      _halted = true;
+      emit(
+        EngineHalted('day ${r.state.world.day.value} keeps failing: $error'),
+      );
+    }
+    _publish();
+    _scheduleNextDay();
   }
 
   // ------------------------------------------------------------- internals
@@ -225,7 +253,10 @@ class EngineCore {
   /// never rewinds the world, and far forward is capped.
   Future<void> _catchUpNow() async {
     final g = _game;
-    if (g == null) return;
+    if (g == null || _halted) {
+      _publish();
+      return;
+    }
     try {
       final s = g.state;
       final nowMs = _now().toUtc().millisecondsSinceEpoch;
@@ -274,8 +305,6 @@ class EngineCore {
   /// Saves now. A failure is reported and retried; it never stops later
   /// saves and never throws into the caller's operation.
   Future<void> _saveNow() async {
-    _autosave?.cancel();
-    _dirtySince = null;
     final g = _game;
     if (g == null) return;
     try {
@@ -313,21 +342,10 @@ class EngineCore {
     emit(SnapshotPush(s));
   }
 
-  void _scheduleAutosave() {
-    final now = _now();
-    _dirtySince ??= now;
-    _autosave?.cancel();
-    final waited = now.difference(_dirtySince!);
-    final delay = waited >= autosaveMaxWait ? Duration.zero : autosaveDelay;
-    _autosave = Timer(delay, () {
-      if (!_closed) unawaited(_serial(_saveNow).catchError((Object _) {}));
-    });
-  }
-
   void _scheduleNextDay() {
     _nextDay?.cancel();
     final g = _game;
-    if (g == null || _paused || _closed) return;
+    if (g == null || _paused || _closed || _halted) return;
     final wait = g.state.clock(now: _now).untilNextDay();
     _nextDay = Timer(wait + const Duration(milliseconds: 50), () {
       if (!_closed) unawaited(catchUp().catchError((Object _) {}));
@@ -335,7 +353,6 @@ class EngineCore {
   }
 
   void _cancelTimers() {
-    _autosave?.cancel();
     _nextDay?.cancel();
     _retry?.cancel();
   }

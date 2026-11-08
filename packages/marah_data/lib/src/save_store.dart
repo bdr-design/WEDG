@@ -53,11 +53,14 @@ abstract interface class GameStore {
   /// Persists the game. Completes with an error if this write fails.
   Future<void> save(GameState state);
 
-  /// Restores the last save that was proven readable.
+  /// Restores the last save that was proven good. The current save is kept
+  /// as a dated copy first, and nothing changes unless the fallback loads.
   Future<OpenResult> openPrevious();
 
-  /// A loaded save turned out unusable: back it up and lock saving.
-  Future<OpenFailed> reject(String detail);
+  /// The game was opened, brought up to date and saved: the current save is
+  /// proven good and becomes the fallback. Returns false if the backup
+  /// could not be written (the old fallback is kept).
+  Future<bool> markGood();
 
   /// The player chose to start over.
   Future<void> startOver();
@@ -109,19 +112,22 @@ class SaveStore implements GameStore {
     final result = codec.decode(raw);
     switch (result) {
       case Loaded(:final state, :final migratedFrom):
-        // This save is proven readable: it becomes the fallback.
-        await backend.copy(slot, _prev);
         return Opened(state, migratedFrom: migratedFrom);
       case LoadFailed(:final problem, :final detail):
         return _fail(problem, detail);
     }
   }
 
-  /// Reports that a loaded save could not be used (for example the
-  /// simulation failed on it). Backs it up and locks saving.
   @override
-  Future<OpenFailed> reject(String detail) =>
-      _fail(LoadProblem.corrupt, detail);
+  Future<bool> markGood() async {
+    try {
+      await flush();
+      await backend.copy(slot, _prev);
+      return true;
+    } on Object {
+      return false;
+    }
+  }
 
   Future<OpenFailed> _fail(LoadProblem problem, String detail) async {
     _locked = true;

@@ -74,7 +74,16 @@ class SaveCodec {
   }
 }
 
-enum LoadProblem { corrupt, notASave, tooNew, noMigration }
+enum LoadProblem {
+  corrupt,
+  notASave,
+  tooNew,
+  noMigration,
+
+  /// The save is fine but this version of the game failed to resume it (a
+  /// bug). Nothing was changed or locked; an update can fix it.
+  engineError,
+}
 
 sealed class LoadResult {
   const LoadResult();

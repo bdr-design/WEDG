@@ -53,11 +53,23 @@ Rules of the road:
 On devices the save is a SQLite file (`SqliteGameStore`, ADR 0004): a
 save writes only the camels and documents that changed, in one
 transaction, and rows keep the in-memory order so a reloaded game replays
-identically. Measured at 10,000 head (desktop): a command's save 11 ms, a
-day's save 311 ms, reopen 329 ms, 8.7 MB on disk. A good open is copied to
-`.prev`; a file that fails to open is copied to `.broken` and never
-replaced. If a bug leaves the in-memory game half-changed, the engine
-throws it away and reloads the last save.
+identically. Every command is saved before the player is told it worked.
+Measured at 10,000 head (desktop): a command's save 8 ms, a day's save
+213 ms, reopen 164 ms, 8.7 MB on disk.
+
+Nothing ever destroys a save:
+
+- The fallback (`backups/prev.db`, `prev2.db`) is refreshed only after the
+  engine has opened the game, brought it up to date and saved it.
+- A file that fails to open, or is replaced by a restore or a new game, is
+  first kept as a dated copy in `backups/`; dated copies are never
+  overwritten. An upgrade keeps the original (`backups/v<N>-…`) and rebuilds
+  the file in the new shape.
+- If this version of the game fails to resume a save (a bug), the save is
+  reported and left untouched, not locked.
+- If a bug leaves the in-memory game half-changed, the engine reloads the
+  last save; if the same day keeps failing, it stops the world and says so.
+- Android backups include the live save and skip `backups/`.
 
 The JSON store below is kept for tests and tools.
 

@@ -108,14 +108,18 @@ void main() {
       expect(backend.data['marah.save'], '{broken');
     });
 
-    test('the fallback is the last save that loaded, and restores', () async {
+    test('the fallback is the last save proven good, and restores', () async {
       final backend = MemoryBackend();
       final store = SaveStore(backend);
       final g = sampleGame();
       await store.save(g.state);
       expect(backend.data['marah.save.prev'], isNull);
       final good = backend.data['marah.save'];
-      expect(await SaveStore(backend).open(), isA<Opened>());
+      final opened = SaveStore(backend);
+      expect(await opened.open(), isA<Opened>());
+      // Only a save the engine proved good becomes the fallback.
+      expect(backend.data['marah.save.prev'], isNull);
+      expect(await opened.markGood(), isTrue);
       expect(backend.data['marah.save.prev'], good);
 
       backend.data['marah.save'] = '{broken';

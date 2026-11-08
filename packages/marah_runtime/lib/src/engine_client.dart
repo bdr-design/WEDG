@@ -77,7 +77,12 @@ mixin PushStreams {
         if (!_snapshots.isClosed) _snapshots.add(snapshot);
       case CatchUpProgress():
         if (!_progress.isClosed) _progress.add(p);
-      case SaveStatus() || CatchUpCapped() || EngineDown() || StateRecovered():
+      case SaveStatus() ||
+          CatchUpCapped() ||
+          EngineDown() ||
+          StateRecovered() ||
+          BackupWarning() ||
+          EngineHalted():
         if (!_notices.isClosed) _notices.add(p);
     }
   }

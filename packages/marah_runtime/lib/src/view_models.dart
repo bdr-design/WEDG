@@ -349,6 +349,7 @@ class PlayerSnapshot {
     required this.farm,
     required this.herd,
     required this.herdTop,
+    required this.herdSignature,
     required this.sections,
     required this.market,
     required this.myListings,
@@ -375,6 +376,10 @@ class PlayerSnapshot {
 
   /// The best few camels by look, for the farm screen.
   final List<CamelCard> herdTop;
+
+  /// Changes whenever any camel in the herd changes (not only the top
+  /// few), so herd lists know to refresh their pages.
+  final int herdSignature;
 
   /// What changed since the previous snapshot.
   final SectionRevisions sections;
@@ -539,8 +544,9 @@ class HerdSummary {
     sick,
     listed,
     entered,
-    Object.hashAll(byCategory.entries.map((e) => Object.hash(e.key, e.value))),
-    Object.hashAll(byAge.entries.map((e) => Object.hash(e.key, e.value))),
+    // Order-independent, matching ==.
+    byCategory.entries.fold<int>(0, (h, e) => h ^ Object.hash(e.key, e.value)),
+    byAge.entries.fold<int>(0, (h, e) => h ^ Object.hash(e.key, e.value)),
   );
 }
 

@@ -106,14 +106,19 @@ class Presenter {
     final me = v.me;
     final mine = state.inboxOf(viewer);
     final public = state.publicNews;
-    final events = [
-      ...mine.skip(
+    final events = _mergeByDay(
+      mine.sublist(
         mine.length > recentEventCount ? mine.length - recentEventCount : 0,
       ),
-      ...public.skip(public.length > 10 ? public.length - 10 : 0),
-    ]..sort((a, b) => a.day.value - b.day.value);
+      public.sublist(public.length > 10 ? public.length - 10 : 0),
+    );
 
     final herdViews = v.herd;
+    var signature = herdViews.length;
+    for (final c in state.world.aliveOwnedBy(viewer)) {
+      signature =
+          (signature * 31 + Object.hashAll(c.mutableFields())) & 0x3FFFFFFF;
+    }
     final farm = FarmSummary(
       name: me.farm.name,
       region: me.farm.region,
@@ -158,7 +163,10 @@ class Presenter {
       ),
       herd: bump(
         p?.sections.herd,
-        p != null && p.herd == summary && _same(p.herdTop, top),
+        p != null &&
+            p.herd == summary &&
+            p.herdSignature == signature &&
+            _same(p.herdTop, top),
       ),
       market: bump(
         p?.sections.market,
@@ -171,9 +179,7 @@ class Presenter {
       ),
       news: bump(
         p?.sections.news,
-        p != null &&
-            p.recentEvents.length == events.length &&
-            (events.isEmpty || identical(p.recentEvents.last, events.last)),
+        p != null && _sameEvents(p.recentEvents, events),
       ),
     );
 
@@ -187,6 +193,7 @@ class Presenter {
       farm: farm,
       herd: summary,
       herdTop: top,
+      herdSignature: signature,
       sections: sections,
       market: market,
       myListings: myListings,
@@ -200,6 +207,31 @@ class Presenter {
 
   /// How many of the best camels the snapshot carries.
   static const topCount = 12;
+
+  /// Merges two day-ordered lists, keeping each list's own order (stable).
+  static List<DomainEvent> _mergeByDay(
+    List<DomainEvent> a,
+    List<DomainEvent> b,
+  ) {
+    final out = <DomainEvent>[];
+    var i = 0, j = 0;
+    while (i < a.length || j < b.length) {
+      if (j >= b.length || (i < a.length && a[i].day <= b[j].day)) {
+        out.add(a[i++]);
+      } else {
+        out.add(b[j++]);
+      }
+    }
+    return out;
+  }
+
+  static bool _sameEvents(List<DomainEvent> a, List<DomainEvent> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!identical(a[i], b[i])) return false;
+    }
+    return true;
+  }
 
   static bool _same<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;

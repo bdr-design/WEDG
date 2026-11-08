@@ -35,7 +35,6 @@ void main() {
           emit: pushes.add,
           now: now.call,
           sliceBudget: slice,
-          autosaveDelay: const Duration(milliseconds: 10),
         );
 
     setUp(() {
@@ -212,23 +211,16 @@ void main() {
       await e.close();
     });
 
-    test('steady play still autosaves within the maximum wait', () async {
-      final e = EngineCore(
-        store: SaveStore(backend),
-        emit: pushes.add,
-        now: DateTime.now,
-        autosaveDelay: const Duration(milliseconds: 80),
-        autosaveMaxWait: const Duration(milliseconds: 200),
-      );
+    test('a command is saved before it returns', () async {
+      final e = core();
       await e.newGame(params);
       final me = e.game!.me.id;
-      final before = backend.data['marah.save'];
-      for (var i = 0; i < 12; i++) {
-        await e.dispatch(SetShepherds(me, 1 + i % 3));
-        await Future<void>.delayed(const Duration(milliseconds: 40));
-      }
-      expect(backend.data['marah.save'], isNot(before));
+      await e.dispatch(SetShepherds(me, 3));
+      final again = core();
+      expect(await again.open(), isA<GameOpened>());
+      expect(again.game!.me.farm.shepherds, 3);
       await e.close();
+      await again.close();
     });
 
     test('a closed engine refuses work', () async {
@@ -452,6 +444,60 @@ void main() {
       expect(backend.data['marah.save'], saved);
       await e.close();
     });
+  });
+  group('Repeated failures', () {
+    test('the same failing day stops the world instead of looping', () async {
+      final pushes = <Push>[];
+      final backend = MemoryBackend();
+      final now = FakeNow();
+      final e = EngineCore(
+        store: SaveStore(backend),
+        emit: pushes.add,
+        now: now.call,
+      );
+      await e.newGame(params);
+      // A saved camel under treatment with no recovery date: every day
+      // fails in the health system (a bug a future change could introduce).
+      e.game!.state.world.camels.values.firstWhere(
+          (c) => c.ownerId == e.game!.me.id,
+        )
+        ..health = HealthStatus.treated
+        ..illness = Illness.mange
+        ..recoversOn = null;
+      await e.flush();
+      final day = e.game!.today;
+      now.advance(const Duration(days: 1));
+      for (var i = 0; i < 4; i++) {
+        await e.resume();
+      }
+      expect(pushes.whereType<EngineHalted>(), isNotEmpty);
+      expect(e.game!.today, day);
+      await e.close();
+    });
+
+    test(
+      'a save this version cannot resume is reported, not changed',
+      () async {
+        final backend = MemoryBackend();
+        final first = EngineCore(store: SaveStore(backend), emit: (_) {});
+        await first.newGame(params);
+        // A listing that points at a camel that does not exist.
+        final w = first.game!.state.world;
+        final l = w.listings.values.first;
+        w.camels.remove(l.camelId);
+        await first.flush();
+        await first.close();
+        final saved = backend.data['marah.save'];
+
+        final e = EngineCore(store: SaveStore(backend), emit: (_) {});
+        final status = await e.open();
+        expect(status, isA<GameOpenFailed>());
+        expect((status as GameOpenFailed).problem, LoadProblem.engineError);
+        expect(backend.data['marah.save'], saved);
+        expect(e.store.locked, isFalse);
+        await e.close();
+      },
+    );
   });
 }
 

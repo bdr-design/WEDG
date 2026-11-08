@@ -43,18 +43,41 @@ class WorldState {
   Iterable<Camel> aliveOwnedBy(OwnerId owner) =>
       camels.values.where((c) => c.isAlive && c.ownerId == owner);
 
-  Map<String, Object?> toJson() => {
-    'seed': seed,
-    'day': day.value,
-    'idCounter': ids.counter,
-    'owners': [for (final o in owners.values) o.toJson()],
-    'camels': [for (final c in camels.values) c.toJson()],
-    'listings': [for (final l in listings.values) l.toJson()],
-    'offers': [for (final o in offers.values) o.toJson()],
-    'studs': [for (final s in studs.values) s.toJson()],
-    'festivals': [for (final f in festivals.values) f.toJson()],
-    'plannedUntil': plannedUntil.value,
+  /// Keys of [toJson] that hold collections (stored row by row).
+  static const collectionKeys = {
+    'owners',
+    'camels',
+    'listings',
+    'offers',
+    'studs',
+    'festivals',
   };
+
+  /// Everything in [toJson] except the collections.
+  Map<String, Object?> scalarsToJson() => {
+    for (final e in toJsonWithout(collectionKeys).entries) e.key: e.value,
+  };
+
+  Map<String, Object?> toJsonWithout(Set<String> skip) => {
+    if (!skip.contains('seed')) 'seed': seed,
+    if (!skip.contains('day')) 'day': day.value,
+    if (!skip.contains('idCounter')) 'idCounter': ids.counter,
+    if (!skip.contains('owners'))
+      'owners': [for (final o in owners.values) o.toJson()],
+    if (!skip.contains('camels'))
+      'camels': [for (final c in camels.values) c.toJson()],
+    if (!skip.contains('listings'))
+      'listings': [for (final l in listings.values) l.toJson()],
+    if (!skip.contains('offers'))
+      'offers': [for (final o in offers.values) o.toJson()],
+    if (!skip.contains('studs'))
+      'studs': [for (final s in studs.values) s.toJson()],
+    if (!skip.contains('festivals'))
+      'festivals': [for (final f in festivals.values) f.toJson()],
+    if (!skip.contains('plannedUntil')) 'plannedUntil': plannedUntil.value,
+  };
+
+  Map<String, Object?> toJson() => toJsonWithout(const {});
 
   static WorldState fromJson(Map<String, Object?> j) {
     final seed = j['seed']! as int;
@@ -140,16 +163,26 @@ class GameState {
     }
   }
 
-  Map<String, Object?> toJson() => {
+  /// Keys of [toJson] that hold collections (stored row by row).
+  static const collectionKeys = {'world', 'players', 'inboxes'};
+
+  /// Everything in [toJson] except the collections.
+  Map<String, Object?> scalarsToJson() => {
+    for (final e in toJson(includeCollections: false).entries) e.key: e.value,
+  };
+
+  Map<String, Object?> toJson({bool includeCollections = true}) => {
     'startedOn': startedOn.value,
     'startedAtUtcMs': startedAtUtcMs,
     'clockShiftMs': clockShiftMs,
     'lastSeenUtcMs': lastSeenUtcMs,
-    'world': world.toJson(),
-    'players': [for (final p in players.values) p.toJson()],
-    'inboxes': {
-      for (final e in inboxes.entries)
-        e.key: [for (final ev in e.value) ev.toJson()],
+    if (includeCollections) ...{
+      'world': world.toJson(),
+      'players': [for (final p in players.values) p.toJson()],
+      'inboxes': {
+        for (final e in inboxes.entries)
+          e.key: [for (final ev in e.value) ev.toJson()],
+      },
     },
   };
 
