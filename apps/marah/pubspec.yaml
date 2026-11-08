@@ -14,7 +14,6 @@ dependencies:
     sdk: flutter
   marah_domain: any
   marah_data: any
-  shared_preferences: ^2.5.6
   path_provider: ^2.1.6
   marah_runtime: any
 

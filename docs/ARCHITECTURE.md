@@ -1,7 +1,7 @@
 # Marah architecture
 
-Marah is a realistic camel-owner game (Arabic, Saudi audience) for iOS,
-Android and the web. It ships offline first and is built so it can move to
+Marah is a realistic camel-owner game (Arabic, Saudi audience) for iOS and
+Android. The web build is paused (owner decision, 2026-11-08). It ships offline first and is built so it can move to
 online play (shared market, live auctions, tournaments) without a rewrite.
 
 ## Layers
@@ -60,8 +60,9 @@ Nothing heavy runs on the UI thread (ADR 0002):
 - iOS and Android: one long-lived worker isolate owns the game, the saves
   and the clock timers. The UI sends commands and receives ready-made
   `PlayerSnapshot`s; it never decodes JSON or computes views.
-- Web: the same `EngineCore` runs time-sliced (about 1 ms per slice,
-  scheduled between frames).
+- Web (paused): the same `EngineCore` can run time-sliced
+  (`InlineEngineClient`, also used in tests); a real Web Worker with OPFS
+  storage is the path if the web returns.
 - Screens talk only to `EngineClient`.
 
 ## Quality gates (CI)
@@ -76,7 +77,7 @@ Every push runs, and must pass:
 6. app tests
 7. a 10-year simulation of four worlds with a scripted player, checking the
    invariants every game week
-8. builds: web, Android (debug APK) and iOS (simulator, unsigned)
+8. builds: Android (debug APK) and iOS (simulator, unsigned)
 
 ## Online later
 

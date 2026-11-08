@@ -1,6 +1,7 @@
 # ADR 0002: Nothing heavy on the UI thread
 
-- Status: accepted
+- Status: accepted. Web paused by the owner on 2026-11-08: the app
+  targets iOS and Android only until the web is picked up again.
 - Deciders: owner ("no load on the main thread"), Claude; design brief with
   sources in [../research-threading.md](../research-threading.md)
 
@@ -33,10 +34,10 @@ decoding or catching up on the UI thread would drop frames.
    fetched on demand. The UI never decodes JSON or computes views.
 3. **Saving happens in the worker** with plain `dart:io`: the save folder is
    looked up once on the UI isolate (`path_provider`) and passed in. Files
-   are written atomically: `<key>.tmp`, flushed, then renamed over the old
+   are written atomically: a uniquely named temp file, flushed, then renamed over the old
    file. Autosave runs 1.5 s after a change, after every catch-up, and when
    the app is hidden.
-4. **Web: no isolates.** `InlineEngineClient` runs the same `EngineCore` on
+4. **Web (paused).** Notes kept for when it resumes: **no isolates.** `InlineEngineClient` runs the same `EngineCore` on
    the main thread in slices of about 1 ms, each scheduled between frames
    with `SchedulerBinding.scheduleTask`. Measured: 420 game days caught up
    in 65 ms with the longest stall 6.9 ms, including the final save. A real
