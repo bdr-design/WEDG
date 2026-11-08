@@ -144,7 +144,22 @@ const sand = new THREE.TextureLoader().load('sand.jpg');
 sand.colorSpace = THREE.SRGBColorSpace; sand.wrapS = sand.wrapT = THREE.RepeatWrapping;
 const before = scene.children.length;
 buildWorld(scene, renderer, sand);
+dedupeMaterials(scene.children.slice(before));
 mergeStatic(scene.children.slice(before));
+function dedupeMaterials(roots) {
+  const seen = new Map(), sph = new THREE.Sphere();
+  scene.updateMatrixWorld(true);
+  for (const r of roots) r.traverse((o) => {
+    if (!o.isMesh || o.isInstancedMesh || Array.isArray(o.material)) return;
+    const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere();
+    sph.copy(g.boundingSphere).applyMatrix4(o.matrixWorld);
+    if (sph.radius < 0.3) o.castShadow = false;            // a shadow nobody can see from a camera above the yard
+    const m = o.material;
+    if (!(m.isMeshStandardMaterial || m.isMeshBasicMaterial) || m.isMeshPhysicalMaterial || m.onBeforeCompile.toString() !== THREE.Material.prototype.onBeforeCompile.toString()) return;
+    const key = [m.type, m.color?.getHex(), m.roughness, m.metalness, m.emissive?.getHex(), m.emissiveIntensity, m.map?.uuid, m.side, m.transparent, m.opacity, m.alphaTest, m.vertexColors, m.flatShading, m.envMapIntensity, m.visible].join('|');
+    if (!seen.has(key)) seen.set(key, m); else o.material = seen.get(key);
+  });
+}
 function mergeStatic(roots) {
   const groups = new Map(), drop = [];
   scene.updateMatrixWorld(true);
@@ -246,13 +261,15 @@ class Camel {
       o.traverse((n) => {
         if (!n.isMesh) return;
         if (li > 0 && n.isSkinnedMesh && sameBones(n.skeleton)) n.bind(skel, n.bindMatrix);
-        n.castShadow = li === 1; n.receiveShadow = li === 0; n.material = coatMaterial(n.material, li, spec.coat);
+        n.castShadow = li === 2; n.receiveShadow = li === 0; n.material = coatMaterial(n.material, li, spec.coat);
         n.boundingSphere = sphere.clone(); n.visible = false; meshes.push(n);
       });
       return { o, meshes };
     });
-    // shadow stand-in: the 8k mesh, invisible on screen (writes no colour or depth) but cast into the shadow map
-    this.shadow = this.lods[1].meshes.map((m) => { const c = m.clone(); c.material = SHADOW_ONLY; c.visible = false; c.castShadow = true; c.receiveShadow = false; m.parent.add(c); return c; });
+    // shadow stand-ins, invisible on screen (they write no colour or depth) but cast into the shadow map:
+    // up close the 8k mesh casts for the 40k one, in the middle distance the 1.5k mesh casts for the 8k one
+    const standIn = (L) => L.meshes.map((m) => { const c = m.clone(); c.material = SHADOW_ONLY; c.visible = false; c.castShadow = true; c.receiveShadow = false; m.parent.add(c); return c; });
+    this.shadowFor = [standIn(this.lods[1]), standIn(this.lods[2]), []];
     this.li = -1; this.clip = null; this.speed = 0; this.timer = R(2, 9); this.animDt = 0; this.frame = Math.floor(R(0, 4));
     this.mode = spec.home === 'graze' ? 'graze' : 'idle';
     this.target = null; this.contact = [true, true, true, true];
@@ -266,7 +283,7 @@ class Camel {
     if (this.li >= 0) for (const m of this.lods[this.li].meshes) m.visible = false;
     this.li = i;
     for (const m of this.lods[i].meshes) m.visible = true;
-    for (const m of this.shadow) m.visible = i === 0;
+    this.shadowFor.forEach((list, li) => { for (const m of list) m.visible = li === i; });
   }
   play(name, fade = 0.5) {
     if (this.clip === name) return;
@@ -473,6 +490,10 @@ loadVehicles().catch(() => {});
 view('drone');
 const clock = new THREE.Clock();
 let lastS2 = '';
+renderer.shadowMap.autoUpdate = false;
+sun.target.position.set(1e9, 0, 0);          // forces the first placement of the shadow area
+const sunFocus = new THREE.Vector3();
+let shadowFrame = 0;
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   for (const c of camels) c.update(dt, camera.position);
@@ -487,8 +508,12 @@ function tick() {
   }
   for (const d of dust) if (d.s.visible) { d.age += dt; const k = d.age / 1.5; d.s.scale.setScalar(0.35 + k * 1.1); d.s.position.y = 0.12 + k * 0.25; d.s.material.opacity = 0.42 * Math.max(0, 1 - k); if (k > 1) d.s.visible = false; }
   updateScatter(camera.position);
-  const focus = controls.target;
-  sun.position.copy(focus).addScaledVector(sunDir, 160); sun.target.position.copy(focus);
+  // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
+  // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk
+  sunFocus.set(Math.round(controls.target.x / 4) * 4, 0, Math.round(controls.target.z / 4) * 4);
+  const shadowMoved = !sunFocus.equals(sun.target.position);
+  if (shadowMoved) { sun.position.copy(sunFocus).addScaledVector(sunDir, 160); sun.target.position.copy(sunFocus); }
+  if (shadowMoved || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
   controls.update();
   placeLabels();
   renderer.render(scene, camera);

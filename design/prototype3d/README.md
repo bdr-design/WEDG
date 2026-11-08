@@ -70,6 +70,10 @@ in the code, and the numbers are in
   instanced.
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)
   and a 2048 px satellite image.
+- **Shadows:**
+  - Each camel's shadow comes from a lighter mesh.
+  - Objects smaller than 30 cm cast none.
+  - The map is redrawn every other frame.
 
 Each page loads its models as `lod0.json`, `lod1.json` and `lod2.json`. Each
 file holds `{"glb": "<base64>"}` from `assets_src/camels/*.glb`, because

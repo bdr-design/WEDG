@@ -76,11 +76,32 @@ Counts include the shadow pass. Texture memory went from 217 to 99 MiB.
 - Vehicles are 12k triangles with 1K textures.
 - PCF shadows on a 1536 map, a render scale of 1.5, anisotropy 4, and
   standard (not physical) materials.
+- **Shadows:**
+  - Each camel's shadow comes from the next lighter mesh: 8k up close,
+    1.5k further out, so far camels now have one.
+  - Objects smaller than 30 cm cast none.
+  - The shadow area follows the view in 4 m steps, and the map is redrawn
+    every other frame.
+
+**Shadows only for the camels?** The owner asked. We measured it in the room
+view:
+- **Shadow pass:** 63 draws and 93k triangles with every shadow. With the
+  camels alone it is 14 draws and 21k.
+- **What is lost:** the cars, shade, room and trees no longer shadow the
+  ground, so they look like they are floating in the low afternoon sun.
+
+**Decision:**
+- **Prototype:** keep every shadow.
+- **Flutter build:** static objects (buildings, shades, fences, trees,
+  parked vehicles) go in a cached shadow map, refreshed only when the sun
+  has moved. A game day lasts about 3.4 real hours, so the sun moves about
+  1° every 35 s. Only the camels cast live shadows each frame.
 
 **Budget for the Flutter build (checked in CI on a benchmark scene):**
 - At most 200 draws and 400k triangles per frame, shadows included.
 - At most 80 MiB of textures, compressed (KTX2 with ASTC or ETC2).
 - At most 16 skinned camels near the camera, and no allocations per frame.
+- Live shadows from camels only; static shadows cached (see above).
 - Render scale at most 1.5.
 
 **The herd in three tiers:**
