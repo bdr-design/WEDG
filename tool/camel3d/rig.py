@@ -63,7 +63,7 @@ for s, y in (('L', 1), ('R', -1)):
     bone(f'fcannon.{s}', f[2], f[3], f'forearm.{s}', roll_to=FWD, connect=True)
     bone(f'fpastern.{s}', f[3], f[4], f'fcannon.{s}', roll_to=FWD, connect=True)
     bone(f'ffoot.{s}', f[4], f[5], f'fpastern.{s}', roll_to=UP, connect=True)
-    h = [W(1215, 420, .15 * y), W(1180, 560, .19 * y), W(1224, 765, .15 * y), W(1204, 955, .14 * y), W(1184, 1001, .14 * y), W(1133, 1019, .14 * y)]
+    h = [W(1215, 420, .135 * y), W(1180, 560, .175 * y), W(1224, 765, .15 * y), W(1204, 955, .14 * y), W(1184, 1001, .14 * y), W(1133, 1019, .14 * y)]
     bone(f'thigh.{s}', h[0], h[1], 'hips', roll_to=FWD)
     bone(f'shin.{s}', h[1], h[2], f'thigh.{s}', roll_to=FWD, connect=True)
     bone(f'hcannon.{s}', h[2], h[3], f'shin.{s}', roll_to=FWD, connect=True)

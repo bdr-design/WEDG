@@ -12,8 +12,8 @@ photo.
 | 4. Rig and clips | `rig.py` | `camel_rigged.blend` (idle, graze) |
 | 4b. Walk from foot physics | `walk_physics.py` | replaces `walk`, prints slip and contact checks |
 | 5. Export | `export_glb.py` | `camel_wodh_female.glb` |
-| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 611 KB), `_lod2.glb` (1.5k triangles, 512 px, 267 KB); same skeleton and clips |
-| Checks | `render_tex.py`, `render_anim.py`, `feet_closeup.py`, `feet_clay.py`, `feet_walk.py` | Cycles renders in desert light; close-ups of the lower legs standing, untextured and through a stride |
+| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 599 KB), `_lod2.glb` (1.5k triangles, 512 px, 261 KB); same skeleton and clips |
+| Checks | `render_tex.py`, `render_anim.py`, `feet_closeup.py`, `feet_clay.py`, `feet_walk.py`, `body_views.py`, `ortho_compare.py` | Cycles renders in desert light; close-ups of the lower legs standing, untextured and through a stride; front, rear and three-quarter views; a side view at the photo's own scale to lay over it |
 
 ## How each step works
 
@@ -21,6 +21,15 @@ photo.
   - The body, neck and head are the photo's outline inflated sideways, with
     real camel widths per region (barrel, narrow hump ridge, narrow neck and
     head).
+    - The barrel is about 57 cm wide and the hips about 48 cm, which gives
+      an adult she-camel's heart girth of about 2.2 m.
+  - **Legs, matched to the photo at every height:**
+    - Forearm about 17 cm deep below the elbow and 13–15 cm at mid
+      forearm; gaskin 19 cm under the stifle and 14 cm at the hock.
+    - Flat from the side: the leg tubes are squeezed sideways about their own
+      axis, so a forearm is about 10 cm wide from the front and a gaskin
+      about 13 cm.
+    - The hind legs sit a little closer in, as a camel's do.
   - The legs, knees, ears, chest pad, lower lip and tail are tapered tubes
     and ellipsoids at real proportions.
   - **Lower legs and feet**, matched to the photo:

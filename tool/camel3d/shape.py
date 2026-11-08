@@ -62,15 +62,15 @@ outside = ndimage.distance_transform_edt(1 - m) / PX
 
 # lateral scale by region (blurred so parts flow into each other)
 H, W = m.shape
-S = np.full((H, W), 0.80, np.float32)              # barrel
+S = np.full((H, W), 0.645, np.float32)             # barrel (about 58 cm wide)
 uu, vv = np.meshgrid(np.arange(W), np.arange(H))
 neck = (uu < 640) & (vv > 150)
 head = (uu < 330) & (vv < 230)
 S[neck] = 0.58
 S[head] = 0.62
 S[(uu < 175) & (vv < 230)] = 0.50                  # muzzle
-S[(vv < 250) & (uu > 760) & (uu < 1080)] = 0.62    # hump is a narrow ridge
-S[(uu > 1110)] = 0.70                              # hips and thighs are narrow
+S[(vv < 250) & (uu > 760) & (uu < 1080)] = 0.53    # hump is a narrow ridge
+S[(uu > 1110)] = 0.555                             # hips and thighs are narrow (about 48 cm)
 S = cv2.GaussianBlur(S, (0, 0), 28)
 T = np.where(m > 0, inside * S, -outside)          # half-width; negative outside
 T = ndimage.gaussian_filter(T, 1.5)
@@ -134,16 +134,30 @@ def add(sdf_fn, box_min, box_max, k):
     F[sel] = smin(F[sel], sdf_fn(P[sel]), k)
 
 
-def chain(points, radii, k_body, side):
+def flat_cone(q, a, b, r1, r2, flat):
+    """Round cone squeezed sideways by `flat` about its own axis (legs are deeper than wide)."""
+    if flat == 1.0:
+        return round_cone(q, a, b, r1, r2)
+    yc = 0.5 * (a[1] + b[1])
+    q2 = q.copy()
+    q2[:, 1] = yc + (q[:, 1] - yc) * flat
+    a2, b2 = a.copy(), b.copy()
+    a2[1] = yc + (a[1] - yc) * flat
+    b2[1] = yc + (b[1] - yc) * flat
+    return round_cone(q2, a2, b2, r1, r2) / flat
+
+
+def chain(points, radii, k_body, side, flats=None):
     pts = [np.array(p) for p in points]
     for i in range(len(pts) - 1):
         a, b = pts[i].copy(), pts[i + 1].copy()
         a[1] *= side
         b[1] *= side
         r1, r2 = radii[i], radii[i + 1]
+        fl = flats[i] if flats else 1.0
         lo = np.minimum(a, b) - max(r1, r2) - 0.1
         hi = np.maximum(a, b) + max(r1, r2) + 0.1
-        add(lambda q, a=a, b=b, r1=r1, r2=r2: round_cone(q, a, b, r1, r2), lo, hi, k_body if i == 0 else 0.03)
+        add(lambda q, a=a, b=b, r1=r1, r2=r2, fl=fl: flat_cone(q, a, b, r1, r2, fl), lo, hi, k_body if i == 0 else 0.03)
 
 
 def j(u, v, y):
@@ -155,8 +169,8 @@ def j(u, v, y):
 # joints in image space for the bind pose (both legs of a pair side by side)
 FRONT = [j(700, 520, 0.17), j(702, 610, 0.17), j(706, 700, 0.165), j(704, 800, 0.155),
          j(698, 885, 0.15), j(694, 955, 0.15), j(688, 995, 0.15)]
-FRONT_R = [0.13, 0.10, 0.085, 0.07, 0.046, 0.054, 0.05]
-HIND = [j(1210, 430, 0.15), j(1180, 560, 0.19), j(1205, 665, 0.17), j(1224, 765, 0.15),
+FRONT_R = [0.12, 0.088, 0.066, 0.066, 0.046, 0.054, 0.05]
+HIND = [j(1210, 430, 0.135), j(1180, 560, 0.175), j(1205, 665, 0.16), j(1224, 765, 0.15),
         j(1214, 870, 0.145), j(1204, 955, 0.14), j(1196, 995, 0.14)]
 HIND_R = [0.16, 0.12, 0.085, 0.062, 0.043, 0.05, 0.047]
 joints = {'front': FRONT, 'hind': HIND}
@@ -205,14 +219,14 @@ def cannon(top, fet, r_top, r_bot, side):
         aa, bb = a + fw * off, b + fw * off
         if off < 0:
             aa = aa + np.array([0, 0, -0.05])
-        add(lambda q, aa=aa, bb=bb, r1=r1, r2=r2: round_cone(q, aa, bb, r1, r2),
+        add(lambda q, aa=aa, bb=bb, r1=r1, r2=r2: flat_cone(q, aa, bb, r1, r2, 1.12),
             np.minimum(aa, bb) - 0.12, np.maximum(aa, bb) + 0.12, 0.03)
 
 
 nails = []
 for side in (1, -1):
-    chain(FRONT[:4], FRONT_R[:4], 0.07, side)
-    chain(HIND[:4], HIND_R[:4], 0.09, side)
+    chain(FRONT[:4], FRONT_R[:4], 0.06, side, flats=[1.25, 1.5, 1.4])
+    chain(HIND[:4], HIND_R[:4], 0.08, side, flats=[1.45, 1.55, 1.35])
     cannon(FRONT[3], FRONT[5], 0.038, 0.033, side)
     cannon(HIND[3], HIND[5], 0.036, 0.031, side)
     for fet, scale in ((FRONT[5], 1.0), (HIND[5], 0.92)):
@@ -220,7 +234,7 @@ for side in (1, -1):
         c[1] *= side
         nails += foot(c, scale, side)
     # bony knees (carpus) and hocks
-    for (u, v, r, y) in ((707, 798, np.array([0.06, 0.062, 0.07]), 0.155), (1222, 765, np.array([0.06, 0.05, 0.065]), 0.15)):
+    for (u, v, r, y) in ((707, 798, np.array([0.06, 0.05, 0.07]), 0.155), (1222, 765, np.array([0.06, 0.045, 0.065]), 0.15)):
         c = j(u, v, y * side)
         c[0] += 0.012
         add(lambda q, c=c, r=r: ellipsoid(q, c, r), c - 0.2, c + 0.2, 0.03)
