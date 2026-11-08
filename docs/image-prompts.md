@@ -38,14 +38,15 @@ Photorealistic aerial drone photograph looking straight down (true top-down nadi
 
 ### 5. بيت الشعر
 ```
-Photorealistic aerial drone photograph looking straight down (true top-down nadir view) at a traditional black goat-hair Bedouin tent (bayt al-sha'ar) about 10 m by 5 m, its ropes staked out to the sides, a red and white Sadu woven rug at the open front, isolated on a plain flat solid magenta (#FF00FF) background, no shadow on the background. Natural true colors, no text, no watermark.
+Overhead drone photograph looking straight down at a traditional black goat-hair Bedouin tent (bayt al-sha'ar) about 10 m by 5 m. We see only its black woven roof as a long low rectangle with seams, and the guy ropes radiating out on all four sides to stakes. A red and white Sadu rug lies flat on the ground in front of the open long side. No front view, no walls or curtains visible. Transparent background, no ground, no shadow. Natural true colors, no text, no watermark.
 ```
 
 ### 6. ناقة من فوق
 ولّد هذا الوصف مرتين: مرة بلون الوضح ومرة بلون المجاهيم (الوصفين تحت).
 ```
-Photorealistic aerial drone photograph looking straight down (true top-down nadir view) at a single adult Saudi dromedary camel standing still, [COLOR]. Anatomically correct: one hump, four legs, long neck, small head. The head points to the top of the image and the camel fills about 70% of the frame. Isolated on a plain flat solid magenta (#FF00FF) background, no ground, no shadow on the background, no saddle, no rope, no decorations. Soft even daylight, natural true colors, crisp detail, no text, no watermark.
+Overhead drone photograph taken from directly above a single adult Saudi dromedary camel at about 15 m height, the lens pointing straight down at the hump (true orthographic top-down view). We see only the top of the animal: the top of the head, the back of the long neck stretched forward, the single hump and the back. The legs are hidden under the body, with at most the tips of the feet showing at the sides. No view of the face, chest, rear or tail from behind. The camel [COLOR], standing still, head pointing to the top of the image, filling about 70% of the frame. Transparent background, no ground, no shadow, no saddle, no rope. Natural true colors, crisp detail, no text, no watermark.
 ```
+> الدفعة الأولى طلعت من ورا وفوق (تبين الرجول والذيل)، فعدّلنا الوصف. أعد بها كل صور الإبل من فوق.
 - **الوضح:** حط مكان `[COLOR]`:
   `with a bright pure white coat`
 - **المجاهيم:** حط مكان `[COLOR]`:
@@ -106,7 +107,8 @@ Photorealistic aerial drone photograph looking straight down (true top-down nadi
 - **الشعل:**
   `with a coat of mixed reddish and blond hair`
 - **الصفر:**
-  `with a sandy-yellow to date-molasses coloured coat and dense thick wool`
+  `with a pale sandy-yellow coat like desert sand, clearly more yellow and lighter than a red camel, and dense thick wool`
+  > طلعت الصفر قريبة جدًا من الشعل في اللون، فوضحنا الوصف.
 - **الحمر:**
   `with a reddish-brown coat and a medium-sized body`
 
