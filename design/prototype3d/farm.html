@@ -1,0 +1,554 @@
+<title>عزبة الصفوة</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+  /* One screen: the 3D world is the game; glass controls sit only on the edges. */
+  :root {
+    --ground: #b98a5e;
+    --glass: rgba(22, 16, 12, 0.52);
+    --glass-line: rgba(255, 255, 255, 0.16);
+    --ink: #fffaf2;
+    --ink-soft: rgba(255, 250, 242, 0.82);
+    --saffron: #e0a93b;
+    --on-saffron: #1b1410;
+    --live: #7fd08a;
+    --font-ui: 'IBM Plex Sans Arabic', 'Geeza Pro', 'Segoe UI', Tahoma, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-ui); overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .glass { background: var(--glass); -webkit-backdrop-filter: blur(16px) saturate(150%); backdrop-filter: blur(16px) saturate(150%); border: 1px solid var(--glass-line); }
+  button { font: inherit; color: var(--ink); cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
+  .top { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 8px; pointer-events: none; }
+  .top > * { pointer-events: auto; }
+  .round { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; flex: none; }
+  .pill { height: 44px; padding: 0 14px; border-radius: 22px; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
+  .pill b { font-size: 13px; line-height: 1.25; }
+  .pill span { font-size: 11px; line-height: 1.25; color: var(--ink-soft); }
+  .cash { flex-direction: row; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cash span { font-size: 11px; font-weight: 500; }
+  .grow { flex: 1; }
+  .side { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; }
+  .side button { height: 44px; padding: 0 14px; border-radius: 22px; font-size: 13px; font-weight: 600; }
+  .side button[aria-pressed="true"] { background: var(--saffron); color: var(--on-saffron); border-color: transparent; }
+  .sheet { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); max-width: 560px; margin-inline: auto; padding: 10px 12px 10px 14px; border-radius: 22px; display: flex; align-items: center; gap: 12px; box-sizing: border-box; }
+  .dot { width: 10px; height: 10px; border-radius: 10px; background: var(--live); box-shadow: 0 0 0 4px rgba(127, 208, 138, 0.25); flex: none; }
+  .sheet .txt { flex: 1; min-width: 0; }
+  .sheet .t1 { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sheet .t2 { font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sheet .act { height: 38px; padding: 0 14px; border-radius: 19px; border: 0; background: var(--ink); color: var(--on-saffron); font-size: 12px; font-weight: 700; flex: none; }
+  .sheet .ghost { background: transparent; color: var(--ink); border: 1px solid var(--glass-line); }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  .lbl { position: absolute; left: 0; top: 0; padding: 3px 9px; border-radius: 9px; font-size: 11px; font-weight: 600; white-space: nowrap; will-change: transform; }
+  .lbl.warn { color: #ffe3a3; }
+  .status { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  .status[hidden] { display: none; }
+  .status p { margin: 0; padding: 10px 16px; border-radius: 14px; font-size: 14px; }
+  @media (max-width: 370px) { .pill span { display: none; } }
+</style>
+
+<div id="stage" aria-label="عزبة الصفوة ثلاثية الأبعاد: الحلال يسرح في المرعى جنب الشبوك. اسحب للف الكاميرا، وقرّب بإصبعين، واضغط على ناقة لتختارها."></div>
+<div id="labels" aria-hidden="true"></div>
+
+<div class="top" dir="rtl">
+  <button class="round glass" type="button" aria-label="خريطة المملكة">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20V6.5z"></path><path d="M9 4v13.5M15 6.5V20"></path></svg>
+  </button>
+  <div class="pill glass"><b>عزبة الصفوة</b><span id="clock">القصيم · العصر 4:12 م</span></div>
+  <div class="grow"></div>
+  <div class="pill glass cash">486,300 <span>ريال</span></div>
+</div>
+
+<div class="side" dir="rtl">
+  <button id="cam-drone" class="glass" type="button" aria-pressed="true">درون</button>
+  <button id="cam-near" class="glass" type="button" aria-pressed="false">قريب</button>
+</div>
+
+<div class="sheet glass" dir="rtl" aria-live="polite">
+  <span class="dot" aria-hidden="true"></span>
+  <div class="txt"><div class="t1" id="s1">الحلال يسرح · 20 راس</div><div class="t2" id="s2">المرعى رمث وعرفج · زين بعد مطر الوسم</div></div>
+  <button id="s-clear" class="act ghost" type="button" hidden>إلغاء</button>
+  <button id="s-act" class="act" type="button">تابع القطيع</button>
+</div>
+
+<div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+
+const $ = (id) => document.getElementById(id);
+const stage = $('stage');
+const rand = mulberry(20261108);
+function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const R = (a, b) => a + (b - a) * rand();
+
+// ------------------------------------------------------------ renderer, sky, light
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(stage.clientWidth, stage.clientHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.AgXToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2('#d6bf9f', 0.0042);
+const camera = new THREE.PerspectiveCamera(40, stage.clientWidth / stage.clientHeight, 0.3, 4000);
+
+const sunDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 27), THREE.MathUtils.degToRad(252));
+function makeSky() {
+  const s = new Sky(); s.scale.setScalar(3000);
+  const u = s.material.uniforms;
+  u.turbidity.value = 6.5; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.008; u.mieDirectionalG.value = 0.82;
+  u.sunPosition.value.copy(sunDir);
+  return s;
+}
+scene.add(makeSky());
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envScene = new THREE.Scene();
+envScene.add(makeSky());
+envScene.add(new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#9c7148', side: THREE.BackSide })));
+scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+scene.environmentIntensity = 0.34;
+
+const sun = new THREE.DirectionalLight('#ffdcae', 4.4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 });
+sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
+scene.add(sun, sun.target);
+
+// ------------------------------------------------------------ ground, dunes, shrubs, track
+const sand = new THREE.TextureLoader().load('sand.jpg');
+sand.colorSpace = THREE.SRGBColorSpace; sand.wrapS = sand.wrapT = THREE.RepeatWrapping;
+sand.anisotropy = renderer.capabilities.getMaxAnisotropy();
+function noise2(x, y) {
+  const h = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  return THREE.MathUtils.lerp(THREE.MathUtils.lerp(h(xi, yi), h(xi + 1, yi), u), THREE.MathUtils.lerp(h(xi, yi + 1), h(xi + 1, yi + 1), u), v);
+}
+{
+  const size = 3600, seg = 220;
+  const g = new THREE.PlaneGeometry(size, size, seg, seg);
+  g.rotateX(-Math.PI / 2);
+  const p = g.attributes.position, uv = g.attributes.uv;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), r = Math.hypot(x, z);
+    const far = THREE.MathUtils.smoothstep(r, 260, 900);
+    const dune = noise2(x / 140, z / 90) * 26 + noise2(x / 50, z / 40) * 7;
+    p.setY(i, far * dune);
+    uv.setXY(i, x / 22, z / 22);
+  }
+  g.computeVertexNormals();
+  const ground = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: sand, roughness: 1 }));
+  ground.receiveShadow = true;
+  scene.add(ground);
+}
+{ // graded dirt track from the road to the gate
+  const g = new THREE.PlaneGeometry(4.2, 260, 1, 40); g.rotateX(-Math.PI / 2);
+  const m = new THREE.MeshStandardMaterial({ color: '#8a6440', roughness: 1, transparent: true, opacity: 0.32, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  const track = new THREE.Mesh(g, m); track.position.set(33, 0.01, 128); scene.add(track);
+  const g2 = new THREE.PlaneGeometry(22, 4.2); g2.rotateX(-Math.PI / 2);
+  const t2 = new THREE.Mesh(g2, m); t2.position.set(22, 0.01, 0); scene.add(t2);
+}
+{ // desert shrubs (rimth, arfaj) scattered away from the pens
+  const g = new THREE.IcosahedronGeometry(0.5, 1);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const k = 0.75 + 0.5 * noise2(p.getX(i) * 7 + 3, p.getZ(i) * 7 + p.getY(i) * 5); p.setXYZ(i, p.getX(i) * k, Math.max(0, p.getY(i)) * k * 0.9, p.getZ(i) * k); }
+  g.computeVertexNormals();
+  const n = 700, mesh = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1 }), n);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
+  let k = 0;
+  while (k < n) {
+    const x = R(-260, 260), z = R(-200, 300);
+    if (x > -22 && x < 40 && z > -40 && z < 6) continue;
+    const s = R(0.25, 0.85);
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R(0, 6.28));
+    m4.compose(new THREE.Vector3(x, -0.05, z), q, new THREE.Vector3(s, s * R(0.45, 0.7), s));
+    mesh.setMatrixAt(k, m4);
+    mesh.setColorAt(k, c.setHSL(0.17 + R(-0.03, 0.04), 0.34, 0.27 + R(-0.05, 0.07)));
+    k++;
+  }
+  mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
+}
+
+// ------------------------------------------------------------ the farm, built at real size
+const metal = new THREE.MeshStandardMaterial({ color: '#a7abad', metalness: 0.85, roughness: 0.42 });
+const posts = [], rails = [];
+function pen(x0, z0, x1, z1, gate) {
+  const pts = [[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]];
+  for (let s = 0; s < 4; s++) {
+    const [ax, az] = pts[s], [bx, bz] = pts[s + 1];
+    const len = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(len / 3));
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n, t1 = (i + 1) / n;
+      const a = new THREE.Vector3(ax + (bx - ax) * t0, 0, az + (bz - az) * t0);
+      const b = new THREE.Vector3(ax + (bx - ax) * t1, 0, az + (bz - az) * t1);
+      posts.push(a.clone());
+      const open = gate && gate.side === s && i === Math.floor(n / 2);
+      for (const h of open ? [1.55] : [0.45, 1.0, 1.55]) rails.push([a.clone().setY(h), b.clone().setY(h)]);
+    }
+  }
+}
+pen(-15, -32, 15, -10, { side: 2 });           // شبك النوق 30 x 22
+pen(-15, -10, 0, 2, { side: 2 });              // الحيران
+pen(0, -10, 8, -2, { side: 2 });               // الفحل
+pen(8, -10, 15, -4, { side: 2 });              // العزل
+{
+  const pg = new THREE.CylinderGeometry(0.045, 0.05, 1.7, 8); pg.translate(0, 0.85, 0);
+  const pm = new THREE.InstancedMesh(pg, metal, posts.length);
+  posts.forEach((p, i) => pm.setMatrixAt(i, new THREE.Matrix4().makeTranslation(p.x, 0, p.z)));
+  pm.castShadow = true; scene.add(pm);
+  const rg = new THREE.CylinderGeometry(0.024, 0.024, 1, 6);
+  const rm = new THREE.InstancedMesh(rg, metal, rails.length);
+  const up = new THREE.Vector3(0, 1, 0);
+  rails.forEach(([a, b], i) => {
+    const d = b.clone().sub(a), q = new THREE.Quaternion().setFromUnitVectors(up, d.clone().normalize());
+    rm.setMatrixAt(i, new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), q, new THREE.Vector3(1, d.length(), 1)));
+  });
+  rm.castShadow = true; scene.add(rm);
+}
+function shade(cx, cz, w, d) {
+  const cloth = new THREE.PlaneGeometry(w, d, 24, 10); cloth.rotateX(-Math.PI / 2);
+  const p = cloth.attributes.position;
+  for (let i = 0; i < p.count; i++) { const sx = p.getX(i) / (w / 2), sz = p.getZ(i) / (d / 2); p.setY(i, -0.18 * (1 - sx * sx) * (1 - sz * sz)); }
+  cloth.computeVertexNormals();
+  const m = new THREE.Mesh(cloth, new THREE.MeshStandardMaterial({ color: '#2d4535', roughness: 0.92, side: THREE.DoubleSide }));
+  m.position.set(cx, 3.1, cz); m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  const pg = new THREE.CylinderGeometry(0.06, 0.06, 3.1, 8); pg.translate(0, 1.55, 0);
+  for (const sx of [-1, -0.33, 0.33, 1]) for (const sz of [-1, 1]) {
+    const post = new THREE.Mesh(pg, metal); post.position.set(cx + sx * w / 2, 0, cz + sz * d / 2); post.castShadow = true; scene.add(post);
+  }
+}
+shade(-3, -27, 20, 8);
+shade(-7.5, -6.5, 12, 5);
+{ // water tank and trough
+  const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.3, 2.3, 40), new THREE.MeshStandardMaterial({ color: '#ece8e0', roughness: 0.55 }));
+  tank.position.set(18.5, 1.45, -21); tank.castShadow = tank.receiveShadow = true; scene.add(tank);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(3, 0.3, 3), new THREE.MeshStandardMaterial({ color: '#b9b2a6', roughness: 0.9 }));
+  base.position.set(18.5, 0.15, -21); base.receiveShadow = base.castShadow = true; scene.add(base);
+  const trough = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 6), metal);
+  trough.position.set(15.5, 0.28, -21); trough.castShadow = true; scene.add(trough);
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 5.85).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#3d5b57', roughness: 0.06 }));
+  water.position.set(15.5, 0.5, -21); scene.add(water);
+}
+function canvasTex(w, h, draw, srgb = true) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+{ // feed store with alfalfa bales and barley sacks
+  const walls = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#d9d3c7'; g.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 6) { g.fillStyle = x % 12 ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.18)'; g.fillRect(x, 0, 3, h); } });
+  const store = new THREE.Mesh(new THREE.BoxGeometry(8, 3, 6), new THREE.MeshStandardMaterial({ map: walls, roughness: 0.75, metalness: 0.2 }));
+  store.position.set(24, 1.5, -27); store.castShadow = store.receiveShadow = true; scene.add(store);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.14, 6.6), new THREE.MeshStandardMaterial({ color: '#c7c0b3', roughness: 0.6, metalness: 0.4 }));
+  roof.position.set(24, 3.1, -27); roof.rotation.x = 0.05; roof.castShadow = true; scene.add(roof);
+  const hay = canvasTex(128, 64, (g, w, h) => { g.fillStyle = '#b8a25b'; g.fillRect(0, 0, w, h); for (let i = 0; i < 380; i++) { g.strokeStyle = `rgba(${90 + rand() * 90},${100 + rand() * 80},${40 + rand() * 30},0.5)`; g.beginPath(); const x = rand() * w, y = rand() * h; g.moveTo(x, y); g.lineTo(x + 6 + rand() * 10, y + (rand() - 0.5) * 3); g.stroke(); } });
+  const bales = new THREE.InstancedMesh(new THREE.BoxGeometry(1.0, 0.42, 0.5), new THREE.MeshStandardMaterial({ map: hay, roughness: 1 }), 30);
+  let i = 0;
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 5; col++) for (let lay = 0; lay < 2; lay++) {
+    bales.setMatrixAt(i++, new THREE.Matrix4().makeTranslation(18.8 + lay * 0.52, 0.21 + row * 0.42, -29.6 + col * 1.02).multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2)));
+  }
+  bales.castShadow = bales.receiveShadow = true; scene.add(bales);
+  const sacks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.25, 0.85), new THREE.MeshStandardMaterial({ color: '#ece9e1', roughness: 0.9 }), 16);
+  for (let j = 0; j < 16; j++) sacks.setMatrixAt(j, new THREE.Matrix4().makeTranslation(28.6 + (j % 2) * 0.6, 0.13 + Math.floor(j / 8) * 0.26, -29.4 + (Math.floor(j / 2) % 4) * 0.9));
+  sacks.castShadow = true; scene.add(sacks);
+}
+{ // shepherds' cabin
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(6, 2.6, 3), new THREE.MeshStandardMaterial({ color: '#f0eee8', roughness: 0.7 }));
+  cab.position.set(24, 1.3, -17); cab.castShadow = cab.receiveShadow = true; scene.add(cab);
+  const ac = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.55, 0.35), new THREE.MeshStandardMaterial({ color: '#cfd2d2', roughness: 0.5 }));
+  ac.position.set(25.6, 1.9, -15.3); scene.add(ac);
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 2), new THREE.MeshStandardMaterial({ color: '#7d8a8f', roughness: 0.6 }));
+  door.position.set(22.6, 1, -15.49); door.rotation.y = Math.PI; scene.add(door);
+}
+{ // black goat-hair tent (the owner's majlis) with a Sadu rug at the open side
+  const wool = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#1c1916'; g.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 32) { g.fillStyle = 'rgba(120,105,90,0.35)'; g.fillRect(x, 0, 2, h); } for (let i = 0; i < 3000; i++) { g.fillStyle = `rgba(255,255,255,${rand() * 0.04})`; g.fillRect(rand() * w, rand() * h, 1, 2); } });
+  const L = 10, D = 5, H = 2.2, E = 1.3;
+  const v = new Float32Array([
+    -L / 2, E, -D / 2, L / 2, E, -D / 2, L / 2, H, 0, -L / 2, E, -D / 2, L / 2, H, 0, -L / 2, H, 0,
+    -L / 2, H, 0, L / 2, H, 0, L / 2, E, D / 2, -L / 2, H, 0, L / 2, E, D / 2, -L / 2, E, D / 2,
+    -L / 2, 0, -D / 2, L / 2, 0, -D / 2, L / 2, E, -D / 2, -L / 2, 0, -D / 2, L / 2, E, -D / 2, -L / 2, E, -D / 2,
+    -L / 2, 0, -D / 2, -L / 2, E, -D / 2, -L / 2, H, 0, -L / 2, 0, -D / 2, -L / 2, H, 0, -L / 2, 0, 0,
+    L / 2, 0, -D / 2, L / 2, H, 0, L / 2, E, -D / 2, L / 2, 0, -D / 2, L / 2, 0, 0, L / 2, H, 0,
+  ]);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(v, 3));
+  const uv = new Float32Array(v.length / 3 * 2); for (let i = 0; i < v.length / 3; i++) { uv[i * 2] = v[i * 3] / 3; uv[i * 2 + 1] = (v[i * 3 + 1] + v[i * 3 + 2]) / 3; }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.computeVertexNormals();
+  const tent = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: wool, roughness: 1, side: THREE.DoubleSide }));
+  tent.position.set(26, 0, -2); tent.castShadow = tent.receiveShadow = true; scene.add(tent);
+  const sadu = canvasTex(256, 128, (c, w, h) => {
+    c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#efe6d6'; c.fillRect(0, 18, w, 10); c.fillRect(0, h - 28, w, 10);
+    c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 64 + 22); c.lineTo(x + 12, 64 - 22); c.lineTo(x + 24, 64 + 22); c.fill(); }
+    c.fillStyle = '#efe6d6'; for (let x = 12; x < w; x += 24) { c.beginPath(); c.moveTo(x - 5, 64); c.lineTo(x, 54); c.lineTo(x + 5, 64); c.lineTo(x, 74); c.fill(); }
+  });
+  const rug = new THREE.Mesh(new THREE.PlaneGeometry(4, 2).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: sadu, roughness: 1 }));
+  rug.position.set(26, 0.02, 1.4); rug.receiveShadow = true; scene.add(rug);
+  const ropes = []; for (const sx of [-1, -0.5, 0, 0.5, 1]) { ropes.push(26 + sx * L / 2, H, -2, 26 + sx * L / 2 * 1.05, 0, -2 - D / 2 - 2.2); }
+  const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(ropes, 3));
+  scene.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: '#cbb994' })));
+}
+
+// ------------------------------------------------------------ footprints and dust
+const printTex = canvasTex(64, 96, (g, w, h) => {
+  const toe = (x, y) => { const gr = g.createRadialGradient(x, y, 2, x, y, 20); gr.addColorStop(0, 'rgba(60,38,20,0.75)'); gr.addColorStop(1, 'rgba(60,38,20,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, 15, 34, 0, 0, 6.28); g.fill(); };
+  toe(w * 0.33, h * 0.5); toe(w * 0.67, h * 0.5);
+});
+const printGeo = new THREE.PlaneGeometry(0.2, 0.3).rotateX(-Math.PI / 2);
+const prints = Array.from({ length: 260 }, () => { const m = new THREE.Mesh(printGeo, new THREE.MeshBasicMaterial({ map: printTex, transparent: true, depthWrite: false, opacity: 0 })); m.visible = false; m.renderOrder = 1; scene.add(m); return { m, age: 0 }; });
+let printNext = 0;
+const dustTex = canvasTex(64, 64, (g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 2, w / 2, w / 2, w / 2); gr.addColorStop(0, 'rgba(226,200,160,0.9)'); gr.addColorStop(1, 'rgba(226,200,160,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); });
+const dust = Array.from({ length: 90 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dustTex, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; scene.add(s); return { s, age: 9 }; });
+let dustNext = 0;
+function footfall(pos, heading, near) {
+  const p = prints[printNext++ % prints.length];
+  p.m.position.set(pos.x, 0.015, pos.z); p.m.rotation.y = heading; p.m.visible = true; p.age = 0;
+  if (near) { const d = dust[dustNext++ % dust.length]; d.s.position.set(pos.x, 0.12, pos.z); d.s.visible = true; d.age = 0; }
+}
+
+// ------------------------------------------------------------ camels
+const COATS = {
+  wodh: { name: 'وضحاء', tint: '#ffffff' }, shaqh: { name: 'شقحاء', tint: '#f3e3c8' },
+  homr: { name: 'حمراء', tint: '#a8694a' }, majaheem: { name: 'مجهمية', tint: '#2c2622' },
+};
+const GRAZE = { x0: -30, x1: 26, z0: 12, z1: 46 };
+const camels = [];
+const SPEED = 0.85;            // the walk clip plants each foot and moves it back at this speed
+const LOD_D = [16, 48];
+
+async function loadLod(file) {
+  const { glb } = await (await fetch(file)).json();
+  const bin = Uint8Array.from(atob(glb), (c) => c.charCodeAt(0));
+  return new GLTFLoader().parseAsync(bin.buffer, '');
+}
+const coatMats = new Map();
+function coatMaterial(src, lod, coat) {
+  const key = lod + coat;
+  if (!coatMats.has(key)) { const m = src.clone(); m.color.set(COATS[coat].tint); if (coat === 'majaheem') m.roughness = 0.78; coatMats.set(key, m); }
+  return coatMats.get(key);
+}
+
+class Camel {
+  constructor(t, spec) {
+    Object.assign(this, spec);
+    this.root = new THREE.Group();
+    this.root.position.set(spec.x, 0, spec.z);
+    this.root.rotation.y = spec.heading;
+    this.root.scale.setScalar(spec.scale || 1);
+    scene.add(this.root);
+    this.lods = t.map((tpl, li) => {
+      const o = SkeletonUtils.clone(tpl.scene);
+      o.rotation.y = -Math.PI / 2;
+      o.traverse((n) => { if (n.isMesh) { n.castShadow = li < 2; n.receiveShadow = li === 0; n.material = coatMaterial(n.material, li, spec.coat); n.frustumCulled = false; } });
+      o.visible = false;
+      this.root.add(o);
+      const mixer = new THREE.AnimationMixer(o);
+      const acts = {}; for (const c of tpl.animations) acts[c.name] = mixer.clipAction(c);
+      const feet = ['ffootL', 'ffootR', 'hfootL', 'hfootR'].map((n) => o.getObjectByName(n)).filter(Boolean);
+      return { o, mixer, acts, feet };
+    });
+    this.li = -1; this.clip = null; this.speed = 0; this.timer = R(2, 9);
+    this.mode = spec.home === 'graze' ? 'graze' : 'idle';
+    this.target = null; this.contact = [true, true, true, true];
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.3, 3.0), new THREE.MeshBasicMaterial({ visible: false }));
+    hit.position.y = 1.1; hit.userData.camel = this; this.root.add(hit); this.hit = hit;
+    this.setLod(2); this.play(this.mode === 'graze' ? 'graze' : 'idle', 0);
+    this.lod().acts[this.clip].time = R(0, 3);
+  }
+  lod() { return this.lods[this.li]; }
+  setLod(i) {
+    if (i === this.li) return;
+    const prev = this.li >= 0 ? this.lod() : null;
+    const t = prev && this.clip ? prev.acts[this.clip].time : 0;
+    if (prev) { prev.o.visible = false; prev.mixer.stopAllAction(); }
+    this.li = i; const L = this.lod(); L.o.visible = true;
+    if (this.clip) { const a = L.acts[this.clip]; a.reset().play(); a.time = t; a.timeScale = this.clip === 'walk' ? Math.max(0.25, this.speed / SPEED) : 1; }
+  }
+  play(name, fade = 0.5) {
+    if (this.clip === name) return;
+    const L = this.lod(), next = L.acts[name];
+    next.reset().play();
+    if (this.clip && fade > 0) L.acts[this.clip].crossFadeTo(next, fade, false); else if (this.clip) L.acts[this.clip].stop();
+    this.clip = name;
+  }
+  pickTarget() {
+    const b = this.home === 'graze' ? GRAZE : this.pen;
+    for (let k = 0; k < 8; k++) {
+      const a = R(0, 6.283), d = this.home === 'graze' ? R(4, 13) : R(1.5, 4);
+      const x = this.root.position.x + Math.sin(a) * d, z = this.root.position.z + Math.cos(a) * d;
+      if (x > b.x0 + 1.5 && x < b.x1 - 1.5 && z > b.z0 + 1.5 && z < b.z1 - 1.5) return new THREE.Vector3(x, 0, z);
+    }
+    return new THREE.Vector3((b.x0 + b.x1) / 2, 0, (b.z0 + b.z1) / 2);
+  }
+  update(dt, camPos) {
+    const pos = this.root.position;
+    this.timer -= dt;
+    if (this.mode !== 'walk' && this.timer <= 0) { this.mode = 'walk'; this.target = this.pickTarget(); this.play('walk'); }
+    let want = 0;
+    if (this.mode === 'walk') {
+      const to = this.target.clone().sub(pos); const dist = to.length();
+      // keep a camel's length from the others
+      for (const o of camels) { if (o === this) continue; const d = pos.distanceTo(o.root.position); if (d < 2.6 && d > 0.01) to.add(pos.clone().sub(o.root.position).multiplyScalar((2.6 - d) * 1.5)); }
+      const desired = Math.atan2(to.x, to.z);
+      let dh = desired - this.root.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh));
+      const turn = THREE.MathUtils.degToRad(38) * dt;
+      this.root.rotation.y += THREE.MathUtils.clamp(dh, -turn, turn);
+      want = dist < 0.6 ? 0 : Math.min(SPEED, dist * 0.6) * (Math.abs(dh) > 1.2 ? 0.35 : 1);
+      if (dist < 0.6) { this.mode = this.home === 'graze' ? 'graze' : 'idle'; this.timer = this.home === 'graze' ? R(7, 16) : R(6, 14); this.play(this.mode); }
+    }
+    // a 500 kg animal speeds up and slows down gradually
+    this.speed += THREE.MathUtils.clamp(want - this.speed, -0.7 * dt, 0.5 * dt);
+    const h = this.root.rotation.y;
+    pos.x += Math.sin(h) * this.speed * dt; pos.z += Math.cos(h) * this.speed * dt;
+    const d = camPos.distanceTo(pos);
+    this.setLod(d < LOD_D[0] ? 0 : d < LOD_D[1] ? 1 : 2);
+    const L = this.lod();
+    if (this.clip === 'walk') L.acts.walk.timeScale = Math.max(0.25, this.speed / SPEED);
+    L.mixer.update(d > 140 ? dt : dt);
+    if (this.clip === 'walk' && this.li < 2 && this.speed > 0.2) {
+      L.feet.forEach((f, i) => {
+        const w = f.getWorldPosition(tmpV);
+        const down = w.y < 0.07 * (this.scale || 1);
+        if (down && !this.contact[i]) footfall(w, h, d < 60);
+        this.contact[i] = down;
+      });
+    }
+  }
+}
+const tmpV = new THREE.Vector3();
+
+const NAMES = ['الصفوة', 'هدلا', 'نجلا', 'الغالية', 'الهيلة', 'المزيونة', 'صيته', 'شهلا', 'عفرا', 'غرسة', 'ريمة', 'وضحى', 'دبلة', 'العنود', 'شيخة', 'مزون', 'الجوهرة', 'سمحة', 'زينة', 'حصة'];
+const AGES = ['ثنية', 'رباع', 'سديس', 'حقة', 'لقية', 'جذعة', 'فاطر'];
+const coatsOut = ['wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'homr', 'homr', 'homr', 'homr', 'majaheem', 'majaheem', 'shaqh', 'shaqh'];
+
+// ------------------------------------------------------------ labels over the world
+const labelLayer = $('labels');
+const labels = [
+  ['شبك النوق · 3', new THREE.Vector3(-12, 2.4, -14)], ['الحيران · 6', new THREE.Vector3(-12, 2.2, 0)],
+  ['مزعل', new THREE.Vector3(4, 2.4, -3)], ['العزل · مزنة', new THREE.Vector3(11.5, 2.2, -5)],
+  ['الماء 62% · 8 أيام', new THREE.Vector3(18.5, 3.2, -21), 'warn'], ['العلف 13 يوم', new THREE.Vector3(24, 3.8, -27)],
+  ['المجلس', new THREE.Vector3(26, 3, -2)],
+].map(([text, p, cls]) => { const el = document.createElement('div'); el.className = 'lbl glass' + (cls ? ' ' + cls : ''); el.textContent = text; labelLayer.appendChild(el); return { el, p }; });
+const proj = new THREE.Vector3();
+function placeLabels() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  for (const l of labels) {
+    proj.copy(l.p).project(camera);
+    const vis = proj.z < 1 && Math.abs(proj.x) < 1.05 && Math.abs(proj.y) < 1.05 && camera.position.distanceTo(l.p) < 140;
+    l.el.style.display = vis ? '' : 'none';
+    if (vis) l.el.style.transform = `translate(${(proj.x * 0.5 + 0.5) * w}px, ${(-proj.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
+  }
+}
+
+// ------------------------------------------------------------ camera, selection, HUD
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.minDistance = 4; controls.maxDistance = 220;
+controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
+let follow = null, followHerd = false;
+function herdCenter() { const c = new THREE.Vector3(); let n = 0; for (const k of camels) if (k.home === 'graze') { c.add(k.root.position); n++; } return c.multiplyScalar(1 / Math.max(1, n)); }
+function view(kind) {
+  const tgt = follow ? follow.root.position.clone() : kind === 'near' ? herdCenter() : new THREE.Vector3(5, 0, 6);
+  const off = kind === 'near' ? new THREE.Vector3(7, 3.2, 9) : new THREE.Vector3(26, 33, 50);
+  controls.target.copy(tgt).setY(1);
+  camera.position.copy(controls.target).add(off);
+  $('cam-drone').setAttribute('aria-pressed', String(kind !== 'near'));
+  $('cam-near').setAttribute('aria-pressed', String(kind === 'near'));
+}
+$('cam-drone').addEventListener('click', () => view('drone'));
+$('cam-near').addEventListener('click', () => view('near'));
+
+const STATE = { graze: 'ترعى', walk: 'تمشي', idle: 'واقفة' };
+let selectedRing = null;
+function showHerd() {
+  follow = null; followHerd = false;
+  $('s1').textContent = `الحلال يسرح · ${camels.filter((c) => c.home === 'graze').length} راس`;
+  $('s2').textContent = 'المرعى رمث وعرفج · زين بعد مطر الوسم';
+  $('s-act').textContent = 'تابع القطيع'; $('s-clear').hidden = true;
+  if (selectedRing) selectedRing.visible = false;
+}
+function showCamel(c) {
+  $('s1').textContent = `${c.name} · ${COATS[c.coat].name} ${c.age}`;
+  $('s2').textContent = `${STATE[c.mode]} · ${c.note}`;
+  $('s-act').textContent = follow === c ? 'وقف المتابعة' : 'تابعها'; $('s-clear').hidden = false;
+  if (!selectedRing) {
+    selectedRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.7, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#e0a93b', transparent: true, opacity: 0.9, depthWrite: false }));
+    selectedRing.renderOrder = 2; scene.add(selectedRing);
+  }
+  selectedRing.visible = true; selected = c;
+}
+let selected = null;
+$('s-act').addEventListener('click', () => {
+  if (selected) { follow = follow === selected ? null : selected; showCamel(selected); if (follow) view('near'); }
+  else { followHerd = !followHerd; $('s-act').textContent = followHerd ? 'وقف المتابعة' : 'تابع القطيع'; if (followHerd) view('near'); }
+});
+$('s-clear').addEventListener('click', () => { selected = null; showHerd(); });
+
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(camels.map((c) => c.hit), false)[0];
+  if (hit) showCamel(hit.object.userData.camel);
+});
+
+// ------------------------------------------------------------ load and run
+Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
+  // the grazing herd, drifting back toward the pens late in the afternoon
+  for (let i = 0; i < 20; i++) {
+    camels.push(new Camel(T, {
+      name: NAMES[i], coat: coatsOut[i], age: AGES[i % AGES.length], home: 'graze',
+      x: R(GRAZE.x0 + 4, GRAZE.x1 - 4), z: R(GRAZE.z0 + 4, GRAZE.z1 - 6), heading: R(0, 6.28),
+      scale: i % 7 === 3 ? 0.86 : R(0.97, 1.03), note: i === 0 ? 'مرضع، حوارها بالشبك' : i % 5 === 1 ? 'عشار' : 'بصحة زينة',
+    }));
+  }
+  const inPen = (spec) => camels.push(new Camel(T, { home: 'pen', ...spec }));
+  const bigPen = { x0: -15, x1: 15, z0: -32, z1: -10 };
+  inPen({ name: 'الهيفاء', coat: 'wodh', age: 'سديس', x: -6, z: -22, heading: 1.2, pen: bigPen, note: 'قريبة ولادة، بقت بالشبك' });
+  inPen({ name: 'ظبية', coat: 'homr', age: 'فاطر', x: 4, z: -18, heading: -2, pen: bigPen, note: 'كبيرة، ترتاح بالظل' });
+  inPen({ name: 'مزعل', coat: 'wodh', age: 'فحل سديس', x: 4, z: -6, heading: 0.6, scale: 1.08, pen: { x0: 0, x1: 8, z0: -10, z1: -2 }, note: 'فحل العزبة · موسم الضراب' });
+  inPen({ name: 'مزنة', coat: 'majaheem', age: 'ثنية', x: 11.5, z: -7, heading: 2.4, pen: { x0: 8, x1: 15, z0: -10, z1: -4 }, note: 'جرب · تحت العلاج باقي 12 يوم' });
+  for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-13, -2), z: R(-8, 0), heading: R(0, 6.28), scale: 0.6, pen: { x0: -15, x1: 0, z0: -10, z1: 2 }, note: 'ينتظر أمه ترجع من المرعى' });
+  $('status').hidden = true;
+  showHerd();
+}).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
+
+view('drone');
+const clock = new THREE.Clock();
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  for (const c of camels) c.update(dt, camera.position);
+  // follow without stealing the viewer's control of the angle
+  const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
+  if (tgt) { const want = tgt.clone().setY(1.1), delta = want.sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }
+  if (selected && selectedRing) { selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z); $('s2').textContent = `${STATE[selected.mode]} · ${selected.note}`; }
+  for (const p of prints) if (p.m.visible) { p.age += dt; p.m.material.opacity = 0.55 * Math.max(0, 1 - p.age / 70); if (p.age > 70) p.m.visible = false; }
+  for (const d of dust) if (d.s.visible) { d.age += dt; const k = d.age / 1.5; d.s.scale.setScalar(0.35 + k * 1.1); d.s.position.y = 0.12 + k * 0.25; d.s.material.opacity = 0.42 * Math.max(0, 1 - k); if (k > 1) d.s.visible = false; }
+  const focus = controls.target;
+  sun.position.copy(focus).addScaledVector(sunDir, 120); sun.target.position.copy(focus);
+  controls.update();
+  placeLabels();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+addEventListener('resize', () => { renderer.setSize(stage.clientWidth, stage.clientHeight); camera.aspect = stage.clientWidth / stage.clientHeight; camera.updateProjectionMatrix(); });
+</script>

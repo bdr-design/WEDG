@@ -135,9 +135,22 @@ def smooth(vals, n=3):
     return out
 
 
+# each foot strike: the body sinks about a centimetre as the leg takes ~500 kg, then recovers
+def strike_dip(t, ph0):
+    ph = (t + ph0) % 1.0
+    if ph >= DUTY:
+        return 0.0
+    tau = ph * CYCLE
+    return 0.010 * (tau / 0.07) * math.exp(1 - tau / 0.07)
+
+
+dip_f = [sum(strike_dip(f / FRAMES, PHASE[l]) for l in PHASE if l.startswith('fore')) for f in range(FRAMES)]
+dip_h = [sum(strike_dip(f / FRAMES, PHASE[l]) for l in PHASE if l.startswith('hind')) for f in range(FRAMES)]
 raw_f, raw_h = need_f[:], need_h[:]
 need_f = [max(a, b) + 0.002 for a, b in zip(smooth(raw_f), raw_f)]
 need_h = [max(a, b) + 0.002 for a, b in zip(smooth(raw_h), raw_h)]
+need_f = [a + d for a, d in zip(need_f, dip_f)]
+need_h = [a + d for a, d in zip(need_h, dip_h)]
 shift = smooth(shift, 4)
 
 deform = [p for p in pb if p.bone.use_deform]
@@ -148,6 +161,7 @@ for f in range(FRAMES):
     for p in pb:
         p.rotation_euler = (0, 0, 0)
         p.location = (0, 0, 0)
+        p.scale = (1, 1, 1)
     dh, df = need_h[f], need_f[f]
     pitch = math.asin(max(-0.2, min(0.2, (df - dh) / HIP_TO_SHOULDER)))
     hips = pb['hips']
@@ -196,6 +210,10 @@ for f in range(FRAMES):
         if lift == 0:
             align(c['pastern'], r['dir_pastern'])
             align(c['foot'], r['dir_foot'])
+            ph = ((t + PHASE[leg]) % 1.0) / DUTY
+            load = min(1.0, ph / 0.12, (1 - ph) / 0.12)
+            load = load * load * (3 - 2 * load)
+            pb[c['foot']].scale = (1 + 0.13 * load, 1 + 0.03 * load, 1 - 0.10 * load)
         else:
             flex = math.radians(38 if kind == 'fore' else 28) * math.sin(math.pi * k)
             align(c['pastern'], r['dir_pastern'])
@@ -208,7 +226,7 @@ for f in range(FRAMES):
         e = p.rotation_euler.copy()
         e.make_compatible(prev[p.name])
         prev[p.name] = e
-        row[p.name] = (tuple(e), tuple(p.location) if p.name == 'hips' else None)
+        row[p.name] = (tuple(e), tuple(p.location) if p.name == 'hips' else None, tuple(p.scale) if 'foot' in p.name else None)
     baked.append(row)
     feet_world.append(fw)
 
@@ -253,9 +271,13 @@ for f, row in enumerate(baked + [baked[0]]):
     for p in pb:
         p.rotation_euler = (0, 0, 0)
         p.location = (0, 0, 0)
-    for name, (e, loc) in row.items():
+        p.scale = (1, 1, 1)
+    for name, (e, loc, scl) in row.items():
         pb[name].rotation_euler = e
         pb[name].keyframe_insert('rotation_euler', frame=f + 1)
+        if scl is not None:
+            pb[name].scale = scl
+            pb[name].keyframe_insert('scale', frame=f + 1)
         if loc is not None:
             pb[name].location = loc
             pb[name].keyframe_insert('location', frame=f + 1)

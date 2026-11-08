@@ -44,6 +44,8 @@ photo.
     - 0.85 m/s, 1.3 s per stride, 1.1 m stride.
     - Measured: planted pads slip under 1 mm per frame and stay within
       2 mm of the ground. The body bobs about 5 cm.
+    - Weight: the body sinks about 1 cm as each foot takes the load, and the
+      pad spreads 13% wider and 10% flatter while loaded.
   - `graze` (4 s): the muzzle reaches the ground about 0.75 m in front of
     the forefeet.
 - **Budget:** 40k triangles, 37 bones, 2K textures, 2.1 MB GLB.

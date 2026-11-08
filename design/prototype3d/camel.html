@@ -1,0 +1,251 @@
+<title>الوضحاء ثلاثية الأبعاد</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+  /* One screen: the 3D desert fills it; a thin glass layer sits on the edges only. */
+  :root {
+    --ground: #b98a5e;
+    --glass: rgba(24, 17, 12, 0.52);
+    --glass-line: rgba(255, 255, 255, 0.16);
+    --ink: #fffaf2;
+    --ink-soft: rgba(255, 250, 242, 0.8);
+    --saffron: #e0a93b;
+    --on-saffron: #1b1410;
+    --font-ui: 'IBM Plex Sans Arabic', 'Geeza Pro', 'Segoe UI', Tahoma, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .glass {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid var(--glass-line);
+  }
+  .top {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: max(16px, env(safe-area-inset-right, 0px));
+    left: max(16px, env(safe-area-inset-left, 0px));
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+    pointer-events: none;
+  }
+  .tag { padding: 8px 14px; border-radius: 18px; pointer-events: auto; }
+  .tag b { display: block; font-size: 15px; font-weight: 700; }
+  .tag span { display: block; font-size: 12px; color: var(--ink-soft); }
+  .views { display: flex; gap: 6px; pointer-events: auto; }
+  .views button, .clips button {
+    font: inherit; color: var(--ink); cursor: pointer;
+    min-height: 44px; padding: 0 14px; border-radius: 22px;
+  }
+  .views button { font-size: 12px; font-weight: 600; }
+  .bar {
+    position: fixed;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    right: max(16px, env(safe-area-inset-right, 0px));
+    left: max(16px, env(safe-area-inset-left, 0px));
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px; border-radius: 26px;
+    max-width: 520px; margin-inline: auto;
+  }
+  .clips { display: flex; gap: 6px; flex: 1; }
+  .clips button { flex: 1; font-size: 14px; font-weight: 600; background: transparent; border: 1px solid transparent; }
+  .clips button[aria-pressed="true"] { background: var(--saffron); color: var(--on-saffron); font-weight: 700; }
+  button:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
+  .status { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  .status[hidden] { display: none; }
+  .status p { margin: 0; padding: 10px 16px; border-radius: 14px; font-size: 14px; }
+  @media (max-width: 380px) { .tag span { display: none; } }
+</style>
+
+<div id="stage" aria-label="ناقة وضحاء ثلاثية الأبعاد في صحراء نجد. اسحب للف الكاميرا، وقرّب بإصبعين."></div>
+
+<div class="top" dir="rtl">
+  <div class="tag glass">
+    <b>الوضحاء</b>
+    <span>نموذج تجريبي منحوت بالكود من صورتك</span>
+  </div>
+  <div class="views">
+    <button id="view-near" class="glass" type="button">قريب</button>
+    <button id="view-drone" class="glass" type="button">درون</button>
+  </div>
+</div>
+
+<div class="bar glass" dir="rtl">
+  <div class="clips" role="group" aria-label="حركة الناقة">
+    <button id="clip-walk" type="button" data-clip="walk" aria-pressed="true">تمشي</button>
+    <button id="clip-graze" type="button" data-clip="graze" aria-pressed="false">ترعى</button>
+    <button id="clip-idle" type="button" data-clip="idle" aria-pressed="false">واقفة</button>
+  </div>
+</div>
+
+<div class="status" id="status" dir="rtl"><p class="glass">تحميل الناقة…</p></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+
+const stage = document.getElementById('stage');
+const statusEl = document.getElementById('status');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(stage.clientWidth, stage.clientHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.AgXToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const haze = new THREE.Color('#d8c2a2');
+scene.fog = new THREE.FogExp2(haze, 0.009);
+
+const camera = new THREE.PerspectiveCamera(42, stage.clientWidth / stage.clientHeight, 0.1, 1500);
+camera.position.set(4.6, 2.0, 5.2);
+
+// Late-afternoon sun over Najd: low, warm, from the west.
+const elevation = 26, azimuth = 235;
+const sunDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - elevation), THREE.MathUtils.degToRad(azimuth));
+const sky = new Sky();
+sky.scale.setScalar(1000);
+const u = sky.material.uniforms;
+u.turbidity.value = 6.5; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.008; u.mieDirectionalG.value = 0.82;
+u.sunPosition.value.copy(sunDir);
+scene.add(sky);
+
+// Image-based light from the same sky, so the coat picks up sky blue and sand bounce.
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envScene = new THREE.Scene();
+const envSky = new Sky(); envSky.scale.setScalar(1000);
+envSky.material.uniforms.turbidity.value = 6.5;
+envSky.material.uniforms.rayleigh.value = 1.6;
+envSky.material.uniforms.mieCoefficient.value = 0.008;
+envSky.material.uniforms.sunPosition.value.copy(sunDir);
+envScene.add(envSky);
+const groundBounce = new THREE.Mesh(new THREE.SphereGeometry(500, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: '#9c7148', side: THREE.BackSide }));
+envScene.add(groundBounce);
+scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+scene.environmentIntensity = 0.32;
+
+const sun = new THREE.DirectionalLight('#ffdcae', 4.6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+const sc = sun.shadow.camera; sc.left = -6; sc.right = 6; sc.top = 6; sc.bottom = -6; sc.near = 1; sc.far = 80;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+
+// Najd ground: the owner's sand photo, one tile per 22 m.
+const sand = new THREE.TextureLoader().load('sand.jpg');
+sand.colorSpace = THREE.SRGBColorSpace;
+sand.wrapS = sand.wrapT = THREE.RepeatWrapping;
+sand.repeat.set(1600 / 22, 1600 / 22);
+sand.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600),
+  new THREE.MeshStandardMaterial({ map: sand, roughness: 1, metalness: 0 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 2.2;
+controls.maxDistance = 45;
+controls.maxPolarAngle = THREE.MathUtils.degToRad(86);
+controls.target.set(0, 1.1, 0);
+
+const holder = new THREE.Group();
+scene.add(holder);
+let mixer = null, actions = {}, current = null, mode = 'walk';
+const walkSpeed = 0.85;     // metres per second: the clip plants each foot and moves it back at exactly this speed
+const radius = 6;           // the camel walks a wide circle on the sand
+let angle = 0;
+
+fetch('camel.json').then((r) => r.json()).then(({ glb }) => {
+  const bin = Uint8Array.from(atob(glb), (c) => c.charCodeAt(0));
+  return new GLTFLoader().parseAsync(bin.buffer, '');
+}).then((gltf) => {
+  const camel = gltf.scene;
+  // Blender's camel faces +X; turn it to face the direction of travel (+Z of the holder).
+  camel.rotation.y = -Math.PI / 2;
+  camel.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  holder.add(camel);
+  mixer = new THREE.AnimationMixer(camel);
+  for (const clip of gltf.animations) actions[clip.name] = mixer.clipAction(clip);
+  play('walk', 0);
+  statusEl.hidden = true;
+}).catch(() => {
+  statusEl.querySelector('p').textContent = 'ما قدرت أحمّل الناقة. حدّث الصفحة.';
+});
+
+function play(name, fade = 0.45) {
+  const next = actions[name];
+  if (!next) return;
+  next.reset().setEffectiveWeight(1).play();
+  if (current && current !== next) current.crossFadeTo(next, fade, false);
+  current = next;
+  mode = name;
+  document.querySelectorAll('.clips button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.clip === name)));
+}
+document.querySelectorAll('.clips button').forEach((b) => b.addEventListener('click', () => play(b.dataset.clip)));
+
+const camOffset = new THREE.Vector3();
+function frameNear() { camOffset.set(6.2, 1.5, 7.6); snap(); }
+function frameDrone() { camOffset.set(-7, 14, 10); snap(); }
+function snap() {
+  controls.target.copy(holder.position).add(new THREE.Vector3(0, 1.0, 0));
+  camera.position.copy(controls.target).add(camOffset);
+}
+document.getElementById('view-near').addEventListener('click', frameNear);
+document.getElementById('view-drone').addEventListener('click', frameDrone);
+
+const clock = new THREE.Clock();
+const prev = new THREE.Vector3();
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (mixer) mixer.update(dt);
+  prev.copy(holder.position);
+  if (mode === 'walk' && !reduceMotion) {
+    angle += (walkSpeed / radius) * dt;
+    holder.position.set(Math.cos(angle) * radius - radius, 0, Math.sin(angle) * radius);
+    holder.rotation.y = -angle;   // tangent to the circle
+  }
+  // the camera follows the camel without taking control away from the viewer
+  const moved = holder.position.clone().sub(prev);
+  camera.position.add(moved);
+  controls.target.add(moved);
+  sun.position.copy(holder.position).addScaledVector(sunDir, 30);
+  sun.target.position.copy(holder.position);
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+frameNear();
+tick();
+
+addEventListener('resize', () => {
+  renderer.setSize(stage.clientWidth, stage.clientHeight);
+  camera.aspect = stage.clientWidth / stage.clientHeight;
+  camera.updateProjectionMatrix();
+});
+</script>
