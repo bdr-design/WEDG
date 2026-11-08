@@ -348,6 +348,7 @@ class BreedingSystem implements DailySystem {
       env: Genetics.randomEnv(rng),
       condition: q2(clampDouble(dam.condition - 5, 40, 90)),
       acquiredOn: sim.today,
+      lastPlayerOwner: sim.isPlayer(dam.ownerId) ? dam.ownerId : null,
       sire: preg.sire,
       dam: dam.asParent,
       crossbred: crossbred,
@@ -473,15 +474,20 @@ class MarketSystem implements DailySystem {
     // Forget other owners' camels once they have left the world, unless a
     // player's camel descends from them. Players' own camels are kept.
     {
-      final parents = <CamelId>{
+      final keep = <CamelId>{
         for (final x in w.camels.values)
-          if (sim.isPlayer(x.ownerId)) ...[?x.sire?.id, ?x.dam?.id],
+          if (x.lastPlayerOwner != null) ...[
+            ?x.sire?.id,
+            ?x.dam?.id,
+            ?x.pregnancy?.sire.id,
+          ],
       };
       w.camels.removeWhere(
         (_, c) =>
             c.status != CamelStatus.alive &&
+            c.lastPlayerOwner == null &&
             !sim.isPlayer(c.ownerId) &&
-            !parents.contains(c.id),
+            !keep.contains(c.id),
       );
     }
   }

@@ -91,6 +91,7 @@ class Game {
       );
       c
         ..acquiredOn = start - 200
+        ..lastPlayerOwner = playerId
         ..purchasePrice = Valuation.value(c, start).value;
     }
     for (var i = 0; i < 34; i++) {

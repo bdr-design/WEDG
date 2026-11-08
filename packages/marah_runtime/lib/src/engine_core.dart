@@ -35,7 +35,7 @@ class EngineCore {
   }) : _now = now ?? DateTime.now,
        _yield = yielder ?? _defaultYield;
 
-  final SaveStore store;
+  final GameStore store;
 
   /// Pushes snapshots, progress and status to the client.
   final void Function(Push) emit;
@@ -58,6 +58,7 @@ class EngineCore {
 
   Game? _game;
   int _revision = 0;
+  PlayerSnapshot? _last;
   Timer? _autosave;
   DateTime? _dirtySince;
   Timer? _nextDay;
@@ -172,7 +173,13 @@ class EngineCore {
   Future<Result> dispatch(Command c) => _serial(() async {
     final g = _game;
     if (g == null) return const Err(DomainError(ErrorCode.notFound));
-    final r = g.dispatch(c);
+    final Result r;
+    try {
+      r = g.dispatch(c);
+    } on Object catch (e) {
+      await _recover(e);
+      return const Err(DomainError(ErrorCode.internalError));
+    }
     if (r.events.isNotEmpty) {
       _publish();
       _scheduleAutosave();
@@ -190,7 +197,26 @@ class EngineCore {
     return g == null ? null : Presenter(g.state, g.me.id).festivalDetail(id);
   });
 
+  Future<HerdPage?> herdPage(HerdQuery q) => _serial(() async {
+    final g = _game;
+    return g == null ? null : Presenter(g.state, g.me.id).herdPage(q);
+  });
+
   Future<void> catchUp() => _serial(_catchUpNow);
+
+  /// A bug left the in-memory game half-changed: throw it away and reload
+  /// the last save, which is always a consistent state.
+  Future<void> _recover(Object error) async {
+    _cancelTimers();
+    _game = null;
+    emit(StateRecovered('$error'));
+    final r = await store.open();
+    if (r is Opened) {
+      _game = Game(r.state);
+      _publish();
+      _scheduleNextDay();
+    }
+  }
 
   // ------------------------------------------------------------- internals
 
@@ -223,7 +249,12 @@ class EngineCore {
         final watch = Stopwatch()..start();
         var done = 0;
         while (g.today < target) {
-          g.advanceDays(1);
+          try {
+            g.advanceDays(1);
+          } on Object catch (e) {
+            await _recover(e);
+            return;
+          }
           done++;
           if (watch.elapsed >= sliceBudget) {
             if (total > 14) emit(CatchUpProgress(done, total));
@@ -277,7 +308,9 @@ class EngineCore {
     final g = _game;
     if (g == null) return;
     _revision++;
-    emit(SnapshotPush(Presenter(g.state, g.me.id).snapshot(_revision)));
+    final s = Presenter(g.state, g.me.id).snapshot(_revision, previous: _last);
+    _last = s;
+    emit(SnapshotPush(s));
   }
 
   void _scheduleAutosave() {

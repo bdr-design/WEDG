@@ -36,6 +36,9 @@ enum ErrorCode {
   listedForSale,
   roundOwnerLimit,
   notEntered,
+
+  /// The engine hit a bug; the game was restored from the last save.
+  internalError,
 }
 
 class DomainError {

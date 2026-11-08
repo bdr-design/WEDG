@@ -160,6 +160,7 @@ class Camel {
     this.dam,
     this.crossbred = false,
     this.purchasePrice = 0,
+    this.lastPlayerOwner,
     List<Placing>? placings,
   }) : placings = placings ?? [];
 
@@ -197,6 +198,34 @@ class Camel {
   final ParentRef? dam;
   final bool crossbred;
   int purchasePrice;
+
+  /// The last player who owned this camel. Set when a player buys or
+  /// breeds it and kept after it is sold, so its record is never dropped.
+  OwnerId? lastPlayerOwner;
+
+  /// Everything that can change after the camel is created, in a fixed
+  /// order. The store compares this with what it last wrote and rewrites
+  /// the row only when something differs (exact, no hashing).
+  List<Object?> mutableFields() => [
+    name,
+    ownerId.value,
+    condition,
+    acquiredOn.value,
+    status.index,
+    endedOn?.value,
+    health.index,
+    illness?.index,
+    sickSince?.value,
+    recoversOn?.value,
+    pregnancy?.matedOn.value,
+    pregnancy?.confirmed,
+    lastCalvedOn?.value,
+    calvings,
+    lastServiceOn?.value,
+    purchasePrice,
+    placings.length,
+    lastPlayerOwner?.value,
+  ];
   final List<Placing> placings;
 
   bool get isAlive => status == CamelStatus.alive;
@@ -236,6 +265,7 @@ class Camel {
     'dam': dam?.toJson(),
     'crossbred': crossbred,
     'purchasePrice': purchasePrice,
+    'lastPlayerOwner': lastPlayerOwner?.value,
     'placings': [for (final p in placings) p.toJson()],
   };
 
@@ -275,6 +305,9 @@ class Camel {
           : ParentRef.fromJson(j['dam']! as Map<String, Object?>),
       crossbred: j['crossbred']! as bool,
       purchasePrice: j['purchasePrice']! as int,
+      lastPlayerOwner: j['lastPlayerOwner'] == null
+          ? null
+          : OwnerId(j['lastPlayerOwner']! as String),
       placings: [
         for (final p in j['placings']! as List<Object?>)
           Placing.fromJson(p! as Map<String, Object?>),

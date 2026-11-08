@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:marah_data/marah_data.dart';
 import 'package:marah_domain/marah_domain.dart';
+import 'package:marah_domain/persistence.dart' show Pregnancy;
 import 'package:marah_runtime/io.dart';
 import 'package:marah_runtime/marah_runtime.dart';
 import 'package:test/test.dart';
@@ -53,7 +54,7 @@ void main() {
       expect(snapshots(), isNotEmpty);
       final s = snapshots().last;
       expect(s.playerName, 'بدر');
-      expect(s.herd, hasLength(3));
+      expect(s.herd.total, 3);
       expect(s.market, isNotEmpty);
       expect(backend.data['marah.save'], isNotNull);
       await e.close();
@@ -241,7 +242,7 @@ void main() {
       final e = core();
       await e.newGame(params);
       final s = snapshots().last;
-      final camel = await e.camelDetail(s.herd.first.id);
+      final camel = await e.camelDetail(s.herdTop.first.id);
       expect(camel!.isMine, isTrue);
       expect(camel.looks, hasLength(Trait.values.length));
       expect(camel.canSell, isNull);
@@ -263,7 +264,7 @@ void main() {
         final late = await client.snapshots.first.timeout(
           const Duration(seconds: 2),
         );
-        expect(late.herd, hasLength(3));
+        expect(late.herd.total, 3);
         expect(client.latest, same(late));
         await client.dispose();
       },
@@ -332,23 +333,23 @@ void main() {
       final first = client.snapshots.first;
       await client.newGame(params);
       final snap = await first.timeout(const Duration(seconds: 10));
-      expect(snap.herd, hasLength(3));
+      expect(snap.herd.total, 3);
 
       // Snapshots replay the latest to new listeners: wait for a newer one.
       final next = client.snapshots.firstWhere(
         (s) => s.revision > snap.revision,
       );
-      final camel = snap.herd.first;
+      final camel = snap.herdTop.first;
       final r = await client.dispatch(
         RenameCamel(snap.playerId, camel.id, 'الغالية'),
       );
       expect(r.ok, isTrue, reason: '$r');
       final renamed = await next.timeout(const Duration(seconds: 10));
-      expect(renamed.herd.any((c) => c.name == 'الغالية'), isTrue);
+      expect(renamed.herdTop.any((c) => c.name == 'الغالية'), isTrue);
 
       await client.pause();
       await client.dispose();
-      expect(File('${dir.path}/marah.save').existsSync(), isTrue);
+      expect(File('${dir.path}/marah.db').existsSync(), isTrue);
       expect(dir.listSync().where((f) => f.path.endsWith('.tmp')), isEmpty);
 
       final again = await IsolateEngineClient.spawn(saveDirectory: dir.path);
@@ -381,17 +382,75 @@ void main() {
     });
   });
 
-  group('FileBackend', () {
-    test('writes atomically and leaves no temp file', () async {
-      final dir = await Directory.systemTemp.createTemp('marah_fb');
-      final fb = FileBackend(dir.path);
-      await fb.write('k', 'one');
-      await fb.write('k', 'two');
-      expect(await fb.read('k'), 'two');
-      expect(File('${dir.path}/k.tmp').existsSync(), isFalse);
-      await fb.delete('k');
-      expect(await fb.read('k'), isNull);
-      await dir.delete(recursive: true);
+  group('Paging and sections', () {
+    test('herd pages are filtered, sorted and complete', () async {
+      final e = EngineCore(store: SaveStore(MemoryBackend()), emit: (_) {});
+      await e.newGame(params);
+      final all = await e.herdPage(const HerdQuery(limit: 2));
+      expect(all!.total, 3);
+      expect(all.cards, hasLength(2));
+      expect(
+        all.cards.first.quality,
+        greaterThanOrEqualTo(all.cards[1].quality),
+      );
+      final rest = await e.herdPage(const HerdQuery(offset: 2, limit: 2));
+      expect(rest!.cards, hasLength(1));
+      final males = await e.herdPage(const HerdQuery(filter: HerdFilter.males));
+      expect(males!.total, 0);
+      await e.close();
+    });
+
+    test('only the sections that changed get a new revision', () async {
+      final pushes = <Push>[];
+      final e = EngineCore(store: SaveStore(MemoryBackend()), emit: pushes.add);
+      await e.newGame(params);
+      PlayerSnapshot last() => pushes.whereType<SnapshotPush>().last.snapshot;
+      final before = last().sections;
+      final me = last().playerId;
+      await e.dispatch(RenameCamel(me, last().herdTop.first.id, 'الغالية'));
+      final after = last().sections;
+      expect(after.herd, before.herd + 1);
+      expect(after.market, before.market);
+      expect(after.festivals, before.festivals);
+      expect(after.studs, before.studs);
+      await e.close();
+    });
+  });
+
+  group('Recovery', () {
+    test('a bug during a day restores the last save instead of saving a '
+        'half-changed game', () async {
+      final pushes = <Push>[];
+      final backend = MemoryBackend();
+      final now = FakeNow();
+      final e = EngineCore(
+        store: SaveStore(backend),
+        emit: pushes.add,
+        now: now.call,
+      );
+      await e.newGame(params);
+      await e.flush();
+      final saved = backend.data['marah.save'];
+      // Corrupt the in-memory game: a pregnancy whose sire has no genes.
+      final dam = e.game!.state.world.camels.values.firstWhere(
+        (c) => c.ownerId == e.game!.me.id,
+      );
+      dam.pregnancy = Pregnancy(
+        sire: dam.sire!,
+        sireGenes: const {},
+        matedOn: e.game!.today,
+        checkOn: e.game!.today,
+        dueOn: e.game!.today + 1,
+        conceived: true,
+        confirmed: true,
+      );
+      now.advance(const Duration(days: 1));
+      await e.resume();
+      expect(pushes.whereType<StateRecovered>(), isNotEmpty);
+      expect(e.game, isNotNull);
+      expect(e.game!.state.world.camels[dam.id]!.pregnancy, isNull);
+      expect(backend.data['marah.save'], saved);
+      await e.close();
     });
   });
 }

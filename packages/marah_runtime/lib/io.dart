@@ -2,5 +2,4 @@
 /// file storage. Not available on the web.
 library;
 
-export 'src/file_backend.dart';
 export 'src/isolate_client.dart';

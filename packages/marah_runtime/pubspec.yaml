@@ -9,6 +9,7 @@ environment:
 dependencies:
   marah_data: any
   marah_domain: any
+  marah_store: any
 
 dev_dependencies:
   test: ^1.25.0

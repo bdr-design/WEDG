@@ -99,7 +99,9 @@ class Presenter {
     );
   }
 
-  PlayerSnapshot snapshot(int revision) {
+  /// Builds the snapshot. Each section's revision moves only when its
+  /// content differs from [previous], so screens rebuild only what changed.
+  PlayerSnapshot snapshot(int revision, {PlayerSnapshot? previous}) {
     final v = view;
     final me = v.me;
     final mine = state.inboxOf(viewer);
@@ -110,6 +112,71 @@ class Presenter {
       ),
       ...public.skip(public.length > 10 ? public.length - 10 : 0),
     ]..sort((a, b) => a.day.value - b.day.value);
+
+    final herdViews = v.herd;
+    final farm = FarmSummary(
+      name: me.farm.name,
+      region: me.farm.region,
+      capacity: me.farm.capacity,
+      shepherds: me.farm.shepherds,
+      shepherdsNeeded: v.shepherdsNeeded,
+      feedPlan: me.farm.feedPlan,
+      dailyFeed: v.dailyFeed.value,
+      monthlyWages: v.monthlyWages.value,
+      expansionCost: v.expansionCost.value,
+    );
+    final summary = _summary(herdViews, v);
+    final top = _sorted(
+      herdViews,
+      HerdSort.quality,
+    ).take(topCount).map((c) => card(c, v)).toList(growable: false);
+    final market = [for (final l in v.market) listing(l, v)];
+    final myListings = [for (final l in v.myListings) listing(l, v)];
+    final studs = [
+      for (final st in v.studs)
+        StudCard(
+          id: st.stud.id,
+          bull: card(st.bull, v),
+          ownerName: st.ownerName,
+          region: st.stud.region,
+          fee: st.stud.fee.value,
+          transport: st.transport.value,
+          until: st.stud.until,
+        ),
+    ];
+    final festivals = [for (final f in v.festivals) festival(f)];
+
+    final p = previous;
+    int bump(int? old, bool same) => old == null ? 1 : (same ? old : old + 1);
+    final sections = SectionRevisions(
+      farm: bump(
+        p?.sections.farm,
+        p != null &&
+            p.farm == farm &&
+            p.cash == me.cash.value &&
+            p.today == v.today,
+      ),
+      herd: bump(
+        p?.sections.herd,
+        p != null && p.herd == summary && _same(p.herdTop, top),
+      ),
+      market: bump(
+        p?.sections.market,
+        p != null && _same(p.market, market) && _same(p.myListings, myListings),
+      ),
+      studs: bump(p?.sections.studs, p != null && _same(p.studs, studs)),
+      festivals: bump(
+        p?.sections.festivals,
+        p != null && _same(p.festivals, festivals),
+      ),
+      news: bump(
+        p?.sections.news,
+        p != null &&
+            p.recentEvents.length == events.length &&
+            (events.isEmpty || identical(p.recentEvents.last, events.last)),
+      ),
+    );
+
     return PlayerSnapshot(
       revision: revision,
       today: v.today,
@@ -117,36 +184,117 @@ class Presenter {
       playerName: me.name,
       cash: me.cash.value,
       herdValue: v.herdValue.value,
-      farm: FarmSummary(
-        name: me.farm.name,
-        region: me.farm.region,
-        capacity: me.farm.capacity,
-        shepherds: me.farm.shepherds,
-        shepherdsNeeded: v.shepherdsNeeded,
-        feedPlan: me.farm.feedPlan,
-        dailyFeed: v.dailyFeed.value,
-        monthlyWages: v.monthlyWages.value,
-        expansionCost: v.expansionCost.value,
-      ),
-      herd: [for (final c in v.herd) card(c, v)],
-      market: [for (final l in v.market) listing(l, v)],
-      myListings: [for (final l in v.myListings) listing(l, v)],
-      studs: [
-        for (final s in v.studs)
-          StudCard(
-            id: s.stud.id,
-            bull: card(s.bull, v),
-            ownerName: s.ownerName,
-            region: s.stud.region,
-            fee: s.stud.fee.value,
-            transport: s.transport.value,
-            until: s.stud.until,
-          ),
-      ],
-      festivals: [for (final f in v.festivals) festival(f)],
+      farm: farm,
+      herd: summary,
+      herdTop: top,
+      sections: sections,
+      market: market,
+      myListings: myListings,
+      studs: studs,
+      festivals: festivals,
       openOffers: v.openOffers,
       breedingSeason: v.breedingSeason,
       recentEvents: List.unmodifiable(events),
+    );
+  }
+
+  /// How many of the best camels the snapshot carries.
+  static const topCount = 12;
+
+  static bool _same<T>(List<T> a, List<T> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  HerdSummary _summary(List<CamelView> herd, GameView v) {
+    var females = 0, males = 0, young = 0, pregnant = 0, waiting = 0;
+    var sick = 0, listed = 0, entered = 0;
+    final byCategory = <ColorCategory, int>{};
+    final byAge = <AgeClass, int>{};
+    final listedIds = {for (final l in v.myListings) l.camel.id};
+    final enteredIds = {
+      for (final f in state.world.festivals.values)
+        if (!f.done)
+          for (final r in f.rounds)
+            for (final e in r.entries)
+              if (e.ownerId == viewer) e.camelId,
+    };
+    for (final c in herd) {
+      if (c.sex == Sex.female) {
+        females++;
+      } else {
+        males++;
+      }
+      if (c.ageDays < 730) young++;
+      if (c.pregnant) pregnant++;
+      if (c.awaitingCheck) waiting++;
+      if (c.health == HealthStatus.sick) sick++;
+      if (listedIds.contains(c.id)) listed++;
+      if (enteredIds.contains(c.id)) entered++;
+      byCategory[c.category] = (byCategory[c.category] ?? 0) + 1;
+      byAge[c.ageClass] = (byAge[c.ageClass] ?? 0) + 1;
+    }
+    return HerdSummary(
+      total: herd.length,
+      females: females,
+      males: males,
+      young: young,
+      pregnant: pregnant,
+      awaitingCheck: waiting,
+      sick: sick,
+      listed: listed,
+      entered: entered,
+      byCategory: byCategory,
+      byAge: byAge,
+    );
+  }
+
+  static List<CamelView> _sorted(List<CamelView> herd, HerdSort sort) {
+    final keyed =
+        switch (sort) {
+          HerdSort.quality => [for (final c in herd) (c, -c.quality)],
+          HerdSort.value => [
+            for (final c in herd) (c, -c.estimate.$2.value.toDouble()),
+          ],
+          HerdSort.oldest => [for (final c in herd) (c, -c.ageDays.toDouble())],
+          HerdSort.youngest => [
+            for (final c in herd) (c, c.ageDays.toDouble()),
+          ],
+        }..sort((a, b) {
+          final k = a.$2.compareTo(b.$2);
+          return k != 0 ? k : a.$1.id.value.compareTo(b.$1.id.value);
+        });
+    return [for (final (c, _) in keyed) c];
+  }
+
+  /// One page of the herd, filtered and sorted.
+  HerdPage herdPage(HerdQuery q) {
+    final v = view;
+    final listedIds = {for (final l in v.myListings) l.camel.id};
+    final matches = [
+      for (final c in v.herd)
+        if ((q.category == null || c.category == q.category) &&
+            switch (q.filter) {
+              HerdFilter.all => true,
+              HerdFilter.females => c.sex == Sex.female && c.ageDays >= 730,
+              HerdFilter.males => c.sex == Sex.male && c.ageDays >= 730,
+              HerdFilter.young => c.ageDays < 730,
+              HerdFilter.pregnant => c.pregnant,
+              HerdFilter.sick => c.health != HealthStatus.healthy,
+              HerdFilter.listed => listedIds.contains(c.id),
+            })
+          c,
+    ];
+    final sorted = _sorted(matches, q.sort);
+    final start = q.offset.clamp(0, sorted.length);
+    final end = (start + q.limit).clamp(start, sorted.length);
+    return HerdPage(
+      cards: [for (final c in sorted.sublist(start, end)) card(c, v)],
+      total: sorted.length,
+      offset: start,
     );
   }
 

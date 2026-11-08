@@ -1,12 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:isolate';
 
-import 'package:marah_data/marah_data.dart';
 import 'package:marah_domain/marah_domain.dart';
+import 'package:marah_store/marah_store.dart';
 
 import 'engine_client.dart';
 import 'engine_core.dart';
-import 'file_backend.dart';
 import 'protocol.dart';
 import 'view_models.dart';
 
@@ -117,6 +117,9 @@ class IsolateEngineClient with PushStreams implements EngineClient {
   Future<FestivalDetail?> festivalDetail(FestivalId id) =>
       _ask((rid) => FestivalDetailReq(rid, id));
   @override
+  Future<HerdPage?> herdPage(HerdQuery query) =>
+      _ask((rid) => HerdPageReq(rid, query));
+  @override
   Future<void> pause() => _ask(PauseReq.new);
   @override
   Future<void> resume() => _ask(ResumeReq.new);
@@ -154,7 +157,7 @@ Future<void> _workerMain((SendPort, String) args) async {
   toUi.send(inbox.sendPort);
 
   final core = EngineCore(
-    store: SaveStore(FileBackend(saveDirectory)),
+    store: SqliteGameStore('$saveDirectory${Platform.pathSeparator}marah.db'),
     emit: (p) => toUi.send(Pushed(p)),
   );
 
@@ -190,6 +193,8 @@ Future<Object?> _handle(EngineCore core, Request message) async {
       return core.camelDetail(camel);
     case FestivalDetailReq(:final festival):
       return core.festivalDetail(festival);
+    case HerdPageReq(:final query):
+      return core.herdPage(query);
     case PauseReq():
       await core.pause();
     case ResumeReq():

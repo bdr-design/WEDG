@@ -30,6 +30,9 @@ abstract interface class EngineClient {
   Future<CamelDetail?> camelDetail(CamelId id);
   Future<FestivalDetail?> festivalDetail(FestivalId id);
 
+  /// One page of the player's herd, filtered and sorted in the engine.
+  Future<HerdPage?> herdPage(HerdQuery query);
+
   /// Call when the app is hidden: saves and stops timers.
   Future<void> pause();
 
@@ -74,7 +77,7 @@ mixin PushStreams {
         if (!_snapshots.isClosed) _snapshots.add(snapshot);
       case CatchUpProgress():
         if (!_progress.isClosed) _progress.add(p);
-      case SaveStatus() || CatchUpCapped() || EngineDown():
+      case SaveStatus() || CatchUpCapped() || EngineDown() || StateRecovered():
         if (!_notices.isClosed) _notices.add(p);
     }
   }
@@ -115,6 +118,8 @@ class InlineEngineClient with PushStreams implements EngineClient {
   @override
   Future<FestivalDetail?> festivalDetail(FestivalId id) =>
       core.festivalDetail(id);
+  @override
+  Future<HerdPage?> herdPage(HerdQuery query) => core.herdPage(query);
   @override
   Future<void> pause() => core.pause();
   @override

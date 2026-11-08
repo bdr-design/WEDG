@@ -73,6 +73,13 @@ final class CatchUpCapped extends Push {
   final int skippedDays;
 }
 
+/// A command or day failed because of a bug. The engine threw away the
+/// half-applied change and reloaded the last save; [reason] is for logs.
+final class StateRecovered extends Push {
+  const StateRecovered(this.reason);
+  final String reason;
+}
+
 /// The engine stopped (the worker died). Pending and later calls fail with
 /// `EngineStopped`; the app can start a new engine from the last save.
 final class EngineDown extends Push {
@@ -114,6 +121,11 @@ final class DispatchReq extends Request {
 final class CamelDetailReq extends Request {
   const CamelDetailReq(super.id, this.camel);
   final CamelId camel;
+}
+
+final class HerdPageReq extends Request {
+  const HerdPageReq(super.id, this.query);
+  final HerdQuery query;
 }
 
 final class FestivalDetailReq extends Request {

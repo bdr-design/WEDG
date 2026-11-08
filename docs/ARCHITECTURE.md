@@ -9,13 +9,14 @@ online play (shared market, live auctions, tournaments) without a rewrite.
 ```
 apps/marah/              Flutter app: screens, picks the engine per platform, lifecycle
 packages/marah_runtime/  runs the engine off the UI thread; view models for screens
-packages/marah_data/     save format: versioned envelope, migrations, safe store
+packages/marah_store/    SQLite save on devices: incremental, transactional, backups
+packages/marah_data/     save interface, JSON envelope and migrations (tests, tools)
 packages/marah_domain/   rules and simulation, pure Dart (no Flutter)
 docs/                    this file, ADRs, game design, realism sources
 tool/                    benchmarks and CI helpers
 ```
 
-Dependencies point down only: app → runtime → data → domain. The domain package does
+Dependencies point down only: app → runtime → store → data → domain. The domain package does
 not import Flutter, so the same rules can run in a worker isolate today and
 in a Dart service on a server later.
 
@@ -47,7 +48,18 @@ Rules of the road:
 - The domain produces no display text. The app turns events and error codes
   into Arabic.
 
-## Data (`packages/marah_data`)
+## Saving (`packages/marah_store`, `packages/marah_data`)
+
+On devices the save is a SQLite file (`SqliteGameStore`, ADR 0004): a
+save writes only the camels and documents that changed, in one
+transaction, and rows keep the in-memory order so a reloaded game replays
+identically. Measured at 10,000 head (desktop): a command's save 11 ms, a
+day's save 311 ms, reopen 329 ms, 8.7 MB on disk. A good open is copied to
+`.prev`; a file that fails to open is copied to `.broken` and never
+replaced. If a bug leaves the in-memory game half-changed, the engine
+throws it away and reloads the last save.
+
+The JSON store below is kept for tests and tools.
 
 `SaveCodec` writes and reads the save envelope and runs migrations.
 `SaveStore` never overwrites a save it could not read, keeps the previous

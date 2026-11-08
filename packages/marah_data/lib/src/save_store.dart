@@ -37,6 +37,40 @@ final class OpenFailed extends OpenResult {
   final String detail;
 }
 
+/// Where a game is kept. The engine only talks to this interface: the
+/// SQLite store on devices, the JSON store in tests and tools.
+///
+/// Every implementation must: never overwrite a save it could not read
+/// (back it up, lock, report); keep a fallback that is proven readable;
+/// and keep later writes working after one write fails.
+abstract interface class GameStore {
+  /// True while a broken save waits for the player's decision; saving is
+  /// ignored until they restore or start over.
+  bool get locked;
+
+  Future<OpenResult> open();
+
+  /// Persists the game. Completes with an error if this write fails.
+  Future<void> save(GameState state);
+
+  /// Restores the last save that was proven readable.
+  Future<OpenResult> openPrevious();
+
+  /// A loaded save turned out unusable: back it up and lock saving.
+  Future<OpenFailed> reject(String detail);
+
+  /// The player chose to start over.
+  Future<void> startOver();
+
+  /// Waits for pending writes.
+  Future<void> flush();
+
+  /// Releases resources (database connections).
+  Future<void> close();
+}
+
+/// Keeps the game as one JSON document (tests, tools).
+///
 /// Loads and saves one game safely.
 ///
 /// * A save that cannot be read is copied to `.broken` and never
@@ -45,7 +79,7 @@ final class OpenFailed extends OpenResult {
 ///   a save loads successfully), not simply the previous write.
 /// * Each write is independent: one failed write (full disk) never stops
 ///   later ones, and the error reaches the caller.
-class SaveStore {
+class SaveStore implements GameStore {
   SaveStore(this.backend, {this.slot = 'marah.save', SaveCodec? codec})
     : codec = codec ?? const SaveCodec();
 
@@ -59,8 +93,10 @@ class SaveStore {
   bool _locked = false;
   Future<void> _queue = Future.value();
 
+  @override
   bool get locked => _locked;
 
+  @override
   Future<OpenResult> open() async {
     final String? raw;
     try {
@@ -83,6 +119,7 @@ class SaveStore {
 
   /// Reports that a loaded save could not be used (for example the
   /// simulation failed on it). Backs it up and locks saving.
+  @override
   Future<OpenFailed> reject(String detail) =>
       _fail(LoadProblem.corrupt, detail);
 
@@ -99,6 +136,7 @@ class SaveStore {
   /// Saves the game. Ignored while a broken save awaits the player's
   /// decision. Completes with an error if this write fails; later writes
   /// still run.
+  @override
   Future<void> save(GameState state) {
     if (_locked) return Future.value();
     final text = codec.encode(state);
@@ -111,6 +149,7 @@ class SaveStore {
 
   /// Restores the last save that was proven readable. The restored text is
   /// written to the slot before anything else changes.
+  @override
   Future<OpenResult> openPrevious() async {
     final String? raw;
     try {
@@ -132,13 +171,18 @@ class SaveStore {
 
   /// The player chose to start over. The broken copy and the last good
   /// save stay where they are.
+  @override
   Future<void> startOver() async {
     _locked = false;
     await backend.delete(slot);
   }
 
   /// Waits for pending writes (call when the app goes to the background).
+  @override
   Future<void> flush() => _queue;
+
+  @override
+  Future<void> close() => _queue;
 }
 
 /// In-memory backend for tests and tools.

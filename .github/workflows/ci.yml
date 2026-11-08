@@ -34,6 +34,7 @@ jobs:
           (cd packages/marah_domain && dart analyze --fatal-infos)
           (cd packages/marah_data && dart analyze --fatal-infos)
           (cd packages/marah_runtime && dart analyze --fatal-infos)
+          (cd packages/marah_store && dart analyze --fatal-infos)
           (cd apps/marah && flutter analyze --fatal-infos)
 
       - name: Domain tests with coverage floor
@@ -48,7 +49,11 @@ jobs:
         working-directory: packages/marah_data
         run: dart test
 
-      - name: Runtime tests (worker isolate, web slicing, files)
+      - name: SQLite store tests (exact reload, incremental writes, 10k head)
+        working-directory: packages/marah_store
+        run: dart test
+
+      - name: Runtime tests (worker isolate, paging, recovery, budgets)
         working-directory: packages/marah_runtime
         run: dart test
 

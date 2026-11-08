@@ -80,6 +80,7 @@ Result _buyAt(Sim sim, PlayerState p, Listing l, Riyal price) {
   sim.world.offers.removeWhere((_, o) => o.listingId == l.id);
   c
     ..ownerId = p.id
+    ..lastPlayerOwner = p.id
     ..acquiredOn = sim.today
     ..purchasePrice = price.value;
   final sellerName = sim.world.owners[l.sellerId]?.name ?? seller?.name ?? '';
