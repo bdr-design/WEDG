@@ -16,6 +16,12 @@ These are the owner's standing rules for this project. Follow them in every sess
 
 ## What the game must be
 
+**Lightness and realism come first, ahead of every other goal.** Every change
+is judged on both:
+- What it costs a mid-range phone per frame and in memory, measured rather
+  than guessed.
+- Whether it matches the real thing.
+
 - **Realism above all:** real geography, real camel anatomy and gait, real
   Saudi market and festival rules. Every number is either sourced or marked as
   a game choice (see `docs/GDD.md`).
