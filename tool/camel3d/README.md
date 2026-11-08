@@ -31,21 +31,26 @@ photo.
   and dark soles. The normal map adds fur grain.
 - **Clips:**
   - `idle` (4 s).
-  - `walk`: built from foot physics, not keyed by hand (`walk_physics.py`).
-    - Each planted foot moves back under the body at exactly the ground
-      speed.
-    - The legs turn about the top of the shoulder blade and the hip joint.
-      The lower legs are solved so the carpus folds forward and the hock
-      back.
-    - The body drops only as far as the planted legs need (an inverted
-      pendulum), shifts over the side carrying it and rolls.
-    - Gait: a lateral-sequence walk close to a pace; the forefoot lands 8%
-      of a stride after the hind foot of the same side.
-    - 0.85 m/s, 1.3 s per stride, 1.1 m stride.
-    - Measured: planted pads slip under 1 mm per frame and stay within
-      2 mm of the ground. The body bobs about 5 cm.
-    - Weight: the body sinks about 1 cm as each foot takes the load, and the
-      pad spreads 13% wider and 10% flatter while loaded.
+  - `walk`: built from foot physics and checked against Muybridge's camel
+    walking (*Animal Locomotion* plate 737, 1887; in
+    `assets_src/reference/`).
+    - **Footfalls:** a lateral-sequence walk close to a pace. A planted foot
+      moves back at exactly the ground speed. At the end of the stance the
+      heel lifts while the toes stay down.
+    - **Forelimb:** while it carries weight, the forearm and cannon form one
+      straight column with the carpus locked. The shoulder blade turns with
+      the stride, and the shoulder and elbow take up the length. In the
+      swing the carpus folds about 78° and the pastern curls.
+    - **Hind limb:** the thigh swings about the hip, and the hock folds back.
+    - **Joint accuracy:** the legs splay slightly, so each joint is re-aimed
+      until the fetlock lands within 2 mm of its target.
+    - **Body:** carried at the height the planted legs allow, with a 1.2 cm
+      bob, a sideways shift over the supporting side and a roll. The neck and
+      head counter the bob.
+    - **Weight:** the pads spread under load.
+    - **Pace:** 1.15 m/s (about 4 km/h), 1.45 s and 1.67 m per stride.
+    - **Measured:** the toes slip under 2 mm per frame and stay within 2 mm
+      of the ground while planted.
   - `graze` (4 s): the muzzle reaches the ground about 0.75 m in front of
     the forefeet.
 - **Budget:** 40k triangles, 37 bones, 2K textures, 2.1 MB GLB.

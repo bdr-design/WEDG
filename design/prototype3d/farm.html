@@ -172,7 +172,7 @@ const COATS = {
 };
 const GRAZE = LAYOUT.graze;
 const camels = [];
-const SPEED = 0.85;            // the walk clip plants each foot and moves it back at this speed
+const SPEED = 1.15;            // the walk clip plants each foot and moves it back at this speed (1.67 m strides)
 const LOD_D = [16, 48];
 
 async function loadLod(file) {
@@ -250,13 +250,13 @@ class Camel {
       for (const o of camels) { if (o === this) continue; const d = pos.distanceTo(o.root.position); if (d < 2.6 && d > 0.01) to.add(pos.clone().sub(o.root.position).multiplyScalar((2.6 - d) * 1.5)); }
       const desired = Math.atan2(to.x, to.z);
       let dh = desired - this.root.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh));
-      const turn = THREE.MathUtils.degToRad(38) * dt;
+      const turn = THREE.MathUtils.degToRad(16) * dt;      // a walking camel turns in a wide arc, not on the spot
       this.root.rotation.y += THREE.MathUtils.clamp(dh, -turn, turn);
-      want = dist < 0.6 ? 0 : Math.min(SPEED, dist * 0.6) * (Math.abs(dh) > 1.2 ? 0.35 : 1);
+      want = dist < 0.6 ? 0 : Math.min(SPEED, dist * 0.5) * (Math.abs(dh) > 0.7 ? 0.3 : Math.abs(dh) > 0.35 ? 0.65 : 1);
       if (dist < 0.6) { this.mode = this.home === 'graze' ? 'graze' : 'idle'; this.timer = this.home === 'graze' ? R(7, 16) : R(6, 14); this.play(this.mode); }
     }
     // a 500 kg animal speeds up and slows down gradually
-    this.speed += THREE.MathUtils.clamp(want - this.speed, -0.7 * dt, 0.5 * dt);
+    this.speed += THREE.MathUtils.clamp(want - this.speed, -0.6 * dt, 0.4 * dt);
     const h = this.root.rotation.y;
     pos.x += Math.sin(h) * this.speed * dt; pos.z += Math.cos(h) * this.speed * dt;
     const d = camPos.distanceTo(pos);

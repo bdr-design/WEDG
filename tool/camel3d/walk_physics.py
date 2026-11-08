@@ -1,31 +1,39 @@
-"""Walk built from foot physics, solved analytically, baked to joint keys.
+"""Camel walk from foot physics and real proportions, baked to joint keys.
 
-- Footfall plan: each foot is planted while it carries weight and moves
-  back under the body at exactly the ground speed (no slip, no float);
-  then it lifts and swings forward on a smooth arc.
-- Gait: lateral-sequence walk close to a pace (hind foot first, the
-  forefoot of the same side 8% of a stride later), the camel's walk.
-- Legs: each leg turns about its top pivot (top of the shoulder blade,
-  hip joint) toward its foot; the lower two segments solve as a two-bone
-  chain so the knee folds forward (forelimb carpus) and the hock folds
-  back, as in the real animal. Planted pads stay flat on the ground.
-- Body: drops only as much as the planted legs need to reach their feet
-  (an inverted pendulum), pitches between fore and hind, shifts over the
-  side carrying the weight and rolls away from it: the camel's rolling
-  walk. Head steadies against the bob.
+Reference: Muybridge, Animal Locomotion (1887), Plate 737, a camel walking:
+long strides, the legs of one side moving almost together, the forefoot
+snatched up with the carpus folded hard, the hind hock folding under, the
+pad rolling onto the toes before it leaves the ground.
+
+- Footfalls: a planted foot moves back under the body at exactly the
+  ground speed and stays on the ground (no slip, no float). The heel
+  lifts as the pad rolls onto the toes in the last part of the stance.
+- Forelimb: while it carries weight, forearm and cannon form one straight
+  column (the carpus is locked); the shoulder blade turns with the stride
+  and the shoulder and elbow take up the length. In the swing the carpus
+  folds and the pastern curls.
+- Hind limb: the thigh swings about the hip; shin and cannon solve with
+  the hock folding back.
+- Body: carried at the height the planted legs allow, with a small bob,
+  a shift over the side carrying the weight and a roll away from it.
+  The neck and head counter the bob.
 """
 import os, math, json
 import bpy
 from mathutils import Vector
 
-SPEED = float(os.environ.get('SPEED', '0.85'))     # m/s, an unhurried walk (estimate)
-CYCLE = float(os.environ.get('CYCLE', '1.3'))      # s per stride
-DUTY = 0.65
+SPEED = float(os.environ.get('SPEED', '1.15'))     # m/s, about 4 km/h
+CYCLE = float(os.environ.get('CYCLE', '1.45'))     # s per stride
+DUTY = 0.62
 FPS = 30
 FRAMES = round(CYCLE * FPS)
 STRIDE = SPEED * CYCLE
 PHASE = {'hind.L': 0.0, 'fore.L': 0.08, 'hind.R': 0.5, 'fore.R': 0.58}
-LIFT = {'fore': 0.13, 'hind': 0.10}
+LIFT = {'fore': 0.20, 'hind': 0.15}
+ROLL = {'fore': 0.035, 'hind': 0.045}
+CENTER = {'fore': -0.05, 'hind': -0.04}
+CARPUS = math.radians(78)    # carpus fold at mid-swing
+CURL = {'fore': math.radians(55), 'hind': math.radians(42)}   # pastern curl at mid-swing
 
 bpy.ops.wm.open_mainfile(filepath=os.path.abspath('camel_rigged.blend'))
 arm = bpy.data.objects['CamelRig']
@@ -37,6 +45,7 @@ for p in pb:
     p.rotation_mode = 'XYZ'
     p.rotation_euler = (0, 0, 0)
     p.location = (0, 0, 0)
+    p.scale = (1, 1, 1)
 bpy.context.view_layer.update()
 MW = arm.matrix_world
 
@@ -49,28 +58,16 @@ def tail(b):
     return MW @ pb[b].tail
 
 
-CH = {}
-for s in 'LR':
-    CH[f'fore.{s}'] = dict(pivot=f'scapula.{s}', up=[f'scapula.{s}', f'upperarm.{s}'], a=f'forearm.{s}', b=f'fcannon.{s}',
-                           pastern=f'fpastern.{s}', foot=f'ffoot.{s}', apex=+1)
-    CH[f'hind.{s}'] = dict(pivot=f'thigh.{s}', up=[f'thigh.{s}'], a=f'shin.{s}', b=f'hcannon.{s}',
-                           pastern=f'hpastern.{s}', foot=f'hfoot.{s}', apex=-1)
-REST = {}
-for leg, c in CH.items():
-    P = head(c['pivot'])
-    F = tail(c['b'])
-    REST[leg] = dict(P=P, F=F, R=(F - P).length, la=pb[c['a']].bone.length, lb=pb[c['b']].bone.length,
-                     dir_pastern=(tail(c['pastern']) - head(c['pastern'])).normalized(),
-                     dir_foot=(tail(c['foot']) - head(c['foot'])).normalized())
-HIP_TO_SHOULDER = (REST['fore.L']['P'] - head('hips')).length
+def update():
+    bpy.context.view_layer.update()
 
 
 def align(name, d):
-    """Rotate a bone about its own lateral axis so it points along d (sagittal)."""
+    """Turn a bone about its own lateral axis so it points along d (sagittal plane)."""
     p = pb[name]
     e = p.rotation_euler
     p.rotation_euler = (0, e[1], e[2])
-    bpy.context.view_layer.update()
+    update()
     m = (MW @ p.matrix).to_3x3()
     y0 = (m @ Vector((0, 1, 0))).normalized()
     xl = (m @ Vector((1, 0, 0))).normalized()
@@ -78,149 +75,188 @@ def align(name, d):
     if dd.length < 1e-9:
         return
     dd.normalize()
-    ang = math.atan2(y0.cross(dd).dot(xl), y0.dot(dd))
-    p.rotation_euler = (ang, e[1], e[2])
-    bpy.context.view_layer.update()
+    p.rotation_euler = (math.atan2(y0.cross(dd).dot(xl), y0.dot(dd)), e[1], e[2])
+    update()
 
 
-def rotate_about(name, ang):
+def turn(name, ang):
     p = pb[name]
     e = p.rotation_euler
     p.rotation_euler = (e[0] + ang, e[1], e[2])
-    bpy.context.view_layer.update()
+    update()
+
+
+def two_bone(A, F, l1, l2, apex):
+    """Joint of a planar two-segment chain A->J->F; apex +1 puts J in front (+x), -1 behind, 0 below."""
+    v = F - A
+    d = min(max(v.length, abs(l1 - l2) + 1e-4), (l1 + l2) * 0.9995)
+    a = math.acos(max(-1.0, min(1.0, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))))
+    base = math.atan2(v.z, v.x)
+    cands = []
+    for sgn in (1, -1):
+        J = A + Vector((math.cos(base + sgn * a) * l1, 0, math.sin(base + sgn * a) * l1))
+        cands.append(J)
+    if apex == 0:
+        J = min(cands, key=lambda q: q.z)
+    else:
+        J = max(cands, key=lambda q: -(q - A).cross(F - A).y * apex)
+    J.y = A.y
+    return J
+
+
+def swing_angle(restv, want):
+    return math.atan2(restv.x * want.z - restv.z * want.x, restv.x * want.x + restv.z * want.z)
+
+
+CH = {}
+for s in 'LR':
+    CH[f'fore.{s}'] = dict(kind='fore', pivot=f'scapula.{s}', upper=f'upperarm.{s}', a=f'forearm.{s}', b=f'fcannon.{s}', pastern=f'fpastern.{s}', foot=f'ffoot.{s}')
+    CH[f'hind.{s}'] = dict(kind='hind', pivot=f'thigh.{s}', upper=f'thigh.{s}', a=f'shin.{s}', b=f'hcannon.{s}', pastern=f'hpastern.{s}', foot=f'hfoot.{s}')
+REST = {}
+for leg, c in CH.items():
+    P, F = head(c['pivot']), tail(c['b'])
+    REST[leg] = dict(P=P, F=F, R=(F - P).length, T=tail(c['foot']),
+                     lu=pb[c['upper']].bone.length, la=pb[c['a']].bone.length, lb=pb[c['b']].bone.length,
+                     lp=pb[c['pastern']].bone.length, lf=pb[c['foot']].bone.length,
+                     dp=(tail(c['pastern']) - head(c['pastern'])).normalized(), df=(tail(c['foot']) - head(c['foot'])).normalized())
+for leg, r in REST.items():
+    chain = (r['lu'] if leg.startswith('fore') else 0) + (pb[CH[leg]['pivot']].bone.length if leg.startswith('fore') else r['lu']) + r['la'] + r['lb']
+    r['reach'] = min(r['R'] * (1.012 if leg.startswith('fore') else 1.045), chain * 0.985)
+    print('REACH', leg, round(r['R'], 3), round(chain, 3), round(r['reach'], 3))
+HIP_TO_SHOULDER = (REST['fore.L']['P'] - head('hips')).length
+
+
+def smoothstep(a, b, x):
+    t = min(1.0, max(0.0, (x - a) / (b - a)))
+    return t * t * (3 - 2 * t)
 
 
 def foot_plan(ph):
+    """(dx, lift, swing progress, toe-off roll, stance progress)."""
     if ph < DUTY:
         k = ph / DUTY
-        return STRIDE * DUTY * (0.5 - k), 0.0, 0.0
+        return STRIDE * DUTY * (0.5 - k), 0.0, 0.0, smoothstep(0.62, 1.0, k), k
     k = (ph - DUTY) / (1 - DUTY)
     ease = 0.5 - 0.5 * math.cos(math.pi * k)
-    return STRIDE * DUTY * (-0.5 + ease), math.sin(math.pi * k) ** 1.2, k
+    return STRIDE * DUTY * (-0.5 + ease), math.sin(math.pi * k ** 0.8), k, 0.0, 0.0
 
 
-# ---- body motion from the planted legs
-plan, need_f, need_h, shift = [], [], [], []
+# ---- how low the body must ride for every planted leg to reach its foot
+plan, shift = [], []
+need = {'fore': [], 'hind': []}
 for f in range(FRAMES):
     t = f / FRAMES
     legs = {}
     for leg, ph in PHASE.items():
-        dx, lift, k = foot_plan((t + ph) % 1.0)
-        # mid-stance foot sits right under its pivot, as a weight-bearing column
-        legs[leg] = (dx + (REST[leg]['P'].x - REST[leg]['F'].x), lift, k)
-    nf = nh = 0.0
-    for leg, (dx, lift, _) in legs.items():
+        dx, lift, k, roll, ks = foot_plan((t + ph) % 1.0)
+        kind = leg.split('.')[0]
+        legs[leg] = (dx + (REST[leg]['P'].x - REST[leg]['F'].x) + CENTER[kind], lift, k, roll, ks)
+    nd = {'fore': 0.0, 'hind': 0.0}
+    for leg, (dx, lift, _, roll, _) in legs.items():
         if lift:
             continue
-        r = REST[leg]
+        r, kind = REST[leg], leg.split('.')[0]
         horiz = r['F'].x + dx - r['P'].x
-        reach = r['R'] * 0.994
-        drop = (r['P'].z - r['F'].z) - math.sqrt(max(reach * reach - horiz * horiz, 0))
-        if leg.startswith('fore'):
-            nf = max(nf, drop)
-        else:
-            nh = max(nh, drop)
+        fz = r['F'].z + ROLL[kind] * roll
+        nd[kind] = max(nd[kind], (r['P'].z - fz) - math.sqrt(max(r['reach'] ** 2 - horiz * horiz, 0)))
+    for kind in nd:
+        need[kind].append(nd[kind])
     left = sum(1 for l, v in legs.items() if l.endswith('L') and not v[1])
     right = sum(1 for l, v in legs.items() if l.endswith('R') and not v[1])
-    plan.append(legs)
-    need_f.append(nf)
-    need_h.append(nh)
     shift.append((right - left) / 2.0)
+    plan.append(legs)
 
 
-def smooth(vals, n=3):
+def smooth(vals, n=4):
     out = vals[:]
     for _ in range(n):
         out = [(out[i - 1] + 2 * out[i] + out[(i + 1) % len(out)]) / 4 for i in range(len(out))]
     return out
 
 
-# each foot strike: the body sinks about a centimetre as the leg takes ~500 kg, then recovers
-def strike_dip(t, ph0):
-    ph = (t + ph0) % 1.0
-    if ph >= DUTY:
-        return 0.0
-    tau = ph * CYCLE
-    return 0.010 * (tau / 0.07) * math.exp(1 - tau / 0.07)
-
-
-dip_f = [sum(strike_dip(f / FRAMES, PHASE[l]) for l in PHASE if l.startswith('fore')) for f in range(FRAMES)]
-dip_h = [sum(strike_dip(f / FRAMES, PHASE[l]) for l in PHASE if l.startswith('hind')) for f in range(FRAMES)]
-raw_f, raw_h = need_f[:], need_h[:]
-need_f = [max(a, b) + 0.002 for a, b in zip(smooth(raw_f), raw_f)]
-need_h = [max(a, b) + 0.002 for a, b in zip(smooth(raw_h), raw_h)]
-need_f = [a + d for a, d in zip(need_f, dip_f)]
-need_h = [a + d for a, d in zip(need_h, dip_h)]
-shift = smooth(shift, 4)
+# a steady carriage at the lowest height the stride needs, plus a gentle bob
+base = {k: max(v) + 0.004 for k, v in need.items()}
+bob = [0.012 * (0.5 + 0.5 * math.cos(4 * math.pi * (f / FRAMES) - 0.6)) for f in range(FRAMES)]
+drop = {k: [base[k] + bob[f] for f in range(FRAMES)] for k in base}
+shift = smooth(shift)
 
 deform = [p for p in pb if p.bone.use_deform]
-baked, feet_world = [], []
 prev = {p.name: p.rotation_euler.copy() for p in deform}
+baked, feet = [], []
 for f in range(FRAMES):
     t = f / FRAMES
     for p in pb:
         p.rotation_euler = (0, 0, 0)
         p.location = (0, 0, 0)
         p.scale = (1, 1, 1)
-    dh, df = need_h[f], need_f[f]
+    dh, df = drop['hind'][f], drop['fore'][f]
     pitch = math.asin(max(-0.2, min(0.2, (df - dh) / HIP_TO_SHOULDER)))
-    hips = pb['hips']
-    # hips local axes: X = -world Y, Y ~ world X (forward), Z ~ world Z
-    hips.location = (-0.03 * shift[f], 0.0, -dh)
-    hips.rotation_euler = (-pitch, math.radians(-3.0 * shift[f]), 0)
-    pb['neck1'].rotation_euler = (math.radians(1.8 * math.cos(4 * math.pi * t + 0.5)), 0, math.radians(1.5 * shift[f]))
-    pb['head'].rotation_euler = (math.radians(-1.5 * math.cos(4 * math.pi * t + 0.5)) + pitch, 0, 0)
-    pb['tail1'].rotation_euler = (0, 0, math.radians(6 * shift[f]))
-    pb['tail2'].rotation_euler = (0, 0, math.radians(8 * math.sin(2 * math.pi * t - 0.8)))
-    bpy.context.view_layer.update()
+    pb['hips'].location = (-0.035 * shift[f], 0.0, -dh)
+    pb['hips'].rotation_euler = (-pitch, math.radians(-3.2 * shift[f]), 0)
+    pb['neck1'].rotation_euler = (math.radians(3.0 * math.cos(4 * math.pi * t + 0.5)), 0, math.radians(2.0 * shift[f]))
+    pb['neck3'].rotation_euler = (math.radians(-1.6 * math.cos(4 * math.pi * t + 1.1)), 0, 0)
+    pb['head'].rotation_euler = (math.radians(-1.8 * math.cos(4 * math.pi * t + 0.5)) + pitch, 0, math.radians(-1.2 * shift[f]))
+    pb['tail1'].rotation_euler = (0, 0, math.radians(7 * shift[f]))
+    pb['tail2'].rotation_euler = (0, 0, math.radians(10 * math.sin(2 * math.pi * t - 0.8)))
+    update()
     fw = {}
-    for leg, (dx, lift, k) in plan[f].items():
+    for leg, (dx, lift, k, roll, ks) in plan[f].items():
         c, r = CH[leg], REST[leg]
-        kind = leg.split('.')[0]
-        F = Vector((r['F'].x + dx, r['F'].y, r['F'].z + LIFT[kind] * lift))
-        # 1. swing the whole leg about its top pivot toward the foot
-        P = head(c['pivot'])
-        cur = (tail(c['b']) - P)
-        want = (F - P)
-        ang = math.atan2(-(cur.x * want.z - cur.z * want.x), cur.x * want.x + cur.z * want.z)
-        # rotation about local X (= -world Y on leg bones): flip sign accordingly
-        for i, b in enumerate(c['up']):
-            rotate_about(b, -ang if i == 0 else 0.0)
-        # 2. two-bone solve for the lower leg, knee apex forward (fore) or back (hind)
-        A = head(c['a'])
-        la, lb = r['la'], r['lb']
-        v = F - A
-        dist = min(v.length, (la + lb) * 0.9995)
-        cosA = (la * la + dist * dist - lb * lb) / (2 * la * dist)
-        alpha = math.acos(max(-1.0, min(1.0, cosA)))
-        base = math.atan2(v.z, v.x)
-        a_ang = base + c['apex'] * alpha if base < 0 else base - c['apex'] * alpha
-        # choose the solution whose joint lies on the apex side
-        cand = []
-        for sgn in (+1, -1):
-            ang_a = base + sgn * alpha
-            K = A + Vector((math.cos(ang_a) * la, 0, math.sin(ang_a) * la))
-            side_val = (K - A).cross(F - A).y * -1  # >0 when K is in front of the A->F line (x forward)
-            cand.append((side_val * c['apex'], K))
-        K = max(cand, key=lambda z: z[0])[1]
-        K.y = A.y
-        align(c['a'], K - A)
-        align(c['b'], Vector((F.x, A.y, F.z)) - head(c['b']))
-        # 3. pads: flat on the ground while planted, toe trails in swing
+        kind = c['kind']
+        F = Vector((r['F'].x + dx + 0.035 * roll, r['F'].y, r['F'].z + LIFT[kind] * lift + ROLL[kind] * roll))
+        T = Vector((r['T'].x + dx, r['T'].y, r['T'].z))
+        swing = math.sin(math.pi * min(1.0, k * 1.1)) if lift else 0.0
+        ang = swing_angle(r['F'] - r['P'], F - head(c['pivot']))
+        if kind == 'fore':
+            turn(c['pivot'], 0.4 * ang)                     # the shoulder blade takes part of the swing
+        else:
+            turn(c['upper'], ang)                           # thigh swings about the hip
+        # the legs splay a little, so aim, measure the miss and re-aim until the fetlock lands on target
+        aim = F.copy()
+        for _ in range(5):
+            if kind == 'fore':
+                S = head(c['upper'])
+                flex = CARPUS * swing
+                col = math.sqrt(r['la'] ** 2 + r['lb'] ** 2 + 2 * r['la'] * r['lb'] * math.cos(flex))
+                E = two_bone(S, aim, r['lu'], col, -1)        # the elbow points back
+                align(c['upper'], E - S)
+                K = two_bone(head(c['a']), aim, r['la'], r['lb'], +1)   # carpus folds forward, the cannon tucks back
+                align(c['a'], K - head(c['a']))
+                align(c['b'], Vector((aim.x, K.y, aim.z)) - head(c['b']))
+            else:
+                St = tail(c['upper'])
+                Kh = two_bone(St, aim, r['la'], r['lb'], -1)  # the hock points back
+                align(c['a'], Kh - St)
+                align(c['b'], Vector((aim.x, Kh.y, aim.z)) - head(c['b']))
+            miss = F - tail(c['b'])
+            miss.y = 0
+            if miss.length < 0.002:
+                break
+            aim += miss
+        Fw = tail(c['b'])
         if lift == 0:
-            align(c['pastern'], r['dir_pastern'])
-            align(c['foot'], r['dir_foot'])
-            ph = ((t + PHASE[leg]) % 1.0) / DUTY
-            load = min(1.0, ph / 0.12, (1 - ph) / 0.12)
+            # pastern and pad between the fetlock and the planted toes; the heel lifts as the pad rolls
+            Tw = Vector((T.x, Fw.y, T.z))
+            aimT = Tw.copy()
+            for _ in range(5):
+                Pd = two_bone(Fw, aimT, r['lp'], r['lf'], 0)
+                align(c['pastern'], Pd - Fw)
+                align(c['foot'], Vector((aimT.x, Pd.y, aimT.z)) - tail(c['pastern']))
+                miss = Tw - tail(c['foot'])
+                miss.y = 0
+                if miss.length < 0.002:
+                    break
+                aimT += miss
+            load = max(0.0, min(1.0, ks / 0.12, (1 - ks) / 0.2))
             load = load * load * (3 - 2 * load)
             pb[c['foot']].scale = (1 + 0.13 * load, 1 + 0.03 * load, 1 - 0.10 * load)
+            update()
         else:
-            flex = math.radians(38 if kind == 'fore' else 28) * math.sin(math.pi * k)
-            align(c['pastern'], r['dir_pastern'])
-            rotate_about(c['pastern'], flex if kind == 'fore' else flex)
-            align(c['foot'], r['dir_foot'])
-            rotate_about(c['foot'], 0.6 * flex)
-        fw[leg] = (tail(c['foot']), head(c['foot']), tail(c['b']))
+            align(c['pastern'], r['dp'])
+            turn(c['pastern'], CURL[kind] * swing)
+            align(c['foot'], r['df'])
+            turn(c['foot'], 0.55 * CURL[kind] * swing)
+        fw[leg] = (tail(c['foot']).copy(), tail(c['pastern']).copy(), tail(c['b']).copy(), F)
     row = {}
     for p in deform:
         e = p.rotation_euler.copy()
@@ -228,31 +264,25 @@ for f in range(FRAMES):
         prev[p.name] = e
         row[p.name] = (tuple(e), tuple(p.location) if p.name == 'hips' else None, tuple(p.scale) if 'foot' in p.name else None)
     baked.append(row)
-    feet_world.append(fw)
+    feet.append(fw)
 
-# ---- check: planted pads must not slip or sink; swinging pads must clear the ground
+# ---- checks
 report = {}
 for leg in PHASE:
-    slip, planted_z, clear, fet_err = 0.0, [], [], 0.0
+    slip, toe_z, clear, ferr = 0.0, [], [], 0.0
     for f in range(FRAMES):
-        dx, lift, _ = plan[f][leg]
-        toe, pad, fet = feet_world[f][leg]
-        r = REST[leg]
-        fet_err = max(fet_err, (fet - Vector((r['F'].x + dx, fet.y, r['F'].z + LIFT[leg.split('.')[0]] * lift))).length)
+        dx, lift, _, roll, _ = plan[f][leg]
+        toe, padp, fet, Ft = feet[f][leg]
+        ferr = max(ferr, math.hypot(fet.x - Ft.x, fet.z - Ft.z))
         if lift == 0:
-            planted_z.append(min(toe.z, pad.z))
-            nxt = plan[(f + 1) % FRAMES][leg]
-            if nxt[1] == 0:
-                toe2 = feet_world[(f + 1) % FRAMES][leg][0]
-                slip = max(slip, abs((toe2.x - toe.x) + SPEED / FPS))
+            toe_z.append(toe.z)
+            if plan[(f + 1) % FRAMES][leg][1] == 0:
+                slip = max(slip, abs((feet[(f + 1) % FRAMES][leg][0].x - toe.x) + SPEED / FPS))
         else:
-            clear.append(min(toe.z, pad.z))
-    report[leg] = dict(slip_mm_per_frame=round(slip * 1000, 1),
-                       planted_pad_height_mm=[round(min(planted_z) * 1000, 1), round(max(planted_z) * 1000, 1)],
-                       swing_clearance_mm=round(max(clear) * 1000, 1),
-                       fetlock_error_mm=round(fet_err * 1000, 1))
-report['body_drop_mm'] = dict(fore=[round(min(need_f) * 1000), round(max(need_f) * 1000)],
-                              hind=[round(min(need_h) * 1000), round(max(need_h) * 1000)])
+            clear.append(min(toe.z, padp.z))
+    report[leg] = dict(toe_slip_mm_per_frame=round(slip * 1000, 1), planted_toe_height_mm=[round(min(toe_z) * 1000, 1), round(max(toe_z) * 1000, 1)],
+                       swing_clearance_mm=round(max(clear) * 1000), fetlock_error_mm=round(ferr * 1000, 1))
+report['carriage_drop_mm'] = {k: round(base[k] * 1000) for k in base}
 report['stride_m'] = round(STRIDE, 2)
 report['speed_mps'] = SPEED
 print(json.dumps(report, indent=1))
@@ -275,12 +305,12 @@ for f, row in enumerate(baked + [baked[0]]):
     for name, (e, loc, scl) in row.items():
         pb[name].rotation_euler = e
         pb[name].keyframe_insert('rotation_euler', frame=f + 1)
-        if scl is not None:
-            pb[name].scale = scl
-            pb[name].keyframe_insert('scale', frame=f + 1)
         if loc is not None:
             pb[name].location = loc
             pb[name].keyframe_insert('location', frame=f + 1)
+        if scl is not None:
+            pb[name].scale = scl
+            pb[name].keyframe_insert('scale', frame=f + 1)
 tr = arm.animation_data.nla_tracks.new()
 tr.name = 'walk'
 tr.strips.new('walk', 1, act)
