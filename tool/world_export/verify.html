@@ -1,0 +1,42 @@
+<!doctype html><meta charset="utf-8"><title>yard check</title>
+<style>html,body{margin:0;height:100%;background:#b98a5e}canvas{display:block}</style>
+<script type="importmap">{ "imports": { "three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/" } }</script>
+<script type="module">
+// Loads only the exported, engine-neutral files (terrain.glb, yard.glb, scatter, vehicles) to check the port.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); r.outputColorSpace = THREE.SRGBColorSpace;
+r.toneMapping = THREE.AgXToneMapping; r.shadowMap.enabled = true; document.body.appendChild(r.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#9fb6c9'); scene.fog = new THREE.FogExp2('#d9c6a8', 0.000042);
+const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 90000);
+cam.position.set(-74, 41, 48); cam.lookAt(30, 1, -18);
+const sunDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(66), THREE.MathUtils.degToRad(300));
+const sun = new THREE.DirectionalLight('#ffdcae', 4.4); sun.position.copy(new THREE.Vector3(30, 0, -18)).addScaledVector(sunDir, 160); sun.target.position.set(30, 0, -18);
+sun.castShadow = true; sun.shadow.mapSize.set(1536, 1536); Object.assign(sun.shadow.camera, { left: -72, right: 72, top: 72, bottom: -72, near: 1, far: 320 }); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
+scene.add(sun, sun.target, new THREE.HemisphereLight('#cfe0f0', '#9c7148', 1.1));
+const L = new GLTFLoader(), load = (u) => L.loadAsync(u);
+const t0 = performance.now();
+const [ter, yard] = await Promise.all([load('terrain.glb'), load('out/yard.glb')]);
+ter.scene.traverse((o) => { if (o.isMesh) o.receiveShadow = true; }); scene.add(ter.scene);
+yard.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); scene.add(yard.scene);
+const sc = await (await fetch('out/yard_scatter.json')).json();
+let inst = 0;
+for (const [kind, k] of Object.entries(sc.kinds)) {
+  const g = await load('out/' + k.glb); let mesh = null; g.scene.traverse((o) => { if (o.isMesh && !mesh) mesh = o; });
+  const F = k.fields.length, n = k.count, im = new THREE.InstancedMesh(mesh.geometry, mesh.material, n), m = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
+  for (let i = 0; i < n; i++) {
+    const d = k.data.slice(i * F, i * F + F), f = Object.fromEntries(k.fields.map((name, j) => [name, d[j]]));
+    m.compose(new THREE.Vector3(f.x, f.y ?? +k.y, f.z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.yaw ?? 0), new THREE.Vector3(f.scale_xz ?? f.scale ?? 1, f.scale_y ?? f.scale ?? 1, f.scale_xz ?? f.scale ?? 1));
+    im.setMatrixAt(i, m); if (f.r !== undefined) im.setColorAt(i, c.setRGB(f.r, f.g, f.b));
+  }
+  im.castShadow = !!k.cast_shadow; im.receiveShadow = true; scene.add(im); inst += n;
+}
+const vj = await (await fetch('out/vehicles.json')).json();
+const models = {}; for (const name of Object.keys(vj.models)) models[name] = (await load(`veh/${name}.glb`)).scene;
+const place = (v, parent) => { const o = models[v.model].clone(true); o.position.fromArray(v.position); o.rotation.y = v.yaw;
+  o.traverse((n) => { if (n.isMesh) { n.castShadow = n.receiveShadow = true; if (v.tint) { n.material = n.material.clone(); n.material.color.setRGB(...(Array.isArray(v.tint) ? v.tint : [1, 1, 1])); } } }); parent.add(o); };
+for (const v of vj.vehicles) place(v, scene);
+r.render(scene, cam);
+r.info.autoReset = false; r.info.reset(); r.render(scene, cam);
+window.__done = { ms: Math.round(performance.now() - t0), draws: r.info.render.calls, tris: r.info.render.triangles, instances: inst, vehicles: vj.vehicles.length };
+</script>

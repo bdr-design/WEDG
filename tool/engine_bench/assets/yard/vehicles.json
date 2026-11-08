@@ -1,0 +1,108 @@
+{
+ "frame": "x east, y up, z south, metres from the yard; yaw = rotation about +y in radians (glTF/three.js sense: +yaw turns +x toward -z)",
+ "models": {
+  "shas": "assets_src/vehicles/shas_mobile.glb",
+  "suv": "assets_src/vehicles/suv_mobile.glb",
+  "tractor": "assets_src/vehicles/tractor_mobile.glb",
+  "caravan": "assets_src/vehicles/caravan_mobile.glb"
+ },
+ "model_note": "paths are relative to the repository root; the prototype loads the same bytes (veh_<model>.json)",
+ "tint": "when set, replaces the base colour factor of every material of that model instance (the textures stay)",
+ "vehicles": [
+  {
+   "id": "shas_car_shade",
+   "model": "shas",
+   "position": [
+    14.4,
+    0.0,
+    6.8
+   ],
+   "yaw": 1.570796,
+   "tint": null
+  },
+  {
+   "id": "suv_car_shade",
+   "model": "suv",
+   "position": [
+    18.6,
+    0.0,
+    6.8
+   ],
+   "yaw": 1.570796,
+   "tint": null
+  },
+  {
+   "id": "shas_feed",
+   "model": "shas",
+   "position": [
+    29.6,
+    0.0,
+    -14.2
+   ],
+   "yaw": -1.450796,
+   "tint": {
+    "srgb": "#e2d3b4",
+    "linear": [
+     0.76052,
+     0.65141,
+     0.45641
+    ]
+   },
+   "cargo": "3 hay bales on the bed, baked into yard.glb (node yard, palette)"
+  },
+  {
+   "id": "caravan_camp",
+   "model": "caravan",
+   "position": [
+    -234,
+    0.0,
+    226
+   ],
+   "yaw": 0.35,
+   "tint": null,
+   "rig": "camp_rig"
+  },
+  {
+   "id": "tractor_camp",
+   "model": "tractor",
+   "position": [
+    -227.5653,
+    0.0,
+    223.6512
+   ],
+   "yaw": 0.35,
+   "tint": null,
+   "rig": "camp_rig"
+  }
+ ],
+ "rigs": {
+  "camp_rig": {
+   "note": "the shepherd caravan on its flatbed coupled to the tractor unit, at the grazing camp",
+   "position": [
+    -234,
+    0.0,
+    226
+   ],
+   "yaw": 0.35,
+   "children": [
+    {
+     "model": "caravan",
+     "local_position": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "model": "tractor",
+     "local_position": [
+      6.85,
+      0,
+      0
+     ]
+    }
+   ]
+  }
+ },
+ "not_here": "the water tanker by the tank (37.2, 0, -30) is procedural and is part of yard.glb"
+}

@@ -59,3 +59,29 @@ size of `app-arm64-v8a-release.apk`. An empty Flutter app is the baseline.
   the engines' CPU and driver overhead, not real phone GPU speed.
 - **APK size, memory and startup** are meaningful as they are.
 - **A real mid-range phone has the final word** before ADR 0005 is accepted.
+
+## The yard (`assets/yard/`), ported from the prototype
+
+Made by `tool/world_export/` from the three.js prototype. Every engine loads
+the same files.
+
+| File | What it holds |
+|---|---|
+| `yard.glb` | Every fixed object of the yard and the grazing camp: walls, pens, shades, troughs, room, tent and its furnishings, tank, feed shed, cabin, the water tanker, and the roads draped on the terrain. Merged into 5 materials (a colour palette texture, textiles, walls, mesh panels, ground decals), so it is about 5 draws. 37k triangles, 1.5 MB. No lights and no physical materials. |
+| `yard_scatter.json` with `grass_tuft.glb`, `bush.glb`, `stone.glb`, `tamarisk_clump.glb`, `tamarisk_trunk.glb` | Ground cover and trees as instance data: position, yaw, scale and a linear-RGB tint per instance. Grouped in cells, with the prototype's distance bands (draw all, part or none of a cell's instances by distance) and shadow flags. 42,000 grass tufts, 1,500 bushes, 2,600 stones (8 triangles each), plus the tamarisks. |
+| `vehicles.json` | Each vehicle: the model GLB (`assets_src/vehicles/*_mobile.glb`, 12k triangles), position, yaw and tint. Also the caravan rig at the camp. |
+
+**Frame:** x east, y up, z south, in metres from the yard, the same as
+`terrain.glb`.
+
+**Not in the files:**
+- **The ground's look up close.** The prototype multiplies the satellite
+  colour by the owner's sand photo near the camera. That is a terrain
+  material, done in the engine.
+- **The final colours of grass and trees.** They depend on the engine's sky
+  and ambient light.
+
+**Checked:** loading only these files in a plain three.js page
+(`tool/world_export/verify.html`) gives the same yard as the prototype from
+the drone view. Geometry and placement match. The colours differ only
+because that page has no sand detail and no sky lighting.
