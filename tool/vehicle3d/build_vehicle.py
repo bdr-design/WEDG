@@ -43,7 +43,11 @@ def load(view):
     # background showing through windows or chassis gaps inside the outline: dark glass / shadow
     f[keep.astype(bool) & bg] = (40, 36, 32)
     known = keep.astype(bool).copy()
-    for _ in range(300):
+    # The hull's rounded edges can reach a little past an outline (for the SDF hull, the closed notches between
+    # tyre and bumper, for example). Push-pull carries the edge colour only a few pixels out; beyond that the
+    # fill is the dark of the paint, so stretched fill never paints spikes on the body.
+    PUSH = int(os.environ.get('FILL_PUSH', '300'))
+    for _ in range(PUSH):
         if known.all():
             break
         s = cv2.blur(f * known[..., None], (7, 7))
@@ -51,6 +55,7 @@ def load(view):
         new = (c > 0.02) & ~known
         f[new] = s[new] / c[new, None]
         known |= new
+    f[~known] = (22, 21, 20)
     filled = f.clip(0, 255).astype(np.uint8)
     cv2.imwrite(os.path.join(out, f'{view}_fill.png'), filled)
     x, y, w, h = cv2.boundingRect(keep)

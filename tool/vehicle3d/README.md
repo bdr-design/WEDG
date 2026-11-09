@@ -23,6 +23,9 @@ them into game models.
        the nose and tail keep their place. The front and rear outlines are
        smoothed across the width as well, which takes the ribs out of the roof.
      - The views meet in a rounded intersection (`ROUND`, 1.2 cm).
+     - Outside each outline, the photo's background is filled with the edge
+       colour for only `FILL_PUSH` steps, then with dark paint. A hull edge
+       that reaches past an outline never picks up stretched fill.
      `HULL=voxel` keeps the old binary grid.
    - Meshes it with marching cubes, smooths it lightly (Taubin), and stores a
      smoothed normal field.
@@ -63,7 +66,7 @@ VEH=<name> blendenv/bin/python bake_vehicle.py
 The black SUV from the owner's photos, made drivable from inside. Output:
 `assets_src/vehicles/suv_full.glb`.
 
-The hull was built with `HULL=sdf SDF_SIGMA=7 CLOSE=15 TAUBIN=4`, 8 mm voxels and 36k triangles, then baked.
+The hull was built with `HULL=sdf SDF_SIGMA=7 CLOSE=15 FILL_PUSH=3 TAUBIN=4`, 8 mm voxels and 36k triangles, then baked.
 
 ```
 blendenv/bin/python suv_complete.py <out_dir> [render|quick|ext]
@@ -88,7 +91,8 @@ blendenv/bin/python suv_complete.py <out_dir> [render|quick|ext]
   - The photo skin is lined on the inside: an offset copy is smoothed, decimated and cut into material bands. Rims close every opening.
   - Signed-distance seats with perforated inserts and seams, a dashboard with an instrument hood and vents, a console with a wood top, and a steering wheel with wood arcs.
   - The centre screen and cluster (with Arabic text) are emissive. The cluster needles are separate objects.
-  - Also: a mirror, visors, grab handles, belts, and door armrests with switches.
+  - Also: a mirror, visors, grab handles, belts, door armrests with switches, and scuff plates on the sills.
+- **Wipers:** two at the foot of the windscreen and one on the rear glass, which lifts with the tailgate. The plain glass no longer carries the photo's painted ones.
 - **Game hooks:**
   - Objects: `door_FL`/`FR`/`RL`/`RR`, `tailgate`, `wheel_*`, `steering`, `needle_speed`, `needle_rpm`.
   - Empties: `eye` and `eye_look` for the first-person camera.
@@ -98,7 +102,8 @@ blendenv/bin/python suv_complete.py <out_dir> [render|quick|ext]
 - **Measured in the prototype:** at a phone viewport, the heaviest frames measured, shadow pass included, were 195 draws (seen from above the farm) and 342k triangles (walking by the car). The budget is 200 draws and 400k triangles. The game shows the full model only within 20 m or while driving; beyond that it uses a 12k model of the same hull (`slim_vehicle.py`).
 
 **Known gaps:**
-- Dark streaks from the photo projection stay just above the front wheel arches.
+- Up close at wheel height, the reflections on the lower body break into teeth near the arches. The decimated surface still has small waves there. Smoothing it or transferring smoothed normals made it worse, so neither is used.
+- The tailgate's chrome strip reads as dull grey, as it does in the photo's dark reflections.
 - The far mirror is a thin wedge, because a visual hull cannot carve it.
 - The grille and lower bumper are painted, not modelled.
 - The reference photos make the body about 3.5 % too short for its height: length over height is 2.50, against 2.59 for the real car (4985/1925 mm).

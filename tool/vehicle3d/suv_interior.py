@@ -572,6 +572,23 @@ def overhead():
         P.append(rounded(f'buckle{s}', (2.84, s * 0.15, 0.93), (0.025, 0.012, 0.035), 0.008, 'int_piano'))
     return P
 
+def wipers(body, tailgate):
+    """Front wipers parked at the foot of the windscreen (joined to the body), and the rear wiper on the rear glass
+    (joined to the tailgate, so it lifts with it). The glass is plain now, so the photo's painted wipers are gone."""
+    ws = -math.atan(0.88)                     # the windscreen leans back about 41 degrees: the blades lie on it
+    nd, nz = -math.sin(-ws), math.cos(-ws)    # its outward normal in (d, z)
+    front = []
+    for yc, half in ((0.31, 0.29), (-0.27, 0.27)):
+        d, z = 1.46 + nd * 0.012, 1.423 + nz * 0.012
+        front.append(rounded(f'blade{yc}', (d, yc, z), (0.009, half, 0.007), 0.004, 'int_plastic', rot=(0, ws, 0)))
+        front.append(rounded(f'arm{yc}', (d + nd * 0.01 - 0.012, yc - 0.03, z + nz * 0.01), (0.006, half * 0.8, 0.005), 0.003, 'int_plastic', rot=(0, ws, 0)))
+    ob = join(front, 'wipers'); activate(body); ob.select_set(True); bpy.ops.object.join()
+    # the rear wiper: pivot low on the centre of the rear glass, parked up and to the left
+    rear = [rounded('rblade', (4.655, 0.16, 1.56), (0.008, 0.20, 0.007), 0.004, 'int_plastic', rot=(0.95, 0.42, 0)),
+            rounded('rarm', (4.67, 0.10, 1.50), (0.007, 0.15, 0.006), 0.003, 'int_plastic', rot=(0.95, 0.42, 0)),
+            cylinder('rpivot', (4.70, 0.0, 1.40), (4.73, 0.0, 1.40), 0.018, 'int_plastic', verts=12)]
+    ob = join(rear, 'rear_wiper'); activate(tailgate); ob.select_set(True); bpy.ops.object.join()
+
 def door_details(door, d0, d1, side, front):
     """Armrest, pull, handle, speaker and switches, parented to the door so they swing with it."""
     P = []
@@ -608,6 +625,7 @@ def build(XF, K, belt, bplane, body, doors, door_spans, tailgate, tex_dir):
         return 1.38 < d < 4.90 and (z > 0.50 and f.normal.z > -0.5 or z > 1.55)
     def body_mat(c, f):
         d, y, z = c
+        if d > 4.40 and z < 1.72: return 'int_plastic'                 # the cargo pillars: dark trim, so tailgate seams stay dark
         if z > belt_r(d) - 0.02: return 'int_fabric'
         return 'int_carpet' if d > 3.80 else 'int_plastic'
     inner_skin(body, body_keep, body_mat, offset=0.05, ratio=0.10, cuts=[belt_cut(-0.02), DP(3.80)])
@@ -632,7 +650,12 @@ def build(XF, K, belt, bplane, body, doors, door_spans, tailgate, tex_dir):
     parts += seat('bench', 0.0, 3.38, (3.62, 0.90), 0.42, width=0.70, bench=True)
     parts += overhead()
     trims = [door_details(ob, *door_spans[n][:2], door_spans[n][2], n.startswith('door_F')) for n, ob in doors.items()]
+    for s in (1, -1):        # scuff plates on the sills: they also close the slit between the floor and the doors
+        for d0, d1 in ((1.62, 2.70), (2.82, 3.66)):
+            parts.append(rounded(f'scuff{s}{d0}', ((d0 + d1) / 2, s * 0.84, 0.585), ((d1 - d0) / 2, 0.055, 0.03), 0.012, 'int_plastic'))
+            parts.append(rounded(f'scuffm{s}{d0}', ((d0 + d1) / 2, s * 0.84, 0.616), ((d1 - d0) / 2 - 0.03, 0.03, 0.002), 0.0, 'int_alu'))
     cabin = join(parts, 'interior')
+    wipers(body, tailgate)
     wheel = steering_wheel((2.20, 0.40, 1.13), 0.45)
     # where the eyes are (the first-person camera) and where they look
     eye = bpy.data.objects.new('eye', None); eye.location = R((2.86, 0.40, 1.585)); bpy.context.collection.objects.link(eye)
