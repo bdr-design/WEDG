@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marah compact HUD</title>
+<link rel="stylesheet" href="../fonts/node_modules/@fontsource/ibm-plex-sans-arabic/500.css">
+<link rel="stylesheet" href="../fonts/node_modules/@fontsource/alexandria/500.css">
+<link rel="stylesheet" href="../fonts/node_modules/@fontsource/alexandria/600.css">
+<link rel="stylesheet" href="../fonts/node_modules/@fontsource/ibm-plex-sans-arabic/600.css">
+<link rel="stylesheet" href="../fonts/node_modules/@fontsource/ibm-plex-sans-arabic/700.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.3; color: #fff;
+    background: #2b2117; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums;
+    /* iPhone 15/16 Pro safe areas plus a margin: portrait top 59, the tab bar 26 above the bottom edge as in iOS; landscape sides 59, bottom 21 */
+    --top: 62px; --bot: 26px; --side: 12px; }
+  body.land { --top: 14px; --bot: 24px; --side: 64px; }
+  svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  svg .f { fill: currentColor; stroke: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  [hidden] { display: none !important; }
+  /* every control keeps a 44 pt hit area even when it is drawn smaller */
+  .hit { position: relative; }
+  .hit::before { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); translate: -50% -50%; }
+
+  /* iPhone chrome, only so the mock reads as a phone screen */
+  .island { position: fixed; top: 11px; left: 50%; translate: -50% 0; width: 124px; height: 36px; border-radius: 20px; background: #000; z-index: 50; }
+  .status { position: fixed; top: 0; inset-inline: 0; height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 4px 34px 0; font: 600 16px/1 -apple-system, sans-serif; z-index: 49; direction: ltr; }
+  .status .bars { display: flex; gap: 6px; align-items: center; }
+  .status .bat { width: 25px; height: 12px; border-radius: 4px; border: 1.5px solid currentColor; position: relative; }
+  .status .bat::after { content: ""; position: absolute; inset: 1.5px; width: 70%; border-radius: 2px; background: currentColor; }
+  .land .island, .land .status { display: none; }
+  .homebar { position: fixed; bottom: 7px; left: 50%; translate: -50% 0; width: 134px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.85); z-index: 50; }
+
+  /* liquid glass: a dark tint so white text holds on bright sand, and a bright rim on top */
+  .glass { background: rgba(30, 22, 14, 0.42); -webkit-backdrop-filter: blur(18px) saturate(185%); backdrop-filter: blur(18px) saturate(185%);
+    box-shadow: inset 0 1px 0.5px rgba(255,255,255,.42), inset 0 -0.5px 0 rgba(255,255,255,.14), inset 0 0 0 0.5px rgba(255,255,255,.18), 0 6px 22px rgba(30,16,4,.22); }
+
+  /* ---------- top: who and when (start), money and supplies (end) ---------- */
+  .who { position: fixed; top: var(--top); inset-inline-start: var(--side); height: 44px; border-radius: 22px; border: 0; padding: 4px; padding-inline-end: 14px; display: flex; align-items: center; gap: 8px; z-index: 10; text-align: start; }
+  .wasm { width: 36px; height: 36px; border-radius: 50%; background: #e9dcc6; display: grid; place-items: center; flex: none; }
+  .wasm svg { width: 22px; height: 22px; stroke: #5a3b22; stroke-width: 2.6; fill: none; stroke-linecap: round; }
+  .who b { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.15; }
+  .who small { display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 500; opacity: .92; }
+  .who small svg { width: 12px; height: 12px; stroke-width: 2; color: #ffd27a; }
+  .res { position: fixed; top: var(--top); inset-inline-end: var(--side); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; z-index: 10; }
+  .land .res { flex-direction: row; align-items: center; }
+  .cap { border-radius: 20px; display: flex; align-items: center; padding-inline: 12px; gap: 6px; white-space: nowrap; }
+  .money { height: 40px; border: 0; }
+  .money b { font-weight: 700; font-size: 16px; letter-spacing: .01em; }
+  .money small { font-weight: 500; font-size: 11.5px; opacity: .85; }
+  .sup-cap { height: 34px; padding-inline: 6px 10px; gap: 10px; }
+  .land .sup-cap { height: 40px; }
+  .sup { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; font-size: 12.5px; }
+  .gr { width: 24px; height: 24px; position: relative; flex: none; }
+  .gr > svg { position: absolute; inset: 0; width: 24px; height: 24px; }
+  .gr circle { fill: none; stroke-width: 2.4; }
+  .gr .bg { stroke: rgba(255,255,255,.2); }
+  .gr .fg { stroke-linecap: round; transform: rotate(-90deg) scaleY(-1); transform-origin: 50% 50%; }
+  .gr svg.g { inset: 6px; width: 12px; height: 12px; stroke-width: 2.2; }
+  .sup.water .fg, .sup.water .g { stroke: #7cc0ff; }
+  .sup.feed .fg, .sup.feed .g { stroke: #f2bb55; }
+  .sup.warn { color: #ffc98e; }
+
+  /* ---------- places: painted on the ground of the place itself, no floating labels ---------- */
+  #ground { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+  #ground .bgimg { position: absolute; inset: 0; background: var(--bg) center / cover no-repeat; }
+  .tint { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: #ff7a2e; mix-blend-mode: soft-light; opacity: .9; }
+  .paint { position: absolute; left: 0; top: 0; transform-origin: 0 0; display: grid; place-items: center; text-align: center;
+    font-family: "Alexandria", "IBM Plex Sans Arabic", sans-serif; font-weight: 600; white-space: nowrap; line-height: 1; letter-spacing: .02em; }
+  .paint small { display: block; font-size: 0.5em; font-weight: 500; margin-top: 0.18em; }
+  /* v1: a lighter green printed into the cloth */
+  .b1 .paint { color: #b4e2c0; mix-blend-mode: screen; opacity: .85; }
+  .b1 .paint.alert { color: #ffb48a; }
+  /* v2: the cloth's own colour, lifted: soft light over the roof */
+  .b2 .paint { color: #ffffff; mix-blend-mode: soft-light; opacity: 1; }
+  .b2 .paint.alert { color: #ffb48a; mix-blend-mode: hard-light; opacity: .7; }
+  /* v3: overlay white, as a woven-in pale band */
+  .b3 .paint { color: #e8f6ea; mix-blend-mode: overlay; }
+  .b3 .paint.alert { color: #ffc29e; }
+  .ring { position: absolute; left: 0; top: 0; transform-origin: 0 0; border-radius: 50%; }
+  .ring.alert { border: 18px solid rgba(255, 140, 60, 0.85); box-shadow: 0 0 30px rgba(255, 140, 60, 0.6), inset 0 0 30px rgba(255, 140, 60, 0.5); }
+  .ring.sel { border: 14px solid rgba(255, 255, 255, 0.95); box-shadow: 0 0 40px rgba(255, 255, 255, 0.55); }
+
+  /* ---------- bottom: a floating tab bar and the camera button beside it ---------- */
+  .bottom { position: fixed; bottom: var(--bot); left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 10px; z-index: 10; }
+  .tabs { height: 62px; border-radius: 31px; display: flex; align-items: center; padding: 4px; gap: 2px; }
+  .tab { width: 72px; height: 54px; border-radius: 27px; border: 0; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; position: relative; }
+  .tab svg { width: 24px; height: 24px; }
+  .tab span { font-size: 11px; font-weight: 600; }
+  .tab .badge { position: absolute; top: 3px; left: 17px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #d4321e; color: #fff; font-size: 11px; font-weight: 700; line-height: 17px; text-align: center; }
+  .tab.on { background: rgba(255,255,255,.88); color: #22170c; }
+  .round { width: 62px; height: 62px; border-radius: 50%; border: 0; display: grid; place-items: center; }
+  .round svg { width: 25px; height: 25px; }
+
+  /* ---------- place card: one small glass line beside the thing itself ---------- */
+  .mini { position: fixed; z-index: 12; height: 52px; border-radius: 26px; padding: 6px; padding-inline-start: 14px; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  .mini .t b { display: block; font-size: 14px; font-weight: 700; line-height: 1.15; }
+  .mini .t small { display: block; font-size: 11.5px; font-weight: 500; opacity: .9; }
+  .mini button { height: 40px; border-radius: 20px; border: 0; padding-inline: 14px; background: #fff; color: #1f160d; font-weight: 700; font-size: 13px; }
+  .mini .tip { position: absolute; width: 12px; height: 12px; rotate: 45deg; background: rgba(30, 22, 14, 0.42); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-radius: 2px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+</style>
+</head>
+<body>
+<div class="island"></div>
+<div class="status"><span>9:41</span><span class="bars"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><span class="bat"></span></span></div>
+
+<button class="who glass hit" aria-label="عزبة الصفوة، العصر 3:20، موسم الوسم">
+  <span class="wasm" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12.5 5.2a6.8 6.8 0 1 0 0 13.6 5.4 5.4 0 0 1 0-13.6z"/><path d="M18 5v14"/></svg></span>
+  <span><b>عزبة الصفوة</b><small><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>العصر 3:20 · موسم الوسم</small></span>
+</button>
+
+<div class="res">
+  <button class="cap glass money hit" aria-label="الرصيد 486,300 ريال"><b>486,300</b><small>ريال</small></button>
+  <div class="cap glass sup-cap">
+    <span class="sup water warn hit" aria-label="الماء يكفي 8 أيام"><span class="gr"><svg viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10.3"/><circle class="fg" cx="12" cy="12" r="10.3" stroke-dasharray="40.1 64.7"/></svg><svg class="i g" viewBox="0 0 24 24"><path d="M12 3.5s6 6.4 6 10.6a6 6 0 0 1-12 0C6 9.9 12 3.5 12 3.5z"/></svg></span>8 أيام</span>
+    <span class="sup feed hit" aria-label="العلف يكفي 13 يوم"><span class="gr"><svg viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10.3"/><circle class="fg" cx="12" cy="12" r="10.3" stroke-dasharray="29.1 64.7"/></svg><svg class="i g" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="11" rx="2"/><path d="M9.5 7v11M14.5 7v11"/></svg></span>13 يوم</span>
+  </div>
+</div>
+
+<div id="ground"></div>
+
+<div class="bottom">
+  <nav class="tabs glass">
+    <button class="tab on"><svg viewBox="0 0 24 24"><path class="f" d="M2.6 6.4c0-1 .8-1.6 1.7-1.6h1.1c.9 0 1.5.7 1.4 1.6l-.2 1.3c-.1.8.2 1.6.8 2.1.5.4 1.2.4 1.7 0 .5-.5.9-1.1 1.2-1.7.9-1.8 2.6-3 4.6-2.8 1.2.1 2.2.8 2.8 1.8.5.8 1.2 1.4 2.1 1.7 1.2.4 2 1.6 2 2.9v1.3c0 .7-.4 1.3-1 1.6V21h-1.4l-.5-4.9-.9.4.1 4.5h-1.4l-.6-4.4c-1.8.5-3.7.5-5.5 0L10 21H8.6l.1-4.6-.9-.9.1 5.5H6.5l-.5-6.6c-.1-1.1-.2-2.2 0-3.3l.1-.8-1.7-.4c-.6-.1-1-.6-1.1-1.2l-.4-1.4c-.2-.3-.3-.6-.3-.9z"/></svg><span>حلالي</span></button>
+    <button class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M12 20v-6"/><path d="M12 14c-3.6 0-6-2-6-4.6C6 7 8.4 5.6 10 6c.6-1.5 1.6-2.3 3-2.3s2.6 1 3 2.6c1.8 0 3 1.4 3 3.1C19 12 16 14 12 14z"/></svg><span>المسراح</span></button>
+    <button class="tab"><span class="badge">3</span><svg class="i" viewBox="0 0 24 24"><path d="M3.5 12.4V5c0-.8.7-1.5 1.5-1.5h7.4l8.1 8.1c.6.6.6 1.5 0 2.1l-7.4 7.4c-.6.6-1.5.6-2.1 0z"/><circle cx="8.2" cy="8.2" r="1.6"/></svg><span>الحراج</span></button>
+    <button class="tab"><svg class="i" viewBox="0 0 24 24"><path d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.8c0 2.4 1.2 3.8 3.2 4.2M16.5 6h2.7c0 2.4-1.2 3.8-3.2 4.2"/><path d="M12 14v3.5M9.5 17.5h5v3h-5z"/></svg><span>المزاين</span></button>
+  </nav>
+  <button class="round glass" aria-label="زاوية الكاميرا"><svg class="i" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="13" height="11" rx="2.5"/><path d="m15.5 10.5 5-3v9l-5-3"/></svg></button>
+</div>
+<div class="homebar"></div>
+
+<template id="mini-t">
+  <section class="mini glass" id="mini">
+    <span class="tip"></span>
+    <span class="t"><b>خزان الماء</b><small>يكفي 8 أيام · 9,300 لتر</small></span>
+    <button>اطلب وايت</button>
+  </section>
+</template>
+
+<script src="proj.js"></script>
+<script>
+  const q = new URLSearchParams(location.search);
+  const land = q.get('o') === 'l';
+  if (land) document.body.classList.add('land');
+  document.body.style.setProperty('--bg', `url(${q.get('bg')})`);
+  const cam = JSON.parse(q.get('cam'));
+  const W = innerWidth, H = innerHeight;
+  const P = makeCam(cam.t, cam.o, W, H);
+  const sel = q.get('v') === 'card' ? 'water' : '';
+
+  // CSS matrix3d that maps an element of w x h onto the screen quad q (top-left, top-right, bottom-right, bottom-left)
+  function quad(w, h, Q) {
+    const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = Q;
+    const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+    const den = dx1 * dy2 - dx2 * dy1;
+    const g = (dx3 * dy2 - dx2 * dy3) / den, hh = (dx1 * dy3 - dx3 * dy1) / den;
+    const a = x1 - x0 + g * x1, b = x3 - x0 + hh * x3, d = y1 - y0 + g * y1, e = y3 - y0 + hh * y3;
+    return `matrix3d(${a / w},${d / w},0,${g / w},${b / h},${e / h},0,${hh / h},0,0,1,0,${x0},${y0},0,1)`;
+  }
+  // a rectangle lying on the ground at (cx, cz), long side along the world axis that reads most level on screen,
+  // turned so the text's top points away from the camera
+  function groundRect(cx, cz, len, wid, y = 0.06, axis = null) {
+    const c = [cx, y, cz], s0 = P(c);
+    let best = null;
+    for (const b of axis === 'x' ? [[1, 0], [-1, 0]] : [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const p = P([cx + b[0], y, cz + b[1]]); const dx = p[0] - s0[0], dy = p[1] - s0[1];
+      const score = dx / Math.hypot(dx, dy);
+      if (!best || score > best.score) best = { b, score };
+    }
+    const b = best.b;
+    let u = [-b[1], b[0]];
+    if (P([cx + u[0], y, cz + u[1]])[1] > s0[1]) u = [-u[0], -u[1]];
+    const pt = (sb, su) => P([cx + b[0] * sb + u[0] * su, y, cz + b[1] * sb + u[1] * su]).slice(0, 2);
+    return [pt(-len / 2, wid / 2), pt(len / 2, wid / 2), pt(len / 2, -wid / 2), pt(-len / 2, -wid / 2)];
+  }
+  const ground = document.getElementById('ground');
+  ground.innerHTML = '<div class="bgimg"></div>';
+  function paint(html, cx, cz, len, wid, cls = '', y = 0.06, axis = null) {
+    const w = 1000, h = Math.round(1000 * wid / len);
+    const el = document.createElement('div');
+    el.className = 'paint ' + cls; el.style.width = w + 'px'; el.style.height = h + 'px';
+    el.style.fontSize = Math.round(h * (cls.includes('two') ? 0.5 : 0.6)) + 'px';
+    const Q = groundRect(cx, cz, len, wid, y, axis);
+    // too small to read (letters under 11 pt): left out until the camera comes closer. In the game it fades in at 12 pt
+    // and out at 10 pt, so names do not flicker while zooming
+    const tall = (Math.hypot(Q[3][0] - Q[0][0], Q[3][1] - Q[0][1]) + Math.hypot(Q[2][0] - Q[1][0], Q[2][1] - Q[1][1])) / 2;
+    if (tall * 0.6 < 11) return;
+    el.innerHTML = html; el.style.transform = quad(w, h, Q);
+    ground.appendChild(el);
+  }
+  function ring(cx, cz, r, cls) {
+    const w = 400;
+    const el = document.createElement('div');
+    el.className = 'ring ' + cls; el.style.width = el.style.height = w + 'px';
+    const Q = [[-r, -r], [r, -r], [r, r], [-r, r]].map(([dx, dz]) => P([cx + dx, 0.08, cz + dz]).slice(0, 2));
+    el.style.transform = quad(w, w, Q);
+    ground.appendChild(el);
+  }
+  function tint(cx, cz, w, d, y) {
+    const el = document.createElement('div'); el.className = 'tint'; el.style.width = '400px'; el.style.height = Math.round(400 * d / w) + 'px';
+    const Q = [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(([dx, dz]) => P([cx + dx, y, cz + dz]).slice(0, 2));
+    el.style.transform = quad(400, Math.round(400 * d / w), Q); ground.appendChild(el);
+  }
+  // each pen's name printed on its shade roof (world.js: roofs at 3.2 m, long side along x)
+  document.body.classList.add('b' + (q.get('b') || '1'));
+  const R = 3.12;
+  paint('شبك النوق', -17, -40.5, 15, 3.4, '', R, 'x');
+  paint('المفاريد', 8, -41, 10, 2.9, '', R, 'x');
+  paint('الحيران', -24.5, -16.5, 8, 2.3, '', R, 'x');
+  paint('الفحل', -11, -18, 5, 2.6, '', R, 'x');
+  if (q.get('sick') !== '0') { tint(-1, -18, 6, 3.5, R - 0.02); paint('العزل', -1, -18, 5, 2.6, 'alert', R, 'x'); }
+  // the water tank is low: a glowing ring on the ground around its legs
+  ring(30, -40, 4.2, sel === 'water' ? 'sel' : 'alert');
+
+  if (sel) {
+    document.body.appendChild(document.getElementById('mini-t').content.cloneNode(true));
+    const m = document.getElementById('mini'), tip = m.querySelector('.tip'), r = m.getBoundingClientRect();
+    const top = P([30, 8.4, -40]);
+    // under the tank top in portrait, beside it in landscape; the tip points at the tank
+    if (!land) {
+      // below the ring on the ground, so the tank itself stays in view
+      const foot = P([30, 0, -40 + 4.6]), mid = P([30, 0, -40]);
+      const x = Math.min(Math.max(mid[0] - r.width / 2, 12), W - 12 - r.width);
+      m.style.left = x + 'px'; m.style.top = (foot[1] + 14) + 'px';
+      tip.style.left = (mid[0] - x - 6) + 'px'; tip.style.top = '-6px';
+    } else {
+      m.style.left = (top[0] + 22) + 'px'; m.style.top = (top[1] - r.height / 2) + 'px';
+      tip.style.left = '-6px'; tip.style.top = (r.height / 2 - 6) + 'px'; tip.style.clipPath = 'polygon(0 0, 0 100%, 100% 100%)';
+    }
+    const mr = m.getBoundingClientRect();
+    for (const e of ground.querySelectorAll('.paint')) {
+      const r2 = e.getBoundingClientRect();
+      if (r2.left < mr.right && r2.right > mr.left && r2.top < mr.bottom && r2.bottom > mr.top) e.hidden = true;
+    }
+  }
+</script>
+</body>
+</html>
