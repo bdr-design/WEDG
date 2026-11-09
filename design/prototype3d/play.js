@@ -68,6 +68,22 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const fwd = new THREE.Vector3(), right = new THREE.Vector3();
   const carFwd = (yaw, out) => out.set(Math.cos(yaw), 0, -Math.sin(yaw));       // the model's +x is its front
   // the cabin for the driver's view: dash, wheel, pillars, headliner and door cards, in the car's own frame
+  // the car built by code carries its own cabin and moving parts; the older photo model gets a simple cabin
+  const part = (n) => car.getObjectByName(n);
+  const model = { interior: part('interior'), steer: part('steering'), doors: { FL: part('door_FL'), FR: part('door_FR'), RL: part('door_RL'), RR: part('door_RR') },
+    tailgate: part('tailgate'), wheels: { FL: part('wheel_FL'), FR: part('wheel_FR'), RL: part('wheel_RL'), RR: part('wheel_RR') } };
+  const hasCabin = !!model.interior;
+  const steerBase = model.steer ? model.steer.quaternion.clone() : null;
+  const tailMats = [];
+  car.traverse((n) => { if (n.isMesh && n.material && n.material.name === 'taillight') tailMats.push(n.material); });
+  let spin = 0;
+  const tween = [];                                   // simple part animations: { obj, key, from, to, t, dur }
+  // one animation per part at a time; `then` runs after an optional hold, in game time (not wall-clock)
+  function animate(obj, to, dur = 0.45, then = null, hold = 0) {
+    if (!obj) return;
+    for (let i = tween.length - 1; i >= 0; i--) if (tween[i].obj === obj) tween.splice(i, 1);
+    tween.push({ obj, from: obj.rotation.y, to, t: 0, dur, then, hold });
+  }
   const cabin = new THREE.Group(); cabin.visible = false; car.add(cabin);
   {
     const dark = new THREE.MeshStandardMaterial({ color: '#1d1b19', roughness: 0.8 });
@@ -92,7 +108,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   // body seen from inside: front faces only, so the shell is see-through from the driver's seat but the hood still shows
   const carMats = [];
-  car.traverse((n) => { if (n.isMesh) { n.material = n.material.clone(); carMats.push(n.material); } });
+  car.traverse((n) => { if (n.isMesh) { n.material = n.material.clone(); carMats.push(n.material); if (n.material.name === 'taillight') tailMats.push(n.material); } });
+  tailMats.splice(0, tailMats.length, ...carMats.filter((m) => m.name === 'taillight'));
 
   // ---------------------------------------------------------------- dust behind the wheels (a small pool)
   const dustTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(200,170,130,0.9)'); gr.addColorStop(1, 'rgba(200,170,130,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
@@ -190,11 +207,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     let n = 0; const t = setInterval(() => { for (const m of carMats) m.emissive?.setScalar(n % 2 ? 0 : 0.25); if (++n > 3) { clearInterval(t); for (const m of carMats) m.emissive?.setScalar(0); } }, 140);
   }
   function enter() {
+    animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.35);
     state.mode = 'drive'; man.root.visible = false; carState.v = 0;
     $('.pl-drive').hidden = false; $('.pl-speed').hidden = false; stick.hidden = true; stickId = null;
     setCard('drive', '<button data-c="out">انزل</button>');
   }
   function exit() {
+    if (Math.abs(carState.v) <= 1.5) animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.7);
     if (Math.abs(carState.v) > 1.5) return;                   // not while moving
     state.mode = 'walk'; carState.v = 0;
     driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading;
@@ -251,10 +270,10 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
   }
   function updateDrive(dt) {
-    let gas = held.gas, brake = held.brake, steer = held.steerR - held.steerL;
+    let gas = held.gas, brake = held.brake, steer = held.steerL - held.steerR;
     if (keys.size) {
       gas = keys.has('KeyW') || keys.has('ArrowUp') ? 1 : gas; brake = keys.has('KeyS') || keys.has('ArrowDown') ? 1 : brake;
-      steer = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) || steer;
+      steer = (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) - (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) || steer;
     }
     const v = carState.v;
     let a = 0;
@@ -286,6 +305,11 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     carState.pos.y = (fl + fr + bl + br) / 4;
     car.position.copy(carState.pos); car.rotation.set(carState.roll, carState.yaw, carState.pitch, 'YZX');
     cabin.userData.wheel.rotation.x = -carState.steer * 3.2;
+    spin += carState.v * dt / 0.401;
+    for (const [k, w] of Object.entries(model.wheels)) { if (!w) continue; w.rotation.order = 'YZX'; w.rotation.y = k[0] === 'F' ? carState.steer : 0; w.rotation.z = -spin; }
+    if (model.steer) model.steer.quaternion.copy(steerBase).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), carState.steer * 4.0));
+    const braking = brake && carState.v > 0.3;
+    for (const m of tailMats) m.emissiveIntensity = braking ? 4.0 : 0.6;
     $('.pl-speed b').textContent = Math.round(Math.abs(carState.v) * 3.6);
     // dust from the rear wheels when moving on sand
     puffT += dt * Math.min(1, Math.abs(carState.v) / 6);
@@ -324,11 +348,11 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     } else {
       carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP);
       const inside = state.view === 1;
-      cabin.visible = inside;
-      for (const m of carMats) { const side = inside ? THREE.FrontSide : THREE.DoubleSide; if (m.side !== side) { m.side = side; m.needsUpdate = true; } }
+      cabin.visible = inside && !hasCabin;
+      if (!hasCabin) for (const m of carMats) { const side = inside ? THREE.FrontSide : THREE.DoubleSide; if (m.side !== side) { m.side = side; m.needsUpdate = true; } }
       if (inside) {
-        car.updateMatrixWorld(); camera.position.copy(tmp.set(0.0, 1.47, -0.42).applyMatrix4(car.matrixWorld));
-        camLook.copy(tmp.set(6, 1.15, -0.42).applyMatrix4(car.matrixWorld)); camera.lookAt(camLook);
+        car.updateMatrixWorld(); camera.position.copy(tmp.set(hasCabin ? -0.17 : 0.0, 1.46, hasCabin ? -0.40 : -0.42).applyMatrix4(car.matrixWorld));
+        camLook.copy(tmp.set(6, 1.15, -0.36).applyMatrix4(car.matrixWorld)); camera.lookAt(camLook);
       } else {
         const back = 7.2 + Math.abs(carState.v) * 0.05;
         camPos.copy(carState.pos).addScaledVector(fwd, -back).add(tmp.set(0, 2.9, 0));
@@ -354,10 +378,15 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     onExit && onExit(state.mode === 'drive' ? carState.pos : man.pos);
   }
   function update(dt) {
+    for (let i = tween.length - 1; i >= 0; i--) {
+      const a = tween[i]; a.t = Math.min(1, a.t + dt / a.dur); const e = a.t * a.t * (3 - 2 * a.t);
+      a.obj.rotation.y = a.from + (a.to - a.from) * e;
+      if (a.t >= 1) { if (a.hold > 0) { a.hold -= dt; continue; } tween.splice(i, 1); if (a.then) a.then(); }
+    }
     if (!state.on || !man.root) return false;
     if (state.mode === 'walk') updateWalk(dt); else updateDrive(dt);
     updateCamera(dt);
     return true;
   }
-  return { start, stop, update, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; } } };
+  return { start, stop, update, model, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; } } };
 }
