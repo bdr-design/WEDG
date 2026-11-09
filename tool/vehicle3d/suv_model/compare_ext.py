@@ -55,8 +55,9 @@ def view_cam(name):
         set_aspect(k)
         z = (c['v0'] - H / 2) * s
         yc = (W / 2 - c['uc']) * s * k * (1 if name == 'front' else -1)
-        if name == 'front': cam.location = (20, -yc, z); cam.rotation_euler = (math.pi / 2, 0, math.pi / 2)
-        else: cam.location = (-20, -yc, z); cam.rotation_euler = (math.pi / 2, 0, -math.pi / 2)
+        # the image centre is at y = +yc in both views (the front camera's right is +y, the rear camera's is -y)
+        if name == 'front': cam.location = (20, yc, z); cam.rotation_euler = (math.pi / 2, 0, math.pi / 2)
+        else: cam.location = (-20, yc, z); cam.rotation_euler = (math.pi / 2, 0, -math.pi / 2)
     else:                  # top: looking down, the front at the top of the image
         # the top photo was scaled by its width with mirrors, which are small from above: its body comes out 2.5 %
         # narrower than in the front photo (and than the real 1.98 m). TOP_K corrects that.
@@ -75,8 +76,12 @@ def score(name, path):
     if os.environ.get('REAL'):
         ph = warp_photo(name, ph); Image.fromarray(ph.astype(np.uint8)).save(os.path.join(OUT, f'{name}_photo_real.jpg'))
     rd = np.asarray(Image.open(path).convert('RGBA')).astype(np.float32)
+    if name != 'top':
+        # nothing shows below the ground: the model's rigid tyres stand on the loaded radius, so they reach 30 mm under
+        # z = 0, where the ground hides them (the photo's tyres stand on the ground row v0)
+        rd = rd.copy(); rd[int(math.floor(CFG[name]['v0'])) + 1:, :, 3] = 0
     mag = (ph[..., 0] > 180) & (ph[..., 2] > 180) & (ph[..., 1] < 110)
-    pm = ndimage.binary_fill_holes(~mag); rm = rd[..., 3] > 127
+    pm = ndimage.binary_fill_holes(~mag); rm = ndimage.binary_fill_holes(rd[..., 3] > 127)   # outlines: holes filled in both
     iou = (pm & rm).sum() / max((pm | rm).sum(), 1)
     s = CFG[name]['s']
     e1 = cv2.Canny(cv2.cvtColor(ph.astype(np.uint8), cv2.COLOR_RGB2GRAY), 60, 160) > 0

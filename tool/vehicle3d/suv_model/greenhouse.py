@@ -103,7 +103,7 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
     # chrome strips along the foot and the head of the side windows
     strips = []
     for s in (1, -1):
-        for zf, d0, d1 in ((lambda d: bplane(d) - 0.004, 1.62, 4.20), (lambda d: ZTOP + 0.012, 2.40, 4.45)):
+        for nm, zf, d0, d1 in (('low', lambda d: bplane(d) - 0.004, 1.62, 4.20), ('top', lambda d: ZTOP + 0.012, 2.40, 4.45)):
             V, F = [], []
             ds = np.linspace(d0, d1, 60)
             for d in ds:
@@ -111,10 +111,15 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
                 hit = shell.ray_cast(Vector((XF - d, s * 1.5, z)), Vector((0, -s, 0)))
                 y = hit[1].y + s * 0.004 if hit[0] else s * 0.94
                 V += [(XF - d, y, z - 0.006), (XF - d, y + s * 0.006, z), (XF - d, y, z + 0.006)]
+            # a closed three-sided bar, wound to look outward on the right side and turned over for the left
             for i in range(len(ds) - 1):
-                a = 3 * i; F += [[a, a + 1, a + 4, a + 3], [a + 1, a + 2, a + 5, a + 4]]
-            mesh = bpy.data.meshes.new('chrome_strip'); mesh.from_pydata(V, [], F); mesh.update()
-            o = bpy.data.objects.new('chrome_strip', mesh); bpy.context.collection.objects.link(o); mesh.materials.append(chrome)
+                a = 3 * i; F += [[a, a + 1, a + 4, a + 3], [a + 1, a + 2, a + 5, a + 4], [a + 2, a, a + 3, a + 5]]
+            n = 3 * (len(ds) - 1); F += [[0, 2, 1], [n, n + 1, n + 2]]
+            if s > 0: F = [f[::-1] for f in F]
+            name = f"window_chrome_{nm}_{'L' if s > 0 else 'R'}"
+            mesh = bpy.data.meshes.new(name); mesh.from_pydata(V, [], F); mesh.update()
+            o = bpy.data.objects.new(name, mesh); bpy.context.collection.objects.link(o); mesh.materials.append(chrome)
             for p in mesh.polygons: p.use_smooth = True
+            mesh.set_sharp_from_angle(angle=math.radians(40))
             strips.append(o)
     return glass, strips
