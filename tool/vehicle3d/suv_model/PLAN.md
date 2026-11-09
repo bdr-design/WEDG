@@ -39,3 +39,10 @@ Steps:
 - Front features measured on 02_front (y, z in m): headlamps y 0.60-0.93, z 1.10-1.21; grille y +-0.60, z 0.665-1.19,
   with 4 chrome bars at z about 1.18, 1.04, 0.91, 0.79; L-shaped chrome DRL bars at y +-0.86, z 0.70-1.10; lower intake
   z 0.32-0.66 with a chrome strip at 0.44; fog lamps at y +-0.88, z 0.48.
+- 9 Nov: the owner asked for the dimensions to come from the sources and the photos. DIMENSIONS.md has the official
+  ZX figures (4985 x 1980 x 1925, wheelbase 2850, track 1665, 265/55R20) and a real side photo measured against the
+  owner's: the photos put the rear axle 119 mm too far back, the wheels 8 % too big and the car about 5 cm high.
+  realframe.py maps everything built in the photo frame to the real frame; the arches, shut lines, handles and wheels
+  are built in the real frame. The rim is now six V pairs of spokes, as in the photo. Two scorer bugs fixed (the
+  front, rear and top renders ignored the photos' sideways stretch; the top camera was turned 180 degrees). Build r4,
+  scored with REAL=1: IoU side 0.970, front 0.934, rear 0.943, top 0.986.

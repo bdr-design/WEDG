@@ -65,12 +65,15 @@ def roof_rails(black):
         out.append(join([o] + posts, o.name))
     return out
 
+ARCH_CZ, ARCH_R = 0.45, 0.476   # the real arch: its top edge 0.926 m up, 0.47 m either side of the hub at hub height
+
 def arches(shell, paint, liner, flare_mat):
-    """Cut each wheel opening 0.47 m round the hub from the shell, line it, and add a 4 cm flare round its upper edge."""
+    """Cut each wheel opening from the shell round the real axle (a circle 0.476 m round a point 7 cm above the hub, as
+    measured on the real side photo), line it, and add a flare round its upper edge. Runs in the real frame."""
     cutters = []
     for x in WH.AXLE_X:
         for s in (1, -1):
-            bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=0.47, depth=0.70, location=(x, s * (0.60 + 0.35), WH.HUB_Z), rotation=(math.pi / 2, 0, 0))
+            bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=ARCH_R, depth=0.70, location=(x, s * (0.60 + 0.35), ARCH_CZ), rotation=(math.pi / 2, 0, 0))
             cutters.append(bpy.context.active_object)
     cut = join(cutters, 'arch_cutters'); cut.data.materials.append(liner)
     activate(shell)
@@ -80,11 +83,11 @@ def arches(shell, paint, liner, flare_mat):
     for x in WH.AXLE_X:
         for s in (1, -1):
             # a half torus over the opening, flattened against the body side
-            bpy.ops.mesh.primitive_torus_add(major_radius=0.49, minor_radius=0.03, major_segments=48, minor_segments=10,
-                                             location=(x, s * 0.985, WH.HUB_Z), rotation=(math.pi / 2, 0, 0))
+            bpy.ops.mesh.primitive_torus_add(major_radius=ARCH_R + 0.02, minor_radius=0.034, major_segments=48, minor_segments=10,
+                                             location=(x, s * 0.97, ARCH_CZ), rotation=(math.pi / 2, 0, 0))   # outer edge at 0.99: the spec width
             t = bpy.context.active_object; bpy.ops.object.transform_apply(location=False, rotation=True)
             bm = bmesh.new(); bm.from_mesh(t.data)
-            bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.06], context='VERTS')      # only over the top
+            bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.10], context='VERTS')      # only over the top
             bm.to_mesh(t.data); bm.free()
             t.scale.y = 0.6; bpy.ops.object.transform_apply(scale=True)
             t.data.materials.append(flare_mat)

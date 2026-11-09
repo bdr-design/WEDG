@@ -6,7 +6,10 @@ import bpy, bmesh, math, sys, os, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import outlines as O
 
-TOP_TO_FRONT = 0.985 / 0.960
+# The top photo at TOP_K 1.026 is 1.980 m across its flares, the spec width; the body is built on the front photo's
+# scale, which realframe.Y_SCALE (1.980 / 2.0125) takes to the spec. So top-photo widths go in at 1.026 / Y_SCALE.
+import realframe as RF
+TOP_TO_FRONT = 1.026 / RF.Y_SCALE
 
 def smin(a, b, k):
     h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1); return b * (1 - h) + a * h - k * h * (1 - h)

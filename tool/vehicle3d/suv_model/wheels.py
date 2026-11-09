@@ -1,16 +1,19 @@
 """Step 6: wheels, modelled after the rim in the owner's side photo (suv/rim_rear.png).
-The rim: 12 straight spokes 30 degrees apart (8-10 degrees wide at the rim, 5 at mid radius), a machined silver face
-with dark painted sides and pockets, a slight dish toward the hub, six lug nuts and a black centre cap.
-The tyre: 0.856 m across on the 0.576 m rim face, as measured on the photo, with a tread and sidewall normal map.
+The rim: 12 spokes in six V pairs (each pair from one root between two studs, evenly 30 degrees apart at the lip),
+machined silver faces with dark bevels and pockets, a 30 mm dish toward the hub, six studs and a black centre cap.
+The size is the spec sheet's, not the photo's (the photo's wheels are 8 % too big, see realframe.py): a 265/55R20 tyre,
+0.800 m across, on a 20 x 8.5 rim (lip 0.536 m across), six studs on a 139.7 mm circle; track 1665 mm.
 Local frame: the axle along +Y (the car's left), the wheel's outer face at +Y."""
 import bpy, bmesh, math, os, sys, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mathutils import Vector, Matrix
 
-R_TYRE, R_RIM, W_TYRE = 0.428, 0.288, 0.265
-HUB_Z = 0.43
-AXLE_X = (2.495 - 0.941, 2.495 - 3.901)   # front, rear (the photo's hub positions from its front)
-HALF_TRACK = 0.86
+import realframe as RF
+R_TYRE, R_RIM, W_TYRE = RF.TYRE_D / 2, 0.268, 0.265
+HUB_Z = RF.HUB_Z
+AXLE_X = RF.AXLE_X                        # front, rear
+HALF_TRACK = RF.TRACK / 2
+PCD_R = 0.1397 / 2
 
 def mat(name, color, metal=0.0, rough=0.5, coat=0.0):
     m = bpy.data.materials.get(name)
@@ -62,47 +65,57 @@ def tyre(materials):
 def rim(m_silver, m_dark, m_chrome, m_black):
     parts = []
     # the barrel and the lip
-    lip = [(R_RIM + 0.004, W_TYRE / 2 - 0.004), (R_RIM, W_TYRE / 2 + 0.002), (R_RIM - 0.016, W_TYRE / 2 + 0.004), (R_RIM - 0.022, W_TYRE / 2 - 0.004),
-           (R_RIM - 0.022, -W_TYRE / 2 + 0.01), (R_RIM, -W_TYRE / 2)]
+    lip = [(R_RIM + 0.004, W_TYRE / 2 - 0.004), (R_RIM, W_TYRE / 2 + 0.002), (R_RIM - 0.008, W_TYRE / 2 + 0.003), (R_RIM - 0.016, W_TYRE / 2 - 0.004),
+           (R_RIM - 0.016, -W_TYRE / 2 + 0.01), (R_RIM, -W_TYRE / 2)]
     parts.append(revolve('rim_lip', lip, 72, [m_silver, m_dark], mat_of=lambda i: 0 if i < 2 else 1))
-    # the dark back of the face, seen between the spokes
-    back = [(R_RIM - 0.022, W_TYRE / 2 - 0.05), (0.09, W_TYRE / 2 - 0.075), (0.02, W_TYRE / 2 - 0.075)]
+    # behind the spokes: a deep dark well and the brake disc (the disc turns with the wheel, so it can live here)
+    back = [(R_RIM - 0.016, W_TYRE / 2 - 0.05), (0.11, W_TYRE / 2 - 0.115), (0.02, W_TYRE / 2 - 0.115)]
     parts.append(revolve('rim_back', back, 48, [m_dark]))
-    # spokes: tapered bars with a machined face, dished toward the hub
+    disc = [(0.105, W_TYRE / 2 - 0.085), (0.190, W_TYRE / 2 - 0.085), (0.190, W_TYRE / 2 - 0.110), (0.105, W_TYRE / 2 - 0.110)]
+    parts.append(revolve('brake_disc', disc, 48, [mat('brake_disc', (0.16, 0.16, 0.17), metal=0.8, rough=0.6)]))
+    # 12 spokes in six V pairs, as on the owner's rim: each pair grows from one root between two studs (roots at
+    # 0, 60, 120 ... degrees) and splays out to the lip, where the spokes stand evenly 30 degrees apart (tips at
+    # +-15 degrees from the root). Each spoke has a machined silver face and a dark bevel on the side away from its
+    # partner (facing the slot between two pairs); the face dishes 30 mm toward the hub.
     V, F, M = [], [], []
-    def spoke(a0):
-        rs = np.linspace(0.085, R_RIM - 0.018, 9)
+    r0, r1 = 0.074, R_RIM - 0.006
+    def spoke(root_a, tip_a, bevel_side):
+        p0 = np.array([r0 * math.cos(root_a), r0 * math.sin(root_a)]); p1 = np.array([r1 * math.cos(tip_a), r1 * math.sin(tip_a)])
+        axis = (p1 - p0) / np.linalg.norm(p1 - p0); nrm = np.array([-axis[1], axis[0]])
         rows = []
-        for r in rs:
-            t = (r - 0.085) / (R_RIM - 0.018 - 0.085)
-            half = math.radians(2.8 + 2.0 * t ** 1.3 + 3.5 * max(0.0, 1 - (r - 0.085) / 0.05))   # flaring into the hub ring, wider at the rim
-            face_y = W_TYRE / 2 - 0.006 - 0.028 * (1 - t) ** 1.5                            # the dish
-            depth = 0.026
-            pts = []
-            for side in (-1, 1):
-                a = a0 + side * half; ai = a0 + side * half * 0.78
-                pts.append((r * math.cos(ai), face_y, r * math.sin(ai)))        # face edge (chamfered in)
-                pts.append((r * math.cos(a), face_y - 0.006, r * math.sin(a)))    # outer edge
-                pts.append((r * math.cos(a), face_y - depth, r * math.sin(a)))    # bottom
-            rows.append([pts[2], pts[1], pts[0], pts[3], pts[4], pts[5]])          # around the section
+        for t in np.linspace(0, 1, 10):
+            c = p0 + (p1 - p0) * t; r = float(np.linalg.norm(c))
+            w = 0.026 + 0.044 * t ** 1.15
+            face_y = W_TYRE / 2 + 0.001 - 0.020 * (1 - t) ** 1.3
+            depth = 0.028
+            sec = []
+            for (u, dy) in ((-0.5, -depth), (-0.5, -0.006), (-0.5 + 0.36, 0.0), (0.5, 0.0), (0.5, -depth)):
+                uu = u * bevel_side
+                q = c + nrm * uu * w; sec.append((q[0], face_y + dy, q[1]))
+            if bevel_side < 0: sec = sec[::-1]
+            rows.append(sec)
         base = len(V)
         for row in rows: V.extend(row)
         for i in range(len(rows) - 1):
-            for j in range(5):
-                a = base + i * 6 + j; F.append([a, a + 1, a + 7, a + 6]); M.append(0 if j == 2 else 1)
-    for k in range(12): spoke(math.radians(10 + 30 * k))
+            for j in range(4):
+                a_ = base + i * 5 + j; F.append([a_, a_ + 1, a_ + 6, a_ + 5])
+                if bevel_side > 0: M.append(0 if j == 2 else 1)
+                else: M.append(0 if j == 1 else 1)
+    for k in range(6):
+        ra = math.radians(60 * k)
+        spoke(ra + math.radians(7), ra + math.radians(15), -1)
+        spoke(ra - math.radians(7), ra - math.radians(15), 1)
     parts.append(obj('spokes', V, F, [m_silver, m_dark], M, smooth=False))
-    # the hub, the lug nuts and the cap
-    # the hub: a machined ring the spokes grow out of, a dark centre with the lug nuts
-    hub = [(0.0, W_TYRE / 2 - 0.034), (0.050, W_TYRE / 2 - 0.034), (0.056, W_TYRE / 2 - 0.030), (0.098, W_TYRE / 2 - 0.030), (0.112, W_TYRE / 2 - 0.040), (0.112, W_TYRE / 2 - 0.07)]
-    parts.append(revolve('hub', hub, 48, [m_dark, m_silver], mat_of=lambda i: 1 if i in (2, 3) else 0))
+    # the hub: a dark face the spokes grow out of, six studs on the 139.7 mm circle between the roots, a black cap
+    # over the 106 mm centre bore
+    hub = [(0.0, W_TYRE / 2 - 0.036), (0.052, W_TYRE / 2 - 0.036), (0.054, W_TYRE / 2 - 0.026), (0.060, W_TYRE / 2 - 0.024), (0.082, W_TYRE / 2 - 0.026), (0.086, W_TYRE / 2 - 0.040), (0.086, W_TYRE / 2 - 0.075)]
+    parts.append(revolve('hub', hub, 48, [m_dark, m_silver], mat_of=lambda i: 1 if i in (1, 2) else 0))
     for k in range(6):
         a = math.radians(30 + 60 * k)
-        bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.011, depth=0.022, location=(0.062 * math.cos(a), W_TYRE / 2 - 0.022, 0.062 * math.sin(a)), rotation=(math.pi / 2, 0, 0))
+        bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.0115, depth=0.024, location=(PCD_R * math.cos(a), W_TYRE / 2 - 0.014, PCD_R * math.sin(a)), rotation=(math.pi / 2, 0, 0))
         n_ = bpy.context.active_object; n_.data.materials.append(m_chrome); parts.append(n_)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.036, depth=0.014, location=(0, W_TYRE / 2 - 0.024, 0), rotation=(math.pi / 2, 0, 0))
-    cap = bpy.context.active_object; cap.data.materials.append(m_black); parts.append(cap)
-    for p in cap.data.polygons: p.use_smooth = False
+    cap = [(0.0, W_TYRE / 2 - 0.008), (0.030, W_TYRE / 2 - 0.010), (0.044, W_TYRE / 2 - 0.015), (0.048, W_TYRE / 2 - 0.024), (0.048, W_TYRE / 2 - 0.036)]
+    parts.append(revolve('cap', cap, 40, [m_black]))
     return parts
 
 def build(tyre_mat):
