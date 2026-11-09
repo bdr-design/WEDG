@@ -46,6 +46,7 @@ def mat(name, color, metal=0.0, rough=0.5, alpha=1.0, emit=None, emit_s=0.0, coa
 M = {
     'paint': mat('paint', (0.010, 0.010, 0.011), 0.15, 0.30, coat=1.0),        # gloss black: the shine comes from the clear coat, not from metal
     'glass': mat('glass', (0.012, 0.014, 0.017), 0.0, 0.04, alpha=0.80),
+    'glass_ws': mat('glass_ws', (0.02, 0.025, 0.03), 0.0, 0.03, alpha=0.30),
     'trim': mat('trim', (0.02, 0.02, 0.021), 0.0, 0.55),
     'chrome': mat('chrome', (0.8, 0.8, 0.82), 1.0, 0.12),
     'satin': mat('satin', (0.45, 0.46, 0.47), 0.9, 0.35),
@@ -85,11 +86,11 @@ def interp(table, d):
 # ------------------------------------------------------------------ the lower body: a loft of rounded sections
 # (distance from the front, value) tables, from the reference profile scaled to the real 1.925 m height
 # the shoulder / beltline at the side (the hood's centre stands higher, see CROWN), measured on the reference photo
-TOP = [(0.00, 0.80), (0.04, 1.04), (0.14, 1.17), (0.40, 1.215), (1.00, 1.245), (1.46, 1.26), (2.00, 1.27), (3.50, 1.285),
-       (4.40, 1.30), (4.64, 1.30), (4.84, 1.28), (4.95, 1.20), (4.985, 1.02)]
-CROWN = [(0.0, 0.0), (0.10, 0.045), (0.40, 0.07), (1.30, 0.075), (1.46, 0.04), (1.60, 0.012), (4.985, 0.012)]
-BOT = [(0.00, 0.80), (0.03, 0.47), (0.25, 0.40), (0.55, 0.38), (1.40, 0.42), (3.50, 0.42), (4.30, 0.40), (4.70, 0.42), (4.95, 0.47), (4.985, 0.60)]
-HW = [(0.00, 0.80), (0.04, 0.90), (0.20, 0.965), (0.45, 0.99), (4.55, 0.99), (4.85, 0.97), (4.985, 0.90)]
+TOP = [(0.00, 1.13), (0.03, 1.18), (0.12, 1.205), (0.40, 1.215), (1.00, 1.245), (1.46, 1.26), (2.00, 1.27), (3.50, 1.285),
+       (4.40, 1.30), (4.64, 1.30), (4.90, 1.30), (4.97, 1.29), (4.985, 1.25)]
+CROWN = [(0.0, 0.03), (0.10, 0.05), (0.40, 0.07), (1.30, 0.075), (1.46, 0.04), (1.60, 0.012), (4.985, 0.012)]
+BOT = [(0.00, 0.47), (0.03, 0.46), (0.25, 0.40), (0.55, 0.38), (1.40, 0.42), (3.50, 0.42), (4.30, 0.40), (4.70, 0.42), (4.95, 0.47), (4.985, 0.60)]
+HW = [(0.00, 0.95), (0.06, 0.975), (0.25, 0.99), (4.55, 0.99), (4.90, 0.975), (4.985, 0.95)]
 
 def section(d, n=28):
     """Half of a rounded section at station d, from the bottom centre to the top centre (y >= 0)."""
@@ -148,8 +149,8 @@ for xa in (XA_F, XA_R):
     bpy.data.objects.remove(cut)
 
 # ------------------------------------------------------------------ the greenhouse: windscreen, side glass, roof, rear glass
-ROOF = [(1.46, 1.335), (1.62, 1.47), (1.86, 1.66), (2.10, 1.80), (2.30, 1.855), (2.60, 1.875), (3.6, 1.880), (4.55, 1.875), (4.72, 1.86), (4.80, 1.80), (4.86, 1.40)]
-GH = (1.46, 4.86)
+ROOF = [(1.46, 1.335), (1.62, 1.47), (1.86, 1.66), (2.10, 1.80), (2.30, 1.855), (2.60, 1.875), (3.6, 1.880), (4.55, 1.875), (4.76, 1.865), (4.84, 1.80), (4.95, 1.31)]
+GH = (1.46, 4.95)
 def gh_section(d, n=10):
     zb = interp(TOP, d) - 0.005; zt = interp(ROOF, d)
     wb_, wt = 0.935 - 0.01 * max(0.0, d - 4.5) / 0.36, 0.70
@@ -167,7 +168,7 @@ def gh_ring(d):
     return half
 
 # build as an open surface: the side and roof from beltline to beltline
-gh_st = sorted(set(list(np.linspace(GH[0], 2.35, 14)) + list(np.linspace(2.35, 4.70, 22)) + list(np.linspace(4.70, GH[1], 6))))
+gh_st = sorted(set(list(np.linspace(GH[0], 2.35, 16)) + list(np.linspace(2.35, 4.70, 24)) + list(np.linspace(4.70, GH[1], 8)) + [2.70, 2.80, 3.66, 3.74, 4.20, 4.30, 4.42, 4.76]))
 rings = []
 for d in gh_st:
     half = gh_ring(d)                             # beltline (y = wb) ... roof centre (y = 0)
@@ -175,23 +176,24 @@ for d in gh_st:
     rings.append([(d2x(d), y, z) for y, z in full])
 n = len(rings[0]); V = [p for r in rings for p in r]; F = []; MI = []
 WIN = {'A': (1.46, 2.30), 'B': (2.70, 2.80), 'C': (3.66, 3.74), 'D': (4.52, 4.72)}
+def a_pillar_d(z):                       # where the A pillar is at height z (the windscreen's side edge)
+    return 1.46 + (z - 1.27) / (1.86 - 1.27) * (2.30 - 1.46)
 def gh_mat(c):
-    d = XF - c[0]; side = abs(c[1]) > 0.55; top = c[2] > interp(ROOF, d) - 0.035
-    if top and d > 2.25 and d < 4.74: return 0                         # roof: paint
-    if d < 2.30:                                                        # windscreen and the A pillars
-        return 2 if abs(c[1]) > 0.66 else 1
-    if d > 4.74: return 1 if abs(c[1]) < 0.78 else 2                   # rear glass and the D pillars
-    if side:
-        for k, (a, b) in WIN.items():
-            if k in 'BC' and a <= d <= b: return 2                     # black B and C pillars
-        if 4.40 <= d <= 4.74: return 2 if c[2] < interp(TOP, d) + 0.06 else 1
-        return 1
-    return 0
+    d = XF - c[0]; ay = abs(c[1]); top = c[2] > interp(ROOF, d) - 0.035
+    if top and 2.25 < d < 4.78: return 0                                # roof: paint
+    if ay < 0.66 and d < 2.30: return 3                                 # windscreen
+    if d > 4.78: return 1 if ay < 0.78 else 0                           # rear glass; the D pillars in body colour
+    if ay < 0.55: return 0
+    if d < a_pillar_d(c[2]) + 0.09: return 2                            # the A pillar strip
+    if 2.70 <= d <= 2.80 or 3.66 <= d <= 3.74: return 2                 # black B and C pillars
+    if d > 4.42: return 0                                               # body-colour D pillar
+    if d > 4.20 and c[2] < interp(TOP, d) + (d - 4.20) / 0.22 * 0.22: return 0       # the glass corner sweeps up
+    return 1
 for i in range(len(rings) - 1):
     for j in range(n - 1):
         a, b = i * n + j, i * n + j + 1
         F.append([a, b, b + n, a + n]); MI.append(gh_mat(np.mean([V[a], V[b], V[b + n], V[a + n]], 0)))
-greenhouse = obj('greenhouse', V, F, ['paint', 'glass', 'trim'], MI)
+greenhouse = obj('greenhouse', V, F, ['paint', 'glass', 'trim', 'glass_ws'], MI)
 # glass becomes its own object (it is drawn after the opaque parts)
 def split_material(o, idx, name):
     bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
@@ -200,6 +202,9 @@ def split_material(o, idx, name):
     bpy.ops.object.mode_set(mode='OBJECT')
     new = [x for x in bpy.context.selected_objects if x is not o][0]; new.name = name; return new
 glass = split_material(greenhouse, 1, 'glass')
+ws = split_material(greenhouse, 3, 'windscreen')
+bpy.ops.object.select_all(action='DESELECT')
+glass.select_set(True); ws.select_set(True); bpy.context.view_layer.objects.active = glass; bpy.ops.object.join(); glass = bpy.context.active_object; glass.name = 'glass'
 
 # ------------------------------------------------------------------ front: the big grille with three heavy chrome bars, slim lamps, bumper
 def box(name, size, loc, m, rot=(0, 0, 0), bevel=0.0):
@@ -215,7 +220,7 @@ def quad_panel(name, pts, m, depth=0.0):
     V = [tuple(p) for p in pts]; F = [list(range(len(V)))]
     return obj(name, V, F, [m], smooth=False)
 parts = []
-xg = XF - 0.035
+xg = XF + 0.006
 # the grille opening: a trapezoid, wider at the bottom, dark inside
 gw_top, gw_bot, gz0, gz1 = 0.60, 0.68, 0.74, 1.17
 parts.append(quad_panel('grille_back', [(xg, -gw_bot, gz0), (xg, gw_bot, gz0), (xg, gw_top, gz1), (xg, -gw_top, gz1)][::-1], 'trim'))
@@ -229,11 +234,14 @@ for s_ in (1, -1):
     ang = math.atan2(gw_bot - gw_top, gz1 - gz0)
     parts.append(box(f'grille_side{s_}', (0.06, 0.034, gz1 - gz0 + 0.02), (xg + 0.018, s_ * (gw_top + gw_bot) / 2 + s_ * 0.015, (gz0 + gz1) / 2), 'chrome', rot=(s_ * ang, 0, 0), bevel=0.01))
     # headlamps: slim, at the top corners beside the grille, the DRL line underneath, angled round the corner
-    hl = box(f'headlamp{s_}', (0.07, 0.30, 0.075), (XF - 0.06, s_ * 0.80, 1.155), 'trim', rot=(0, 0, s_ * -0.24), bevel=0.014); parts.append(hl)
+    hl = box(f'headlamp{s_}', (0.06, 0.40, 0.07), (XF - 0.01, s_ * 0.80, 1.155), 'trim', rot=(0, 0, s_ * -0.16), bevel=0.012); parts.append(hl)
+    parts.append(box(f'lamp_bar{s_}', (0.05, 0.42, 0.022), (XF + 0.004, s_ * 0.80, 1.11), 'chrome', rot=(0, 0, s_ * -0.16), bevel=0.006))
+    for z_, dz in ((gz0 - 0.005, 0), (gz1 + 0.01, 0)):
+        parts.append(box(f'grille_c{s_}{z_:.2f}', (0.06, 0.08, 0.03), (xg + 0.018, s_ * ((gw_bot if z_ < 1 else gw_top) - 0.02), z_), 'chrome', bevel=0.008))
     for i in range(3):
-        bpy.ops.mesh.primitive_cylinder_add(vertices=14, radius=0.021, depth=0.03, location=(XF - 0.028 - 0.02 * i, s_ * (0.70 + 0.072 * i), 1.162), rotation=(0, math.pi / 2, 0))
+        bpy.ops.mesh.primitive_cylinder_add(vertices=14, radius=0.022, depth=0.03, location=(XF + 0.02 - 0.018 * i, s_ * (0.67 + 0.095 * i), 1.162), rotation=(0, math.pi / 2, 0))
         lens = bpy.context.active_object; lens.data.materials.append(M['headlight']); parts.append(lens)
-    parts.append(box(f'drl{s_}', (0.03, 0.28, 0.010), (XF - 0.032, s_ * 0.80, 1.117), 'drl', rot=(0, 0, s_ * -0.24)))
+    parts.append(box(f'drl{s_}', (0.03, 0.38, 0.010), (XF + 0.022, s_ * 0.80, 1.19), 'drl', rot=(0, 0, s_ * -0.16)))
     parts.append(box(f'drl_v{s_}', (0.03, 0.012, 0.16), (XF - 0.03, s_ * 0.695, 0.99), 'drl'))
     # fog lamps: thin vertical slots low in the bumper corners
     parts.append(box(f'fog{s_}', (0.03, 0.03, 0.12), (XF - 0.012, s_ * 0.80, 0.66), 'headlight', bevel=0.006))
@@ -246,11 +254,9 @@ parts.append(box('bumper_low', (0.20, 1.86, 0.10), (XF - 0.10, 0, 0.46), 'trim',
 # ------------------------------------------------------------------ rear: long tail lamps joined by a chrome bar, the tailgate glass, bumper
 xr = XF - L + 0.025
 for s_ in (1, -1):
-    parts.append(box(f'tail{s_}', (0.05, 0.44, 0.075), (xr - 0.005, s_ * 0.70, 1.255), 'taillight', bevel=0.012))
-    parts.append(box(f'tail_side{s_}', (0.20, 0.05, 0.075), (xr + 0.10, s_ * 0.965, 1.255), 'taillight', bevel=0.012))
-    parts.append(box(f'tail_lower{s_}', (0.04, 0.30, 0.018), (xr - 0.012, s_ * 0.74, 1.205), 'chrome'))
+    parts.append(box(f'tail{s_}', (0.05, 0.42, 0.07), (xr - 0.012, s_ * 0.72, 1.18), 'taillight', bevel=0.012))
+    parts.append(box(f'tail_side{s_}', (0.22, 0.05, 0.07), (xr + 0.09, s_ * 0.968, 1.18), 'taillight', bevel=0.012))
     parts.append(box(f'reflector{s_}', (0.04, 0.18, 0.025), (xr - 0.02, s_ * 0.72, 0.66), 'taillight'))
-parts.append(box('tail_bar', (0.03, 0.56, 0.026), (xr - 0.012, 0, 1.26), 'chrome', bevel=0.006))
 parts.append(box('plate_recess', (0.02, 0.56, 0.16), (xr - 0.002, 0, 0.98), 'trim', bevel=0.01))
 parts.append(box('bumper_rear', (0.14, 1.88, 0.16), (xr + 0.03, 0, 0.60), 'trim', bevel=0.025))
 parts.append(box('skid_rear', (0.06, 1.0, 0.05), (xr - 0.02, 0, 0.53), 'satin', bevel=0.015))
@@ -297,16 +303,26 @@ for s in (1, -1):
         parts.append(sweep(f'shut{s}{d}', [(d2x(d), s * 1.002, 0.46), (d2x(d), s * 1.004, 0.9), (d2x(d), s * 0.995, top)], 0.0025, 'trim'))
     parts.append(sweep(f'shut_sill{s}', [(d2x(d), s * 0.995, 0.47) for d in np.linspace(1.56, 3.72, 6)], 0.0025, 'trim'))
 
+for xa in (XA_F, XA_R):
+    for s_ in (1, -1):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=28, radius=R_TYRE + 0.06, depth=0.34, end_fill_type='NOTHING', location=(xa, s_ * 0.82, R_TYRE + 0.02), rotation=(math.pi / 2, 0, 0))
+        lin = bpy.context.active_object; lin.name = f'liner{s_}{xa:.1f}'
+        bm = bmesh.new(); bm.from_mesh(lin.data)
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.y < -0.05], context='VERTS')     # the upper half (local y is up before the rotation)
+        bm.to_mesh(lin.data); bm.free(); lin.data.materials.append(M['trim']); parts.append(lin)
+        bpy.ops.mesh.primitive_cylinder_add(vertices=28, radius=R_TYRE + 0.06, depth=0.01, location=(xa, s_ * 0.65, R_TYRE + 0.02), rotation=(math.pi / 2, 0, 0))
+        cap = bpy.context.active_object; cap.data.materials.append(M['trim']); parts.append(cap)       # the inner wall
+
 # ------------------------------------------------------------------ wheels: tyre, multi-spoke rim, a brake disc behind
 def wheel(name, x, y, side):
     R_RIM = 0.229                                   # 18 inch rim
     # tyre: a revolved profile from the bead to the tread, with a rounded shoulder
     prof = []
-    for i in range(15):
-        t = i / 14; a = math.pi * t
+    for i in range(11):
+        t = i / 10; a = math.pi * t
         rr = R_RIM + (R_TYRE - R_RIM) * math.sin(a) ** 0.45; ww = (W_TYRE / 2) * math.cos(a) * (1.0 + 0.05 * math.sin(a))
         prof.append((rr, ww))
-    segs = 36; V = []; F = []
+    segs = 28; V = []; F = []
     for k in range(segs):
         ang = 2 * math.pi * k / segs
         for rr, ww in prof: V.append((rr * math.cos(ang), ww, rr * math.sin(ang)))
@@ -401,7 +417,7 @@ ibox('cargo', (0.80, 1.60, 0.03), (d2x(4.45), 0, 0.78), 'carpet')
 for y in (0.74, -0.74):
     ibox(f'bpillar_in{y}', (0.10, 0.03, 0.62), (d2x(2.75), y * 1.05, 1.52), 'headliner')
 # the steering wheel turns: its own object, its origin at the centre of the rim
-col_c = Vector((d2x(1.97), 0.40, 1.08))
+col_c = Vector((d2x(2.08), 0.40, 1.10))
 bpy.ops.mesh.primitive_torus_add(major_radius=0.185, minor_radius=0.017, major_segments=36, minor_segments=8, location=(0, 0, 0), rotation=(0, math.pi / 2, 0))
 rim_ = bpy.context.active_object; rim_.data.materials.append(M['leather']); bpy.ops.object.transform_apply(rotation=True)
 bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=0.065, depth=0.05, location=(0, 0, 0), rotation=(0, math.pi / 2, 0))
@@ -426,13 +442,17 @@ def carve(src, test, name):
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_mode(type='FACE'); bpy.ops.mesh.select_all(action='DESELECT'); bpy.ops.object.mode_set(mode='OBJECT')
     me = src.data; n = 0
     for p in me.polygons:
-        c = src.matrix_world @ p.center; p.select = test(c); n += p.select
+        c = src.matrix_world @ p.center
+        corners = [src.matrix_world @ me.vertices[v].co for v in p.vertices]
+        p.select = test(c) and all(test(q, corner=True) for q in corners); n += p.select
     if not n: return None
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.separate(type='SELECTED'); bpy.ops.object.mode_set(mode='OBJECT')
     new = [x for x in bpy.context.selected_objects if x is not src][0]; new.name = name; return new
 DOORS = {'door_FL': (1.565, 2.735, 1), 'door_RL': (2.775, 3.715, 1), 'door_FR': (1.565, 2.735, -1), 'door_RR': (2.775, 3.715, -1)}
-def in_door(c, d0, d1, side):
+def in_door(c, d0, d1, side, corner=False):
     d = XF - c.x
+    if corner: return d0 - 0.12 < d < d1 + 0.005 and c.y * side > 0.5     # corners may reach forward to the mirror only
+    if d0 < 2 and 1.50 < d < 1.75 and c.y * side > 0.98 and 1.30 < c.z < 1.52: return True      # the mirror rides on the front door
     if not (d0 < d < d1) or c.y * side < 0.55: return False
     if c.z < 0.50: return False                       # the sill cladding stays on the body
     if c.z < interp(TOP, d) + 0.02: return abs(c.y) > 0.80
@@ -440,7 +460,7 @@ def in_door(c, d0, d1, side):
     return d > 1.98 if d0 < 2 else True              # above the beltline: the window, behind the A pillar
 door_objs = {}
 for name, (d0, d1, side) in DOORS.items():
-    pieces = [carve(o, lambda c: in_door(c, d0, d1, side), name + '_' + o.name) for o in (body, greenhouse, glass)]
+    pieces = [carve(o, lambda c, corner=False: in_door(c, d0, d1, side, corner), name + '_' + o.name) for o in (body, greenhouse, glass)]
     pieces = [p for p in pieces if p]
     for o in bpy.context.selected_objects: o.select_set(False)
     for p in pieces: p.select_set(True)
@@ -452,7 +472,7 @@ for name, (d0, d1, side) in DOORS.items():
     hinge = Vector((d2x(d0) - 0.02, side * 0.98, 0.9))
     bpy.context.scene.cursor.location = hinge; bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     door_objs[name] = dobj
-def in_tailgate(c):
+def in_tailgate(c, corner=False):
     d = XF - c.x
     return d > 4.80 and c.z > 0.70 and abs(c.y) < 0.90
 pieces = [p for p in (carve(o, in_tailgate, 'tailgate_' + o.name) for o in (body, greenhouse, glass)) if p]
@@ -490,7 +510,7 @@ if RENDER:
     g.hide_render = True
     lamp = bpy.data.objects.new('cabin_lamp', bpy.data.lights.new('cabin_lamp', 'AREA')); lamp.data.energy = 60; lamp.data.size = 1.2
     lamp.location = (d2x(2.4), 0, 1.75); sc.collection.objects.link(lamp)
-    shot(f'{OUT}/driver.png', (d2x(2.66), 0.40, 1.46), (d2x(0.0), 0.32, 1.18), lens=20, res=(1200, 800))
+    shot(f'{OUT}/driver.png', (d2x(2.66), 0.40, 1.57), (d2x(0.0), 0.34, 1.25), lens=20, res=(1200, 800))
     shot(f'{OUT}/cabin.png', (d2x(3.35), -0.35, 1.55), (d2x(1.7), 0.2, 1.05), lens=18, res=(1200, 800))
     lamp.hide_render = True
     g.hide_render = False

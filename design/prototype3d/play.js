@@ -351,8 +351,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       cabin.visible = inside && !hasCabin;
       if (!hasCabin) for (const m of carMats) { const side = inside ? THREE.FrontSide : THREE.DoubleSide; if (m.side !== side) { m.side = side; m.needsUpdate = true; } }
       if (inside) {
-        car.updateMatrixWorld(); camera.position.copy(tmp.set(hasCabin ? -0.17 : 0.0, 1.46, hasCabin ? -0.40 : -0.42).applyMatrix4(car.matrixWorld));
-        camLook.copy(tmp.set(6, 1.15, -0.36).applyMatrix4(car.matrixWorld)); camera.lookAt(camLook);
+        car.updateMatrixWorld(); camera.position.copy(tmp.set(hasCabin ? -0.17 : 0.0, hasCabin ? 1.57 : 1.46, hasCabin ? -0.40 : -0.42).applyMatrix4(car.matrixWorld));
+        camLook.copy(tmp.set(6, hasCabin ? 1.25 : 1.15, -0.36).applyMatrix4(car.matrixWorld)); camera.lookAt(camLook);
       } else {
         const back = 7.2 + Math.abs(carState.v) * 0.05;
         camPos.copy(carState.pos).addScaledVector(fwd, -back).add(tmp.set(0, 2.9, 0));
