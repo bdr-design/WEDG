@@ -86,6 +86,12 @@ blendenv/bin/python suv_complete.py <out_dir> [render|quick|ext]
   - The photo's own sky and tree reflections inside wide paint areas are pulled to the paint around them.
   - The material is solid black: a satin colour layer with a full clear coat.
 - **Lamps:** the faces around the head and tail lamps have their own materials. Their emission maps are cut from the photo: white for the daytime running lamps, red for the tail lamps. The game lights the tail lamps when braking.
+- **Cabin from the owner's reference images (`suv_interior_photo.py`, images in `suv_parts/interior/`):**
+  - The owner generated six views on magenta: the dashboard from behind the front seats, the driver's view, the driver's door card, the steering wheel, a front seat from the side and the rear bench.
+  - **Steering wheel:** its outline comes from the wheel photo: a torus over the rim, and the hub and spokes pressed to depth, with the airbag pad thickest. The photo is projected straight on, so the buttons, the silver spoke trims and the wood inserts are the photo's own.
+  - **Front seats:** the side outline of the seat photo is pressed across the seat's width with rounded bolsters and grooved inserts. The photo is on both sides, including the switches; the other faces are the matching beige leather.
+  - **Door cards:** the door photo is a grid on each door, raised where the photo is beige (armrest, insert), wood or the switch panel, and sunk at the pocket. It is mirrored for the right-hand doors.
+  - **Dashboard, console and bench:** regions of the dashboard and bench photos are mapped onto the modelled faces: the centre stack, the console top, the passenger dash with its glovebox, and the bench backs, cushions and headrests. The photos are not metrically consistent (the AI drew a wider screen than the wheel allows), so each region is fitted on its own rather than through one camera.
 - **Cabin (`suv_interior.py`, textures from `int_tex.py`):**
   - Laid out in real metres, left-hand drive.
   - The photo skin is lined on the inside: an offset copy is smoothed, decimated and cut into material bands. Rims close every opening.
@@ -99,7 +105,7 @@ blendenv/bin/python suv_complete.py <out_dir> [render|quick|ext]
   - Materials: `tail_light` and `head_light`.
 - **Shading:** the importer's custom normals are dropped, because they leave seams along the cuts. Shading is smooth by angle at 75°, so only the liners and rims keep hard edges.
 - **Weight:** about 96k triangles: body about 34k, cabin about 34k. The door trims are joined into the doors, which saves draws. Only the outer skin, the lamps and the wheels cast shadows.
-- **Measured in the prototype:** at a phone viewport, the heaviest frames measured, shadow pass included, were 195 draws (seen from above the farm) and 342k triangles (walking by the car). The budget is 200 draws and 400k triangles. The game shows the full model only within 20 m or while driving; beyond that it uses a 12k model of the same hull (`slim_vehicle.py`).
+- **Measured in the prototype:** at a phone viewport, the heaviest of four frames per view (shadow pass included) was 195 draws and 344k triangles. The cabin is drawn only from the driver's seat or within 6 m. The budget is 200 draws and 400k triangles. The game shows the full model only within 20 m or while driving; beyond that it uses a 12k model of the same hull (`slim_vehicle.py`).
 
 **Known gaps:**
 - Up close at wheel height, the reflections on the lower body break into teeth near the arches. The decimated surface still has small waves there. Smoothing it or transferring smoothed normals made it worse, so neither is used.

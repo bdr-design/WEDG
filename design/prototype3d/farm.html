@@ -966,6 +966,9 @@ function tick(now) {
       for (const c of playCar.userData.nearParts) c.visible = near;
       playCar.userData.far.visible = !near;
     }
+    // the cabin (about 20 draws) only when it can be seen: from the driver's seat, or close enough to look in
+    const cabin = playCar.userData.cabin || (playCar.userData.cabin = playCar.getObjectByName('interior'));
+    if (cabin && near) cabin.visible = (playing && play.debug.state.view === 1) || camera.position.distanceTo(playCar.position) < 6;
   }
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk

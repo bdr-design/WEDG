@@ -95,6 +95,17 @@ def tri_uv(ob):
     while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
     lay = me.uv_layers.new(name='UVMap'); lay.data.foreach_set('uv', np.stack([u / s, v / s], 1).ravel())
 
+def tri_uv_keep(ob, keep_index):
+    """Tiling UVs in metres on every face except those of material keep_index (they keep their photo UVs)."""
+    me = ob.data; uvl = me.uv_layers.active; names = [m.name for m in me.materials]
+    for p in me.polygons:
+        if p.material_index == keep_index: continue
+        s_ = TILE.get(names[p.material_index], 0.25); n = p.normal; ax = max(range(3), key=lambda i: abs(n[i]))
+        for li, vi in zip(p.loop_indices, p.vertices):
+            co = me.vertices[vi].co
+            u, v = (co.y, co.z) if ax == 0 else (co.x, co.z) if ax == 1 else (co.x, co.y)
+            uvl.data[li].uv = (u / s_, v / s_)
+
 # ------------------------------------------------------------------ signed distance fields on a grid in real metres
 def mx(*a): return reduce(np.maximum, a)
 def mn(*a): return reduce(np.minimum, a)
@@ -361,7 +372,7 @@ def dashboard():
     hood = rbox(G, (1.93, 0.40, 1.30), (0.085, 0.195, 0.06), 0.045)
     f = smin(f, hood, 0.03)
     f = mx(f, -rbox(G, (2.015, 0.40, 1.245), (0.075, 0.168, 0.068), 0.02))           # the cluster sits in the hood
-    stack = rbox(G, (1.985, 0.0, 1.03), (0.07, 0.165, 0.16), 0.03)
+    stack = rbox(G, (1.985, 0.0, 1.07), (0.07, 0.165, 0.19), 0.03)
     f = smin(f, stack, 0.025)
     shroud = capsule(G, (1.90, 0.40, 1.07), (2.10, 0.40, 1.13), 0.052)
     f = smin(f, shroud, 0.02)
@@ -452,10 +463,11 @@ def console():
         if n[2] > 0.6 and 2.10 < d < 2.64 and z > 0.92: return 'int_wood'
         return 'int_dark'
     ob = sdf_object('console', G, f, ['int_leather', 'int_wood', 'int_dark'], assign, 1500, cuts=[DP(2.10), DP(2.64), DP(2.66), ZP(0.92), ZP(0.95)])
-    boot = cylinder('boot', (2.27, 0.02, 0.93), (2.27, 0.02, 0.99), 0.035, 'int_dark', verts=16)
-    lever = cylinder('lever', (2.27, 0.02, 0.98), (2.285, 0.02, 1.08), 0.009, 'int_piano', verts=10)
-    knob = rounded('knob', (2.29, 0.02, 1.10), (0.035, 0.027, 0.035), 0.022, 'int_leather', rot=(0, -0.15, 0))
-    knob_t = rounded('knob_top', (2.29, 0.02, 1.133), (0.03, 0.022, 0.006), 0.005, 'int_wood')
+    # the shifter as in the reference: a stitched dark leather boot, a dark leather knob with a satin silver cap
+    boot = cylinder('boot', (2.27, 0.02, 0.93), (2.275, 0.02, 1.02), 0.034, 'int_dark', verts=16)
+    lever = cylinder('lever', (2.275, 0.02, 1.01), (2.285, 0.02, 1.07), 0.012, 'int_dark', verts=10)
+    knob = rounded('knob', (2.29, 0.02, 1.095), (0.032, 0.026, 0.038), 0.022, 'int_dark', rot=(0, -0.12, 0))
+    knob_t = rounded('knob_top', (2.293, 0.02, 1.131), (0.026, 0.021, 0.005), 0.004, 'int_alu')
     ring = cylinder('cup_ring', (2.47, 0.052, 0.935), (2.47, 0.052, 0.94), 0.039, 'int_alu', verts=20, caps=False)
     ring2 = cylinder('cup_ring2', (2.47, -0.052, 0.935), (2.47, -0.052, 0.94), 0.039, 'int_alu', verts=20, caps=False)
     return [ob, boot, lever, knob, knob_t, ring, ring2]
@@ -631,32 +643,28 @@ def build(XF, K, belt, bplane, body, doors, door_spans, tailgate, tex_dir):
     inner_skin(body, body_keep, body_mat, offset=0.05, ratio=0.10, cuts=[belt_cut(-0.02), DP(3.80)])
     for name, ob in doors.items():
         d0, d1 = door_spans[name][:2]
-        def door_mat(c, f, d0=d0):
-            d, y, z = c; b = belt_r(d)
-            if z > b + 0.005: return 'int_plastic'
-            if z > b - 0.07: return 'int_dark'
-            if 1.005 < z < 1.045: return 'int_wood'
-            if 0.80 < z < 1.005: return 'int_leather'
-            return 'int_plastic'
-        inner_skin(ob, lambda c, f: f.material_index == 0, door_mat, offset=0.032, ratio=0.18, cuts=[belt_cut(0.005), belt_cut(-0.07), ZP(1.045), ZP(1.005), ZP(0.80)])
+        # the photo door card (door_card) covers the lining below the belt: one dark material is enough (fewer draws)
+        inner_skin(ob, lambda c, f: f.material_index == 0, lambda c, f: 'int_plastic', offset=0.032, ratio=0.18)
     inner_skin(tailgate, lambda c, f: f.material_index == 0, lambda c, f: 'int_plastic', offset=0.03)
     parts = []
     parts += floor()
-    parts.append(dashboard())
+    import suv_interior_photo as SP
+    dash = dashboard(); SP.map_regions(dash, 'dash_front.png', 'dash_photo', SP.DASH_REGIONS[:1] + SP.DASH_REGIONS[2:], tex_dir); parts.append(dash)
     det, needles = dash_details(); parts += det
-    parts += console()
-    parts += seat('seat_FL', 0.40, 2.56, (2.80, 0.86), 0.40)
-    parts += seat('seat_FR', -0.40, 2.56, (2.80, 0.86), 0.40)
-    parts += seat('bench', 0.0, 3.38, (3.62, 0.90), 0.42, width=0.70, bench=True)
+    cons = console(); SP.map_regions(cons[0], 'dash_front.png', 'dash_photo', SP.DASH_REGIONS[1:2], tex_dir); parts += cons
+    parts.append(SP.front_seat('seat_FL', 0.40, tex_dir))
+    parts.append(SP.front_seat('seat_FR', -0.40, tex_dir))
+    bench = seat('bench', 0.0, 3.38, (3.62, 0.90), 0.42, width=0.70, bench=True)
+    SP.map_regions(bench[0], 'rear_bench.png', 'bench_photo', SP.BENCH_REGIONS, tex_dir); parts += bench
     parts += overhead()
-    trims = [door_details(ob, *door_spans[n][:2], door_spans[n][2], n.startswith('door_F')) for n, ob in doors.items()]
+    trims = [SP.door_card(ob, door_spans[n][0] + 0.03, door_spans[n][1] - 0.03, door_spans[n][2], belt_r((door_spans[n][0] + door_spans[n][1]) / 2), tex_dir) for n, ob in doors.items()]
     for s in (1, -1):        # scuff plates on the sills: they also close the slit between the floor and the doors
         for d0, d1 in ((1.62, 2.70), (2.82, 3.66)):
             parts.append(rounded(f'scuff{s}{d0}', ((d0 + d1) / 2, s * 0.84, 0.585), ((d1 - d0) / 2, 0.055, 0.03), 0.012, 'int_plastic'))
             parts.append(rounded(f'scuffm{s}{d0}', ((d0 + d1) / 2, s * 0.84, 0.616), ((d1 - d0) / 2 - 0.03, 0.03, 0.002), 0.0, 'int_alu'))
     cabin = join(parts, 'interior')
     wipers(body, tailgate)
-    wheel = steering_wheel((2.20, 0.40, 1.13), 0.45)
+    wheel = SP.steering_wheel((2.20, 0.40, 1.13), 0.45, tex_dir)
     # where the eyes are (the first-person camera) and where they look
     eye = bpy.data.objects.new('eye', None); eye.location = R((2.86, 0.40, 1.585)); bpy.context.collection.objects.link(eye)
     look = bpy.data.objects.new('eye_look', None); look.location = R((-3.0, 0.38, 1.30)); bpy.context.collection.objects.link(look)

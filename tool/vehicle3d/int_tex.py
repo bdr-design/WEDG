@@ -63,7 +63,7 @@ def fabric(base=(198, 189, 174)):
     s = 1 + 0.03 * weave + 0.04 * tnoise(1.2) + 0.03 * tnoise(25)
     return rgb(base, s), normal_map(weave * 0.4 + tnoise(1.5) * 0.6, 0.6)
 
-def carpet(base=(44, 41, 38)):
+def carpet(base=(158, 140, 117)):          # beige carpet, as in the owner's reference
     s = 1 + 0.18 * tnoise(0.8) + 0.06 * tnoise(6)
     return rgb(base, s), normal_map(tnoise(0.9), 1.2)
 
@@ -141,7 +141,7 @@ def screens():
 def write_all(out):
     os.makedirs(out, exist_ok=True)
     maps = {
-        'leather': leather((190, 162, 124)), 'perf': leather((190, 162, 124), True), 'dark': leather((40, 34, 30)),
+        'leather': leather((198, 180, 156)), 'perf': leather((198, 180, 156), True), 'dark': leather((40, 34, 30)),   # the owner's reference beige
         'wood': wood(), 'alu': brushed(), 'fabric': fabric(), 'carpet': carpet(), 'plastic': plastic(),
     }
     paths = {}

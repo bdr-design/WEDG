@@ -9,7 +9,7 @@ Run: blendenv/bin/python suv_complete.py <out_dir> [render]
 import bpy, bmesh, sys, os, math, json, numpy as np
 from mathutils import Vector
 
-RENDER = sys.argv[-1] in ('render', 'quick', 'ext'); QUICK = sys.argv[-1] == 'quick'; EXT = sys.argv[-1] == 'ext'
+RENDER = sys.argv[-1] in ('render', 'quick', 'ext', 'int'); QUICK = sys.argv[-1] == 'quick'; EXT = sys.argv[-1] == 'ext'; INT = sys.argv[-1] == 'int'
 OUT = sys.argv[-2] if RENDER else sys.argv[-1]
 os.makedirs(OUT, exist_ok=True)
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -298,10 +298,10 @@ if RENDER:
         sc.render.resolution_x, sc.render.resolution_y = res; cam.data.lens = lens
         cam.location = loc; cam.rotation_euler = (Vector(look) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
         sc.render.filepath = path; bpy.ops.render.render(write_still=True)
-    if not QUICK:
+    if not (QUICK or INT):
         shot(f'{OUT}/q34.png', (6.5, 5.0, 2.2), (0.3, 0, 0.9), lens=40)
         shot(f'{OUT}/rear34.png', (-6.0, 4.6, 2.0), (-0.3, 0, 0.9), lens=40)
-    if not EXT: shot(f'{OUT}/driver.png', eye.location[:], look.location[:], lens=17, res=(1200, 800))
+    if not EXT: sc.view_settings.exposure = -3.4; shot(f'{OUT}/driver.png', eye.location[:], look.location[:], lens=17, res=(1200, 800))
     if EXT:
         kk = max(XF - XR, 4.5)       # the same cameras as the hull's check renders, for a fair before/after
         shot(f'{OUT}/check_front34.png', (kk * 0.95, -kk * 0.85, kk * 0.42), (0, 0, 0.84), lens=42, res=(640, 420))
@@ -311,11 +311,20 @@ if RENDER:
         shot(f'{OUT}/rear_lamps.png', (d2x(7.0), -2.5, 1.5), (d2x(4.8), 0, 1.05), lens=45)
         sys.exit(0)
     if QUICK: sys.exit(0)
+    sc.view_settings.exposure = -3.4                     # inside the cabin the eye opens up, as a camera would
     shot(f'{OUT}/driver_wide.png', (eye.location.x + 0.25, eye.location.y - 0.05, eye.location.z + 0.08), (d2x(1.9), -0.1, 1.15), lens=13, res=(1200, 800))
+    shot(f'{OUT}/wheel_close.png', eye.location[:], (d2x(2.15), 0.41 * K, 1.16 * K), lens=40, res=(1000, 750))
+    shot(f'{OUT}/door_card.png', (d2x(2.25), -0.30 * K, 1.15 * K), (d2x(2.15), 0.90 * K, 0.85 * K), lens=18, res=(1200, 800))
+    shot(f'{OUT}/rear_view_closed.png', (d2x(3.25), 0.0, 1.42), (d2x(1.9), 0.0, 1.05), lens=16, res=(1200, 700))
+    sc.view_settings.exposure = -5.3
     doors['door_FL'].rotation_euler.z = -1.05; doors['door_RL'].rotation_euler.z = -1.0; tailgate.rotation_euler.y = -1.2
     shot(f'{OUT}/open.png', (1.5, 7.5, 2.6), (-0.4, 0, 1.0), lens=32)
+    sc.view_settings.exposure = -3.6
+    shot(f'{OUT}/rear_view.png', (d2x(3.25), 0.0, 1.42), (d2x(1.9), 0.0, 1.05), lens=16, res=(1200, 700))
+    shot(f'{OUT}/bench_view.png', (d2x(2.35), -0.15, 1.30), (d2x(3.6), 0.0, 1.05), lens=16, res=(1200, 700))
+    sc.view_settings.exposure = -5.3
     shot(f'{OUT}/open_in.png', (d2x(2.3), 2.6, 1.55), (d2x(2.6), 0, 1.0), lens=22)
-    shot(f'{OUT}/cargo.png', (d2x(5.9), 0.0, 1.75), (d2x(3.6), 0, 1.0), lens=24)
+    if not INT: shot(f'{OUT}/cargo.png', (d2x(5.9), 0.0, 1.75), (d2x(3.6), 0, 1.0), lens=24)
     for o in doors.values(): o.rotation_euler = (0, 0, 0)
     tailgate.rotation_euler = (0, 0, 0)
     # a cut-away from above: the roof and glass hidden, to see the layout
