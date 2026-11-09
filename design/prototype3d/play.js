@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 
 const WALK = 1.25, RUN = 3.5;                 // the speeds the walk and run clips were made for (m/s, measured on the planted foot)
-const WHEELBASE = 2.85, TRACK = 1.64;         // Land Cruiser 300
+let WHEELBASE = 2.85, TRACK = 1.64;           // Land Cruiser 300; replaced by the model's own wheel positions when it has them
 const ACCEL = 3.6, BRAKE = 8.0, VMAX = 140 / 3.6, VREV = 20 / 3.6;
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -74,8 +74,19 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     tailgate: part('tailgate'), wheels: { FL: part('wheel_FL'), FR: part('wheel_FR'), RL: part('wheel_RL'), RR: part('wheel_RR') } };
   const hasCabin = !!model.interior;
   const steerBase = model.steer ? model.steer.quaternion.clone() : null;
+  // the model's own geometry: axles, track, tyre radius, the driver's eye, the cluster needles
+  const geo = { front: 1.43, rear: -1.43, half: 0.82, tyre: 0.401, eye: null, look: null };
+  if (model.wheels.FL && model.wheels.RL) {
+    geo.front = model.wheels.FL.position.x; geo.rear = model.wheels.RL.position.x; geo.half = Math.abs(model.wheels.FL.position.z);
+    const bb = new THREE.Box3().setFromObject(model.wheels.FL); geo.tyre = (bb.max.y - bb.min.y) / 2 / car.scale.y;
+    WHEELBASE = geo.front - geo.rear; TRACK = geo.half * 2;
+  }
+  if (part('eye') && part('eye_look')) { geo.eye = part('eye').position.clone(); geo.look = part('eye_look').position.clone(); }
+  const needles = { speed: part('needle_speed'), rpm: part('needle_rpm') };
+  const needleBase = { speed: needles.speed?.quaternion.clone(), rpm: needles.rpm?.quaternion.clone() };
+  const XAXIS = new THREE.Vector3(1, 0, 0), qTmp = new THREE.Quaternion();
   const tailMats = [];
-  car.traverse((n) => { if (n.isMesh && n.material && n.material.name === 'taillight') tailMats.push(n.material); });
+
   let spin = 0;
   const tween = [];                                   // simple part animations: { obj, key, from, to, t, dur }
   // one animation per part at a time; `then` runs after an optional hold, in game time (not wall-clock)
@@ -109,7 +120,9 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   // body seen from inside: front faces only, so the shell is see-through from the driver's seat but the hood still shows
   const carMats = [];
   car.traverse((n) => { if (n.isMesh) { n.material = n.material.clone(); carMats.push(n.material); if (n.material.name === 'taillight') tailMats.push(n.material); } });
-  tailMats.splice(0, tailMats.length, ...carMats.filter((m) => m.name === 'taillight'));
+  tailMats.splice(0, tailMats.length, ...carMats.filter((m) => m.name === 'taillight' || m.name === 'tail_light'));
+  const headMats = carMats.filter((m) => m.name === 'head_light');
+  for (const m of headMats) m.emissiveIntensity = 1.0;                  // daytime running lamps
 
   // ---------------------------------------------------------------- dust behind the wheels (a small pool)
   const dustTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(200,170,130,0.9)'); gr.addColorStop(1, 'rgba(200,170,130,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
@@ -190,7 +203,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (state.mode === 'walk' && state.view === 1) input.yaw = man.heading;
   }
   const doorPoint = new THREE.Vector3();
-  function driverDoor(out) { carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); return out.copy(carState.pos).addScaledVector(right, -1.45).addScaledVector(fwd, 0.15); }
+  function driverDoor(out) { carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); return out.copy(carState.pos).addScaledVector(right, -(geo.half + 0.62)).addScaledVector(fwd, geo.front - 1.2); }
   let cardKey = '';
   function setCard(key, html) {
     if (key === cardKey) return; cardKey = key;
@@ -204,7 +217,10 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   function primary() { if (state.mode === 'drive') exit(); else if (cardKey === 'near' && !carState.locked) enter(); }
   function flash() {   // the indicators blink twice when it locks or unlocks
-    let n = 0; const t = setInterval(() => { for (const m of carMats) m.emissive?.setScalar(n % 2 ? 0 : 0.25); if (++n > 3) { clearInterval(t); for (const m of carMats) m.emissive?.setScalar(0); } }, 140);
+    const lamps = headMats.length || tailMats.length ? [...headMats, ...tailMats] : carMats;
+    const rest = new Map(lamps.map((m) => [m, m.emissiveIntensity]));
+    const set = (on) => { for (const m of lamps) { if (lamps === carMats) m.emissive?.setScalar(on ? 0.25 : 0); else m.emissiveIntensity = on ? 5 : rest.get(m); } };
+    let n = 0; const t = setInterval(() => { set(n % 2 === 0); if (++n > 3) { clearInterval(t); set(false); } }, 140);
   }
   function enter() {
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.35);
@@ -298,18 +314,26 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     // sit on the ground: height, pitch and roll from four wheel contacts, plus a little squat under power
     right.crossVectors(fwd, UP);
     const h = (f, s) => ground(carState.pos.x + fwd.x * f + right.x * s, carState.pos.z + fwd.z * f + right.z * s);
-    const fl = h(1.43, -0.82), fr = h(1.43, 0.82), bl = h(-1.43, -0.82), br = h(-1.43, 0.82);
+    const fl = h(geo.front, -geo.half), fr = h(geo.front, geo.half), bl = h(geo.rear, -geo.half), br = h(geo.rear, geo.half);
     const pitch = Math.atan2((fl + fr) - (bl + br), 2 * WHEELBASE) - THREE.MathUtils.clamp(a, -8, 4) * 0.004;
     const roll = Math.atan2((fl + bl) - (fr + br), 2 * TRACK) + THREE.MathUtils.clamp(carState.v * Math.tan(carState.steer) / WHEELBASE * carState.v, -6, 6) * 0.006;
     carState.pitch += (pitch - carState.pitch) * Math.min(1, dt * 8); carState.roll += (roll - carState.roll) * Math.min(1, dt * 8);
     carState.pos.y = (fl + fr + bl + br) / 4;
     car.position.copy(carState.pos); car.rotation.set(carState.roll, carState.yaw, carState.pitch, 'YZX');
     cabin.userData.wheel.rotation.x = -carState.steer * 3.2;
-    spin += carState.v * dt / 0.401;
+    spin += carState.v * dt / geo.tyre;
     for (const [k, w] of Object.entries(model.wheels)) { if (!w) continue; w.rotation.order = 'YZX'; w.rotation.y = k[0] === 'F' ? carState.steer : 0; w.rotation.z = -spin; }
     if (model.steer) model.steer.quaternion.copy(steerBase).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), carState.steer * 4.0));
     const braking = brake && carState.v > 0.3;
     for (const m of tailMats) m.emissiveIntensity = braking ? 4.0 : 0.6;
+    // the cluster: speed 0-220 km/h and engine speed (a simple gear model) over a 270 degree sweep
+    if (needles.speed) needles.speed.quaternion.copy(needleBase.speed).multiply(qTmp.setFromAxisAngle(XAXIS, -Math.min(1, Math.abs(carState.v) * 3.6 / 220) * 4.712));
+    if (needles.rpm) {
+      const kmh = Math.abs(carState.v) * 3.6, gear = [0, 18, 34, 52, 72, 96, 130, 999].findIndex((g) => kmh < g) || 1;
+      const lo = [0, 0, 18, 34, 52, 72, 96, 130][gear], hi = [0, 18, 34, 52, 72, 96, 130, 220][gear];
+      const rpm = 750 + (kmh - lo) / Math.max(1, hi - lo) * 2600 + (gas > 0 ? 400 : 0);
+      needles.rpm.quaternion.copy(needleBase.rpm).multiply(qTmp.setFromAxisAngle(XAXIS, -Math.min(1, rpm / 8000) * 4.712));
+    }
     $('.pl-speed b').textContent = Math.round(Math.abs(carState.v) * 3.6);
     // dust from the rear wheels when moving on sand
     puffT += dt * Math.min(1, Math.abs(carState.v) / 6);
@@ -351,8 +375,10 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       cabin.visible = inside && !hasCabin;
       if (!hasCabin) for (const m of carMats) { const side = inside ? THREE.FrontSide : THREE.DoubleSide; if (m.side !== side) { m.side = side; m.needsUpdate = true; } }
       if (inside) {
-        car.updateMatrixWorld(); camera.position.copy(tmp.set(hasCabin ? -0.17 : 0.0, hasCabin ? 1.57 : 1.46, hasCabin ? -0.40 : -0.42).applyMatrix4(car.matrixWorld));
-        camLook.copy(tmp.set(6, hasCabin ? 1.25 : 1.15, -0.36).applyMatrix4(car.matrixWorld)); camera.lookAt(camLook);
+        car.updateMatrixWorld();
+        if (geo.eye) { camera.position.copy(tmp.copy(geo.eye).applyMatrix4(car.matrixWorld)); camLook.copy(tmp.copy(geo.look).applyMatrix4(car.matrixWorld)); }
+        else { camera.position.copy(tmp.set(hasCabin ? -0.17 : 0.0, hasCabin ? 1.57 : 1.46, hasCabin ? -0.40 : -0.42).applyMatrix4(car.matrixWorld)); camLook.copy(tmp.set(6, hasCabin ? 1.25 : 1.15, -0.36).applyMatrix4(car.matrixWorld)); }
+        camera.lookAt(camLook);
       } else {
         const back = 7.2 + Math.abs(carState.v) * 0.05;
         camPos.copy(carState.pos).addScaledVector(fwd, -back).add(tmp.set(0, 2.9, 0));
@@ -373,7 +399,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   function stop() {
     state.on = false; ui.hidden = true; setCard('', ''); document.body.classList.remove('playing');
     if (man.root) man.root.visible = false; cabin.visible = false;
-    for (const m of carMats) { m.side = THREE.DoubleSide; m.needsUpdate = true; }
+    if (!hasCabin) for (const m of carMats) { m.side = THREE.DoubleSide; m.needsUpdate = true; }
     camera.near = 0.5; camera.updateProjectionMatrix();
     onExit && onExit(state.mode === 'drive' ? carState.pos : man.pos);
   }

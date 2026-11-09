@@ -865,7 +865,7 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
 
 // ------------------------------------------------------------ vehicles built from the owner's photos
 async function loadVehicles() {
-  const names = ['shas', 'lc300', 'tractor', 'caravan'];
+  const names = ['shas', 'suvfull', 'suvfar', 'tractor', 'caravan'];
   const models = Object.fromEntries(await Promise.all(names.map(async (n) => [n, (await loadLod(`veh_${n}.json`)).scene])));
   const make = (name, tint) => {
     const o = models[name].clone(true);
@@ -873,10 +873,22 @@ async function loadVehicles() {
     return o;
   };
   const hay = new THREE.MeshStandardMaterial({ color: '#b3a256', roughness: 1 });
+  // the player's SUV: the full model (doors, wheels, cabin) up close, the light 12k model beyond 20 m.
+  // Both share the photo paint (same texture atlas); the glass and the cabin cast no shadow.
+  const heroCar = () => {
+    const full = models.suvfull.clone(true), far = models.suvfar.clone(true);
+    let paint = null;
+    // only the outer skin, lamps and wheels cast: the cabin, its linings and the glass are inside or see-through
+    full.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = /_paint$|_light$|tyre|rim_photo|barrel|^trim$/.test(n.material.name); if (!paint && /_paint$/.test(n.material.name)) paint = n.material; } });
+    far.traverse((n) => { if (n.isMesh) { if (paint) n.material = paint; n.castShadow = true; n.receiveShadow = true; } });
+    full.userData.nearParts = [...full.children]; full.userData.far = far; far.visible = false; full.add(far);
+    return full;
+  };
   for (const v of VEHICLES) {
-    const o = make(v.model === 'suv' ? 'lc300' : v.model, v.tint);
+    const hero = v.model === 'suv' && !playCar;
+    const o = hero ? heroCar() : make(v.model === 'suv' ? 'suvfar' : v.model, v.tint);
     o.position.set(v.x, 0, v.z); o.rotation.y = v.rot; scene.add(o);
-    if (v.model === 'suv' && !playCar) playCar = o;
+    if (hero) playCar = o;
     if (v.hay) for (let i = 0; i < 3; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 1.0), hay); b.position.set(-0.9 - i * 0.6, 1.4, 0); b.castShadow = true; o.add(b); }
   }
   // at the grazing camp: the caravan on its flatbed, coupled to the tractor unit
@@ -947,6 +959,14 @@ function tick(now) {
     camera.position.copy(controls.target).add(tmpAway);
   }
   updateScatter(camera.position, sun.target.position);
+  if (playCar) {           // the player's car: full model near (or while playing), light model far
+    const near = (playing && play.debug.state.mode === 'drive') || camera.position.distanceTo(playCar.position) < 20;
+    if (playCar.userData.lodNear !== near) {
+      playCar.userData.lodNear = near;
+      for (const c of playCar.userData.nearParts) c.visible = near;
+      playCar.userData.far.visible = !near;
+    }
+  }
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk
   const focusP = playing ? play.focus() : controls.target;

@@ -70,6 +70,12 @@ in the code, and the numbers are in
   instanced.
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)
   and a 2048 px satellite image.
+- **The player's SUV:** the completed photo model (`veh_suvfull.json`, from
+  `assets_src/vehicles/suv_full.glb`, about 97k triangles with its cabin) is
+  shown within 20 m or while driving. Beyond that, the 12k model of the same
+  hull is shown (`veh_suvfar.json`), wearing the same paint. `play.js` reads
+  the axles, track and tyre size from the model's wheels, the first-person eye
+  from its `eye` and `eye_look` empties, and moves the cluster needles.
 - **Shadows:**
   - Each camel's shadow comes from a lighter mesh.
   - Objects smaller than 30 cm cast none.

@@ -96,19 +96,65 @@ def sample(mask, u, v):
 
 
 X, Z = np.meshgrid(xs, zs, indexing='ij')
-S2 = sample(side, cfg['side']['u0'] + (LENGTH / 2 - X) / ss, cfg['side']['v0'] - Z / ss)      # (x, z)
 Y, Z2 = np.meshgrid(ys, zs, indexing='ij')
-F2 = sample(front, cfg['front']['uc'] + Y / (fs * kf), cfg['front']['v0'] - Z2 / fs)               # (y, z)
-R2 = sample(rear, cfg['rear']['uc'] - Y / (rs * kr), cfg['rear']['v0'] - Z2 / rs)
-FR = F2 & R2 if os.environ.get('USE_REAR', '1') == '1' else F2
 X3, Y3 = np.meshgrid(xs, ys, indexing='ij')
-T2 = sample(top, cfg['top']['uc'] - Y3 / (ts * kt), cfg['top']['v0'] + (LENGTH / 2 - X3) / ts)     # (x, y)
-occ = S2[:, None, :] & FR[None, :, :] & T2[:, :, None]
-print('voxels', occ.shape, int(occ.sum()))
-field = ndimage.gaussian_filter(occ.astype(np.float32), float(os.environ.get('SIGMA', '0.9')))
-verts, faces, _, _ = measure.marching_cubes(field, 0.5, spacing=(VOX, VOX, VOX))
-verts += np.array([xs[0], ys[0], zs[0]])
-faces = faces[:, ::-1]          # occupancy field: flip so normals face outward
+side_uv = (cfg['side']['u0'] + (LENGTH / 2 - X) / ss, cfg['side']['v0'] - Z / ss)                  # (x, z)
+front_uv = (cfg['front']['uc'] + Y / (fs * kf), cfg['front']['v0'] - Z2 / fs)                      # (y, z)
+rear_uv = (cfg['rear']['uc'] - Y / (rs * kr), cfg['rear']['v0'] - Z2 / rs)
+top_uv = (cfg['top']['uc'] - Y3 / (ts * kt), cfg['top']['v0'] + (LENGTH / 2 - X3) / ts)           # (x, y)
+use_rear = os.environ.get('USE_REAR', '1') == '1'
+
+if os.environ.get('HULL', 'sdf') == 'sdf':
+    # Each silhouette becomes a signed distance in metres (negative inside), sampled smoothly between pixels, and the
+    # hull is where all of them are negative. This follows the photo outlines to a fraction of a pixel: no voxel
+    # terraces on the long, nearly flat bonnet and roof, which the binary grid left as stripes in the paint.
+    CLOSE = int(os.environ.get('CLOSE', '13'))      # px: notches narrower than this in an outline are keying noise
+    SDF_SIGMA = float(os.environ.get('SDF_SIGMA', '3.0'))
+
+    LEN_SIGMA = float(os.environ.get('LEN_SIGMA', '20'))   # px, extra smoothing along the car's length
+
+    def sdf2d(mask, scale, sigma=None):
+        m = mask.astype(np.uint8)
+        if CLOSE > 1:
+            m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (CLOSE, CLOSE)))
+        m = cv2.GaussianBlur(m.astype(np.float32), (0, 0), 1.0) > 0.5
+        d = ndimage.distance_transform_edt(~m) - ndimage.distance_transform_edt(m)
+        return ndimage.gaussian_filter(d.astype(np.float32), sigma or SDF_SIGMA) * scale
+
+    def sample_f(f, uv):
+        return ndimage.map_coordinates(f, [uv[1], uv[0]], order=1, mode='nearest')
+
+    def smax(a, b, k):         # a rounded intersection: the edges where two views meet are softened by about k
+        h = np.clip(0.5 - 0.5 * (b - a) / k, 0, 1)
+        return b * (1 - h) + a * h + k * h * (1 - h)
+
+    K_ROUND = float(os.environ.get('ROUND', '0.012'))
+    # smoothing along the length keeps the nose and tail in place but irons the long lines and the sides flat
+    S2 = sample_f(sdf2d(side, ss, (SDF_SIGMA, LEN_SIGMA * 0.6)), side_uv)
+    # the front and rear outlines set the roof and bonnet across the car: smoothing them across the width irons out
+    # the ribs a straight pull along the length would print on the roof
+    F2 = sample_f(sdf2d(front, fs, (SDF_SIGMA, LEN_SIGMA * 0.6)), front_uv)
+    if use_rear:
+        F2 = smax(F2, sample_f(sdf2d(rear, rs, (SDF_SIGMA, LEN_SIGMA * 0.6)), rear_uv), K_ROUND)
+    T2 = sample_f(sdf2d(top, ts, (LEN_SIGMA, SDF_SIGMA)), top_uv)
+    field = smax(smax(S2[:, None, :], F2[None, :, :], K_ROUND), T2[:, :, None], K_ROUND).astype(np.float32)
+    field[0], field[-1], field[:, 0], field[:, -1], field[:, :, 0], field[:, :, -1] = 1, 1, 1, 1, 1, 1
+    print('sdf grid', field.shape)
+    verts, faces, _, _ = measure.marching_cubes(field, 0.0, spacing=(VOX, VOX, VOX))
+    verts += np.array([xs[0], ys[0], zs[0]])
+    # negative inside: marching cubes already winds the faces outwards
+else:
+    S2 = sample(side, *side_uv)
+    F2 = sample(front, *front_uv)
+    R2 = sample(rear, *rear_uv)
+    FR = F2 & R2 if use_rear else F2
+    T2 = sample(top, *top_uv)
+    occ = S2[:, None, :] & FR[None, :, :] & T2[:, :, None]
+    print('voxels', occ.shape, int(occ.sum()))
+    field = ndimage.gaussian_filter(occ.astype(np.float32), float(os.environ.get('SIGMA', '0.9')))
+    verts, faces, _, _ = measure.marching_cubes(field, 0.5, spacing=(VOX, VOX, VOX))
+    verts += np.array([xs[0], ys[0], zs[0]])
+    faces = faces[:, ::-1]      # occupancy field: flip so normals face outward
 # Taubin smoothing removes the voxel steps (visible in paint reflections) without shrinking the body
 from scipy import sparse
 n = len(verts)
