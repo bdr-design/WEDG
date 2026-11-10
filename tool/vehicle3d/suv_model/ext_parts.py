@@ -182,6 +182,11 @@ FLARE_Y, FLARE_END_Z = 0.990, 0.50   # the flares are the widest point of the ca
 # The official width is 1.980, 4 mm a side more than the photo's flares, and that is added all along. (Up to r22 a
 # flare stood 26 mm proud of the body beside it, which was right only while the doors were as wide as the fenders.)
 FLARE_OVER = 0.004
+# The owner's decision (10 Nov, on r24's pictures): a flare stands no more than FLARE_PROUD out of the body beside it.
+# That thins the rear flare's front leg, which on the photo's outline stood 44 to 64 mm proud of the rear door, like a
+# fin. The door's skin comes out to meet it (outlines.REAR_BULGE), because the flare has to cover the tyre.
+FLARE_PROUD = 0.028
+TYRE_COVER = (0.970, 0.40)          # the tyre's face is 0.965 out (measured on the wheel's mesh); within 0.40 m of the hub the flare covers it by 5 mm
 
 def arch_curve(i, offset=0.0, step=0.012):
     """The opening of arch i (0 front, 1 rear) as an array of model (x, z), from the front foot over the top to the rear
@@ -237,7 +242,8 @@ def arches(shell, paint, liner, flare_mat):
             for (x, z), (nx, nz), yb in zip(c[keep], nrm[keep], by[keep]):
                 f = _smooth((z - (FLARE_END_Z - 0.08)) / 0.10)        # the band tapers into the body at its two ends
                 yo = min(float(O.top_half(float(RF.x_photo(x)))) * 1.026 + FLARE_OVER, FLARE_Y)
-                yf = yb + max(yo - yb, 0.006) * f; ww = w * (0.55 + 0.45 * f)
+                yf = yb + min(max(yo - yb, 0.006), FLARE_PROUD) * f; ww = w * (0.55 + 0.45 * f)
+                if abs(x - WH.AXLE_X[i]) < TYRE_COVER[1]: yf = max(yf, min(yo, TYRE_COVER[0]))      # never inside the tyre's face
                 for u, y in ((-0.006, yf - 0.060), (-0.006, yf - 0.006), (0.0, yf), (0.5 * ww, yf), (0.8 * ww, yf - 0.004),
                              (0.95 * ww, yf - 0.010), (ww, yf - 0.018), (ww + 0.002, yb - 0.03)):
                     V.append((x + nx * u, s * y, z + nz * u))

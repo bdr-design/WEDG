@@ -164,8 +164,12 @@ def handles(shell, chrome, black):
             # handles stayed parallel to the car: one end 21 mm inside the body, the other 25 mm off it)
             ends = [shell.ray_cast(Vector((x + e, s * 2.0, z)), Vector((0, -s, 0))) for e in (-0.10, 0.10)]
             yaw = math.atan2(ends[1][1].y - ends[0][1].y, 0.20) if ends[0][0] and ends[1][0] else 0.0
-            bpy.ops.mesh.primitive_cube_add(size=1, location=loc + nrm * 0.012); h = bpy.context.active_object
-            h.scale = (0.27, 0.022, 0.042); h.rotation_euler = (0, 0, yaw); bpy.ops.object.transform_apply(rotation=True, scale=True)
+            # and it leans with the skin (the skin under the handles leans 11 degrees; an upright bar's lower edge sank
+            # 1.5 to 4.7 mm into it and its upper edge stood 2 to 5 mm off)
+            tb = [shell.ray_cast(Vector((x, s * 2.0, z + e)), Vector((0, -s, 0))) for e in (-0.015, 0.015)]
+            roll = -math.atan2(tb[1][1].y - tb[0][1].y, 0.030) if tb[0][0] and tb[1][0] else 0.0
+            bpy.ops.mesh.primitive_cube_add(size=1, location=loc + nrm * 0.0135); h = bpy.context.active_object
+            h.scale = (0.27, 0.022, 0.042); h.rotation_euler = (roll, 0, yaw); bpy.ops.object.transform_apply(rotation=True, scale=True)
             h.name = h.data.name = f"handle_{'FR'[min(i, 1)]}_{'L' if s > 0 else 'R'}"
             # the bevel stays under the bar's half thickness (11 mm), or it folds into zero-area faces
             m = h.modifiers.new('bv', 'BEVEL'); m.width = 0.009; m.segments = 3; bpy.ops.object.modifier_apply(modifier='bv')

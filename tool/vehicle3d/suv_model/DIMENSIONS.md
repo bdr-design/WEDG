@@ -213,6 +213,7 @@ Silhouette IoU with `REAL=1`:
 | r14 | 0.990 | 0.971 | 0.952 | 0.989 | side step clear of the rear opening (r13); flare bands thinned (owner's decision) |
 | r22 | 0.990 | 0.973 | 0.952 | 0.989 | windshield's edges (r16), flat side glass and the belt on the photo's chrome line (r17 to r21), number plates |
 | r24 | 0.989 | 0.975 | 0.951 | 0.993 | the body side from the top photo (section 8): arc glass, shoulder on the belt, narrower doors, step and flares on the outline; plates seated |
+| r25 | 0.989 | 0.975 | 0.950 | 0.993 | the rear fender's swell round the wheel and a thinner flare leg at the rear door (the owner's decisions) |
 
 Edge distance (mm) and colour error, side / front / rear / top:
 
@@ -288,12 +289,20 @@ Because the model is not finished (later steps in PLAN.md):
   thinned by that much (29 and 41 mm for the real photo's 66 and 78), so their tops stay where the photo has them,
   979 and 991 mm up, clear of the head lamp's cover and 95 mm under the fuel flap;
 - the rear door's shut line stops at the top of the rear flare (on the real car it runs on across it);
-- left by the review of r24 (which confirmed the rest of section 8): the rear door's sweep out to the fender reads
-  as a diagonal crease from the rear three-quarter (real x -0.9 to -1.3, z 0.95 to 1.10: the skin runs out 48 mm
-  between z 1.087 and 0.997 at the door's rear seam); no photo shows that surface's depth. The rear flare's front
-  leg stands 44 to 64 mm proud of the door skin, as 04_top's outline has it. The fuel flap's front 5 to 8 cm lies
-  on the end of the sweep. The mirror's arm lands on the side glass 2 to 6.5 cm above its foot, where 01_left has
-  it on the door skin under the belt. The front plate's bracket hangs free below the intake's lowest bar;
+- the rear door and the rear flare (r25, the owner's decisions of 10 Nov on r24's pictures): the door's skin goes
+  out to the rear fender as a gentle swelling round the wheel, and the flare's front leg stands 19 to 28 mm out of
+  it, where 04_top's outline has the flare 4 to 6 cm outside the door. So the model's outline from above is 5 to
+  9 mm inside 04_top's at d 3.4 to 3.6, and the door's widest line is up to 3 cm outside 04_top's at d 3.2 to 3.3
+  (the step shows 3 cm less from above there). r24 had 04_top's sweep and outline: the skin ran out 48 mm in 9 cm
+  of height at the rear door's seam, a diagonal crease from the rear three-quarter, and the leg stood 44 to 64 mm
+  proud, like a fin;
+- left by the reviews of r25: the diagonal hollow is gone (the worst hollow turn across its place is 2.9 degrees in
+  2 cm, 0.4 to 0.9 mm deep; r24 20 to 23 degrees). At a grazing angle of 9 degrees from behind, wavy dark streaks show
+  in the reflection along the rear door's rear seam (the haunch mirroring the body; gone at 14 degrees). The rear
+  door's skin is 24 mm further out than r24's at real x -1.0, z 1.0, which no photo checks;
+- left by the review of r24: the fuel flap's front 5 to 8 cm lies where the skin turns out to the fender. The
+  mirror's arm lands on the side glass 2 to 6.5 cm above its foot, where 01_left has it on the door skin under the
+  belt. The front plate's bracket hangs free below the intake's lowest bar;
 - the review of r16 confirmed the step, the flares (tops 0.979 and 0.991, 37 mm under the head lamp's cover and
   94 mm under the fuel flap), the blacked-out glass and the windshield (pane edge 4 to 6 mm inside the photo's
   line, pillar 46 mm wide from the front where the photo has 46), and left as known: matte patches on the roof
@@ -487,9 +496,17 @@ From the top down, at each station: the glass (outlines.glass_half) less the pla
 head toward the roof's edge, which stays; at the belt (the chrome line on 01_left, which rises to the rear) a shoulder runs down and out to the crease,
 65 mm below the belt at every station; from the crease the door skin bulges to its widest, 0.895 (top photo's scale),
 at z 1.0, and is plumb below that. Over the rear wheel (d 3.30 to 3.66 blends) the fender's top, which the photos
-show up to z 1.28, carries on up to the belt as one arc; at the handles' height that sweep starts 0.40 m later
-(REAR_LATE), because 04_top has the rear handle as far out as the front one and the crease straight to the rear
-door's end, and 01_left has the rear handle over d 3.39 to 3.68. At the front the fender's width fades into the door from
+show up to z 1.28, carries on up to the belt as one arc (blended in along the car between d 3.55 and 4.00), and
+lower down the door's skin swells out to the fender's width round the wheel: all of it within 0.45 m of the hub as
+seen from the side, none beyond 0.85 m (outlines.REAR_BULGE; the owner's decision, section 6); the two are joined
+by a soft maximum (a hard one left a hollow line of 8 to 13 degrees where they crossed, tools/hollow.py). Below the
+fenders' bulge the body's width is limited to 1.97 m, the limit coming in over z 0.96 to 1.06. A hard limit at 1.0
+left a level hollow line along both fenders up to r24 (10 degrees in 2 cm and 2.8 mm deep behind the front arch);
+the review of r25 still measures 5.3 degrees and 1.5 mm there, up to 18 degrees ahead of the front arch (42 in
+r24), and a faint level hollow along the doors at real z 0.90 to 0.92 (1 to 2.5 degrees, under 1 mm deep), none
+of which it could make out in a render. 04_top has the rear
+handle as far out as the front one and 01_left has it over d 3.39 to 3.68; the skin is 16 mm out at its rear end.
+At the front the fender's width fades into the door from
 d 1.48 to 1.82 (under the mirror on 04_top), and ahead of the cowl (d 1.60 to 1.15 blends) the front photo's outline
 is used whole. The hull's rows are 5 mm apart in the 11 cm under the belt, with one row on the belt (body._rows): at
 the old 37 mm the loft chorded the shoulder and its hollow corner stood 8 to 10 mm proud. The rows keep their
@@ -498,12 +515,15 @@ places from the cowl to the tail: where they changed height along the car the qu
 
 The black band under the belt is 10 mm tall (04_top's 8 mm line), under the quarter glass's kick-up too; the chrome
 strip is 9 mm tall, centred 1 mm under the belt line, from d 1.58, and its middle stands 3 mm outside the glass's
-foot, which is set that much inside 04_top's line. The door handles lie along the skin (sides.handles). The side step's outer edge is 04_top's outline (sides.step_y), the sill is 45 mm inside
-the door skin, and each flare's face is 04_top's outline plus 4 mm (ext_parts.FLARE_OVER), so at the rear door the
-flare's leg stands 5 cm proud of the door skin, as the photo has it. The upright shut lines run up to the chrome
+foot, which is set that much inside 04_top's line. The door handles lie along the skin and lean with it
+(sides.handles): 0 to 4 mm off it at the four corners of each bar's back (tools/seated.py); the review's 1 mm grid
+found the rear bars' lower rear corners 0.6 to 0.75 mm into the skin over a patch of 14 by 11 mm. The side step's outer edge is 04_top's outline (sides.step_y), the sill is 45 mm inside
+the door skin, and each flare's face is 04_top's outline plus 4 mm (ext_parts.FLARE_OVER), but no more than 28 mm
+out of the body beside it (FLARE_PROUD, the owner's decision) and never less than 5 mm outside the tyre's face
+(TYRE_COVER; the face is 0.965 m out). The upright shut lines run up to the chrome
 strip at their own stations in 6 mm steps.
 
-### 8.4 Result (measured on r24)
+### 8.4 Result (measured on r24; the last two lines on r25)
 
 - the chrome strip's middle against 04_top's line (tools/chromeplan.py): within 1 mm from d 1.8 to 3.5 on 04_top
   (1.82 to 3.77 on the model), +3 at 3.6, +4 at 3.9, +9 at 4.0, +21 and +25 at 4.1 and 4.2 (the held taper);
@@ -513,7 +533,9 @@ strip at their own stations in 6 mm steps.
   the front door); the black band's lower edge is straight (tools/bandedge.py);
 - the handles' bars 1.2 to 1.3 mm off the skin at both ends, the rear plate 1 to 3 mm off the recess floor
   (tools/seated.py);
-- 209,573 triangles (190 thousand before: the shoulder's rows).
+- the flares stand 9 mm or more outside their tyres at every station, and the rear flare's front leg 19 to 28 mm
+  out of the door (tools/tyrecover.py);
+- 209,565 triangles (190 thousand before: the shoulder's rows).
 
 Not known from any photo: the section of the shoulder between the belt and the crease (taken as straight, 42 to 49
 degrees), the door skin below its widest line (taken as plumb), and the haunch over the rear wheel between z 1.28

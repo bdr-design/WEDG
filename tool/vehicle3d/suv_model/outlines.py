@@ -139,14 +139,29 @@ CHROME_PLAN = ((1.80, 0.7940), (1.90, 0.7967), (2.00, 0.7985), (2.10, 0.7996), (
                (3.90, 0.7682), (4.00, 0.7574), (4.10, 0.7414), (4.20, 0.7329))      # d on 04_top
 D_REF, TAPER_MAX = 2.65, 0.018
 STRIP_OUT = 0.003                       # the chrome strip's middle stands this far outside the glass's foot (hull scale)
-MIRROR_Z, COWL_D, REAR_D = (1.26, 1.63), (1.15, 1.60), (3.30, 3.66)
-REAR_LATE = (0.40, 0.95, 1.17)          # at the handles' height the sweep to the fender starts this much later: 04_top has the rear
-                                        # handle at the front handle's distance out, and the crease straight to the rear door's end
+MIRROR_Z, COWL_D = (1.26, 1.63), (1.15, 1.60)
+# Where the door's skin goes out to the rear fender. 04_top's own line (the door's widest, where the step comes out
+# from under it) is straight to d 3.3 and sweeps out over the next 0.36 m, but behind d 3.4 that line is the flare,
+# not the door; it has the rear handle as far out as the front one, and 01_left has the rear handle over d 3.39 to
+# 3.68. No photo shows the surface's depth there. The owner's decisions (10 Nov, on r24's pictures): the sweep is a
+# gentle one, and the rear flare's front leg stands about 2.5 cm out of the door, not the 4 to 6 cm that 04_top's
+# outline gives. The flare cannot come in (it has to cover the tyre), so the door goes out to it, as a swelling
+# round the wheel: full fender within REAR_BULGE[0] of the hub (seen from the side, heights shortened by
+# REAR_BULGE[2] to follow the opening), none beyond REAR_BULGE[1], and the fender's top carried up to the belt over
+# REAR_HAUNCH along the car. So the skin under the flare's band is within 28 mm of the flare's face, the door's
+# widest line is up to 3 cm outside 04_top's at d 3.2 to 3.3, and under the rear handle the skin is 16 mm out at
+# the bar's rear end (the bar is turned to lie along it). (r24: a sweep over d 3.30 to 3.66 that started 0.40 m
+# later between z 0.95 and 1.17; the skin ran out 48 mm in 9 cm of height at the door's rear seam and read as a
+# diagonal crease from behind.)
+REAR_BULGE, REAR_HAUNCH = (0.45, 0.85, 0.9), (3.55, 4.00)
+HUB_D, HUB_ZP = XF - float(RF.x_photo(RF.AXLE_X[1])), float(RF.z_photo(RF.HUB_Z))      # the rear hub in the photo frame
 FRONT_D, FENDER_W, FENDER_CREASE = (1.48, 1.82), 0.985, 0.940      # the front fender's width fades into the door (hidden under the mirror on 04_top)
 DOOR_W, DOOR_ZW, CREASE_Y, CREASE_DROP, CREASE_R = 0.895 * TOP_TO_FRONT, 1.00, 0.860 * TOP_TO_FRONT, 0.065, 0.012
 FENDER_Z = 1.28                         # the fenders' tops are in the photos up to here
 _wf_line = _wf.copy()
-_wf_line = np.where(_zf < 1.0, np.minimum(_wf_line, 0.985), _wf_line)      # below the fenders the tyres set the width: the body is 1.97 m
+# below the fenders the tyres set the photo's width: the body is 1.97 m. The limit comes in over z 0.96 to 1.06 (a
+# hard limit at z 1.0 left a step of 6 mm in the fenders there, a level hollow line of 9 degrees)
+_t = np.clip((_zf - 0.96) / 0.10, 0, 1); _wf_line = np.minimum(_wf_line, 0.985 + 0.02 * _t * _t * (3 - 2 * _t))
 _wf_line_s = _iron(_wf_line)
 def _smin(a, b, k):
     h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1); return b * (1 - h) + a * h - k * h * (1 - h)
@@ -187,7 +202,10 @@ def side_half(z, d):
     # over the rear wheel: the fender's top carried up to the belt in one arc
     h = zb - FENDER_Z; c = (yf - _WS - _MS * h) / h ** 2; dz = z - FENDER_Z
     fender = np.where(z <= FENDER_Z, np.interp(z, _zf, _wf_line_s), _WS + _MS * dz + c * dz * dz)
-    r = _sstep((d - REAR_D[0] - REAR_LATE[0] * _sstep((z - REAR_LATE[1]) / (REAR_LATE[2] - REAR_LATE[1]))) / (REAR_D[1] - REAR_D[0]))
+    rho = np.hypot(d - HUB_D, (z - HUB_ZP) * REAR_BULGE[2])
+    # the larger of the two, taken softly: a hard maximum left a hollow line where they cross (8 to 13 degrees, from
+    # over the opening's crown up to the rear handle; the review of r25's first build)
+    r = np.clip(-_smin(-(1 - _sstep((rho - REAR_BULGE[0]) / (REAR_BULGE[1] - REAR_BULGE[0]))), -np.full_like(rho, float(_sstep((d - REAR_HAUNCH[0]) / (REAR_HAUNCH[1] - REAR_HAUNCH[0])))), 0.35), 0, 1)
     return np.where(z >= zb, up, door * (1 - r) + fender * r)
 def front_half(z, x=None):
     """The body's half-width at height z at station x (photo frame). Ahead of the cowl it is the front photo's

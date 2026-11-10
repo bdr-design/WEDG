@@ -22,7 +22,9 @@ for nm, f in (('plate_rear', -1), ('plate_front', 1)):
 for o in bpy.data.objects:
     if not o.name.startswith('handle_'): continue
     V = np.array([o.matrix_world @ v.co for v in o.data.vertices]); s = 1 if V[:, 1].mean() > 0 else -1; out = []
-    for xe in (V[:, 0].min() + 0.02, V[:, 0].max() - 0.02):
-        k = np.abs(V[:, 0] - xe) < 0.035; yin = (V[k, 1] * s).min(); z = V[:, 2].mean()
-        h = body.ray_cast(Vector((xe, s * 2.0, z)), Vector((0, -s, 0))); out.append((yin - abs(h[1].y)) * 1e3 if h[0] else float('nan'))
-    print(o.name, 'bar back minus skin (mm; negative is sunk): front end %+.1f, rear end %+.1f' % (out[1], out[0]))
+    # the bar's back at its four corners (2 cm in from each end, 8 mm in from the top and bottom), each against the skin at its own height
+    for xe in (V[:, 0].max() - 0.02, V[:, 0].min() + 0.02):
+        for ze in (V[:, 2].max() - 0.008, V[:, 2].min() + 0.008):
+            h = o.ray_cast(o.matrix_world.inverted() @ Vector((xe, 0.0, ze)), Vector((0, s, 0))); b = body.ray_cast(Vector((xe, s * 2.0, ze)), Vector((0, -s, 0)))
+            out.append((abs(h[1].y) - abs(b[1].y)) * 1e3 if h[0] and b[0] else float('nan'))
+    print(o.name, 'bar back minus skin, mm (negative is sunk): front end top %+.1f bottom %+.1f, rear end top %+.1f bottom %+.1f' % tuple(out))

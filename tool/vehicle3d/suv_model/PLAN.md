@@ -28,6 +28,12 @@ Steps:
 6. Wheels: a modelled 12-spoke two-tone rim from the rim photo, tyres with tread (the owner's photo's size since r10).
 7. Interior from the six photos: dash, screen, cluster, centre stack with its silver frame, vents with slats,
    console, shifter, steering wheel, seats with bolsters and seams, door cards, headliner, pillars.
+   The owner's decision (10 Nov): the interior must match the six photos with no difference, front and rear alike
+   (the glass is blacked out, so it is seen from the driver's eye and through open doors). The photos are in
+   tool/vehicle3d/suv_parts/interior/: three square-on (wheel, seat_side, door_FL), measured like the exterior's,
+   and three in perspective (dash_front, driver_pov, rear_bench), which need a camera each. They are measured
+   against, never projected. Official cabin size (a Japanese listing's catalogue figures, to be checked against
+   Toyota's sheet): 2775 x 1635 x 1215 mm long, wide, high. The steering wheel's diameter has no source yet.
 8. Doors and tailgate as hinged parts, the game hooks (as in suv_complete.py: door_*, wheel_*, steering,
    needle_*, eye/eye_look, tail_light/head_light materials), the game GLB and LOD, a performance check in the
    prototype.
@@ -98,6 +104,9 @@ Steps:
   glass an arc onto the top photo's chrome line, the shoulder hung on the belt, doors narrower than the fenders so
   the side step shows, step and flares on the top photo's outline; top IoU 0.993. r24 after the review of r23:
   handles laid along the skin, plates seated (and the band moved to the middle), the hull's rows kept in place.
+- 10 Nov, build r25, the owner's decisions on r24's pictures: the rear door swells gently out to the fender round
+  the wheel (r24's sweep read as a diagonal crease from behind) and the rear flare's front leg is thinned to 2 to
+  3 cm proud of the door. IoU side 0.989, front 0.975, rear 0.950, top 0.993.
 - 10 Nov, build r20: the belt line raised to the photo's chrome line (it was 2 to 4.5 cm low) and the quarter glass's
   lower edge kicked up to its rear edge as in the photo, with the chrome strip along it. 189,764 triangles.
 - Next: the quarter glass's
