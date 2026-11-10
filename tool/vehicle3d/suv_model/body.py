@@ -48,7 +48,7 @@ def section(x, n_side=64, n_top=10, n_bot=8, r_top=0.07, r_bot=0.05):
         zs = zb + t * (ze - zb)
         # the AI views disagree on width: the top view is scaled to the front view's body width (1.97 m)
         plan = tail().half(d, zs) if blk else np.full_like(zs, O.top_half(x) * TOP_TO_FRONT)
-        w = smin(O.front_half(zs), plan, 0.03)
+        w = smin(O.front_half(zs, x), plan, 0.03)
         # round the roof and the sill edges
         rt = min(r_top, (ze - zb) / 3); rb = min(r_bot, (ze - zb) / 3)
         up = np.clip((zs - (ze - rt)) / rt, 0, 1); dn = np.clip(((zb + rb) - zs) / rb, 0, 1)

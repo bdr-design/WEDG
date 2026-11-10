@@ -4,6 +4,7 @@ import bpy, bmesh, math, numpy as np
 from mathutils import Vector
 import wheels as WH
 import realframe as RF
+import outlines as O
 
 def activate(o):
     for x in bpy.context.selected_objects: x.select_set(False)
@@ -37,7 +38,8 @@ def mirrors(paint, glass, black):
             v.co.z = 1.46 + (v.co.z - 1.46) * (0.82 + 0.18 * t)
             if v.co.x > 0.66: v.co.y = s * (0.91 + (abs(v.co.y) - 0.91) * (1 - 0.25 * (v.co.x - 0.66) / 0.13))
         g = rbox(f'mirror_glass{s}', (0.528, s * 1.01, 1.46), (0.012, 0.165, 0.185), 0.005, glass)
-        arm = rbox(f'mirror_arm{s}', (0.70, s * 0.93, 1.37), (0.16, 0.07, 0.05), 0.02, black)
+        yin = float(O.front_half(1.37)) - 0.012          # the arm starts 12 mm inside the door's skin, wherever that is
+        arm = rbox(f'mirror_arm{s}', (0.70, s * (yin + 0.965) / 2, 1.37), (0.16, 0.965 - yin, 0.05), 0.02, black)
         out.append(join([h, g, arm], f'mirror_{"L" if s > 0 else "R"}'))
     return out
 

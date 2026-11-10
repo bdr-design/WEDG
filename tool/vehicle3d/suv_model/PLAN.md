@@ -89,5 +89,8 @@ Steps:
 - 10 Nov, builds r17 and r18: the crease along the greenhouse's side that the owner saw from the front (the front
   outline was bridged straight behind the mirrors), and the rear door's shut line stopped at the rear flare. The
   review of r16 confirmed r13 to r16. 190,218 triangles.
+- 10 Nov, build r19: the review of r18 confirmed the crease gone and found the mirrors left off the narrowed doors
+  and the side glass hollow in section: the glass is flat now, the turn is in the shoulder under the belt, and the
+  mirrors' arms reach the doors. r19, REAL=1: side 0.990, front 0.973, rear 0.951, top 0.989; 190,230 triangles.
 - Next: the quarter glass's
   kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.

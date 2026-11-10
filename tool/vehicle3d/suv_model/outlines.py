@@ -99,20 +99,31 @@ _zf = np.array(_zf[::-1]); _wf = np.array(_wf[::-1]) + _centred(_ff[::-1]) * cf[
 # mirrors: a bulge of more than 4 cm over the line between the rows either side of it
 mirror = (_zf > 1.30) & (_zf < 1.62)
 base = np.interp(_zf, _zf[~mirror], _wf[~mirror]); _wf = np.where(mirror & (_wf > base + 0.01), base, _wf)
-# Behind the mirrors no photo shows the body's side (z 1.28 to 1.62: the shoulder under the glass and most of the side
-# glass). A straight line across it met the glass above at a fold of 9 to 15 degrees, a crease along the whole
-# greenhouse (the owner saw it from the front, 10 Nov). The gap is bridged with a curve instead, leaving each end at
-# the slope the outline has there: 35 degrees off plumb under the belt, easing to 15 at the top of the mirrors.
-def _bridge(z, w, z0, z1):
+# Behind the mirrors no photo shows the body's side (z 1.28 to 1.63: the shoulder under the glass and most of the side
+# glass). A straight line across it met the glass above at a fold of 8 to 15 degrees, a crease along the whole
+# greenhouse (the owner saw it from the front, 10 Nov). A side glass is flat or bulges outward, and the turn is taken
+# in the shoulder under the belt: so the glass above the mirrors (15.8 degrees off plumb) is carried straight down to
+# GLASS_FOOT, and the shoulder is a curve from there to the outline under the mirrors, leaving each end at its
+# slope. Ahead of the cowl there is no glass, and the straight line is kept for the hood and the fenders (front_half's x).
+GLASS_FOOT, MIRROR_Z, COWL_X = 1.34, (1.28, 1.63), (1.05, 1.25)
+def _bridge(z, w):
+    z0, z1 = MIRROR_Z; zg = GLASS_FOOT
     a = (z > z0 - 0.04) & (z < z0); b = (z > z1) & (z < z1 + 0.07)
     m0 = np.polyfit(z[a], w[a], 1)[0]; m1 = np.polyfit(z[b], w[b], 1)[0]; w0 = float(np.interp(z0, z, w)); w1 = float(np.interp(z1, z, w))
-    k = (z >= z0) & (z <= z1); t = (z[k] - z0) / (z1 - z0); h = z1 - z0; out = w.copy()
-    out[k] = (2 * t**3 - 3 * t**2 + 1) * w0 + (t**3 - 2 * t**2 + t) * h * m0 + (-2 * t**3 + 3 * t**2) * w1 + (t**3 - t**2) * h * m1
+    wg = w1 + (zg - z1) * m1; out = w.copy(); g = (z >= zg) & (z <= z1); out[g] = w1 + (z[g] - z1) * m1
+    k = (z >= z0) & (z < zg); t = (z[k] - z0) / (zg - z0); h = zg - z0
+    out[k] = (2 * t**3 - 3 * t**2 + 1) * w0 + (t**3 - 2 * t**2 + t) * h * m0 + (-2 * t**3 + 3 * t**2) * wg + (t**3 - t**2) * h * m1
     return out
-_wf = _bridge(_zf, _wf, 1.28, 1.63)
+_wf_line = _wf.copy(); _wf = _bridge(_zf, _wf)
 _wf = np.where(_zf < 1.0, np.minimum(_wf, 0.985), _wf)      # below the fenders the tyres set the width: the body is 1.97 m
-_wf_s = _iron(_wf)
-def front_half(z): return np.interp(z, _zf, _wf_s)
+_wf_line = np.where(_zf < 1.0, np.minimum(_wf_line, 0.985), _wf_line)
+_wf_s = _iron(_wf); _wf_line_s = _iron(_wf_line)
+def front_half(z, x=None):
+    """The body's half-width at height z; with x (photo frame), the hood's and fenders' ahead of the cowl."""
+    w = np.interp(z, _zf, _wf_s)
+    if x is None: return w
+    t = float(np.clip((x - COWL_X[0]) / (COWL_X[1] - COWL_X[0]), 0, 1)); t = t * t * (3 - 2 * t)
+    return w * (1 - t) + np.interp(z, _zf, _wf_line_s) * t
 _top = _mask('04_top'); ct = CFG['top']
 _xt, _wt = [], []
 _cq = _cov('04_top', _top); _fq = []
