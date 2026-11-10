@@ -253,6 +253,11 @@ Because the model is not finished (later steps in PLAN.md):
 - no interior yet, so the rear lamps' housings and the far windows show through the glass;
 - the lug nuts are flat, the step tread has no ribs, there are no mud flaps (the photo has one behind each wheel)
   and no number plate;
+- the wheel openings follow the photo's wheels unscaled while the body is brought to the spec's height, so each
+  opening stands 37 mm higher against the body than in the photo: the flare band (the real photo's 66 and 78 mm)
+  tops out 1.016 m up at the front, level with the foot of the head lamp's cover, and 57 mm under the fuel flap at
+  the rear, where the photo has about 108. The owner's call: thinner flare bands, or wheels scaled with the body;
+- the rear door's shut line breaks for about 10 mm where it steps onto the rear flare;
 - the windshield's pane is narrower than the front photo's glass, by 27 mm a side at the foot and about 40 above
   the knee (the r11 review's reading, not yet re-measured): the black surround lies where the photo has glass;
 - approach 29.7 and departure 24.0 degrees, measured on the model, against the official 32 and 25.

@@ -21,6 +21,8 @@ FUEL_FLAP = (-1.645, -1.370, 1.086, 1.232)   # left rear quarter, x0 x1 z0 z1 (b
 # the step's outer edge is flush with the door skin.
 STEP_X = (RF.AXLE_X[0] - 0.599, RF.AXLE_X[0] - 2.363)
 STEP_Z = (0.303, 0.350, 0.377)
+STEP_CLEAR = 0.020                    # the step stops this far ahead of the rear opening (the owner's photo's opening is 20 mm
+                                      # further forward than the real photo's step end, which stood 20 mm short of the real opening)
 SILL_Y, STEP_Y = 0.905, 0.962
 
 def activate(o):
@@ -52,7 +54,10 @@ def sill(shell, black):
 def running_boards(black, silver):
     """The side steps: a swept section with a silver outer face and a black tread that rises toward the sill; the two
     ends are rounded in plan."""
-    out = []; x0, x1 = STEP_X; zb, ze, zi = STEP_Z; xs = np.linspace(x0, x1, 72); yin = SILL_Y - 0.012; n = 8
+    import ext_parts as EP
+    out = []; x0, x1 = STEP_X; zb, ze, zi = STEP_Z
+    x1 = max(x1, RF.AXLE_X[1] - EP.ARCH_PTS[1][0][0] + STEP_CLEAR)      # it ends short of the rear wheel opening
+    xs = np.linspace(x0, x1, 72); yin = SILL_Y - 0.012; n = 8
     for s in (1, -1):
         V, F = [], []
         for x in xs:
