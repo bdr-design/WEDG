@@ -105,7 +105,12 @@ base = np.interp(_zf, _zf[~mirror], _wf[~mirror]); _wf = np.where(mirror & (_wf 
 # in the shoulder under the belt: so the glass above the mirrors (15.8 degrees off plumb) is carried straight down to
 # GLASS_FOOT, and the shoulder is a curve from there to the outline under the mirrors, leaving each end at its
 # slope. Ahead of the cowl there is no glass, and the straight line is kept for the hood and the fenders (front_half's x).
-GLASS_FOOT, MIRROR_Z, COWL_X = 1.34, (1.28, 1.63), (1.05, 1.25)
+# GLASS_FOOT is under the lowest point of the belt (the chrome line is at z 1.314 at the front door's front corner), so
+# no pane has any of the shoulder's turn in it: with the foot at 1.34 the bottom 3 to 5 cm of the door glass leaned 25
+# to 41 degrees and folded hollow into the flat pane (review of r19). The shoulder is then a ledge under the belt:
+# 73 mm of inset in 50 mm of height. The blend to the hood's line runs over 40 cm (20 cm folded the plan by 10 degrees
+# at the A pillar's foot).
+GLASS_FOOT, MIRROR_Z, COWL_X = 1.31, (1.26, 1.63), (0.95, 1.35)
 def _bridge(z, w):
     z0, z1 = MIRROR_Z; zg = GLASS_FOOT
     a = (z > z0 - 0.04) & (z < z0); b = (z > z1) & (z < z1 + 0.07)
