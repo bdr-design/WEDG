@@ -68,3 +68,35 @@ def shade(me):
     n = np.zeros(len(me.vertices) * 3); a.data.foreach_get('vector', n); n = n.reshape(-1, 3); ln = np.linalg.norm(n, axis=1)
     auto = np.zeros(len(me.vertices) * 3); me.vertices.foreach_get('normal', auto); auto = auto.reshape(-1, 3)
     n = np.where(ln[:, None] > 0.5, n / np.maximum(ln, 1e-9)[:, None], auto); me.normals_split_custom_set_from_vertices([tuple(v) for v in n])
+
+
+def ngon(bm, pts, y, mat):
+    """A flat many-sided face at depth y, looking toward -y (the photo's side). pts: model (x, z) pairs."""
+    vs = [bm.verts.new((x, y, z)) for x, z in pts]; f = bm.faces.new(vs); f.material_index = mat
+    if f.normal.y > 0: f.normal_flip()
+    return vs
+
+
+def prism(bm, pts, y_front, y_back, mat, wall=None):
+    """A raised part: its face at y_front (toward the photo's side) and walls back to y_back."""
+    a = ngon(bm, pts, y_front, mat); b = [bm.verts.new((v.co.x, y_back, v.co.z)) for v in a]; n = len(a)
+    for k in range(n):
+        f = bm.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k])); f.material_index = mat if wall is None else wall
+
+
+def ring(bm, outer, inner, y, mat, y_back=None):
+    """A flat band between two outlines at depth y (a bezel round an opening), with an outer wall back to y_back."""
+    from skimage.measure import points_in_poly
+    vo = [bm.verts.new((x, y, z)) for x, z in outer]; vi = [bm.verts.new((x, y, z)) for x, z in inner]
+    ed = [bm.edges.new((vo[k], vo[(k + 1) % len(vo)])) for k in range(len(vo))] + [bm.edges.new((vi[k], vi[(k + 1) % len(vi)])) for k in range(len(vi))]
+    fl = [g for g in bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=False, edges=ed)['geom'] if isinstance(g, bmesh.types.BMFace)]
+    cen = np.array([(f.calc_center_median().x, f.calc_center_median().z) for f in fl]); bmesh.ops.delete(bm, geom=[f for f, k in zip(fl, points_in_poly(cen, np.asarray(inner))) if k], context='FACES')
+    for f in fl:
+        if f.is_valid:
+            f.material_index = mat
+            if f.normal.y > 0: f.normal_flip()
+    if y_back is not None:
+        for loop in (vo, vi):
+            b = [bm.verts.new((v.co.x, y_back, v.co.z)) for v in loop]
+            for k in range(len(loop)):
+                f = bm.faces.new((loop[k], loop[(k + 1) % len(loop)], b[(k + 1) % len(loop)], b[k])); f.material_index = mat
