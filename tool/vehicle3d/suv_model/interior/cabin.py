@@ -23,7 +23,7 @@ SEAT_X, SEAT_Y = -0.66, 0.411                        # CHOICE: the front seats' 
 # photo's camera (below), a wheel 0.38 m tall is 0.77 m from the camera along its axis, which puts its middle here.
 # (The photo draws it as wide as it is tall; seen 30 degrees from the side it should be 0.87 as wide. The height is
 # used.) The rake is a CHOICE.
-WHEEL = (0.420, 0.411, 1.176, 24.0)
+WHEEL = (0.430, 0.417, 1.172, 24.0)        # (the two-view fit puts it at 0.441, 0.423, 1.167: the mean of the two)
 # dash_front's camera, from four readings on the photo (none of them can be checked against a second one, so this
 # is a fit, not a measurement):
 #   the screen's display, 291 px wide; a 12.3 inch display is 0.292 m wide, so about 997 px per metre at the screen;
@@ -38,7 +38,9 @@ WHEEL = (0.420, 0.411, 1.176, 24.0)
 # 4.2 m back, under which the console's top would be seen edge-on; the photo shows it from well above.
 # (position, where it looks, degrees across, the column of the car's centre line or None, what to hide)
 CAMERAS = {'dash_front': ((-0.30, 0.0, 1.45), (-0.30 + math.cos(math.radians(18.6)), 0.0, 1.45 - math.sin(math.radians(18.6))), 89.2, 856, ('seat_',)),
-           'driver_pov': ((-0.30, 0.42, 1.45), (0.75, 0.35, 1.12), 78.0, None, ('seat_',)),          # CHOICE, to be solved
+           # driver_pov: fitted with dash_front's camera held (twoview.py): 1.66 m up over the driver's seat, looking down
+           # 35.6 degrees and 4.4 degrees to the right, 1061 px focal length (76.5 degrees across)
+           'driver_pov': ((-0.194, 0.433, 1.658), (-0.194 + math.cos(math.radians(-4.4)) * math.cos(math.radians(35.6)), 0.433 + math.sin(math.radians(-4.4)) * math.cos(math.radians(35.6)), 1.658 - math.sin(math.radians(35.6))), 76.5, None, ('seat_',)),
            # rear_bench: no camera fits all of it. Its bench is 1467 px wide at the cushion's front edge and its
            # seat backs 1053 px across; taking the bench as 1.45 m wide, the backs as 1.40 m and 0.5 m further away
            # gives 1447 px focal length (60 degrees across) 1.43 m ahead of the cushion's front edge; the cushion's top,
@@ -68,7 +70,9 @@ def build():
             d.scale = ((xf - xr) / DM.DOOR_LENGTH, side, 1); d.rotation_euler = (side * math.radians(DOOR_LEAN), 0, 0); out.append(d)
     w = ST.build('steering_wheel'); x, y, z, rake = WHEEL
     # the wheel is built facing -y with z up: turn it to face the driver (-x) and lean its top forward
-    w.rotation_euler = (0, math.radians(rake), -math.pi / 2) if False else (math.radians(-rake), 0, math.pi / 2); w.location = (x, y, z); out.append(w)
+    # (about x first: its face, which looks along -y, tips up by the rake; then about z by -90 degrees: it looks along -x, at the driver,
+    # with the photo's right on the car's right. Up to here it was turned +90 and showed its back to the cabin.)
+    w.rotation_euler = (math.radians(-rake), 0, -math.pi / 2); w.location = (x, y, z); out.append(w)
     import dash as DASH; out.append(DASH.build())
     import bench as BENCH; out.append(BENCH.build())
     import shell as SHELL; out.append(SHELL.build())

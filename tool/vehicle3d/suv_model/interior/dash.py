@@ -20,13 +20,28 @@ def pillar(foot, head, side):
     foot, head = np.array(foot, float), np.array(head, float); mid = (foot + head) / 2
     return CAM.plane(foot, mid - np.array((mid[0] - 0.6, 0.0, mid[2])), head - foot)
 
+# Where the planes stand. dash_front and driver_pov are two views of the same dashboard (twoview.py: fifteen things
+# read on both fit one scene to 9 px on average, 25 at worst), so the things both show have a place in the car:
+#   the screen's display: its middle 0.53 m ahead of the car's middle and 1.295 m up, leaning back 27 degrees;
+#   the hazard switch at (0.473, 0, 1.195), the silver frame's lower corners near (0.42, +-0.15, 1.12) and the big
+#     knob at (0.387, 0.125, 1.057): one face leaning 28 degrees through (0.45, 0, 1.165);
+#   the glovebox's latch at (0.474, -0.268, 1.170): the beige face, 2 cm ahead of that one and as steep;
+#   the round switch at (0.538, 0.199, 1.253) and the left vent at (0.543, 0.679, 1.245): the upper face, upright;
+#   the left cup holder at (0.178, 0.045, 0.989): the console's top, 0.99 m up.
+# These rest on dash_front's own camera (cabin.CAMERAS) and on the display being 0.292 m wide. The instruments'
+# place behind the wheel is a CHOICE.
+def leaning(x, z, deg):
+    """A face across the car through (x, 0, z) whose top leans forward by deg."""
+    t = math.radians(deg); return CAM.plane((x, 0, z), (math.cos(t), 0, -math.sin(t)), (math.sin(t), 0, math.cos(t)))
+
+LIP_ROW = 370
 # name: (plane, thickness behind it, edge rounding, material, region: a box (col0, row0, col1, row1), corners [(col, row)...] or None)
 A_FOOT, A_HEAD = (1.00, 0.74, 1.27), (0.47, 0.60, 1.74)                 # the hull's A pillar inside the glass (hullspace.py): its foot and head, left side
-PARTS = {'upper': (upright(0.66), 0.30, 0.035, 'black', None), 'lower': (upright(0.62), 0.30, 0.045, 'beige', None),
-         'stack': (upright(0.60), 0.30, 0.012, 'black', (688, 428, 1029, 572)), 'stack_low': (upright(0.57), 0.30, 0.012, 'black', (703, 572, 983, 748)),
-         'screen': (upright(0.55), 0.022, 0.004, 'gloss', (689, 283, 1023, 407)), 'cluster': (upright(0.70), 0.02, 0.004, 'black', (300, 350, 590, 480)),
-         'console_body': (level(0.795), 0.26, 0.02, 'beige', [(660, 748), (1060, 748), (1085, 941), (640, 941)]),
-         'console': (level(0.80), 0.02, 0.008, 'wood', [(699, 748), (1031, 748), (1060, 917), (1060, 941), (681, 941), (681, 917)]),
+PARTS = {'upper': (upright(0.54), 0.12, 0.02, 'black', None), 'dash_top': (level(1.275), 0.12, 0.02, 'black', None), 'lower': (leaning(0.474, 1.170, 28.0), 0.30, 0.045, 'beige', None),
+         'stack': (leaning(0.45, 1.165, 28.0), 0.30, 0.012, 'black', (688, 428, 1029, 572)), 'stack_low': (leaning(0.45, 1.165, 28.0), 0.30, 0.012, 'black', (703, 572, 983, 748)),
+         'screen': (leaning(0.531, 1.295, 27.0), 0.022, 0.004, 'gloss', (689, 283, 1023, 407)), 'cluster': (upright(0.62), 0.02, 0.004, 'black', (300, 350, 590, 480)),
+         'console_body': (level(0.985), 0.40, 0.02, 'beige', [(660, 748), (1060, 748), (1085, 941), (640, 941)]),
+         'console': (level(0.99), 0.02, 0.008, 'wood', [(699, 748), (1031, 748), (1060, 917), (1060, 941), (681, 941), (681, 917)]),
          'pillar_L': (pillar(A_FOOT, A_HEAD, 1), 0.06, 0.02, 'beige', [(96, 60), (176, 44), (318, 292), (300, 336), (212, 356), (140, 250)]),
          'pillar_R': (pillar((A_FOOT[0], -A_FOOT[1], A_FOOT[2]), (A_HEAD[0], -A_HEAD[1], A_HEAD[2]), -1), 0.06, 0.02, 'beige',
                       [(1616, 60), (1572, 250), (1500, 356), (1412, 336), (1394, 292), (1536, 44)]),
@@ -46,7 +61,13 @@ def regions():
             r, c = _poly([p[1] for p in shape], [p[0] for p in shape], m.shape); m[r, c] = True
         reg[name] = m
     centre = (uu > 687) & (uu < 1030) & (vv > 427) & (vv < 748)
-    reg['upper'] = (vv > wbot[None, :]) & (vv < 440) & (uu > 150) & (uu < 1560)
+    # the upper face (the vents' band) and, above its lip, the dashboard's top, which runs level from the lip to the
+    # windshield's foot: through dash_front's camera a top 1.275 m up spans rows 303 (x 1.0) to 370 (x 0.54), and the
+    # outer vents' upper edge is at row 370
+    reg['upper'] = (vv >= LIP_ROW) & (vv < 440) & (uu > 150) & (uu < 1560)
+    # (only where the camera looks down onto that height: beside the windshield, where its edge climbs the pillars,
+    # the photo's rows are above the top's own horizon and would be thrown behind the camera)
+    reg['dash_top'] = (vv > np.maximum(wbot[None, :], 294)) & (vv < LIP_ROW + 2) & (uu > 150) & (uu < 1560)
     reg['lower'] = (vv >= 440) & (vv < 665) & (uu > 113) & (uu < 1590) & ~centre
     return reg, mag
 
