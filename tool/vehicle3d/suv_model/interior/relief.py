@@ -24,11 +24,18 @@ def solid(bm, mask, to_xz, scale, width, radius, y0=0.0, mat=0, rings=4, spacing
     radius = min(radius, width / 2); edt = ndimage.distance_transform_edt(np.pad(mask, 2))[2:-2, 2:-2] * scale
     rings = min(rings, int(radius / scale / 3))          # a rounding of a few pixels cannot carry rings: their contours tangle (the screen's top came out in spikes)
     pts = [_resample(outline(mask), spacing / scale)]; nb = len(pts[0])
-    f = ndimage.gaussian_filter(edt, 1.0)
+    # the rings: each outline point carried inward along the distance field to each ring's depth, so that the rings'
+    # points stand in rows across the rounding (rings resampled each on its own left the edge crumpled: the
+    # triangles between them leaned every way)
+    f = ndimage.gaussian_filter(edt, 1.0) / scale; gr, gc = np.gradient(ndimage.gaussian_filter(edt, 1.5) / scale); p = pts[0].copy()
     for k in range(1, rings + 1):
-        lvl = radius * (1 - np.cos(k * np.pi / 2 / rings))
-        for c in measure.find_contours(f, lvl):
-            if len(c) > 12: pts.append(_resample(c, spacing * (1 + 0.5 * k) / scale))
+        lvl = radius * (1 - np.cos(k * np.pi / 2 / rings)) / scale
+        for _ in range(int(lvl * 3) + 12):
+            d = ndimage.map_coordinates(f, p.T, order=1); need = d < lvl - 0.05
+            if not need.any(): break
+            g = np.c_[ndimage.map_coordinates(gr, p.T, order=1), ndimage.map_coordinates(gc, p.T, order=1)]; ln = np.maximum(np.hypot(g[:, 0], g[:, 1]), 0.5)
+            p[need] += (g / ln[:, None] * np.minimum(lvl - d, 0.7)[:, None])[need]
+        q = p[::2] if k >= 4 else p; key = np.round(q / 0.6).astype(np.int64); _, first = np.unique(key[:, 0] * 100003 + key[:, 1], return_index=True); pts.append(q[np.sort(first)])
     rr, cc = np.mgrid[0:mask.shape[0]:max(2, int(fill / scale)), 0:mask.shape[1]:max(2, int(fill / scale))]
     k = edt[rr, cc] > radius * 1.05 + fill * 0.3; pts.append(np.c_[rr[k], cc[k]].astype(float))
     P = np.vstack(pts); tri = Delaunay(P).simplices

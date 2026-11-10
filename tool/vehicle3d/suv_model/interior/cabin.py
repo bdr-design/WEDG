@@ -17,7 +17,7 @@ DOOR_Y = CABIN_W / 2                                 # the door trims' panel fac
 DOOR_LEAN = 5.5                                      # degrees: the trims lean in with the glass, so their top edge is 0.765 m out, inside the glass (0.81 at the belt)
 FRONT_DOOR_X, REAR_DOOR_X = (0.9385, -0.1365), (-0.1365, -1.1825)
 TRIM_TOP_Z = 1.235                                   # the trims' top edge, at the window's sill (the belt is 1.229 to 1.261 along the front door)
-SEAT_X, SEAT_Y = -0.66, 0.411                        # CHOICE: the front seats' rearmost point (the cushion's front edge is then 0.23 m behind the wheel's rim); across, they are centred on the wheel
+SEAT_X, SEAT_Y = -0.38, 0.411                        # CHOICE: the front seats' rearmost point (the hip point, 0.34 m ahead of it, is then 0.47 m behind the wheel's centre and the cushion's nose 5 cm under the rim); across, they are centred on the wheel
 # The steering wheel's centre x, y, z and its rake in degrees (top leaning forward). On dash_front its rim runs from
 # column 195 to 613 and from row 295 to 713: a circle 418 px across with its middle at (404, 504). Through that
 # photo's camera (below), a wheel 0.38 m tall is 0.77 m from the camera along its axis, which puts its middle here.
@@ -56,7 +56,7 @@ def _place(ob, loc, rot=(0, 0, 0)):
 
 def build():
     """Everything built so far, set in the car. Returns the objects."""
-    import seat as SEAT, door as DOOR, steering as ST, door_measure as DM
+    import seat3d as SEAT, door as DOOR, steering as ST, door_measure as DM
     out = []
     for side, name in ((1, 'seat_FL'), (-1, 'seat_FR')):
         # the photo's seat has its controls on its right: it is the right-hand seat; the left one is its mirror

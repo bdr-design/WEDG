@@ -8,6 +8,10 @@ if what == 'seat':
     import seat_measure as SM
     photo = 'seat_side'; s, to_xz, (x_ref, z_ref) = SM.frame(); sv = s
     world = lambda col, row: ((col - x_ref) * s, (z_ref - row) * s)
+persp = None
+if what == 'seat3d':
+    import seatcam as SC
+    photo = 'seat_side'; s = SC.DIST / SC.F; persp = SC
 if what == 'door':
     import door_measure as DM
     photo = 'door_FL'; s, to_xz, (x_ref, z_ref) = DM.frame(); sv = s
@@ -17,7 +21,10 @@ sc = bpy.context.scene; sc.render.engine = 'CYCLES'; sc.cycles.samples = 16; sc.
 sc.render.resolution_x, sc.render.resolution_y = W, H; sc.render.film_transparent = True
 w = bpy.data.worlds.new('w'); sc.world = w; w.use_nodes = True; w.node_tree.nodes['Background'].inputs[0].default_value = (0.9, 0.9, 0.9, 1); w.node_tree.nodes['Background'].inputs[1].default_value = 0.7
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam); sc.camera = cam
-cam.data.type = 'ORTHO'; cam.data.ortho_scale = max(W, H) * s; cx, cz = world(W / 2, H / 2); cam.location = (cx, -5.0, cz); cam.rotation_euler = (np.pi / 2, 0, 0)
+if persp is None:
+    cam.data.type = 'ORTHO'; cam.data.ortho_scale = max(W, H) * s; cx, cz = world(W / 2, H / 2); cam.location = (cx, -5.0, cz); cam.rotation_euler = (np.pi / 2, 0, 0)
+else:      # the photo's own perspective camera
+    cam.data.sensor_fit = 'HORIZONTAL'; cam.data.angle = 2 * np.arctan(W / 2 / persp.F); cam.location = tuple(persp.POS); cam.rotation_euler = (np.pi / 2 - persp.PITCH, 0, 0)
 sun = bpy.data.objects.new('sun', bpy.data.lights.new('sun', 'SUN')); sun.data.energy = 1.6; sun.rotation_euler = (np.radians(55), 0, np.radians(25)); sc.collection.objects.link(sun)
 for o in bpy.data.objects:      # a low mesh with smooth normals shades in blotches along a rounded edge in Cycles; this is the renderer's remedy
     if o.type == 'MESH': o.shadow_terminator_shading_offset = 0.35; o.shadow_terminator_geometry_offset = 0.4
