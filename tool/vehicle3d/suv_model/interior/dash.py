@@ -99,8 +99,7 @@ def build(name='dashboard'):
         bm.verts.ensure_lookup_table(); bm.faces.ensure_lookup_table()
         for v in bm.verts[n0:]: v.co = pl.to_car(v.co)
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces[nf:])
-    # the shifter: a leather boot and a knob standing on the console where the photo has its foot (sizes are a CHOICE:
-    # the photo shows it from above and behind, 0.19 m of it in all)
+    # the shifter: a leather boot and a knob standing on the console where the photo has its foot
     pl = PARTS['console'][0]; a, b = pl.to_ab(np.array([DF.SHIFTER['foot'][1]], float), np.array([DF.SHIFTER['foot'][0]], float)); foot = pl.to_car(Vector((float(a[0]), 0.0, float(b[0]))))
     cx, cy, z0 = foot.x, foot.y, foot.z
     def frustum(z_lo, z_hi, half_lo, half_hi, lean, mat):
@@ -109,8 +108,9 @@ def build(name='dashboard'):
         fs = [bm.faces.new((lo[k], lo[(k + 1) % 4], hi[(k + 1) % 4], hi[k])) for k in range(4)] + [bm.faces.new(hi)]
         for f in fs: f.material_index = idx[mat]; f.smooth = False
         bmesh.ops.recalc_face_normals(bm, faces=fs)
-    frustum(z0, z0 + 0.105, (0.055, 0.050), (0.022, 0.020), 0.02, 'black'); frustum(z0 + 0.105, z0 + 0.118, (0.026, 0.024), (0.028, 0.026), 0.02, 'silver')
-    frustum(z0 + 0.118, z0 + 0.185, (0.030, 0.036), (0.036, 0.040), 0.035, 'black')
+    # (the two-view fit has the knob's top 0.105 m over the console's top, and the knob is 78 by 61 px on dash_front: 66 by 51 mm)
+    frustum(z0, z0 + 0.055, (0.046, 0.044), (0.020, 0.019), 0.012, 'black'); frustum(z0 + 0.055, z0 + 0.062, (0.022, 0.024), (0.023, 0.026), 0.012, 'silver')
+    frustum(z0 + 0.062, z0 + 0.105, (0.024, 0.030), (0.027, 0.033), 0.020, 'black')
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for m in Mt.values(): me.materials.append(m)
     R.shade(me); ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); return ob

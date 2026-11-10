@@ -22,6 +22,7 @@ def solid(bm, mask, to_xz, scale, width, radius, y0=0.0, mat=0, rings=4, spacing
     """Add the solid for mask to bm. to_xz maps (row, column) arrays to model x, z; scale is metres per pixel;
     width is the solid's full width across, radius its edge rounding (at most width / 2)."""
     radius = min(radius, width / 2); edt = ndimage.distance_transform_edt(np.pad(mask, 2))[2:-2, 2:-2] * scale
+    rings = min(rings, int(radius / scale / 3))          # a rounding of a few pixels cannot carry rings: their contours tangle (the screen's top came out in spikes)
     pts = [_resample(outline(mask), spacing / scale)]; nb = len(pts[0])
     f = ndimage.gaussian_filter(edt, 1.0)
     for k in range(1, rings + 1):
