@@ -12,6 +12,7 @@ from skimage.draw import polygon as _poly
 # How far each thing stands out of the door's inner plane toward the cabin (metres), and its edge rounding where it
 # is a soft part. A game choice: the photo is square-on.
 PANEL, BEIGE = (0.030, 0.006), (0.075, 0.030)
+SILL_ROW = 54                                    # the trim's top edge on the photo
 POCKET_DEPTH, CUP_DEPTH = 0.050, 0.022          # behind the panel's face
 OUT = {'rim': 0.032, 'lever': 0.026, 'lock': 0.020, 'slat': 0.033, 'switch_panel': 0.078, 'switch': 0.084, 'knob': 0.087, 'wood': 0.062,
        'speaker': 0.0305, 'lamp': 0.0315}
@@ -26,18 +27,24 @@ def materials():
             'thread': _mat('seat_thread', (0.70, 0.60, 0.44), rough=0.7)}
 
 
-def build(name='door_trim_FL'):
+def build(name='door_trim_FL', keep=None):
+    """keep(x, z) -> True where the trim stands (the trim's own metres, x from its rear edge): a rear door's trim is cut round the wheel's arch."""
     lab = DM.labels(); s, to_xz, _ = DM.frame(); M = materials(); idx = {k: i for i, k in enumerate(M)}; bm = bmesh.new()
     snap = lambda p, reach=4: WF.snap(p, name='door_FL', reach=reach)
     xz = lambda p: np.c_[to_xz(np.asarray(p, float)[:, 1], np.asarray(p, float)[:, 0])]
     # the panel, with the map pocket and the handle's cup cut through it, and the beige armrest and sweep on it
     panel = lab != 0; pocket, cup = snap(F.POCKET), snap(F.HANDLE_CUP, 3)
+    panel[:SILL_ROW] = False                                    # above the sill the photo shows the window: its frame's posts and the outside mirror, which are the hull's
     for p in (pocket, cup):
         r, c = _poly(p[:, 1], p[:, 0], panel.shape); panel[r, c] = False
+    beige_m = lab == DM.PARTS.index('beige')
+    if keep is not None:
+        rr, cc = np.mgrid[0:panel.shape[0], 0:panel.shape[1]]; kx, kz = to_xz(rr.ravel(), cc.ravel()); km = np.asarray(keep(np.asarray(kx), np.asarray(kz))).reshape(panel.shape); panel &= km; beige_m = beige_m & km
     R.solid(bm, panel, to_xz, s, 2 * PANEL[0], PANEL[1], mat=idx['panel'], rings=2, spacing=0.012, fill=0.06)
-    R.solid(bm, lab == DM.PARTS.index('beige'), to_xz, s, 2 * BEIGE[0], BEIGE[1], mat=idx['beige'], rings=6, spacing=0.012, fill=0.06)
+    R.solid(bm, beige_m, to_xz, s, 2 * BEIGE[0], BEIGE[1], mat=idx['beige'], rings=6, spacing=0.012, fill=0.06)
     # only the cabin's side is wanted: drop the caps that lie on the door's far side
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if min(v.co.y for v in f.verts) > 0.004], context='FACES')
+    solids = set(bm.faces)                                      # (not a count: new faces take the slots the dropped caps left)
     grow = lambda p, k: p.mean(0) + (p - p.mean(0)) * k          # the floors reach past the openings' rounded rims
     R.ngon(bm, xz(grow(pocket, 1.10)), -PANEL[0] + POCKET_DEPTH, idx['dark']); R.ngon(bm, xz(grow(cup, 1.10)), -PANEL[0] + CUP_DEPTH, idx['gloss'])
     R.ring(bm, xz(snap(F.HANDLE_RIM)), xz(cup), -OUT['rim'], idx['gloss'], y_back=-PANEL[0])
@@ -54,6 +61,9 @@ def build(name='door_trim_FL'):
     beige = lab == DM.PARTS.index('beige'); y_at = R.near_face(beige, s, 2 * BEIGE[0], BEIGE[1])
     R.ribbon(bm, F.ARMREST_SEAM, to_xz, y_at, 0.0022, idx['seam']); R.ribbon(bm, F.STITCH, to_xz, y_at, 0.0016, idx['thread'])
     R.ribbon(bm, [(x, y + 7) for x, y in F.STITCH], to_xz, y_at, 0.0016, idx['thread'])
+    if keep is not None:                                        # the things on the panel go where the panel is cut away
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f not in solids and not all(bool(keep(np.array([v.co.x]), np.array([v.co.z]))[0]) for v in f.verts)], context='FACES')
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for m in M.values(): me.materials.append(m)
     R.shade(me); ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); return ob

@@ -16,6 +16,12 @@ FLOOR_Z = 0.555                                      # CHOICE: the headliner is 
 DOOR_Y = CABIN_W / 2                                 # the door trims' panel face at their foot (the cabin's widest)
 DOOR_LEAN = 5.5                                      # degrees: the trims lean in with the glass, so their top edge is 0.765 m out, inside the glass (0.81 at the belt)
 FRONT_DOOR_X, REAR_DOOR_X = (0.9385, -0.1365), (-0.1365, -1.1825)
+REAR_FLOOR = (-0.99, 0.622)                          # behind the second row the floor steps up over the rear axle (the hull's underside is 0.60 m up from x -1.06 to -1.55): where, and to what height
+ARCH = (-1.294, 0.408, (0, 20, 40, 60, 80, 90, 100, 120, 140, 160, 180), (0.506, 0.516, 0.532, 0.564, 0.544, 0.540, 0.548, 0.574, 0.531, 0.496, 0.477), 0.035)
+# (the rear wheel's well in the hull, measured on the built car: the hub (x, z); the well's radius by the angle from straight ahead; how far clear of it the rear doors' trims are cut)
+def _clear_of_arch(x, z):
+    dx, dz = x - ARCH[0], z - ARCH[1]; return np.hypot(dx, dz) > np.interp(np.degrees(np.arctan2(dz, dx)), ARCH[2], ARCH[3], left=0.0, right=0.0) + ARCH[4]
+FRONT_DOOR_TOE = 0.022                               # radians: the front doors' trims turn in toward the front with the hull's plan (their front end 23 mm further in)
 TRIM_TOP_Z = 1.235                                   # the trims' top edge, at the window's sill (the belt is 1.229 to 1.261 along the front door)
 SEAT_X, SEAT_Y = -0.38, 0.411                        # CHOICE: the front seats' rearmost point (the hip point, 0.34 m ahead of it, is then 0.47 m behind the wheel's centre and the cushion's nose 5 cm under the rim); across, they are centred on the wheel
 # The steering wheel's centre x, y, z and its rake in degrees (top leaning forward). On dash_front its rim runs from
@@ -47,7 +53,7 @@ CAMERAS = {'dash_front': ((-0.30, 0.0, 1.45), (-0.30 + math.cos(math.radians(18.
            # 171 px deep for 0.5 m, is then seen from 23 degrees above, 0.73 m over it, looking down 16 degrees. At
            # that the belts' webbing comes out 52 mm wide (47 is the standard). The cushion's front edge is taken 0.75 m
            # behind the car's middle and 0.93 m up (CHOICE). The centre line is at column 840.
-           'rear_bench': ((0.68, 0.0, 1.66), (0.68 - math.cos(math.radians(16.0)), 0.0, 1.66 - math.sin(math.radians(16.0))), 60.0, 840, ('seat_F', 'dashboard', 'steering', 'door_trim_F'))}
+           'rear_bench': ((0.52, 0.0, 1.30), (0.52 - math.cos(math.radians(11.5)), 0.0, 1.30 - math.sin(math.radians(11.5))), 71.6, 837.5, ('seat_F', 'dashboard', 'steering', 'door_trim_F'))}      # (1.06 m ahead of bench3d.FRONT_X: the photo fixes the camera against the bench, not in the car)
 
 
 def _place(ob, loc, rot=(0, 0, 0)):
@@ -66,18 +72,25 @@ def build():
     for side in (1, -1):
         for row, (xf, xr) in (('F', FRONT_DOOR_X), ('R', REAR_DOOR_X)):
             # the rear doors have no photo of their own (rear_bench shows their trims at its borders): the front trim, shortened to the rear door's length
-            d = DOOR.build('door_trim_%s%s' % (row, 'L' if side > 0 else 'R')); d.location = (xr, side * (DOOR_Y + 0.012 + 0.030), zb)
-            d.scale = ((xf - xr) / DM.DOOR_LENGTH, side, 1); d.rotation_euler = (side * math.radians(DOOR_LEAN), 0, 0); out.append(d)
+            sx = (xf - xr) / DM.DOOR_LENGTH
+            # (a rear door is cut round the wheel's arch, as the hull's door is; a front one ends 4 cm short of the door's front, beside the dashboard's end, where the hull narrows)
+            keep = (lambda x, z, xr=xr, sx=sx: _clear_of_arch(xr + x * sx, zb + z)) if row == 'R' else (lambda x, z, xr=xr, sx=sx: xr + x * sx < FRONT_DOOR_X[0] - 0.04)
+            d = DOOR.build('door_trim_%s%s' % (row, 'L' if side > 0 else 'R'), keep=keep); d.location = (xr, side * (DOOR_Y + 0.012 + 0.030), zb)
+            d.scale = ((xf - xr) / DM.DOOR_LENGTH, side, 1); d.rotation_euler = (side * math.radians(DOOR_LEAN), 0, -side * FRONT_DOOR_TOE if row == 'F' else 0.0); out.append(d)
     w = ST.build('steering_wheel'); x, y, z, rake = WHEEL
     # the wheel is built facing -y with z up: turn it to face the driver (-x) and lean its top forward
     # (about x first: its face, which looks along -y, tips up by the rake; then about z by -90 degrees: it looks along -x, at the driver,
     # with the photo's right on the car's right. Up to here it was turned +90 and showed its back to the cabin.)
     w.rotation_euler = (math.radians(-rake), 0, -math.pi / 2); w.location = (x, y, z); out.append(w)
     import dash as DASH; out.append(DASH.build())
-    import bench as BENCH; out.append(BENCH.build())
+    import bench3d as BENCH; out.append(BENCH.build())
     import shell as SHELL; out.append(SHELL.build())
-    bpy.ops.mesh.primitive_plane_add(size=1); f = bpy.context.active_object; f.name = 'cabin_floor'; f.scale = (2.6, CABIN_W, 1); f.location = (-0.35, 0, FLOOR_Z)
-    import seat as S2; f.data.materials.append(S2._mat('cabin_carpet', (0.42, 0.33, 0.22), rough=0.95)); out.append(f)
+    # the floor: flat (a choice: no photo shows the tunnel or the footwells' shape), between the doors and, further back, between the rear wheels' wells
+    import imats; X0, X1 = SHELL.WELL_X; Y = SHELL.WELL_Y; xs, zs = REAR_FLOOR
+    front = [(0.93, 0.80), (X0, 0.80), (X0, Y), (xs, Y)]; rear = [(xs, Y), (X1 - 0.05, Y), (X1 - 0.05, 0.74), (-2.05, 0.74)]
+    V = [(x, y, FLOOR_Z) for x, y in front] + [(x, -y, FLOOR_Z) for x, y in front[::-1]] + [(x, y, zs) for x, y in rear] + [(x, -y, zs) for x, y in rear[::-1]]
+    me = bpy.data.meshes.new('cabin_floor'); me.from_pydata(V, [], [list(range(8))[::-1], list(range(8, 16))[::-1], [3, 4, 15, 8]]); me.materials.append(imats.m('cabin_carpet'))
+    f = bpy.data.objects.new('cabin_floor', me); bpy.context.collection.objects.link(f); out.append(f)
     return out
 
 
