@@ -30,8 +30,7 @@ PARTS = {'upper': (upright(0.66), 0.30, 0.035, 'black', None), 'lower': (upright
          'pillar_L': (pillar(A_FOOT, A_HEAD, 1), 0.06, 0.02, 'beige', [(96, 60), (176, 44), (318, 292), (300, 336), (212, 356), (140, 250)]),
          'pillar_R': (pillar((A_FOOT[0], -A_FOOT[1], A_FOOT[2]), (A_HEAD[0], -A_HEAD[1], A_HEAD[2]), -1), 0.06, 0.02, 'beige',
                       [(1616, 60), (1572, 250), (1500, 356), (1412, 336), (1394, 292), (1536, 44)]),
-         'mirror': (upright(0.52), 0.03, 0.012, 'black', (716, 118, 990, 208)),
-         'header': (ceiling(1.76), 0.04, 0.01, 'beige', [(176, 44), (1536, 44), (1560, 0), (150, 0)])}
+         'mirror': (upright(0.52), 0.03, 0.012, 'black', (716, 118, 990, 208))}      # (the headliner is shell.py's: seen this flat, a region of it cannot be laid on its plane)
 
 
 def regions():

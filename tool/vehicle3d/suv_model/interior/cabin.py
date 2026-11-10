@@ -13,7 +13,8 @@ from mathutils import Matrix, Vector
 
 CABIN_W, CABIN_H = 1.635, 1.215                      # official
 FLOOR_Z = 0.555                                      # CHOICE: the headliner is then 1.77 m up, 9 cm under the roof's skin
-DOOR_Y = CABIN_W / 2                                 # the door trims' panel plane (the cabin's widest)
+DOOR_Y = CABIN_W / 2                                 # the door trims' panel face at their foot (the cabin's widest)
+DOOR_LEAN = 5.5                                      # degrees: the trims lean in with the glass, so their top edge is 0.765 m out, inside the glass (0.81 at the belt)
 FRONT_DOOR_X, REAR_DOOR_X = (0.9385, -0.1365), (-0.1365, -1.1825)
 TRIM_TOP_Z = 1.235                                   # the trims' top edge, at the window's sill (the belt is 1.229 to 1.261 along the front door)
 SEAT_X, SEAT_Y = -0.66, 0.411                        # CHOICE: the front seats' rearmost point (the cushion's front edge is then 0.23 m behind the wheel's rim); across, they are centred on the wheel
@@ -59,16 +60,18 @@ def build():
         # the photo's seat has its controls on its right: it is the right-hand seat; the left one is its mirror
         out.append(_place(SEAT.build(name, mirror=side > 0), (SEAT_X, side * SEAT_Y, FLOOR_Z)))
     # the front left trim as built faces -y with x forward: it stands on the left door as it is; the right one is its mirror
-    s, _, _ = DM.frame(); H = 1024 * s
-    for side, name in ((1, 'door_trim_FL'), (-1, 'door_trim_FR')):
-        d = DOOR.build(name); d.location = (FRONT_DOOR_X[1], side * DOOR_Y, TRIM_TOP_Z - H * (1 - 60 / 1024))
-        if side < 0: d.scale = (1, -1, 1)
-        out.append(d)
+    s, _, _ = DM.frame(); H = 1024 * s; zb = TRIM_TOP_Z - H * (1 - 60 / 1024)
+    for side in (1, -1):
+        for row, (xf, xr) in (('F', FRONT_DOOR_X), ('R', REAR_DOOR_X)):
+            # the rear doors have no photo of their own (rear_bench shows their trims at its borders): the front trim, shortened to the rear door's length
+            d = DOOR.build('door_trim_%s%s' % (row, 'L' if side > 0 else 'R')); d.location = (xr, side * (DOOR_Y + 0.012 + 0.030), zb)
+            d.scale = ((xf - xr) / DM.DOOR_LENGTH, side, 1); d.rotation_euler = (side * math.radians(DOOR_LEAN), 0, 0); out.append(d)
     w = ST.build('steering_wheel'); x, y, z, rake = WHEEL
     # the wheel is built facing -y with z up: turn it to face the driver (-x) and lean its top forward
     w.rotation_euler = (0, math.radians(rake), -math.pi / 2) if False else (math.radians(-rake), 0, math.pi / 2); w.location = (x, y, z); out.append(w)
     import dash as DASH; out.append(DASH.build())
     import bench as BENCH; out.append(BENCH.build())
+    import shell as SHELL; out.append(SHELL.build())
     bpy.ops.mesh.primitive_plane_add(size=1); f = bpy.context.active_object; f.name = 'cabin_floor'; f.scale = (2.6, CABIN_W, 1); f.location = (-0.35, 0, FLOOR_Z)
     import seat as S2; f.data.materials.append(S2._mat('cabin_carpet', (0.42, 0.33, 0.22), rough=0.95)); out.append(f)
     return out
