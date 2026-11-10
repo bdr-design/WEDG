@@ -11,7 +11,9 @@ M = mats.M
 paint = mats.paint(); shell = body.build(); shell.data.materials.append(paint)
 trim = M('trim_black', (0.018, 0.018, 0.019), rough=0.55); liner = M('liner', (0.012, 0.012, 0.012), rough=0.85)
 mirror_glass = M('mirror_glass', (0.6, 0.62, 0.65), metal=1.0, rough=0.02)
-glass_m = M('glass', (0.012, 0.014, 0.017), rough=0.03, alpha=0.55)
+# The owner's decision (10 Nov): the glass is blacked out all round (the full dark tint), so from outside it is a black
+# mirror and nothing shows through it. It is opaque, which also spares the phone a blended layer on every pane.
+glass_m = M('glass', (0.004, 0.0045, 0.006), rough=0.03, coat=1.0)
 black_gloss = M('black_gloss', (0.006, 0.006, 0.007), rough=0.08, coat=1.0); chrome = M('chrome', (0.9, 0.9, 0.92), metal=1.0, rough=0.06)
 MAT = mats.fascia(chrome, trim, black_gloss)
 # 1. in the photo frame (traced on the owner's photos): the body, the windows, the front and rear parts, the mirrors
@@ -36,6 +38,7 @@ ws = wheels.build(tyre_mat)
 UB.build(shell, M('underbody', (0.016, 0.016, 0.017), rough=0.85))
 tidy.tidy_all()
 print('shell sharp edges', body.crisp(bpy.data.objects['body']))
+print('glass sharp edges', body.crisp(bpy.data.objects['glass']))      # the panes' lips: shaded round, they scallop the dark glass along a leaning edge
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'suv.blend'))
 tri = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
 print('triangles', tri)

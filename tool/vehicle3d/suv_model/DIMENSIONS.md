@@ -251,9 +251,10 @@ Because the model is not finished (later steps in PLAN.md):
   stations on the hood, median; 0.3 now that the outlines are read to a fraction of a pixel, outlines._frac and
   _iron; the review measured 0.26 to 0.33); the windshield frame's reflection on the hood's rear third is still wavy;
 - the quarter glass is a plain shape; the photo's kicks up at the rear and has a chrome surround;
-- no interior yet, so the rear lamps' housings and the far windows show through the glass;
-- the lug nuts are flat, the step tread has no ribs, there are no mud flaps (the photo has one behind each wheel)
-  and no number plate;
+- the glass is blacked out all round and opaque (the owner's decision, 10 Nov: the full dark tint), so nothing
+  shows through it from outside; there is no interior yet;
+- the lug nuts are flat, the step tread has no ribs and there is no number plate. There are no mud flaps behind
+  the wheels, by the owner's decision (10 Nov), though his photo has them;
 - the wheel openings follow the photo's wheels unscaled while the body is brought to the spec's height, so each
   opening stands 37 mm higher against the body than in the photo. The owner's decision (10 Nov): the flare bands are
   thinned by that much (29 and 41 mm for the real photo's 66 and 78), so their tops stay where the photo has them,

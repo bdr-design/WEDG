@@ -82,5 +82,7 @@ Steps:
   kept beside the code. r12 sets the openings round the hubs unscaled, as the wheels are, after the r11 review found the rear wheel forward in
   its opening. r13 ends the side step ahead of the rear opening; r14 thins the flare bands (the owner's decision), so their tops stay
   where the photo has them. r14, REAL=1: side 0.990, front 0.971, rear 0.952, top 0.989; 190,050 triangles.
+- 10 Nov, build r15: the owner's decisions: no mud flaps, and the glass blacked out all round (opaque black, the
+  panes' lips marked sharp so the dark glass shades clean along leaning edges).
 - Next: the quarter glass's
   kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.
