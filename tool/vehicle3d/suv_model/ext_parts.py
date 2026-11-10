@@ -38,7 +38,7 @@ def mirrors(paint, glass, black):
             v.co.z = 1.46 + (v.co.z - 1.46) * (0.82 + 0.18 * t)
             if v.co.x > 0.66: v.co.y = s * (0.91 + (abs(v.co.y) - 0.91) * (1 - 0.25 * (v.co.x - 0.66) / 0.13))
         g = rbox(f'mirror_glass{s}', (0.528, s * 1.01, 1.46), (0.012, 0.165, 0.185), 0.005, glass)
-        yin = float(O.front_half(1.37)) - 0.025          # the arm starts 25 mm inside the outline: the pane is set 8 mm in, and leans
+        yin = float(O.front_half(1.37, 0.70)) - 0.025          # the arm starts 25 mm inside the outline: the pane is set 8 mm in, and leans
         arm = rbox(f'mirror_arm{s}', (0.70, s * (yin + 0.965) / 2, 1.37), (0.16, 0.965 - yin, 0.05), 0.02, black)
         out.append(join([h, g, arm], f'mirror_{"L" if s > 0 else "R"}'))
     return out
@@ -177,7 +177,11 @@ FLARE_W = (0.029, 0.041)          # the flare band's width over the top of the o
                                   # the photo, so the bands are thinned by that much and their tops stay where the photo has them
                                   # (0.977 and 0.989 m up: the photo's opening, mapped, plus the real photo's 66 and 78 mm)
 FLARE_Y, FLARE_END_Z = 0.990, 0.50   # the flares are the widest point of the car: the official 1.980 m; they end 0.50 m up
-FLARE_PROUD = 0.026                # how far a flare stands out of the body beside it (the flank is 0.961-0.967 out)
+# A flare's face is the top photo's outline (which along the openings is the flares): 0.985 over the wheels, and still
+# 0.981 at the rear door, where the door skin behind it is 5 cm further in; at the tail end it comes in to 0.957.
+# The official width is 1.980, 4 mm a side more than the photo's flares, and that is added all along. (Up to r22 a
+# flare stood 26 mm proud of the body beside it, which was right only while the doors were as wide as the fenders.)
+FLARE_OVER = 0.004
 
 def arch_curve(i, offset=0.0, step=0.012):
     """The opening of arch i (0 front, 1 rear) as an array of model (x, z), from the front foot over the top to the rear
@@ -194,7 +198,7 @@ def arch_curve(i, offset=0.0, step=0.012):
 
 def arches(shell, paint, liner, flare_mat):
     """Cut each wheel opening from the shell to the outline from the owner's photo (ARCH_PTS), line it, and lay a flare band along
-    its edge that stands 26 mm proud of the body beside it, out to the official width. Runs in the real frame."""
+    its edge, its face on the top photo's outline (FLARE_OVER). Runs in the real frame."""
     # where the body is beside each flare, before the openings are cut
     body_y = {}
     for i in (0, 1):
@@ -232,7 +236,8 @@ def arches(shell, paint, liner, flare_mat):
             by = body_y[i, s]; V, F = [], []
             for (x, z), (nx, nz), yb in zip(c[keep], nrm[keep], by[keep]):
                 f = _smooth((z - (FLARE_END_Z - 0.08)) / 0.10)        # the band tapers into the body at its two ends
-                yf = min(yb + FLARE_PROUD * f, FLARE_Y); ww = w * (0.55 + 0.45 * f)
+                yo = min(float(O.top_half(float(RF.x_photo(x)))) * 1.026 + FLARE_OVER, FLARE_Y)
+                yf = yb + max(yo - yb, 0.006) * f; ww = w * (0.55 + 0.45 * f)
                 for u, y in ((-0.006, yf - 0.060), (-0.006, yf - 0.006), (0.0, yf), (0.5 * ww, yf), (0.8 * ww, yf - 0.004),
                              (0.95 * ww, yf - 0.010), (ww, yf - 0.018), (ww + 0.002, yb - 0.03)):
                     V.append((x + nx * u, s * y, z + nz * u))

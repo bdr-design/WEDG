@@ -94,6 +94,10 @@ Steps:
   mirrors' arms reach the doors. r19, REAL=1: side 0.990, front 0.973, rear 0.951, top 0.989; 190,230 triangles.
 - 10 Nov, builds r21 and r22: every side pane flat from its foot (review of r19); Saudi number plates reading
   ا م ن 1, front and rear (plate.py). 189,749 triangles.
+- 10 Nov, builds r23 and r24: the body side rebuilt from 04_top (DIMENSIONS.md 8) after the review of r21: the side
+  glass an arc onto the top photo's chrome line, the shoulder hung on the belt, doors narrower than the fenders so
+  the side step shows, step and flares on the top photo's outline; top IoU 0.993. r24 after the review of r23:
+  handles laid along the skin, plates seated (and the band moved to the middle), the hull's rows kept in place.
 - 10 Nov, build r20: the belt line raised to the photo's chrome line (it was 2 to 4.5 cm low) and the quarter glass's
   lower edge kicked up to its rear edge as in the photo, with the chrome strip along it. 189,764 triangles.
 - Next: the quarter glass's

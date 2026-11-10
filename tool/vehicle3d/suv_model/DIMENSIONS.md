@@ -211,6 +211,8 @@ Silhouette IoU with `REAL=1`:
 | r11 | 0.990 | 0.971 | 0.952 | 0.989 | wheels and wheel openings re-measured on the photo; windshield's side edges and surround |
 | r12 | 0.990 | 0.971 | 0.951 | 0.989 | wheel openings set round the hubs unscaled, like the wheels |
 | r14 | 0.990 | 0.971 | 0.952 | 0.989 | side step clear of the rear opening (r13); flare bands thinned (owner's decision) |
+| r22 | 0.990 | 0.973 | 0.952 | 0.989 | windshield's edges (r16), flat side glass and the belt on the photo's chrome line (r17 to r21), number plates |
+| r24 | 0.989 | 0.975 | 0.951 | 0.993 | the body side from the top photo (section 8): arc glass, shoulder on the belt, narrower doors, step and flares on the outline; plates seated |
 
 Edge distance (mm) and colour error, side / front / rear / top:
 
@@ -236,15 +238,18 @@ Because the photos are wrong or disagree (not to be fixed):
 - the front under-cover shows in the orthographic rear view, where the rear photo has open air;
 - the rails follow the top photo, so they sit 3 to 4 cm further in than the rear photo draws them;
 - the mirrors follow the front photo;
-- behind the mirrors no photo shows the body's side (z 1.28 to 1.63 in the front photo: the shoulder under the
-  glass and most of the side glass). Up to r16 it was a straight line that met the glass above at a fold of 8 to 15
-  degrees, a crease along the whole greenhouse, which the owner saw from the front. Since r19 the glass above the
-  mirrors (15.8 degrees off plumb) is carried straight down to z 1.31, under the lowest point of the belt, so every
-  side pane is flat from its foot (measured on r21: 16 degrees from the first centimetre at four stations), and the
-  turn is taken in the shoulder under the belt, which is a ledge: 73 mm of inset in 50 mm of height. No photo shows
-  that shoulder; it is what a flat glass leaves. (r19 had the glass's foot at 1.34, above the front doors' belt, so
-  the bottom 3 to 5 cm of their glass folded hollow: the review of r19.) Ahead of the cowl the straight line is kept
-  for the hood and the fenders, blended over 40 cm. The mirrors' arms start 25 mm inside the outline;
+- behind the mirrors the front and rear photos do not show the body's side (z 1.28 to 1.63: the shoulder under
+  the glass and most of the side glass), and they never show the doors, which are narrower than the fenders. Since
+  r23 that part comes from 04_top and 01_left (section 8). 04_top draws the cabin 25 to 37 mm narrower at the glass's
+  head than 02_front and 03_rear do; the front and rear photos are followed there;
+- 04_top's chrome line runs in to 0.733 (top photo's scale) by the quarter glass's rear end, 45 mm inside the
+  glass's line at the B pillar, which would leave about 2 cm of painted pillar beside the rear photo's back window.
+  The taper to the rear is held at 18 mm (a game choice), so the chrome strip is 9 mm outside 04_top's line 0.19 m
+  ahead of the quarter glass's rear end and 21 to 25 mm outside it in the last 12 cm;
+- 04_top draws the cabin shorter than 01_left: the door seams and the pillars are 0.10 m (B pillar) to 0.28 m (the
+  rear door's rear edge) further forward on it, while the wheels are at the same stations on both. The model keeps
+  01_left's stations (section 8.2);
+- the flares are the official 1.980 m across, 4 mm a side more than 04_top's outline;
 - the tail's heights follow 03_rear, so in the side view the bumper's shoulder is 8 to 12 cm lower than 01_left draws
   it and the tail lamp 1 to 3 cm lower (section 7);
 - the bumper stands out beyond the lamps by 01_left's 30 mm, not 04_top's 82;
@@ -270,15 +275,25 @@ Because the model is not finished (later steps in PLAN.md):
 - the lug nuts are flat and the step tread has no ribs. There are no mud flaps behind the wheels, by the owner's
   decision (10 Nov), though his photo has them;
 - number plates (plate.py, r22), the owner's choice: a Saudi private plate reading ا م ن 1, front and rear. Four
-  cells, Eastern Arabic digit and Arabic letters over their Latin equivalents (ا A, م Z, ن N), the country's name and
-  KSA in a band at the right; the long plate, 520 x 110 mm (Wikipedia's figure for the current series; other sources
-  give 550 x 110, and 335 x 155 for the short plate). The national emblem is not drawn: a plain disc stands for it
-  (a game choice). The rear one lies in the plate recess, the front one on the lower intake, 4 mm proud;
+  cells, Eastern Arabic digit and Arabic letters over their Latin equivalents (ا A, م Z, ن N), with the band that
+  carries the country's name and KSA in the middle, between the number and the letters (the long plate since 2014;
+  r22 and r23 had it at the right); the long plate, 520 x 110 mm (Wikipedia's figure for the current series; other
+  sources give 550 x 110 and 520 x 113, and 335 x 155 for the short plate). The national emblem is not drawn: a
+  plain disc stands for it (a game choice). The rear one lies on the floor of the plate recess and leans 4.8 degrees
+  with it, 1 to 3 mm off it; the front one stands upright on a black bracket, a wedge 4 mm deep at its top and
+  28 mm at its foot that takes up the slope of the intake's bars (no photo shows how the front plate is held; r22
+  and r23 had both plates clear of everything near them, floating);
 - the wheel openings follow the photo's wheels unscaled while the body is brought to the spec's height, so each
   opening stands 37 mm higher against the body than in the photo. The owner's decision (10 Nov): the flare bands are
   thinned by that much (29 and 41 mm for the real photo's 66 and 78), so their tops stay where the photo has them,
   979 and 991 mm up, clear of the head lamp's cover and 95 mm under the fuel flap;
 - the rear door's shut line stops at the top of the rear flare (on the real car it runs on across it);
+- left by the review of r24 (which confirmed the rest of section 8): the rear door's sweep out to the fender reads
+  as a diagonal crease from the rear three-quarter (real x -0.9 to -1.3, z 0.95 to 1.10: the skin runs out 48 mm
+  between z 1.087 and 0.997 at the door's rear seam); no photo shows that surface's depth. The rear flare's front
+  leg stands 44 to 64 mm proud of the door skin, as 04_top's outline has it. The fuel flap's front 5 to 8 cm lies
+  on the end of the sweep. The mirror's arm lands on the side glass 2 to 6.5 cm above its foot, where 01_left has
+  it on the door skin under the belt. The front plate's bracket hangs free below the intake's lowest bar;
 - the review of r16 confirmed the step, the flares (tops 0.979 and 0.991, 37 mm under the head lamp's cover and
   94 mm under the fuel flap), the blacked-out glass and the windshield (pane edge 4 to 6 mm inside the photo's
   line, pillar 46 mm wide from the front where the photo has 46), and left as known: matte patches on the roof
@@ -422,3 +437,85 @@ Left as it is:
 rearsil (silhouette against the model), plansec (level cuts), gatex and gatenorm (depth and lean of the gate),
 toptail (the top photo's tail), tailrows and tailcontour (the side photo's line), loops and openedges (open edges),
 sidehit (what a ray from the side meets), rcmp (rear photo against a render, by window).
+
+## 8. The body side between the cowl and the tail (r23)
+
+### 8.1 What the photos say
+
+02_front and 03_rear show the side only where nothing stands out past it: the glass above the mirrors (z over
+1.63, photo frame) and the fenders' tops (up to z 1.28; the two photos agree within 7 mm there: 0.925 and 0.932 at
+1.28, hull scale). Up to r22 that one outline was used at every station, so the doors were as wide as the fenders
+and covered the side step, and what the mirrors hide was filled in by rule (a flat glass and a ledge under it).
+
+04_top shows the side from above between the mirror and the tail (tools/topbelt.py, tools/topsec.py; top photo's
+scale, times 1.026 for real metres; d is metres behind the nose in the photo frame):
+
+| What | Where it is |
+|---|---|
+| the chrome line under the side glass | 0.794 at d 1.8, 0.7985 at 2.0, 0.8036 at 2.55 (its widest), 0.798 at 3.0, 0.789 at 3.5, 0.775 at 3.8, 0.733 at 4.2; left and right within 3 mm of their mean |
+| a thin black line outside the chrome | 8 mm wide, then paint |
+| a crease along the doors | 0.855 to 0.863, d 1.9 to 3.3 |
+| the door skin's widest line (where the step comes out from under it) | 0.893 to 0.899, d 1.8 to 3.3; it sweeps out to the rear fender: 0.909 at 3.4, 0.928 at 3.5, 0.943 at 3.55 |
+| the outline between the wheels (the step's outer edge) | 0.9424 at d 1.6, 0.953 at 2.0, 0.957 at 2.9 |
+| the outline at d 1.5, between the front flare and the step | 0.939: the fender is still at its full width there |
+| the glass's head line | 0.647 at d 2.5, 0.632 at 3.7 |
+
+01_left shows a highlight along the doors 65 to 70 mm under the chrome line (z 1.27 at d 2.0, 1.287 at 3.0 to 3.4),
+rising with the belt and sweeping up over the rear wheel; the door handles are at z 1.17 to 1.25.
+
+### 8.2 Where they disagree, and which is followed
+
+- The glass's head: 04_top has it 0.663 m out (real), 02_front 0.687 and 03_rear 0.693 at the same height. The
+  front and rear photos agree with each other and are followed: above the mirrors the glass is their outline.
+- The glass's foot is hidden in the front and rear photos, so 04_top's chrome line is followed. The two fit one
+  surface if the glass is an arc, as a side glass is: 16 degrees off plumb at z 1.63 and 9 at its foot, radius
+  2.4 m. (The front outline above the mirrors is itself curved the same way: 16 degrees at 1.66, 19 at 1.75, 23 at
+  1.83.)
+- The quarter glass's rear end: see section 6 (the taper is held at 18 mm).
+- Along the car: the seams that cross the chrome line are at d 1.547, 2.570 and 3.484 on 04_top (the front door's
+  front edge, the B pillar, the rear door's rear edge) and its quarter glass ends at 4.262; on 01_left they are at
+  1.544, 2.668, 3.760 and 4.328. The handles differ the same way (rear handle 3.21 to 3.45 against 3.39 to 3.68).
+  The wheels do not: both photos have the rear flare round d 3.4 to 4.4. So 04_top draws the cabin shorter over
+  the same wheels. The doors, pillars and handles keep 01_left's stations (and the real photo's); the cabin's
+  readings from 04_top (the chrome line) are moved to them by those four landmarks (outlines.TOP_CABIN); what
+  belongs to the wheels (the fender's sweep, the flares, the step) is used where 04_top has it.
+
+### 8.3 How it is built (outlines.side_half)
+
+From the top down, at each station: the glass (outlines.glass_half) less the plan's bow at that station
+(outlines.taper: 15 mm at d 1.8, 0 at 2.65, 5 at 3.4, 11 at 3.8, 18 from 4.2 back), fading out above the glass's
+head toward the roof's edge, which stays; at the belt (the chrome line on 01_left, which rises to the rear) a shoulder runs down and out to the crease,
+65 mm below the belt at every station; from the crease the door skin bulges to its widest, 0.895 (top photo's scale),
+at z 1.0, and is plumb below that. Over the rear wheel (d 3.30 to 3.66 blends) the fender's top, which the photos
+show up to z 1.28, carries on up to the belt as one arc; at the handles' height that sweep starts 0.40 m later
+(REAR_LATE), because 04_top has the rear handle as far out as the front one and the crease straight to the rear
+door's end, and 01_left has the rear handle over d 3.39 to 3.68. At the front the fender's width fades into the door from
+d 1.48 to 1.82 (under the mirror on 04_top), and ahead of the cowl (d 1.60 to 1.15 blends) the front photo's outline
+is used whole. The hull's rows are 5 mm apart in the 11 cm under the belt, with one row on the belt (body._rows): at
+the old 37 mm the loft chorded the shoulder and its hollow corner stood 8 to 10 mm proud. The rows keep their
+places from the cowl to the tail: where they changed height along the car the quads sheared and the surface rippled
+(the rear fender in r23's first build, the A pillar's foot while the belt's row left the belt there).
+
+The black band under the belt is 10 mm tall (04_top's 8 mm line), under the quarter glass's kick-up too; the chrome
+strip is 9 mm tall, centred 1 mm under the belt line, from d 1.58, and its middle stands 3 mm outside the glass's
+foot, which is set that much inside 04_top's line. The door handles lie along the skin (sides.handles). The side step's outer edge is 04_top's outline (sides.step_y), the sill is 45 mm inside
+the door skin, and each flare's face is 04_top's outline plus 4 mm (ext_parts.FLARE_OVER), so at the rear door the
+flare's leg stands 5 cm proud of the door skin, as the photo has it. The upright shut lines run up to the chrome
+strip at their own stations in 6 mm steps.
+
+### 8.4 Result (measured on r24)
+
+- the chrome strip's middle against 04_top's line (tools/chromeplan.py): within 1 mm from d 1.8 to 3.5 on 04_top
+  (1.82 to 3.77 on the model), +3 at 3.6, +4 at 3.9, +9 at 4.0, +21 and +25 at 4.1 and 4.2 (the held taper);
+- the model's outline from above against 04_top's (tools/topout.py): within 1 mm along the step (d 1.7 to 3.2),
+  +3 to +4 mm on the flares, -5 mm at d 1.5; top IoU 0.993 (0.989 before);
+- folds in plan under the belt (tools/planfold.py, 2 cm chords, d 1.2 to 4.6): under 4 degrees (r21: 13 to 29 on
+  the front door); the black band's lower edge is straight (tools/bandedge.py);
+- the handles' bars 1.2 to 1.3 mm off the skin at both ends, the rear plate 1 to 3 mm off the recess floor
+  (tools/seated.py);
+- 209,573 triangles (190 thousand before: the shoulder's rows).
+
+Not known from any photo: the section of the shoulder between the belt and the crease (taken as straight, 42 to 49
+degrees), the door skin below its widest line (taken as plumb), and the haunch over the rear wheel between z 1.28
+and the belt (one arc).
+

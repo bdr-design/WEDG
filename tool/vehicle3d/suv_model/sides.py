@@ -17,13 +17,20 @@ HANDLES = ((RF.AXLE_X[0] - 1.522, 1.130), (RF.AXLE_X[0] - 2.473, 1.152))
 FUEL_FLAP = (-1.645, -1.370, 1.086, 1.232)   # left rear quarter, x0 x1 z0 z1 (both photos agree within 2 cm)
 # The side step: 0.599 to 2.363 m behind the front hub on the real photo (the owner's photo, mapped, gives 0.588 to
 # 2.335). Heights from the owner's photo through realframe.z_real: the bottom 0.303, the top of the silver outer face
-# 0.350, the tread's inner edge 0.377. Under the doors the body steps in 6 cm to a black sill that carries the step;
-# the step's outer edge is flush with the door skin.
+# 0.350, the tread's inner edge 0.377. Under the doors the body steps in 4.5 cm to a black sill that carries the step.
+# Across the car, from 04_top (top photo's scale x 1.026): the door skin's widest line is 0.895 out (0.918 real) and the
+# step's outer edge is the photo's outline between the wheels, 0.953 to 0.957 (0.978 to 0.982 real): the step stands
+# 62 mm out from under the doors. (Up to r22 the doors were as wide as the fenders and covered the step.)
 STEP_X = (RF.AXLE_X[0] - 0.599, RF.AXLE_X[0] - 2.363)
 STEP_Z = (0.303, 0.350, 0.377)
 STEP_CLEAR = 0.020                    # the step stops this far ahead of the rear opening (the owner's photo's opening is 20 mm
                                       # further forward than the real photo's step end, which stood 20 mm short of the real opening)
-SILL_Y, STEP_Y = 0.905, 0.962
+SILL_Y, STEP_Y = 0.873, 0.985
+def step_y(x):
+    """The step's outer edge at real x: the top photo's outline, which between the wheels is the step (0.967 at its
+    front end, 0.978 to 0.982 along the doors)."""
+    import outlines as O
+    return min(float(O.top_half(float(RF.x_photo(x)))) * 1.026, STEP_Y)
 
 def activate(o):
     for x in bpy.context.selected_objects: x.select_set(False)
@@ -61,8 +68,8 @@ def running_boards(black, silver):
     for s in (1, -1):
         V, F = [], []
         for x in xs:
-            t = min(max(min(x0 - x, x - x1) / 0.07, 0.0), 1.0); e = math.sqrt(1 - (1 - t) ** 2)
-            yo = SILL_Y + 0.004 + (STEP_Y - SILL_Y - 0.004) * e; c = min(0.016, 0.3 * (yo - yin))
+            t = min(max(min((x0 - x) / 0.07, (x - x1) / 0.025), 0.0), 1.0); e = math.sqrt(1 - (1 - t) ** 2)      # the rear end is cut short: on 04_top the step runs on into the flare
+            yo = SILL_Y + 0.004 + (step_y(x) - SILL_Y - 0.004) * e; c = min(0.016, 0.3 * (yo - yin))
             V += [(x, s * y, z) for y, z in ((yin, zb), (yo - c, zb), (yo - 0.25 * c, zb + 0.004), (yo, zb + 0.010), (yo, ze - 0.008),
                                              (yo - 0.25 * c, ze - 0.002), (yo - c, ze + 0.001), (yin, zi))]
         for i in range(len(xs) - 1):
@@ -120,11 +127,15 @@ def seams(shell, groove, flares=None):
     z_open = max(z for x, z in EP.arch_curve(1) if abs(x - REAR_EDGE_X) < 0.012)
     x_foot = RF.AXLE_X[1] - EP.ARCH_PTS[1][0][0]
     zd = DOOR_BOTTOM_Z + 0.002
+    # each upright seam runs up to the chrome strip's lower edge at its own station (the belt rises to the rear), in
+    # steps of 6 mm: at 2 cm the band cut the corner of the shoulder under the belt and went under the paint there
+    import outlines as O
+    top = lambda x: float(RF.z_real(O.bplane(O.XF - float(RF.x_photo(x))))) - 0.006
     out = []
     for s in (1, -1):
-        for k, pts in enumerate((_line((FRONT_EDGE_X, BELT_Z), (FRONT_EDGE_X, zd)),
-                                 _line((B_SEAM_X, BELT_Z + 0.01), (B_SEAM_X, zd)),
-                                 _line((REAR_EDGE_X, BELT_Z + 0.03), (REAR_EDGE_X, z_open + EP.FLARE_W[1] + 0.006)),
+        for k, pts in enumerate((_line((FRONT_EDGE_X, top(FRONT_EDGE_X)), (FRONT_EDGE_X, zd), 0.006),
+                                 _line((B_SEAM_X, top(B_SEAM_X)), (B_SEAM_X, zd), 0.006),
+                                 _line((REAR_EDGE_X, top(REAR_EDGE_X)), (REAR_EDGE_X, z_open + EP.FLARE_W[1] + 0.006), 0.006),
                                  _line((FRONT_EDGE_X, zd), (x_foot + 0.004, zd)))):
             o = _ribbon(targets, pts, s, groove, f'seam{k}_{"L" if s > 0 else "R"}')
             if o: out.append(o)
@@ -149,8 +160,12 @@ def handles(shell, chrome, black):
             r = shell.ray_cast(Vector((x, s * 2.0, z)), Vector((0, -s, 0)))
             if not r[0]: continue
             loc, nrm = r[1], r[2]
+            # the bar lies along the skin: where the door sweeps out to the fender it turns with it (r23's rear
+            # handles stayed parallel to the car: one end 21 mm inside the body, the other 25 mm off it)
+            ends = [shell.ray_cast(Vector((x + e, s * 2.0, z)), Vector((0, -s, 0))) for e in (-0.10, 0.10)]
+            yaw = math.atan2(ends[1][1].y - ends[0][1].y, 0.20) if ends[0][0] and ends[1][0] else 0.0
             bpy.ops.mesh.primitive_cube_add(size=1, location=loc + nrm * 0.012); h = bpy.context.active_object
-            h.scale = (0.27, 0.022, 0.042); bpy.ops.object.transform_apply(scale=True)
+            h.scale = (0.27, 0.022, 0.042); h.rotation_euler = (0, 0, yaw); bpy.ops.object.transform_apply(rotation=True, scale=True)
             h.name = h.data.name = f"handle_{'FR'[min(i, 1)]}_{'L' if s > 0 else 'R'}"
             # the bevel stays under the bar's half thickness (11 mm), or it folds into zero-area faces
             m = h.modifiers.new('bv', 'BEVEL'); m.width = 0.009; m.segments = 3; bpy.ops.object.modifier_apply(modifier='bv')

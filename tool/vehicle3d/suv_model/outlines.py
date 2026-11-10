@@ -1,6 +1,7 @@
 """Clean outlines of the owner's photos, as functions in metres (model frame: x forward centred, y left, z up).
 side_top(x), side_bottom(x): the body's upper and lower lines from the side photo (roof rails and wheels taken out).
-front_half(z): the body's half-width at height z from the front photo (mirrors and tyres taken out).
+front_half(z, x): the body's half-width at height z at station x: the front photo's outline ahead of the cowl (mirrors and
+    tyres taken out), and behind it side_half, which adds what the top and side photos show of the doors and the shoulder.
 top_half(x): the body's half-width along its length from the top photo (mirrors taken out)."""
 import numpy as np, json, os, sys
 from PIL import Image
@@ -99,36 +100,102 @@ _zf = np.array(_zf[::-1]); _wf = np.array(_wf[::-1]) + _centred(_ff[::-1]) * cf[
 # mirrors: a bulge of more than 4 cm over the line between the rows either side of it
 mirror = (_zf > 1.30) & (_zf < 1.62)
 base = np.interp(_zf, _zf[~mirror], _wf[~mirror]); _wf = np.where(mirror & (_wf > base + 0.01), base, _wf)
-# Behind the mirrors no photo shows the body's side (z 1.28 to 1.63: the shoulder under the glass and most of the side
-# glass). A straight line across it met the glass above at a fold of 8 to 15 degrees, a crease along the whole
-# greenhouse (the owner saw it from the front, 10 Nov). A side glass is flat or bulges outward, and the turn is taken
-# in the shoulder under the belt: so the glass above the mirrors (15.8 degrees off plumb) is carried straight down to
-# GLASS_FOOT, and the shoulder is a curve from there to the outline under the mirrors, leaving each end at its
-# slope. Ahead of the cowl there is no glass, and the straight line is kept for the hood and the fenders (front_half's x).
-# GLASS_FOOT is under the lowest point of the belt (the chrome line is at z 1.314 at the front door's front corner), so
-# no pane has any of the shoulder's turn in it: with the foot at 1.34 the bottom 3 to 5 cm of the door glass leaned 25
-# to 41 degrees and folded hollow into the flat pane (review of r19). The shoulder is then a ledge under the belt:
-# 73 mm of inset in 50 mm of height. The blend to the hood's line runs over 40 cm (20 cm folded the plan by 10 degrees
-# at the A pillar's foot).
-GLASS_FOOT, MIRROR_Z, COWL_X = 1.31, (1.26, 1.63), (0.95, 1.35)
-def _bridge(z, w):
-    z0, z1 = MIRROR_Z; zg = GLASS_FOOT
-    a = (z > z0 - 0.04) & (z < z0); b = (z > z1) & (z < z1 + 0.07)
-    m0 = np.polyfit(z[a], w[a], 1)[0]; m1 = np.polyfit(z[b], w[b], 1)[0]; w0 = float(np.interp(z0, z, w)); w1 = float(np.interp(z1, z, w))
-    wg = w1 + (zg - z1) * m1; out = w.copy(); g = (z >= zg) & (z <= z1); out[g] = w1 + (z[g] - z1) * m1
-    k = (z >= z0) & (z < zg); t = (z[k] - z0) / (zg - z0); h = zg - z0
-    out[k] = (2 * t**3 - 3 * t**2 + 1) * w0 + (t**3 - 2 * t**2 + t) * h * m0 + (-2 * t**3 + 3 * t**2) * wg + (t**3 - t**2) * h * m1
-    return out
-_wf_line = _wf.copy(); _wf = _bridge(_zf, _wf)
-_wf = np.where(_zf < 1.0, np.minimum(_wf, 0.985), _wf)      # below the fenders the tyres set the width: the body is 1.97 m
-_wf_line = np.where(_zf < 1.0, np.minimum(_wf_line, 0.985), _wf_line)
-_wf_s = _iron(_wf); _wf_line_s = _iron(_wf_line)
+# --- the body side between the cowl and the tail ------------------------------------------------------------------
+# The front and rear photos show the side only where nothing stands out past it: the glass above the mirrors
+# (z over 1.63) and the fenders' tops (up to z 1.28; the two photos agree within 7 mm there). Between those heights
+# the mirrors hide it, and the doors, which are narrower than the fenders, are hidden at every height. What is in
+# between comes from 04_top and 01_left (tools/topbelt.py, DIMENSIONS.md 8):
+#   the chrome line under the side glass, in plan: 0.8036 m from the centre line at d 2.55 (top photo's scale; d is
+#     metres behind the nose), bowed in ahead and behind (CHROME_PLAN, both sides within 3 mm of their mean);
+#   the doors' widest line, where the side step comes out from under them: 0.895 (d 1.8 to 3.3), sweeping out to the
+#     rear fender between d 3.3 and 3.66;
+#   a crease along the doors 0.860 out, which 01_left shows as a highlight 65 to 70 mm under the chrome line.
+# So, from the top down: the glass keeps the front photo's line above the mirrors and carries on down as an arc (a
+# side glass is barrel-shaped: 16 degrees off plumb at z 1.63, 9 at its foot, radius 2.4 m) to the chrome line's
+# place; under the belt a shoulder runs down and out to the crease, 65 mm below the belt at every station, and the
+# door skin bulges from there to its widest at z 1.0. Over the rear wheel the fender's top (the photos' outline up
+# to z 1.28) carries on up to the belt as one arc. Ahead of the cowl there is no glass and the front photo's outline
+# is used whole (a straight line across the mirrors' heights).
+#   The photos disagree: 04_top draws the whole cabin 25 to 37 mm narrower at the glass's head than 02_front and
+# 03_rear do, and its quarter glass 43 mm further in at the rear end than the rear photo's back window allows. The
+# front and rear photos keep the head, and the plan's taper to the rear is held at TAPER_MAX (a game choice).
+XF = 2.498
+TOP_TO_FRONT = 1.026 / RF.Y_SCALE       # top-photo widths to the hull's (the front photo's scale); see body.py
+BELT = (2.298, 1.336, 0.0293)           # the chrome line on 01_left: z at d, and its slope (greenhouse.py)
+def bplane(d): return BELT[1] + (d - BELT[0]) * BELT[2]
+Q_D = (3.878, 4.328)                    # the kick-up's foot on the belt, and the quarter glass's rear edge
+Q_TOP = 1.518
+def zlow(d): return max(bplane(d), bplane(Q_D[0]) + (d - Q_D[0]) / (Q_D[1] - Q_D[0]) * (Q_TOP - bplane(Q_D[0])))
+# 04_top draws the cabin shorter than 01_left does: the seams that cross the chrome line are at d 1.547, 2.570 and
+# 3.484 on it (the door's front edge, the B pillar, the rear door's rear edge) and the quarter glass ends at 4.262,
+# where 01_left has 1.544, 2.668, 3.760 and 4.328. The cabin's readings from 04_top (the chrome line) are moved to
+# 01_left's stations by those four; what belongs to the wheels (the fender's sweep, the flares, the step) is not,
+# because the two photos have the wheels at the same stations.
+TOP_CABIN = ((1.547, 2.570, 3.484, 4.262), (1.544, 2.668, 3.760, 4.328))
+CHROME_Z = ((3.90, 1.389), (4.00, 1.409), (4.10, 1.435), (4.20, 1.463), (4.30, 1.498))      # the chrome line on 01_left behind the kick-up's foot
+CHROME_PLAN = ((1.80, 0.7940), (1.90, 0.7967), (2.00, 0.7985), (2.10, 0.7996), (2.20, 0.8006), (2.30, 0.8010), (2.40, 0.8016),
+               (2.50, 0.8038), (2.60, 0.8034), (2.70, 0.8011), (2.80, 0.8006), (2.90, 0.7993), (3.00, 0.7983), (3.10, 0.7969),
+               (3.20, 0.7954), (3.30, 0.7931), (3.40, 0.7911), (3.50, 0.7890), (3.60, 0.7833), (3.70, 0.7798), (3.80, 0.7751),
+               (3.90, 0.7682), (4.00, 0.7574), (4.10, 0.7414), (4.20, 0.7329))      # d on 04_top
+D_REF, TAPER_MAX = 2.65, 0.018
+STRIP_OUT = 0.003                       # the chrome strip's middle stands this far outside the glass's foot (hull scale)
+MIRROR_Z, COWL_D, REAR_D = (1.26, 1.63), (1.15, 1.60), (3.30, 3.66)
+REAR_LATE = (0.40, 0.95, 1.17)          # at the handles' height the sweep to the fender starts this much later: 04_top has the rear
+                                        # handle at the front handle's distance out, and the crease straight to the rear door's end
+FRONT_D, FENDER_W, FENDER_CREASE = (1.48, 1.82), 0.985, 0.940      # the front fender's width fades into the door (hidden under the mirror on 04_top)
+DOOR_W, DOOR_ZW, CREASE_Y, CREASE_DROP, CREASE_R = 0.895 * TOP_TO_FRONT, 1.00, 0.860 * TOP_TO_FRONT, 0.065, 0.012
+FENDER_Z = 1.28                         # the fenders' tops are in the photos up to here
+_wf_line = _wf.copy()
+_wf_line = np.where(_zf < 1.0, np.minimum(_wf_line, 0.985), _wf_line)      # below the fenders the tyres set the width: the body is 1.97 m
+_wf_line_s = _iron(_wf_line)
+def _smin(a, b, k):
+    h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1); return b * (1 - h) + a * h - k * h * (1 - h)
+def _sstep(t): t = np.clip(t, 0, 1); return t * t * (3 - 2 * t)
+_Z1 = MIRROR_Z[1]
+_ba = (_zf > _Z1) & (_zf < _Z1 + 0.07); _M1 = float(np.polyfit(_zf[_ba], _wf_line[_ba], 1)[0]); _W1 = float(np.interp(_Z1, _zf, _wf_line_s))
+_zr = bplane(D_REF) - _Z1
+def _cabin(d): return np.interp(d, *TOP_CABIN)
+_C1 = (float(np.interp(D_REF, _cabin([d for d, _ in CHROME_PLAN]), [y for _, y in CHROME_PLAN])) * TOP_TO_FRONT - STRIP_OUT - _W1 - _M1 * _zr) / _zr ** 2
+def glass_half(z):
+    """The side glass's half-width at height z, at the widest station (D_REF): the front outline above the mirrors,
+    an arc below."""
+    z = np.asarray(z, dtype=float); dz = np.minimum(z - _Z1, 0.0)
+    return np.where(z >= _Z1, np.interp(z, _zf, _wf_line_s), _W1 + _M1 * dz + _C1 * dz * dz)
+def _taper_table():
+    d = np.arange(1.60, 4.41, 0.02); dp, yp = zip(*CHROME_PLAN); dp = _cabin(dp)
+    y = np.interp(d, dp, yp); y = np.where(d < dp[0], yp[0] + (d - dp[0]) * (yp[1] - yp[0]) / (dp[1] - dp[0]), y)
+    zc = np.where(d < CHROME_Z[0][0] - 0.02, [bplane(v) for v in d], np.interp(d, *zip(*((Q_D[0], bplane(Q_D[0])),) + CHROME_Z)))
+    t = glass_half(zc) - (y * TOP_TO_FRONT - STRIP_OUT)
+    t = np.where(d > D_REF, _smin(t, np.full_like(t, TAPER_MAX), 0.006), t)
+    t = np.where(d > dp[-1], t[d <= dp[-1]][-1], t)
+    return d, np.maximum(ndimage.gaussian_filter1d(t, 4, mode='nearest'), 0.0)
+_TAPER = _taper_table()
+def taper(d):
+    """How far the greenhouse is inside its widest station's, at d behind the nose (the plan's bow, from CHROME_PLAN)."""
+    return float(np.interp(d, *_TAPER))
+_ka = (_zf > FENDER_Z - 0.04) & (_zf < FENDER_Z); _MS = float(np.polyfit(_zf[_ka], _wf_line[_ka], 1)[0]); _WS = float(np.interp(FENDER_Z, _zf, _wf_line_s))
+def side_half(z, d):
+    """The body's half-width at height z, d metres behind the nose, between the cowl and the tail."""
+    z = np.asarray(z, dtype=float); zb = bplane(min(max(d, 1.50), 4.40)); t = taper(d)
+    fade = 1 - _sstep((z - 1.862) / 0.07)                        # the roof's edge stays; the fade starts above the glass's head (1.851)
+    up = glass_half(z) - t * fade; yf = float(glass_half(zb)) - t
+    # the doors: a shoulder from the belt to the crease, rolled into the door skin's bulge
+    # (04_top's outline is still the fender's at d 1.5, 0.939, and the door's own line is 0.893 at d 1.8)
+    rf = float(_sstep((FRONT_D[1] - d) / (FRONT_D[1] - FRONT_D[0]))); dw = DOOR_W + (FENDER_W - DOOR_W) * rf; cy = CREASE_Y + (FENDER_CREASE - CREASE_Y) * rf
+    zc = zb - CREASE_DROP; a = (dw - cy) / (zc - DOOR_ZW) ** 2
+    door = _smin(yf + (zb - z) * (cy - yf) / CREASE_DROP, dw - a * np.clip(z - DOOR_ZW, 0, None) ** 2, CREASE_R)
+    # over the rear wheel: the fender's top carried up to the belt in one arc
+    h = zb - FENDER_Z; c = (yf - _WS - _MS * h) / h ** 2; dz = z - FENDER_Z
+    fender = np.where(z <= FENDER_Z, np.interp(z, _zf, _wf_line_s), _WS + _MS * dz + c * dz * dz)
+    r = _sstep((d - REAR_D[0] - REAR_LATE[0] * _sstep((z - REAR_LATE[1]) / (REAR_LATE[2] - REAR_LATE[1]))) / (REAR_D[1] - REAR_D[0]))
+    return np.where(z >= zb, up, door * (1 - r) + fender * r)
 def front_half(z, x=None):
-    """The body's half-width at height z; with x (photo frame), the hood's and fenders' ahead of the cowl."""
-    w = np.interp(z, _zf, _wf_s)
-    if x is None: return w
-    t = float(np.clip((x - COWL_X[0]) / (COWL_X[1] - COWL_X[0]), 0, 1)); t = t * t * (3 - 2 * t)
-    return w * (1 - t) + np.interp(z, _zf, _wf_line_s) * t
+    """The body's half-width at height z at station x (photo frame). Ahead of the cowl it is the front photo's
+    outline, behind it side_half; without x, the tail's (the last station's)."""
+    line = np.interp(z, _zf, _wf_line_s)
+    if x is None: return side_half(z, 9.0)
+    d = XF - x; t = float(_sstep((COWL_D[1] - d) / (COWL_D[1] - COWL_D[0])))
+    return line if t >= 1 else side_half(z, d) * (1 - t) + line * t
 _top = _mask('04_top'); ct = CFG['top']
 _xt, _wt = [], []
 _cq = _cov('04_top', _top); _fq = []

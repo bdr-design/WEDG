@@ -10,7 +10,7 @@ from scipy import ndimage
 # The top photo at TOP_K 1.026 is 1.980 m across its flares, the spec width; the body is built on the front photo's
 # scale, which realframe.Y_SCALE (1.980 / 2.0125) takes to the spec. So top-photo widths go in at 1.026 / Y_SCALE.
 import realframe as RF
-TOP_TO_FRONT = 1.026 / RF.Y_SCALE
+TOP_TO_FRONT = O.TOP_TO_FRONT
 
 def smin(a, b, k):
     h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1); return b * (1 - h) + a * h - k * h * (1 - h)
@@ -30,7 +30,24 @@ def crown(x, y):
     f = (1 - _step((xr - a) / (b - a))) * _step((xr - d) / (c - d))
     return f * CROWN_K / _Z_TOP_SLOPE * (np.asarray(y, dtype=float) * RF.Y_SCALE) ** 2
 
-def section(x, n_side=64, n_top=10, n_bot=8, r_top=0.07, r_bot=0.05):
+# The side's rows. One even spread of 64 rows put them 37 mm apart at the belt, and the loft chorded the shoulder
+# under the glass: the hollow corner at the belt came out 8 to 10 mm proud and the crease under it was lost. So the
+# rows are in three runs: sill to shoulder, the shoulder (the 11 cm under the belt, 5 mm apart, with a row on the
+# belt itself at every station), and belt to roof; the first and last close up toward their ends.
+ROWS = (30, 22, 28); SHOULDER = 0.11; ROWS_END = (0.35, 0.75)
+def _rows(zb, ze, x):
+    # (the belt's row stays on the belt wherever the body reaches up to it: at 0.80 of the height it left the belt
+    # ahead of d 1.65, where the windshield's foot is low, and the shoulder at the A pillar's foot came out in zigzags)
+    h = ze - zb; z2 = min(O.bplane(min(max(O.XF - x, 1.5), 4.4)), zb + 0.96 * h); z1 = z2 - min(SHOULDER, 0.18 * h)
+    c = lambda n, end: (1 - np.cos(np.linspace(0, math.pi, n, endpoint=end))) / 2
+    zs = np.r_[zb + (z1 - zb) * c(ROWS[0], False), np.linspace(z1, z2, ROWS[1], endpoint=False), z2 + (ze - z2) * c(ROWS[2], True)]
+    # toward the nose the rows go back to one even spread: rows 5 mm apart on the front cap upset its rounding (the
+    # inset threw vertices metres away). The rear cap takes them, and there the rows must not change: where they did
+    # (0.35 to 0.75 m from the tail in r23's first build) the quads sheared and the rear fender rippled by 6 to 12 degrees.
+    g = _step((O.X_FRONT - x - ROWS_END[0]) / (ROWS_END[1] - ROWS_END[0]))
+    return (zb + h * c(sum(ROWS), True)) * (1 - g) + zs * g
+
+def section(x, n_top=10, n_bot=8, r_top=0.07, r_bot=0.05):
     zt, zb = float(O.side_top(x)), float(O.side_bottom(x))
     d = x - O.X_REAR; blk = d < TAIL_REACH
     xt = tail_profile()[-1][0]; near = blk and xt <= x < xt + TIP_REACH[0] + TIP_REACH[1]
@@ -42,10 +59,9 @@ def section(x, n_side=64, n_top=10, n_bot=8, r_top=0.07, r_bot=0.05):
         if not near: return zt - float(crown(x, y))
         return tip_top(x - float(tail().pd(y)) * (1 - _step((x - xt - TIP_REACH[0]) / TIP_REACH[1]))) - float(crown(x, y))
     if zt - zb < 0.02: zt = zb + 0.02
-    t = (1 - np.cos(np.linspace(0, math.pi, n_side))) / 2
     ze = zt                                    # the roof's height at its edge: the centre line less the crown there
     for _ in range(4):
-        zs = zb + t * (ze - zb)
+        zs = _rows(zb, ze, x)
         # the AI views disagree on width: the top view is scaled to the front view's body width (1.97 m)
         plan = tail().half(d, zs) if blk else np.full_like(zs, O.top_half(x) * TOP_TO_FRONT)
         w = smin(O.front_half(zs, x), plan, 0.03)
@@ -55,7 +71,7 @@ def section(x, n_side=64, n_top=10, n_bot=8, r_top=0.07, r_bot=0.05):
         w = w - rt * (1 - np.sqrt(np.clip(1 - up ** 2, 0, 1))) - rb * (1 - np.sqrt(np.clip(1 - dn ** 2, 0, 1)))
         w = np.maximum(w, 0.02)
         ze = max(top_at(w[-1]), zb + 0.02)
-    zs = zb + t * (ze - zb)
+    zs = _rows(zb, ze, x)
     top = [(w[-1] * (1 - i / n_top), top_at(w[-1] * (1 - i / n_top))) for i in range(1, n_top)]
     half = [(0.0, zb)] + [(w[0] * (i / n_bot), zb) for i in range(1, n_bot)] + list(zip(w, zs)) + top + [(0.0, zt)]
     # the closed loop: up the left side, then down the right side (mirrored), without repeating the centre points

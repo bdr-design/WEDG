@@ -10,6 +10,10 @@ def tidy(o, merge=1e-6):
     bm = bmesh.new(); bm.from_mesh(o.data); n0 = (len(bm.verts), len(bm.faces)); new = []
     if merge: bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=merge)
     bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=THIN)
+    for _ in range(3):      # a sliver can be wider than THIN and still have no area (r22: one with sides 0.03, 0.10 and 0.13 mm, in line)
+        bad = list({e for f in bm.faces if f.calc_area() < 1e-10 for e in f.edges})
+        if not bad: break
+        bmesh.ops.dissolve_degenerate(bm, edges=bad, dist=10 * THIN)
     if o.name == 'body':
         seen, fins = {}, set()          # a cut can leave a fin: two faces on the same corners, back to back, enclosing nothing
         for f in bm.faces:

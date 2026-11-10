@@ -5,9 +5,9 @@ foot and the head of the side windows."""
 import bpy, bmesh, math, os, sys, numpy as np
 from mathutils import Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import body as _B
+import body as _B, outlines as _O
 
-XF = 2.498; K = 1.034
+XF = _O.XF; K = 1.034
 def interp(t, d): ds, vs = zip(*t); return float(np.interp(d, ds, vs))
 TOP = [(0.0, 1.13), (0.40, 1.215), (1.00, 1.245), (1.46, 1.26), (2.00, 1.27), (3.50, 1.285), (4.40, 1.30), (4.90, 1.30)]
 belt = lambda d: interp(TOP, d) * K
@@ -16,11 +16,8 @@ belt = lambda d: interp(TOP, d) * K
 # belt was 2 to 4.5 cm lower and rose half as fast. Behind d 3.88 the line kicks up under the quarter glass: 1.389 at
 # d 3.90, 1.409 at 4.00, 1.436 at 4.10, 1.462 at 4.20, 1.498 at 4.30, 1.518 at 4.33, where the glass ends (Q below, one
 # straight cut from the belt at d 3.88 to that corner: up to 13 mm over the photo's curve in the middle).
-BELT = (2.298, 1.336, 0.0293)
-def bplane(d): return BELT[1] + (d - BELT[0]) * BELT[2]
-Q_D = (3.878, 4.328)                    # the kick-up's foot on the belt, and the quarter glass's rear edge
-Q_TOP = 1.518
-def zlow(d): return max(bplane(d), bplane(Q_D[0]) + (d - Q_D[0]) / (Q_D[1] - Q_D[0]) * (Q_TOP - bplane(Q_D[0])))
+# The numbers are in outlines.py, where the body's shoulder is hung on the same line.
+BELT, bplane, Q_D, Q_TOP, zlow = _O.BELT, _O.bplane, _O.Q_D, _O.Q_TOP, _O.zlow
 ZTOP, ZDOOR = 1.79 * K, 1.835 * K
 ZWS0, ZWS1 = 1.405 * K, 1.81 * K
 # The rear window, measured row by row on the rear photo (rearwork/seal.py, colrun.py; y on the front photo's scale):
@@ -50,10 +47,12 @@ behind_A = plane_sign(A_CO, A_NO, (XF - 2.6, 0, 1.6 * K))
 above_Q = plane_sign(Q_CO, Q_NO, (XF - 4.0, 0, 1.6 * K))
 B_PILLAR, C_PILLAR = (2.70, 2.80), (3.66, 3.74)
 SURROUND = 0.03                        # the black surround's width
+BELT_SUR = 0.010                       # under the belt: 04_top shows 8 mm of black outside the chrome, then paint
 BL0, BL1 = Vector((XF - 1.5, 0, bplane(1.5))), Vector((XF - 4.4, 0, bplane(4.4)))       # the belt line
 NB = (BL1 - BL0).cross(Vector((0, 1, 0))).normalized(); NB = NB if NB.z > 0 else -NB
 def _out(co, no, ref): return co - no * (SURROUND if (Vector(ref) - co).dot(no) > 0 else -SURROUND)
-A_OUT, Q_OUT = _out(A_CO, A_NO, (XF - 2.6, 0, 1.6 * K)), _out(Q_CO, Q_NO, (XF - 4.0, 0, 1.6 * K))
+A_OUT = _out(A_CO, A_NO, (XF - 2.6, 0, 1.6 * K))
+Q_OUT = Q_CO + (_out(Q_CO, Q_NO, (XF - 4.0, 0, 1.6 * K)) - Q_CO) * BELT_SUR / SURROUND      # under the kick-up the band is the belt's 10 mm
 # The belt and the A pillar's edge meet at 35 degrees, and a band 3 cm outside both would run 9 cm past the glass's
 # corner to a point. It is cut off square to the corner, 1.3 widths out.
 def _a_foot():
@@ -68,7 +67,9 @@ def cut_outline(bm):
     def bis(g, co, no):
         bmesh.ops.bisect_plane(bm, geom=g, plane_co=co, plane_no=no, dist=1e-6)
     side = lambda lo, hi: geom_of(faces(lambda c, d: abs(c.y) > 0.45 and c.z > 1.0 * K and lo < d < hi))
-    bis(side(1.3, 4.6), BL0, NB); bis(side(1.3, 4.6), BL0 - NB * SURROUND, NB)      # the belt, and the surround's edge under it
+    # (the band's lower edge is BELT_SUR straight down, on the hull's second row under the belt, and the cuts stop at
+    # d 1.49: ahead of that the rows leave the belt's line, and a cut across them left slivers)
+    bis(side(1.49, 4.42), BL0, NB); bis(side(1.49, 4.42), BL0 - Vector((0, 0, BELT_SUR)), NB)      # the belt, and the surround's edge under it
     for zc in (ZTOP, ZTOP + SURROUND, ZDOOR): bis(side(1.4, 4.75), (0, 0, zc), (0, 0, 1))
     bis(side(1.3, 2.8), A_CO, A_NO); bis(side(1.3, 2.8), A_OUT, A_NO)      # the pane's edge, and the surround's
     bis(side(1.3, 2.0), A_FOOT + A_BEV * 1.3 * SURROUND, A_BEV)
@@ -127,8 +128,9 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
     # way; above and below it the surround is still the faces within 3 cm of the glass's edge, which run along the
     # shell's rows. The rear window has its own measured seal.
     def side_out(c):
-        """How far outside the side glass's outline the point is, the farthest of its five edges; negative inside."""
-        return -min((c - BL0).dot(NB), ZTOP - c.z, behind_A(c), c.x - (XF - Q_D[1]), above_Q(c))
+        """How far outside the side glass's outline the point is, the farthest of its five edges; negative inside.
+        (Under the belt the band is BELT_SUR wide: its distance is scaled so that one test does for all five.)"""
+        return -min((c - BL0).dot(NB) / NB.z * SURROUND / BELT_SUR, ZTOP - c.z, behind_A(c), c.x - (XF - Q_D[1]), above_Q(c) * SURROUND / BELT_SUR)
     gverts = {v for f in glass_faces for v in f.verts}
     edge_v = [v for v in gverts if any(f.material_index != gi for f in v.link_faces)]
     from mathutils.kdtree import KDTree
@@ -138,11 +140,13 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
     for f in bm.faces:
         if f.material_index != 0: continue
         c = f.calc_center_median(); d = XF - c.x
-        if abs(c.y) > 0.45 and abs(f.normal.y) > 0.6 and 1.3 < d < 4.6 and c.z > 1.0 * K:      # the body side
+        if abs(c.y) > 0.45 and (abs(f.normal.y) > 0.6 or (c - BL0).dot(NB) < 0) and 1.3 < d < 4.6 and c.z > 1.0 * K:      # the body side (the shoulder under the belt leans 45 degrees)
             if 0 < side_out(c) < SURROUND and (c - A_FOOT).dot(A_BEV) < 1.3 * SURROUND: f.material_index = ti
         elif edge_v and d < 2.7:      # round the windshield: a band beside its leaning side edges, whole faces above and below
             out = abs(c.y) - ws_half(c.z)
-            if (0 < out < WS_SUR) if ZWS0 < c.z < ZWS1 and out > 0 else kd.find(c)[2] < SURROUND: f.material_index = ti
+            # (above and below it only: beside its corners the nearest glass is the door's, and whole faces taken there
+            # made a ragged black patch on the fender at the A pillar's foot)
+            if (0 < out < WS_SUR) if ZWS0 < c.z < ZWS1 and out > 0 else (out < WS_SUR and kd.find(c)[2] < SURROUND): f.material_index = ti
     bm.to_mesh(me); bm.free()
     # lift the glass out into its own object and set it 8 mm in, with a lip back to the opening
     for o in bpy.context.selected_objects: o.select_set(False)
@@ -171,14 +175,15 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
     # chrome strips along the foot and the head of the side windows
     strips = []
     for s in (1, -1):
-        for nm, zf, d0, d1 in (('low', lambda d: zlow(d) - 0.004, 1.62, Q_D[1]), ('top', lambda d: ZTOP + 0.012, 2.40, Q_D[1] + 0.03)):
+        for nm, zf, d0, d1, hh in (('low', lambda d: zlow(d) - 0.001, 1.58, Q_D[1], 0.0045), ('top', lambda d: ZTOP + 0.012, 2.40, Q_D[1] + 0.03, 0.006)):
             V, F = [], []
             ds = np.linspace(d0, d1, 60)
             for d in ds:
                 z = zf(d)
                 hit = shell.ray_cast(Vector((XF - d, s * 1.5, z)), Vector((0, -s, 0)))
-                y = hit[1].y + s * 0.004 if hit[0] else s * 0.94
-                V += [(XF - d, y, z - 0.006), (XF - d, y + s * 0.006, z), (XF - d, y, z + 0.006)]
+                # (its back 1 mm and its crown 4 mm off the body: at 4 and 10 the strip stood 5 to 10 mm outside 04_top's line)
+                y = hit[1].y + s * 0.001 if hit[0] else s * 0.94
+                V += [(XF - d, y, z - hh), (XF - d, y + s * 0.003, z), (XF - d, y, z + hh)]
             # a closed three-sided bar, wound to look outward on the right side and turned over for the left
             for i in range(len(ds) - 1):
                 a = 3 * i; F += [[a, a + 1, a + 4, a + 3], [a + 1, a + 2, a + 5, a + 4], [a + 2, a, a + 3, a + 5]]
