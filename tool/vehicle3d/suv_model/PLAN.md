@@ -80,6 +80,7 @@ Steps:
   along their knee and its surround is a band (r11). The outlines are read to a fraction of a pixel, which takes the bands out
   of the hood's and the flanks' reflections. The model builds from the repository alone, and the built suv.blend is
   kept beside the code. r12 sets the openings round the hubs unscaled, as the wheels are, after the r11 review found the rear wheel forward in
-  its opening. r12, REAL=1: side 0.990, front 0.971, rear 0.951, top 0.989; 190,052 triangles.
+  its opening. r13 ends the side step ahead of the rear opening; r14 thins the flare bands (the owner's decision), so their tops stay
+  where the photo has them. r14, REAL=1: side 0.990, front 0.971, rear 0.952, top 0.989; 190,050 triangles.
 - Next: the quarter glass's
   kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.

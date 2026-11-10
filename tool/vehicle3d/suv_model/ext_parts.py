@@ -170,7 +170,10 @@ ARCH_PTS = (
     ((-0.507, 0.20), (-0.507, 0.497), (-0.487, 0.585), (-0.454, 0.670), (-0.409, 0.751), (-0.355, 0.831), (-0.285, 0.901),
      (-0.192, 0.935), (-0.095, 0.945), (0.000, 0.948), (0.095, 0.948), (0.195, 0.943), (0.290, 0.910), (0.359, 0.836),
      (0.407, 0.749), (0.447, 0.666), (0.466, 0.578), (0.477, 0.492), (0.477, 0.20)))
-FLARE_W = (0.066, 0.078)          # the flare band's width over the top of the opening: front, rear (the real photo's widths, on the owner's photo's openings)
+FLARE_W = (0.029, 0.041)          # the flare band's width over the top of the opening: front, rear. The owner's decision (10 Nov):
+                                  # the openings follow the photo's wheels unscaled and stand 37 mm higher against the body than in
+                                  # the photo, so the bands are thinned by that much and their tops stay where the photo has them
+                                  # (0.977 and 0.989 m up: the photo's opening, mapped, plus the real photo's 66 and 78 mm)
 FLARE_Y, FLARE_END_Z = 0.990, 0.50   # the flares are the widest point of the car: the official 1.980 m; they end 0.50 m up
 FLARE_PROUD = 0.026                # how far a flare stands out of the body beside it (the flank is 0.961-0.967 out)
 

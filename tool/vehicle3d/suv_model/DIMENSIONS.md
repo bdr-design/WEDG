@@ -141,8 +141,8 @@ Heights above the ground, in mm (real photo at 4.17 mm/px):
     57 ahead, 98 over, 55 behind / 64, 104, 62; rear 71, 98, 41 / 79, 104, 48 (the flare's lip is 6 mm inside the
     cut). The real photo's openings (tops 862 front, 930 rear) were used up to r10 and do not hold the bigger
     wheel; r11 mapped the photo's openings with the body, which put the rear wheel forward in its opening. The
-    flare band over each opening keeps the real photo's width, 66 and 78 mm. The flares stand 26 mm out of the
-    flank and stop at 0.990 m a side, so the widest point of the car is the spec's 1980 mm.
+    flare band over each opening is 29 and 41 mm wide (section 6), topping out 979 and 991 mm up. The flares stand
+    26 mm out of the flank and stop at 0.990 m a side, so the widest point of the car is the spec's 1980 mm.
   - **Door shut lines, handles, fuel flap** (sides.py), from the real photo: the front door's front edge 617, the B
     seam 1692 and the rear door's rear edge 2738 behind the front hub; door bottoms 429 up; handle centres 1522 and
     2473 behind the front hub, 1130 and 1152 up, 0.27 m long.
@@ -210,6 +210,7 @@ Silhouette IoU with `REAL=1`:
 | r10 | 0.990 | 0.971 | 0.952 | 0.989 | the photos' wheels (owner's decision); outlines read to a fraction of a pixel |
 | r11 | 0.990 | 0.971 | 0.952 | 0.989 | wheels and wheel openings re-measured on the photo; windshield's side edges and surround |
 | r12 | 0.990 | 0.971 | 0.951 | 0.989 | wheel openings set round the hubs unscaled, like the wheels |
+| r14 | 0.990 | 0.971 | 0.952 | 0.989 | side step clear of the rear opening (r13); flare bands thinned (owner's decision) |
 
 Edge distance (mm) and colour error, side / front / rear / top:
 
@@ -254,9 +255,9 @@ Because the model is not finished (later steps in PLAN.md):
 - the lug nuts are flat, the step tread has no ribs, there are no mud flaps (the photo has one behind each wheel)
   and no number plate;
 - the wheel openings follow the photo's wheels unscaled while the body is brought to the spec's height, so each
-  opening stands 37 mm higher against the body than in the photo: the flare band (the real photo's 66 and 78 mm)
-  tops out 1.016 m up at the front, level with the foot of the head lamp's cover, and 57 mm under the fuel flap at
-  the rear, where the photo has about 108. The owner's call: thinner flare bands, or wheels scaled with the body;
+  opening stands 37 mm higher against the body than in the photo. The owner's decision (10 Nov): the flare bands are
+  thinned by that much (29 and 41 mm for the real photo's 66 and 78), so their tops stay where the photo has them,
+  979 and 991 mm up, clear of the head lamp's cover and 95 mm under the fuel flap;
 - the rear door's shut line breaks for about 10 mm where it steps onto the rear flare;
 - the windshield's pane is narrower than the front photo's glass, by 27 mm a side at the foot and about 40 above
   the knee (the r11 review's reading, not yet re-measured): the black surround lies where the photo has glass;
