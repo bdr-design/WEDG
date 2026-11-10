@@ -30,6 +30,7 @@ HEAD_T = 0.11                                    # the headrests' thickness
 SPLIT_Y = 0.175                                  # the cushion's 60:40 split (the photo's column 1007; the camera looks back, so the photo's right is the car's left, +y)
 BUCKLES = (-0.197, 0.21)                         # the belt buckles at the cushion's rear (the photo's columns 690 and 995)
 NOSE = (0.07, 0.55)
+BELT = (0.655, -0.175, 1.07, 0.047)                # the belts: the outer ones' y on the backs, the middle one's, the height their tongues hang at, the webbing's width
 LIP_Z = 0.68                                     # the foot of the cushion's front face (the photo's row 862 through the camera); the base is under it
 
 
@@ -51,7 +52,7 @@ def _blob(bm, c, half, mat, n=18, rings=9, power=3.5):
 
 
 def build(name='seat_bench_2'):
-    M = {k: imats.m(v) for k, v in (('leather', 'seat_leather'), ('black', 'cabin_black'), ('red', 'cabin_red'), ('plastic', 'cabin_beige'))}; idx = {k: i for i, k in enumerate(M)}; bm = bmesh.new(); z0 = C.FLOOR_Z
+    M = {k: imats.m(v) for k, v in (('leather', 'seat_leather'), ('black', 'cabin_black'), ('red', 'cabin_red'), ('plastic', 'cabin_beige'), ('belt', 'seat_belt'), ('chrome', 'cabin_chrome'))}; idx = {k: i for i, k in enumerate(M)}; bm = bmesh.new(); z0 = C.FLOOR_Z
     # --- the cushion: sections across the car from under the backs to its nose ----------------------------------------------
     x_r, x_f = FRONT_X - DEPTH - 0.06, FRONT_X; xs = np.r_[np.linspace(x_r, x_f - NOSE[0], 18), x_f - NOSE[0] + NOSE[0] * np.sin(np.linspace(0, 1, 9)[1:] * math.pi / 2)]
     for side in (1, -1):                                                    # its two parts either side of the split
@@ -91,6 +92,20 @@ def build(name='seat_bench_2'):
     for y in BUCKLES:
         _blob(bm, (x_foot + 0.035, y, TOP_Z[0] + 0.012), (0.022, 0.026, 0.030), idx['black'], n=10, rings=5); _blob(bm, (x_foot + 0.035, y, TOP_Z[0] + 0.043), (0.014, 0.018, 0.004), idx['red'], n=10, rings=3)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    # --- the belts, as the photo has them at rest: the outer ones from the C pillars over the backs' shoulders and down their
+    # outer bolsters to the tongues; the middle one down the right back's inner edge (the photo's left of the middle) ------------
+    face = lambda z, proud: x_foot - (z - TOP_Z[0]) * tl + proud
+    def strap(pts, w, mat, flat=(0.0, 1.0, 0.0)):
+        a = [bm.verts.new((p[0] - flat[0] * w / 2, p[1] - flat[1] * w / 2, p[2] - flat[2] * w / 2)) for p in pts]; b = [bm.verts.new((p[0] + flat[0] * w / 2, p[1] + flat[1] * w / 2, p[2] + flat[2] * w / 2)) for p in pts]
+        for k in range(len(pts) - 1):
+            f = bm.faces.new((a[k], a[k + 1], b[k + 1], b[k])); f.material_index = mat
+            if f.normal.x < 0: f.normal_flip()
+    for sy in (1, -1):
+        y = sy * BELT[0]; zs = np.linspace(BACK_TOP[0] - 0.035, BELT[2], 6)
+        strap([(-1.10, sy * 0.695, 1.56), (face(BACK_TOP[0], -THICK * 0.45), y + sy * 0.03, BACK_TOP[0] + 0.012), (face(BACK_TOP[0] - 0.02, 0.012), y, BACK_TOP[0] - 0.015)] + [(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
+        _blob(bm, (face(BELT[2] - 0.035, 0.014), y, BELT[2] - 0.035), (0.006, 0.024, 0.040), idx['black'], n=10, rings=5); _blob(bm, (face(BELT[2] - 0.085, 0.014), y, BELT[2] - 0.085), (0.002, 0.014, 0.022), idx['chrome'], n=8, rings=3)
+    y = BELT[1]; zs = np.linspace(BACK_TOP[0] - 0.01, BELT[2] - 0.08, 6); strap([(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
+    _blob(bm, (face(BELT[2] - 0.115, 0.014), y, BELT[2] - 0.115), (0.006, 0.024, 0.040), idx['black'], n=10, rings=5); _blob(bm, (face(BELT[2] - 0.165, 0.014), y, BELT[2] - 0.165), (0.002, 0.014, 0.022), idx['chrome'], n=8, rings=3)
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for m in M.values(): me.materials.append(m)
     ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); me.calc_loop_triangles()

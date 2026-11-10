@@ -87,9 +87,9 @@ def build():
     import shell as SHELL; out.append(SHELL.build())
     # the floor: flat (a choice: no photo shows the tunnel or the footwells' shape), between the doors and, further back, between the rear wheels' wells
     import imats; X0, X1 = SHELL.WELL_X; Y = SHELL.WELL_Y; xs, zs = REAR_FLOOR
-    front = [(0.93, 0.80), (X0, 0.80), (X0, Y), (xs, Y)]; rear = [(xs, Y), (X1 - 0.05, Y), (X1 - 0.05, 0.74), (-2.05, 0.74)]
+    front = [(0.93, 0.80), (X0, 0.80), (X0, Y), (xs, Y)]; rear = [(xs, Y), (X1 - 0.05, Y), (X1 - 0.05, 0.74), (-2.05, 0.74), (-2.31, 0.64)]
     V = [(x, y, FLOOR_Z) for x, y in front] + [(x, -y, FLOOR_Z) for x, y in front[::-1]] + [(x, y, zs) for x, y in rear] + [(x, -y, zs) for x, y in rear[::-1]]
-    me = bpy.data.meshes.new('cabin_floor'); me.from_pydata(V, [], [list(range(8))[::-1], list(range(8, 16))[::-1], [3, 4, 15, 8]]); me.materials.append(imats.m('cabin_carpet'))
+    me = bpy.data.meshes.new('cabin_floor'); me.from_pydata(V, [], [list(range(8))[::-1], list(range(8, 18))[::-1], [3, 4, 17, 8]]); me.materials.append(imats.m('cabin_carpet'))
     f = bpy.data.objects.new('cabin_floor', me); bpy.context.collection.objects.link(f); out.append(f)
     return out
 

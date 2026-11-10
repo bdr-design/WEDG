@@ -10,9 +10,10 @@ import imats, cabin as C
 
 HEAD_Z, HEAD_EDGE = 1.77, (0.62, 1.725)          # the headliner's height on the centre line; where it turns down to the glass's head (y, z)
 HEAD_X = (0.47, -2.10)                           # from the windshield's header to the rear glass's
-PILLARS = {'B': (-0.274, -0.182), 'C': (-1.141, -1.067)}
+PILLARS = {'B': (-0.274, -0.182), 'C': (-1.141, -1.067), 'D': (-2.080, -1.900)}
+CARGO = ((-2.30, -2.05, -1.19), (0.66, 0.78, 0.78), 1.285)      # the cargo room's side trims: their face's y by station (the hull's skin is 0.74 to 0.97 out there, rounding in to the tailgate at x -2.44), and their top, at the belt
 WELL_X, WELL_Y, WELL_Z = (-0.79, -1.78), 0.590, 0.96         # the rear wells' trim: its ends, its face and its top
-A_PILLAR = ((1.00, 0.74, 1.27), (0.47, 0.60, 1.74))      # the A pillar inside the glass: its foot and its head (hull, left side)
+A_PILLAR = ((1.035, 0.800, 1.27), (0.333, 0.666, 1.76))      # the A pillar's middle line on the hull's inside (measured on the built car: between the windshield and the door's glass the body is 0.25 m long at each height, from (0.94, 0.74) to (0.70, 0.78) at z 1.42 and from (0.51, 0.66) to (0.27, 0.70) at 1.72), left side: at the dashboard's top and at the headliner
 def glass_y(z): return float(np.interp(z, (1.26, 1.40, 1.55, 1.70, 1.756), (0.812, 0.785, 0.747, 0.702, 0.680)))      # the side glass's outer face (hull, mean of the door stations)
 TRIM_IN = 0.055                                  # a pillar trim's cabin face stands this far inside the glass's outer face
 
@@ -43,7 +44,7 @@ def build(name='cabin_shell'):
     for s_ in (1, -1):
         foot, head = np.array((A_PILLAR[0][0], s_ * A_PILLAR[0][1], A_PILLAR[0][2])), np.array((A_PILLAR[1][0], s_ * A_PILLAR[1][1], A_PILLAR[1][2])); al = (head - foot) / np.linalg.norm(head - foot)
         u = np.array((-1.0, 0, 0)); u = u - al * u.dot(al); u /= np.linalg.norm(u); v = np.array((0, -s_ * 1.0, 0)); v = v - al * v.dot(al) - u * v.dot(u); v /= np.linalg.norm(v)
-        rows = [[bm.verts.new(tuple(foot + al * t + u * a + v * b)) for a, b in ((-0.055, 0.045), (-0.04, 0.072), (0.005, 0.088), (0.04, 0.082), (0.05, 0.068))] for t in np.linspace(-0.08, np.linalg.norm(head - foot) - 0.23, 7)]
+        rows = [[bm.verts.new(tuple(foot + al * t + u * a + v * b)) for a, b in ((-0.058, 0.018), (-0.045, 0.036), (0.0, 0.046), (0.055, 0.036), (0.072, 0.016))] for t in np.linspace(-0.08, np.linalg.norm(head - foot) - 0.10, 7)]
         _quad_strip(bm, rows, 0)
     # the firewall under the dashboard and the footwells' forward wall, in shadow; the pedals
     z0 = C.FLOOR_Z
@@ -55,11 +56,24 @@ def build(name='cabin_shell'):
             f = bm.faces.new([vs[k] for k in q]); f.material_index = mat; f.smooth = False
     box((0.84, 0.33, z0 + 0.13), (0.012, 0.045, 0.035), 1)          # the brake
     box((0.86, 0.20, z0 + 0.11), (0.012, 0.028, 0.060), 1)          # the accelerator
+    def well_top(x):
+        if not WELL_X[1] <= x <= WELL_X[0]: return C.REAR_FLOOR[1]
+        u = (x - WELL_X[0]) / (WELL_X[1] - WELL_X[0]); zl = z0 if x > C.REAR_FLOOR[0] else C.REAR_FLOOR[1]; return zl + (WELL_Z - zl) * (1 - (2 * u - 1) ** 4) ** 0.5 + 0.025
+    # the cargo room's side trims, from the rear doors back, standing on the wells' trims and the floor; the tailgate's inner panel
+    for s_ in (1, -1):
+        st = []
+        for x in np.linspace(CARGO[0][-1], CARGO[0][0], 16):
+            y = float(np.interp(x, CARGO[0], CARGO[1])); zf = well_top(x)
+            st.append([bm.verts.new((x, s_ * yy, z)) for yy, z in ((y - 0.06, zf + 0.003), (y, zf + 0.06), (y, CARGO[2] - 0.01), (y + 0.008, CARGO[2]), (y + 0.018, CARGO[2]))])
+        _quad_strip(bm, st, 0)
+    xt = CARGO[0][0]; yt = CARGO[1][0]
+    rows = [[bm.verts.new((x, y, z)) for y in (-yt, yt)] for x, z in ((xt, C.REAR_FLOOR[1]), (xt, 1.15), (xt + 0.045, CARGO[2] - 0.01), (xt + 0.035, CARGO[2]), (xt + 0.02, CARGO[2]))]      # (the tailgate leans forward above 1.15 m)
+    _quad_strip(bm, rows, 0, smooth=False)
     # the rear wheels' wells, trimmed: the hull's inner wall there is 0.60 m out, from x -0.85 to -1.74 at the floor and up to 0.95 m
     for s_ in (1, -1):
         st = []
         for x in np.linspace(WELL_X[0], WELL_X[1], 13):
-            u = (x - WELL_X[0]) / (WELL_X[1] - WELL_X[0]); zl = z0 if x > C.REAR_FLOOR[0] else C.REAR_FLOOR[1]; zt = zl + (WELL_Z - zl) * (1 - (2 * u - 1) ** 4) ** 0.5 + 0.025
+            zl = z0 if x > C.REAR_FLOOR[0] else C.REAR_FLOOR[1]; zt = well_top(x)
             st.append([bm.verts.new((x, s_ * y, z)) for y, z in ((0.74, zt + 0.02), (WELL_Y + 0.02, zt), (WELL_Y, zt - 0.02), (WELL_Y, (z0 if x > C.REAR_FLOOR[0] else C.REAR_FLOOR[1]) + 0.002))])
         _quad_strip(bm, st, 0)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)

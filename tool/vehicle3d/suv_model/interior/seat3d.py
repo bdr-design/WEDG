@@ -23,7 +23,15 @@ BACK_BOLSTER = [(540, 860), (519, 816), (508, 743), (477, 648), (419, 564), (387
 BUCKLE = ((607, 776), (672, 732), 24)      # the buckle on the photo: its axis from where it leaves the cushion to its end, and its breadth (px)
 FADE = (800, 920)             # the photo's columns between which the cushion's upper outline passes from the far bolster to the cushion's middle
 BOW = 0.05                    # how far the nose's corners stand behind its middle, in plan
-NOSE = (0.055, 0.50)          # the cushion's nose: the length of its roll and how much of the cushion's height it comes down
+NOSE = (0.055, 0.50)
+# the photo's lines drawn on the seat as seams (seat_side.png, read off its enlargements to about 3 px): each is sent
+# through the photo's camera onto the built surface and repeated on the seat's other side
+SEAMS = [PIPING, [(x, y + 9) for x, y in PIPING],                                   # the cushion's piping and the stitched line under it
+         BACK_BOLSTER,                                                               # the seam between the backrest's side and its face
+         [(179, 342), (200, 418), (239, 489), (282, 553), (318, 647), (350, 747), (355, 853)],      # the side panel's rear seam
+         [(282, 552), (340, 548), (397, 546)],                                       # the seam across the side panel
+         [(916, 886), (925, 909), (998, 950)]]                                       # the nose's side seam, past the piping's end
+# (the seating panel's own seams are not drawn yet: on the dished top their hits and their mirror images cross)
 TOP_R = 0.035                 # the backrest's top: the height of its rounding
 BACK_FRONT = [(540, 795), (572, 753), (582, 679), (561, 606), (508, 500), (435, 390), (372, 316)]       # the backrest's outline on the photo's right: the far bolster's crest (y +0.19), foot to top
 
@@ -79,8 +87,30 @@ def _skew(mask, y_near, y_far):
     return f
 
 
+def _seams(bm, lines, mat, width=0.003, lift=0.0012, both=True, step=10.0):
+    """Lines of the photo ((col, row) points) drawn on the built seat: each point is sent through the photo's camera
+    onto the surface it meets first, and a narrow band is laid along the hits, standing just off the surface. With
+    both, the band is repeated on the seat's other side."""
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    tree = BVHTree.FromBMesh(bm); src = Vector(SC.POS)
+    for line in lines:
+        p = np.asarray(line, float); d = np.r_[0, np.cumsum(np.hypot(*np.diff(p, axis=0).T))]; t = np.linspace(0, d[-1], max(2, int(d[-1] / step) + 1))
+        rays = SC._ray(np.interp(t, d, p[:, 1]), np.interp(t, d, p[:, 0])); hits = []
+        for r in rays:
+            h = tree.ray_cast(src, Vector(r).normalized())
+            if h[0] is not None: hits.append((np.array(h[0]), np.array(h[1])))
+        if len(hits) < 2: continue
+        P = np.array([h[0] for h in hits]); N = np.array([h[1] for h in hits]); N[(N * (np.array(SC.POS) - P)).sum(1) < 0] *= -1; T = np.gradient(P, axis=0); S = np.cross(N, T); S /= np.linalg.norm(S, axis=1)[:, None] + 1e-12
+        for sgn in ((1, -1) if both else (1,)):
+            m = np.array((1, sgn, 1.0)); a = [bm.verts.new(tuple((P[i] + N[i] * lift + S[i] * width / 2) * m)) for i in range(len(P))]; b = [bm.verts.new(tuple((P[i] + N[i] * lift - S[i] * width / 2) * m)) for i in range(len(P))]
+            for i in range(len(P) - 1):
+                if np.linalg.norm(P[i + 1] - P[i]) > 0.06: continue          # (a jump from one surface to another: no band across it)
+                f = bm.faces.new((a[i], a[i + 1], b[i + 1], b[i]) if sgn > 0 else (b[i], b[i + 1], a[i + 1], a[i])); f.material_index = mat; f.smooth = True
+
+
 def build(name='seat_front', mirror=False):
-    S = SHAPE; M = {k: imats.m(v) for k, v in (('leather', 'seat_leather'), ('plastic', 'cabin_beige'), ('black', 'cabin_black'), ('chrome', 'cabin_chrome'), ('red', 'cabin_red'))}
+    S = SHAPE; M = {k: imats.m(v) for k, v in (('leather', 'seat_leather'), ('plastic', 'cabin_beige'), ('black', 'cabin_black'), ('chrome', 'cabin_chrome'), ('red', 'cabin_red'), ('seam', 'seat_seam'))}
     idx = {k: i for i, k in enumerate(M)}; bm = bmesh.new(); lay = bm.verts.layers.float_vector.new('relief_n')
     lab = SM.labels(); mpp = SC.DIST / SC.F
     # --- the cushion: sections across the seat, from its rear (under the backrest) to its nose ---------------------------
@@ -155,6 +185,7 @@ def build(name='seat_front', mirror=False):
         cx = float(hz[0][0]) - 0.01; ring = [(cx + S['post_d'] / 2 * math.cos(a), sy * S['post_y'] + S['post_d'] / 2 * math.sin(a)) for a in np.linspace(0, 2 * math.pi, 10, endpoint=False)]
         _loft(bm, [[(x, y, z) for x, y in ring] for z in (bz_top - 0.03, float(hz[1][0]) + 0.03)], idx['chrome'])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    _seams(bm, SEAMS, idx['seam'])
     rim = [f for f in rim if f.is_valid]; flat = [f for f in rim if abs(f.normal.y) > 0.9]            # (the rim is an open shell: its face must look out of the base)
     if flat and flat[0].normal.y > 0: bmesh.ops.reverse_faces(bm, faces=rim)
     if mirror:
