@@ -116,10 +116,12 @@ Steps:
   lower edge kicked up to its rear edge as in the photo, with the chrome strip along it. 189,764 triangles.
 - 10 Nov, build r26: the rear wheels' wells cut to 0.665 m from the middle (0.60 before), out of the cabin.
 - 10 Nov, the interior (step 7), four rounds of independent review: the whole cabin stands inside the hull, laid
-  out from the official cabin and the LX 600's seated positions, with the photos' shapes; no two parts cross. Its
-  near layer (lod_cabin.py: faces no occupant sees dropped) is 54k triangles and draws once. The outside's layers
-  (lod_ext.py, bake_lod.py) are a first trial: thinned to 40k the outline holds but the light on the panels and
-  glass does not yet.
+  out from the official cabin and the LX 600's seated positions, with the photos' shapes. Its near layer
+  (lod_cabin.py: faces no occupant sees dropped) is 44k triangles and draws once. Open: slivers of bare hull at the
+  glass's edges and round the tailgate's top (the windows' seals), a few crossing triangles behind trims. The outside's layers
+  (lod_ext.py, bake_lod.py): a near layer of 55k (the full car's light baked into the body's normals, the glass and
+  lamps kept fuller) differs from the full car on 1.3 % of pixels; a 12k distance layer on 1.2 % from 13 m. Not yet
+  reviewed or exported.
 - Next: the outside's layers with baked normals done properly; the interior's remaining photo differences (the
   bench's and seats' finer shapes, the door's switch panel, the shifter); the quarter glass's kick-up and chrome
   surround, lug nuts, step tread; opening doors.

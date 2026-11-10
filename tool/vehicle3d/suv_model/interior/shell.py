@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import imats, cabin as C
 
 HEAD_Z, HEAD_EDGE = C.HEAD_Z, (0.60, 1.712)       # the headliner's height on the centre line (the official cabin height over the floor); where it turns down to the glass (y, z): its edge hides the glass's top 5 cm, as the roof rail's trim does
-HEAD_X = (0.47, -2.10)                           # from the windshield's header to the rear glass's
+HEAD_X = (0.47, -2.14)                            # from the windshield's header to the rear glass's
 PILLARS = {'B': (-0.274, -0.182), 'C': (-1.141, -1.067), 'D': (-2.080, -1.900)}
 CARGO = ((-2.30, -2.05, -1.19), (0.66, 0.78, 0.78), 1.285)      # the cargo room's side trims: their face's y by station (the hull's skin is 0.74 to 0.97 out there, rounding in to the tailgate at x -2.44), and their top, at the belt
 WELL_X, WELL_Y, WELL_Z = (-0.79, -1.78), 0.655, 0.96         # the rear wells' trim: its ends, its face and its top
@@ -34,7 +34,7 @@ def build(name='cabin_shell'):
     ys = np.r_[np.linspace(-1, 1, 21) * HEAD_EDGE[0]]; prof = [(y, HEAD_Z - (HEAD_Z - HEAD_EDGE[1]) * abs(y / HEAD_EDGE[0]) ** 3) for y in ys]
     edge = [(s * (HEAD_EDGE[0] + 0.035), HEAD_EDGE[1] - 0.012) for s in (-1, 1)] + [(s * (glass_y(1.756) - 0.02), 1.70) for s in (-1, 1)]
     prof = [edge[2], edge[0]] + prof + [edge[1], edge[3]]
-    hb = bmesh.new(); rows = [[hb.verts.new((x, y, z - 0.03 * max(0.0, (x - 0.30) / 0.17) ** 2)) for y, z in prof] for x in np.linspace(HEAD_X[0], HEAD_X[1], 28)]
+    hb = bmesh.new(); rows = [[hb.verts.new((x, y * (1 - 0.10 * max(0.0, (-1.95 - x) / 0.19) ** 2), z - 0.03 * max(0.0, (x - 0.30) / 0.17) ** 2 + 0.022 * max(0.0, (-2.0 - x) / 0.14) ** 2)) for y, z in prof] for x in np.linspace(HEAD_X[0], HEAD_X[1], 30)]      # (it turns up at the rear into the corner over the rear glass, whose top is at x -2.17, z 1.79)
     _quad_strip(hb, rows, 0); bmesh.ops.recalc_face_normals(hb, faces=hb.faces)
     for f in hb.faces:
         if f.normal.z > 0: f.normal_flip()                                   # seen from below
@@ -55,7 +55,7 @@ def build(name='cabin_shell'):
         for z, (ax, ay), (bx, by) in A_EDGES:
             a, b = np.array((ax, s_ * ay, z)), np.array((bx, s_ * by, z)); m = (a + b) / 2; inn = np.array((-(b - a)[1], (b - a)[0], 0.0)); inn /= np.linalg.norm(inn)
             if inn[1] * s_ > 0: inn = -inn                                   # toward the cabin's middle
-            rows.append([bm.verts.new(tuple(a + (b - a) * t + inn * (0.020 + A_BOW * math.sin(math.pi * t)))) for t in np.linspace(0.0, 1.0, 7)])      # (a little past the pillar's edges, over the glass's edges, as trims lie)
+            rows.append([bm.verts.new(tuple(a + (b - a) * t + inn * (0.009 + A_BOW * math.sin(math.pi * t) ** 0.6))) for t in np.linspace(0.0, 1.0, 9)])      # (a little past the pillar's edges, over the glass's edges, as trims lie)
         _quad_strip(bm, rows, 0)
     # the firewall under the dashboard and the footwells' forward wall, in shadow; the pedals
     z0 = C.FLOOR_Z

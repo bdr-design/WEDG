@@ -7,7 +7,7 @@ bench (cabin.REAR_CAM, 1.06 m ahead of the cushion's front edge and 0.53 m over 
   the backs between y 0.148 and 0.734 (the car's left, the photo's right), +-0.14 (middle) and -0.15 and -0.727;
   the outer headrests 0.25 m wide at y +-0.465, the middle one 0.26.
 What neither gives is a CHOICE: the cushion's depth, the backs' lean and thickness, every rounding, the belts'
-guides (on the C pillars' rear edge: the hull has no other place for them).
+guides (on the C pillars' trims, at the pillar's middle: the hull has no other place for them).
 The hull rules where they meet: the rear wheels' wells stand 0.665 m out from x -0.85 back, up to 0.95 m, so the
 cushion's rear corners and the outer backs' feet are narrower there than the photo's 1.45 m (WELL)."""
 import bpy, bmesh, os, sys, math, numpy as np
@@ -27,7 +27,7 @@ NOSE = (0.07, 0.55)
 WING = (0.045, 0.11, 0.05)                        # the outer backs' side bolsters: how far they stand forward of the insert, their width, and the width of their rise
 SEAM_Z = 0.62                                    # the seam across each outer back: its height up the back (the photo's row 265)
 CUSHION_SEAM = -0.238                            # the cushion's seam between the middle and the right places (the photo's column 600)
-BELT = (0.655, -0.175, 1.07 + RISE, 0.047)
+BELT = (0.655, -0.175, 1.07 + RISE, 0.047)          # the belts: the outer ones' y on the backs, the middle one's, the height their tongues hang at, the webbing's width
 BELT_GUIDE = (-1.104, 1.60)                        # the outer belts' guides on the C pillars' trims (the pillar's middle; x, z)                # the belts: the outer ones' y on the backs, the middle one's, the height their tongues hang at, the webbing's width
 LIP_Z = 0.68 + RISE                                     # the foot of the cushion's front face (the photo's row 862 through the camera); the base is under it
 
@@ -126,8 +126,12 @@ def build(name='seat_bench_2'):
             if f.normal.x < 0: f.normal_flip()
     for sy in (1, -1):
         y = sy * BELT[0]; zs = np.linspace(BACK_TOP[0] - 0.035, BELT[2], 6)
-        gy = SH.glass_y(BELT_GUIDE[1] + 0.03) - SH.TRIM_IN - 0.016; _blob(bm, (BELT_GUIDE[0], sy * (gy - 0.004), BELT_GUIDE[1]), (0.022, 0.012, 0.032), idx['black'], n=10, rings=5)      # the guide on the pillar's trim
-        strap([(BELT_GUIDE[0], sy * gy, BELT_GUIDE[1] - 0.02), (face(BACK_TOP[0], -THICK * 0.45), y - sy * 0.01, BACK_TOP[0] + 0.012), (face(BACK_TOP[0] - 0.02, 0.012), y, BACK_TOP[0] - 0.015)] + [(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
+        pface = lambda z: SH.glass_y(z) - SH.TRIM_IN                         # the C pillar trim's face across the car at height z
+        g = [bm.verts.new((BELT_GUIDE[0] + dx, sy * (pface(z) - dy), z)) for z in (BELT_GUIDE[1] - 0.03, BELT_GUIDE[1] + 0.03) for dy in (0.006, 0.018) for dx in (-0.02, 0.02)]
+        for q in ((0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)):
+            f = bm.faces.new([g[i] for i in q]); f.material_index = idx['black']; f.smooth = False
+        gy = pface(BELT_GUIDE[1] - 0.02) - 0.040                                # the webbing leaves the guide's foot
+        strap([(BELT_GUIDE[0], sy * gy, BELT_GUIDE[1] - 0.025), (face(BACK_TOP[0], -THICK * 0.45), y - sy * 0.01, BACK_TOP[0] + 0.012), (face(BACK_TOP[0] - 0.02, 0.012), y, BACK_TOP[0] - 0.015)] + [(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
         _blob(bm, (face(BELT[2] - 0.035, 0.014), y, BELT[2] - 0.035), (0.006, 0.024, 0.040), idx['black'], n=10, rings=5); _blob(bm, (face(BELT[2] - 0.085, 0.014), y, BELT[2] - 0.085), (0.002, 0.014, 0.022), idx['chrome'], n=8, rings=3)
     y = BELT[1]; zs = np.linspace(BACK_TOP[0] - 0.01, BELT[2] - 0.08, 6); strap([(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
     _blob(bm, (face(BELT[2] - 0.115, 0.014), y, BELT[2] - 0.115), (0.006, 0.024, 0.040), idx['black'], n=10, rings=5); _blob(bm, (face(BELT[2] - 0.165, 0.014), y, BELT[2] - 0.165), (0.002, 0.014, 0.022), idx['chrome'], n=8, rings=3)

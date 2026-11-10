@@ -1,7 +1,7 @@
 """The trim that lines the hull wherever no other part covers it: the strips between the doors' trims and the glass,
 the sills, the gap round the rear wells' arches, the footwells' sides, the rear quarters and D pillars, the
 tailgate's inside and the roof's edges. No photo shows these; the rule is the hull's own shape: rays from inside
-the cabin find the body (not the glass) and the liner lies LINER_IN inside it, so it follows every fold of the skin
+the cabin find the body (not the glass) and the liner lies a little inside it (each pass's inset), so it follows every fold of the skin
 and leaves the glass clear. Black below the windows, beige above (as the pillars' and roof's trims are)."""
 import bpy, bmesh, os, sys, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -9,8 +9,6 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 import imats, cabin as C
 
-LINER_IN = 0.020          # how far inside the skin
-STEP = 0.05               # the grid's spacing
 BEIGE_Z = 1.40            # beige above, black below
 # Each pass: a fan of rays and how its hits are used. 'side' casts across the car from its middle line at (x, z);
 # 'rear' casts back from x -1.50 at (y, z); 'front' casts forward from x 0 at (y, z); 'radial' casts every way from a
@@ -76,9 +74,11 @@ def build(hull_path, cover=(), name='cabin_liner'):
                     if not h or h[0] != 'body': continue
                     q = h[2]
                     if (kind == 'side' and abs(q.y) < 0.55) or (kind == 'rear' and q.x > -2.0) or (kind == 'front' and q.x < 0.4) or (kind == 'radial' and q.z < C.FLOOR_Z + 0.03): continue      # not the wall this pass is for
-                    if rg['cover'] == 'near' and any(t.ray_cast(h[2] - Vector(d) * 0.001, -Vector(d), rg['inset'] + 0.06)[0] is not None for t in covers): continue      # (a part within the liner's own depth of the skin, or just in front of it: the liner would pass through it, or lie hidden behind it; the trims have no backs)
+                    if rg['cover'] == 'near' and any(t.ray_cast(h[2] - Vector(d) * 0.001, -Vector(d), rg['inset'] + 0.06)[0] is not None for t in covers): continue      # (a part within the liner's inset and 6 cm more of the skin: the liner would pass through it, or lie hidden behind it; the trims have no backs)
                     if rg['cover'] is True and any((c := t.ray_cast(Vector(p), Vector(d), h[1]))[0] is not None and c[3] > h[1] - 0.05 for t in covers): continue      # already covered
                     if kind == 'radial' and any((c := t.ray_cast(Vector(p), Vector(d), h[1]))[0] is not None for t in covers): continue      # (a fan: only what it sees past every part)
+                    nn = h[3] if h[3].dot(Vector(d)) < 0 else -h[3]
+                    if kind == 'radial' and any(t.ray_cast(h[2] + nn * 0.001, nn, rg['inset'] + 0.06)[0] is not None for t in covers): continue      # (nor where a part stands just inside the skin: the trims' top edges, the headliner's)
                     n = h[3] if h[3].dot(Vector(d)) < 0 else -h[3]
                     if -n.dot(Vector(d)) < (0.25 if kind == 'radial' else 0.5): continue          # met edge-on (a flange, an arch's lip): no liner there
                     grid[i, j] = (h[1], q + n * rg['inset'], n)      # (off the skin along its own normal: where it curves, along the ray was not enough)

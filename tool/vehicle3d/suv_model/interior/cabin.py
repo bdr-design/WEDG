@@ -88,7 +88,7 @@ CAMERAS = {'dash_front': (*_d((-0.30, 0.0, 1.45 + DASH_DZ), 0.0, 18.6), 89.2, 85
            # driver_pov: fitted with dash_front's camera held (twoview.py, 15 landmarks to 8.7 px): over the driver's
            # seat, looking down 35.6 degrees and 4.4 to the right, 76.5 degrees across. It is above a seated eye: the
            # photo was drawn from there. The game's own seated eye is SEATED_EYE.
-           'driver_pov': (*_d((-0.194, 0.433, 1.658 + DASH_DZ), -4.4, 35.6), 76.5, None, ('seat_', 'cabin_headliner')),      # (1 cm over the headliner, as the fit has it: the comparison leaves the headliner out)
+           'driver_pov': (*_d((-0.194, 0.433, 1.658 + DASH_DZ), -4.4, 35.6), 76.5, None, ('seat_', 'cabin_headliner')),      # (at the fit's height, just over the headliner: the comparison leaves the headliner out)
            # rear_bench: one camera fits what it shows of the bench (REAR_CAM), not its belts' anchors; the centre line is at column 837.5
            'rear_bench': (*_rear_cam(), 71.6, 837.5, ('seat_F', 'dashboard', 'steering', 'door_trim_F'))}
 SEATED_EYE = (H_POINT[0] - 0.13, SEAT_Y, H_POINT[1] + 0.69)      # a seated eye over the driver's H-point (SAE J941's eyellipse centre, roughly: CHOICE)
