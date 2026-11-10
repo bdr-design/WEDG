@@ -8,6 +8,7 @@ pillars) and from the screen's assumed place otherwise, until driver_pov is meas
 import bpy, bmesh, os, sys, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import masks as M, relief as R, cabin as C, dash_features as DF
+C_ = C
 from seat import _mat
 from scipy import ndimage
 from skimage.draw import polygon as _poly
@@ -42,10 +43,66 @@ PARTS = {'upper': (upright(0.54), 0.12, 0.02, 'black', None), 'dash_top': (level
          'screen': (leaning(0.531, 1.295, 27.0), 0.022, 0.004, 'gloss', (689, 283, 1023, 407)), 'cluster': (upright(0.62), 0.02, 0.004, 'black', (300, 350, 590, 480)),
          'console_body': (level(0.985), 0.40, 0.02, 'beige', [(660, 748), (1060, 748), (1085, 941), (640, 941)]),
          'console': (level(0.99), 0.02, 0.008, 'wood', [(699, 748), (1031, 748), (1060, 917), (1060, 941), (681, 941), (681, 917)]),
-         'pillar_L': (pillar(A_FOOT, A_HEAD, 1), 0.06, 0.02, 'beige', [(96, 60), (176, 44), (318, 292), (300, 336), (212, 356), (140, 250)]),
-         'pillar_R': (pillar((A_FOOT[0], -A_FOOT[1], A_FOOT[2]), (A_HEAD[0], -A_HEAD[1], A_HEAD[2]), -1), 0.06, 0.02, 'beige',
-                      [(1616, 60), (1572, 250), (1500, 356), (1412, 336), (1394, 292), (1536, 44)]),
          'mirror': (upright(0.52), 0.03, 0.012, 'black', (716, 118, 990, 208))}      # (the headliner is shell.py's: seen this flat, a region of it cannot be laid on its plane)
+
+
+# The dashboard's own body is one surface, not a slab per face: sections along the car (x, z), the same across the
+# car but behind the wheel, where the instruments' binnacle stands. The sections' corners are where the photo's
+# edges fall on the faces' planes at the car's middle (the top's lip, row 370; the black band's foot and the beige
+# face's top, row 440; the beige face's foot, row 665). Behind the wheel the photo is hidden by the wheel itself
+# but for the hood's line (its top at row 300, 1.345 m up if it stands at x 0.50) and the instruments' window:
+# the binnacle's depths, the sill under the instruments and the underside are a CHOICE.
+BODY = ('upper', 'dash_top', 'lower', 'cluster')          # the faces the body carries (their planes stay, for the things on them)
+Y_END = 0.79
+BIN_Y, BIN_W, BIN_H = 0.430, (0.185, 0.225), 0.070       # the binnacle: its middle across the car, where it is whole and where it has ended, and its hood's height
+#            the car's body of the dashboard                 behind the wheel
+SECTION = [((1.000, 1.262), (1.000, 1.262), 0.0, 'black'),       # the windshield's foot
+           ((0.800, 1.275), (0.860, 1.275), 0.0, 'black'),       # the top
+           ((0.548, 1.275), (0.500, 1.275), 0.012, 'black'),     # the top's lip / the hood's lip (raised by the hood's height)
+           ((0.540, 1.267), (0.508, 1.252), 0.006, 'black'),     # the black band's head / the lip's underside
+           ((0.540, 1.213), (0.620, 1.285), 0.004, 'beige'),     # the band's foot / the instruments' head
+           ((0.520, 1.213), (0.620, 1.125), 0.0, 'beige'),       # the ledge / the instruments' foot
+           ((0.497, 1.213), (0.470, 1.105), 0.012, 'beige'),     # the beige face's head / the sill's edge
+           ((0.396, 1.023), (0.405, 1.023), 0.030, 'beige'),     # the beige face's foot
+           ((0.430, 0.985), (0.435, 0.985), 0.030, 'black'),     # the roll under it
+           ((0.800, 0.960), (0.800, 0.960), 0.0, 'black')]       # the underside, to the firewall
+BIN_MAT = {3: 'black', 4: 'dark', 5: 'black'}             # behind the wheel the hood's underside, the instruments' face and the sill are black
+
+
+def _sstep(t): t = min(max(t, 0.0), 1.0); return t * t * (3 - 2 * t)
+
+
+def _section(y):
+    """The body's section at y: (x, z) points with every corner rounded, and each stretch's material."""
+    d = abs(y - BIN_Y); w = 1 - _sstep((d - BIN_W[0]) / (BIN_W[1] - BIN_W[0])); h = BIN_H * math.cos(min(d / BIN_W[1], 1.0) * math.pi / 2) ** 2
+    C = [np.array(a) * (1 - w) + np.array(b) * w + (np.array((0, h)) * w if k in (2, 3) else 0) for k, (a, b, _, _) in enumerate(SECTION)]
+    pts, mats = [C[0]], []
+    for k in range(1, len(C) - 1):
+        r = SECTION[k][2]; d0, d1 = C[k] - C[k - 1], C[k + 1] - C[k]; l0, l1 = np.linalg.norm(d0), np.linalg.norm(d1); t = min(r, 0.4 * l0, 0.4 * l1); e = min(0.002, 0.1 * l0, 0.1 * l1)
+        T0, T1 = C[k] - d0 / l0 * t, C[k] + d1 / l1 * t; m0 = SECTION[k - 1][3] if not (w > 0.5 and k - 1 in BIN_MAT) else BIN_MAT[k - 1]
+        pts += [T0 - d0 / l0 * e, T0] + [(1 - u) ** 2 * T0 + 2 * u * (1 - u) * C[k] + u * u * T1 for u in (1 / 3, 2 / 3)] + [T1, T1 + d1 / l1 * e]; mats += [m0] * 6
+    pts.append(C[-1]); mats.append(SECTION[-2][3]); return pts, mats
+
+
+def _body(bm, idx):
+    ys = np.unique(np.r_[np.linspace(-Y_END, BIN_Y - BIN_W[1] - 0.01, 5), np.linspace(BIN_Y - BIN_W[1], BIN_Y + BIN_W[1], 41), Y_END]); rows, mats = [], []
+    for y in ys:
+        p, m = _section(float(y)); rows.append([bm.verts.new((q[0], y, q[1])) for q in p]); mats.append(m)
+    fs = []
+    for i in range(len(rows) - 1):
+        for k in range(len(rows[0]) - 1):
+            f = bm.faces.new((rows[i][k], rows[i + 1][k], rows[i + 1][k + 1], rows[i][k + 1])); f.material_index = idx[mats[i if abs(ys[i] - BIN_Y) > abs(ys[i + 1] - BIN_Y) else i + 1][k]]; f.smooth = True; fs.append(f)
+    for r in (rows[0], rows[-1]):                                     # its ends, behind the doors' trims
+        ed = [bm.edges.get((r[k], r[k + 1])) for k in range(len(r) - 1)] + [bm.edges.new((r[-1], r[0]))]
+        fs += [g for g in bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=False, edges=ed)['geom'] if isinstance(g, bmesh.types.BMFace)]
+    bmesh.ops.recalc_face_normals(bm, faces=fs)
+    # the steering column's shroud, from behind the wheel's hub into the binnacle's sill
+    x0, y0, z0, rake = C_.WHEEL; ax = np.array((math.cos(math.radians(rake)), 0.0, -math.sin(math.radians(rake)))); up = np.array((ax[2], 0.0, -ax[0])) * -1; fs = []; rings = []
+    for t, (hw, hh) in ((0.045, (0.050, 0.040)), (0.10, (0.062, 0.050)), (0.26, (0.070, 0.058))):
+        c = np.array((x0, y0, z0)) + ax * t; rings.append([bm.verts.new(tuple(c + np.array((0, 1.0, 0)) * hw * math.cos(a) + up * hh * math.sin(a))) for a in np.linspace(0, 2 * math.pi, 12, endpoint=False)])
+    for a, b in zip(rings, rings[1:]):
+        for k in range(12): f = bm.faces.new((a[k], a[(k + 1) % 12], b[(k + 1) % 12], b[k])); f.material_index = idx['black']; f.smooth = True; fs.append(f)
+    fs.append(bm.faces.new(rings[0])); fs[-1].material_index = idx['black']; bmesh.ops.recalc_face_normals(bm, faces=fs)
 
 
 def regions():
@@ -82,7 +139,9 @@ def materials():
 def build(name='dashboard'):
     reg, mag = regions(); Mt = materials(); idx = {k: i for i, k in enumerate(Mt)}; bm = bmesh.new()
     lay = bm.verts.layers.float_vector.new('relief_n')
+    _body(bm, idx)
     for part, (pl, thick, rad, mat, _) in PARTS.items():
+        if part in BODY: continue
         n0 = len(bm.verts); r, c = np.where(reg[part]); mpp = pl.metres_per_px(r.mean(), c.mean())
         R.solid(bm, reg[part], pl.to_ab, mpp, thick, min(rad, thick / 2), y0=thick / 2, mat=idx[mat], rings=4 if rad > 0.02 else 2, spacing=0.014, fill=0.07)
         bm.verts.ensure_lookup_table()

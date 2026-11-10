@@ -11,6 +11,7 @@ import imats, cabin as C
 HEAD_Z, HEAD_EDGE = 1.77, (0.62, 1.725)          # the headliner's height on the centre line; where it turns down to the glass's head (y, z)
 HEAD_X = (0.47, -2.10)                           # from the windshield's header to the rear glass's
 PILLARS = {'B': (-0.274, -0.182), 'C': (-1.141, -1.067)}
+A_PILLAR = ((1.00, 0.74, 1.27), (0.47, 0.60, 1.74))      # the A pillar inside the glass: its foot and its head (hull, left side)
 def glass_y(z): return float(np.interp(z, (1.26, 1.40, 1.55, 1.70, 1.756), (0.812, 0.785, 0.747, 0.702, 0.680)))      # the side glass's outer face (hull, mean of the door stations)
 TRIM_IN = 0.055                                  # a pillar trim's cabin face stands this far inside the glass's outer face
 
@@ -37,6 +38,12 @@ def build(name='cabin_shell'):
                 yo = glass_y(z); yi = yo - TRIM_IN
                 rows.append([bm.verts.new((x, s * y, z)) for x, y in ((x1 + 0.012, yo), (x1 + 0.004, yi), (x0 - 0.004, yi), (x0 - 0.012, yo))])
             _quad_strip(bm, rows, 0, smooth=False)
+    # the A pillars' trims: the hull's pillar inside the glass (hullspace.py), from under the dashboard's top to the headliner
+    for s_ in (1, -1):
+        foot, head = np.array((A_PILLAR[0][0], s_ * A_PILLAR[0][1], A_PILLAR[0][2])), np.array((A_PILLAR[1][0], s_ * A_PILLAR[1][1], A_PILLAR[1][2])); al = (head - foot) / np.linalg.norm(head - foot)
+        u = np.array((-1.0, 0, 0)); u = u - al * u.dot(al); u /= np.linalg.norm(u); v = np.array((0, -s_ * 1.0, 0)); v = v - al * v.dot(al) - u * v.dot(u); v /= np.linalg.norm(v)
+        rows = [[bm.verts.new(tuple(foot + al * t + u * a + v * b)) for a, b in ((-0.065, -0.01), (-0.05, 0.040), (0.0, 0.055), (0.05, 0.040), (0.065, -0.01))] for t in np.linspace(-0.08, np.linalg.norm(head - foot) + 0.05, 7)]
+        _quad_strip(bm, rows, 0)
     # the firewall under the dashboard and the footwells' forward wall, in shadow; the pedals
     z0 = C.FLOOR_Z
     for vs in (((0.93, -0.80, z0), (0.93, 0.80, z0), (0.80, 0.80, 0.95), (0.80, -0.80, 0.95)),):

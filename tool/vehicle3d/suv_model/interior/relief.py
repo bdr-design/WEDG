@@ -23,7 +23,9 @@ def solid(bm, mask, to_xz, scale, width, radius, y0=0.0, mat=0, rings=4, spacing
     width is the solid's full width across, radius its edge rounding (at most width / 2)."""
     radius = min(radius, width / 2); edt = ndimage.distance_transform_edt(np.pad(mask, 2))[2:-2, 2:-2] * scale
     rings = min(rings, int(radius / scale / 3))          # a rounding of a few pixels cannot carry rings: their contours tangle (the screen's top came out in spikes)
-    pts = [_resample(outline(mask), spacing / scale)]; nb = len(pts[0])
+    # every outline of the region: its outer one and those of its holes, each a closed loop of its own
+    fm = ndimage.gaussian_filter(np.pad(mask.astype(float), 2), 1.2); loops = [_resample(c - 2, spacing / scale) for c in measure.find_contours(fm, 0.5) if len(c) > 12]
+    pts = [np.vstack(loops)]; nb = len(pts[0]); ends = np.cumsum([len(l) for l in loops]); starts = ends - [len(l) for l in loops]
     # the rings: each outline point carried inward along the distance field to each ring's depth, so that the rings'
     # points stand in rows across the rounding (rings resampled each on its own left the edge crumpled: the
     # triangles between them leaned every way)
@@ -58,10 +60,11 @@ def solid(bm, mask, to_xz, scale, width, radius, y0=0.0, mat=0, rings=4, spacing
             try: faces.append(bm.faces.new(vs))
             except ValueError: pass
     if width / 2 - radius > 1e-5:
-        for i in range(nb):
-            j = (i + 1) % nb
-            try: faces.append(bm.faces.new((near[i], near[j], far[j], far[i])))
-            except ValueError: pass
+        for s0, e0 in zip(starts, ends):
+            for i in range(s0, e0):
+                j = i + 1 if i + 1 < e0 else s0
+                try: faces.append(bm.faces.new((near[i], near[j], far[j], far[i])))
+                except ValueError: pass
     else:
         for i in range(nb): bmesh.ops.pointmerge(bm, verts=[near[i], far[i]], merge_co=near[i].co)
     for f in faces:

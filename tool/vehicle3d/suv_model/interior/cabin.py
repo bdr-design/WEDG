@@ -40,7 +40,7 @@ WHEEL = (0.430, 0.417, 1.172, 24.0)        # (the two-view fit puts it at 0.441,
 CAMERAS = {'dash_front': ((-0.30, 0.0, 1.45), (-0.30 + math.cos(math.radians(18.6)), 0.0, 1.45 - math.sin(math.radians(18.6))), 89.2, 856, ('seat_',)),
            # driver_pov: fitted with dash_front's camera held (twoview.py): 1.66 m up over the driver's seat, looking down
            # 35.6 degrees and 4.4 degrees to the right, 1061 px focal length (76.5 degrees across)
-           'driver_pov': ((-0.194, 0.433, 1.658), (-0.194 + math.cos(math.radians(-4.4)) * math.cos(math.radians(35.6)), 0.433 + math.sin(math.radians(-4.4)) * math.cos(math.radians(35.6)), 1.658 - math.sin(math.radians(35.6))), 76.5, None, ('seat_',)),
+           'driver_pov': ((-0.20, 0.41, 1.45), (-0.20 + math.cos(math.radians(-3.4)) * math.cos(math.radians(21.0)), 0.41 + math.sin(math.radians(-3.4)) * math.cos(math.radians(21.0)), 1.45 - math.sin(math.radians(21.0))), 76.0, None, ('seat_',)),
            # rear_bench: no camera fits all of it. Its bench is 1467 px wide at the cushion's front edge and its
            # seat backs 1053 px across; taking the bench as 1.45 m wide, the backs as 1.40 m and 0.5 m further away
            # gives 1447 px focal length (60 degrees across) 1.43 m ahead of the cushion's front edge; the cushion's top,
