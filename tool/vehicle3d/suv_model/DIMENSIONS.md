@@ -267,8 +267,13 @@ Because the model is not finished (later steps in PLAN.md):
   rounded upper rear corner are not modelled yet;
 - the glass is blacked out all round and opaque (the owner's decision, 10 Nov: the full dark tint), so nothing
   shows through it from outside; there is no interior yet;
-- the lug nuts are flat, the step tread has no ribs and there is no number plate. There are no mud flaps behind
-  the wheels, by the owner's decision (10 Nov), though his photo has them;
+- the lug nuts are flat and the step tread has no ribs. There are no mud flaps behind the wheels, by the owner's
+  decision (10 Nov), though his photo has them;
+- number plates (plate.py, r22), the owner's choice: a Saudi private plate reading ا م ن 1, front and rear. Four
+  cells, Eastern Arabic digit and Arabic letters over their Latin equivalents (ا A, م Z, ن N), the country's name and
+  KSA in a band at the right; the long plate, 520 x 110 mm (Wikipedia's figure for the current series; other sources
+  give 550 x 110, and 335 x 155 for the short plate). The national emblem is not drawn: a plain disc stands for it
+  (a game choice). The rear one lies in the plate recess, the front one on the lower intake, 4 mm proud;
 - the wheel openings follow the photo's wheels unscaled while the body is brought to the spec's height, so each
   opening stands 37 mm higher against the body than in the photo. The owner's decision (10 Nov): the flare bands are
   thinned by that much (29 and 41 mm for the real photo's 66 and 78), so their tops stay where the photo has them,

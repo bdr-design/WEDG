@@ -36,6 +36,7 @@ SD.seams(shell, groove, flares); SD.handles(shell, chrome, black_gloss)
 tyre_mat = SE.tyre_material(SE.tyre_maps(os.path.join(OUT, 'tex')))
 ws = wheels.build(tyre_mat)
 UB.build(shell, M('underbody', (0.016, 0.016, 0.017), rough=0.85))
+import plate; plate.build(os.path.join(OUT, 'tex'))      # the number plates (the owner's: ا م ن 1)
 tidy.tidy_all()
 print('shell sharp edges', body.crisp(bpy.data.objects['body']))
 print('glass sharp edges', body.crisp(bpy.data.objects['glass']))      # the panes' lips: shaded round, they scallop the dark glass along a leaning edge
