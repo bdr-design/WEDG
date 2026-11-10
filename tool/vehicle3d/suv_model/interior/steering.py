@@ -13,7 +13,7 @@ from scipy import ndimage
 DISH = 0.012          # the spokes' face is this far behind the rim's middle plane
 PLATE = 0.024         # the spokes' thickness
 PAD_RISE = 0.014      # the pad's face stands this far out of the spokes'
-SEG, RING = 180, 14   # the rim: stations round it, points round its section
+SEG, RING = 132, 12   # the rim: stations round it, points round its section
 SEAMS = (44.0, 136.0, 270.0)          # where the rim's leather is joined, degrees from the photo's right, anticlockwise
 STITCH = (8.0, 172.0, math.pi + 0.30)        # the stitching: from, to (degrees round the rim) and where on the tube's section (pi is the inner edge; more is toward the driver)
 # The wood: an inlay on the rim's lower sides, on its inner part only (the outer part stays leather), pointed at both
@@ -92,14 +92,14 @@ def build(name='steering_wheel'):
     wa, wf = zip(*WOOD)
     for side in (1, -1):
         rows = []
-        for a in np.arange(wa[0], wa[-1] + 0.01, 1.0):
+        for a in np.arange(wa[0], wa[-1] + 0.01, 2.0):
             f = float(np.interp(a, wa, wf)); aa = a if side > 0 else 540.0 - a; tt = float(np.interp(aa % 360, th, t, period=360)); c = float(np.interp(aa % 360, th, rc, period=360))
             pb = 2 * math.pi - math.acos(2 * f - 1); ar = math.radians(aa); row = []
-            for p in np.linspace(math.pi - 0.5, pb, 9):
+            for p in np.linspace(math.pi - 0.5, pb, 7):
                 rr = c + (tt + 0.0005) * math.cos(p); row.append(bm.verts.new((rr * math.cos(ar), 1.10 * (tt + 0.0005) * math.sin(p), rr * math.sin(ar))))
             rows.append(row)
         for r0, r1 in zip(rows, rows[1:]):
-            for k in range(8):
+            for k in range(6):
                 f = bm.faces.new((r0[k], r1[k], r1[k + 1], r0[k + 1])); f.material_index = idx['wood']; f.smooth = True
     # --- the spokes: the disc inside the rim with the four openings cut out, as one plate -------------------------------
     outer = [bm.verts.new((c * math.cos(a), DISH, c * math.sin(a))) for a, c in zip(np.radians(th), rc - 0.25 * t)]

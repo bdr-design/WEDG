@@ -87,7 +87,7 @@ def _skew(mask, y_near, y_far):
     return f
 
 
-def _seams(bm, lines, mat, width=0.003, lift=0.0012, both=True, step=10.0):
+def _seams(bm, lines, mat, width=0.003, lift=0.0012, both=True, step=16.0):
     """Lines of the photo ((col, row) points) drawn on the built seat: each point is sent through the photo's camera
     onto the surface it meets first, and a narrow band is laid along the hits, standing just off the surface. With
     both, the band is repeated on the seat's other side."""
@@ -186,7 +186,7 @@ def build(name='seat_front', mirror=False):
     _loft(bm, stations, idx['leather'])
     # --- the parts that keep the photo's own outline, each on its plane ----------------------------------------------------
     def region(part, y_face, y_mid, width, rad, mat, rings=5, to=None):
-        R.solid(bm, lab == SM.PARTS.index(part), to or SC.on_plane(y_face), (SC.DIST + y_face) / SC.F, width, rad, y0=y_mid, mat=idx[mat], rings=rings, spacing=0.012)
+        R.solid(bm, lab == SM.PARTS.index(part), to or SC.on_plane(y_face), (SC.DIST + y_face) / SC.F, width, rad, y0=y_mid, mat=idx[mat], rings=rings, spacing=0.016)
     # the base's region is its near face (a little inside it: the rounded edge draws the outline from there)
     n0 = len(bm.verts); region('base', -S['base_w'] / 2 + 0.008, 0.0, S['base_w'], 0.022, 'plastic'); bm.verts.ensure_lookup_table()
     for v in bm.verts[n0:]:                                                 # its front follows the nose's bow

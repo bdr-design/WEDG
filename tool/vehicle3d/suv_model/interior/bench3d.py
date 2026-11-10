@@ -29,7 +29,7 @@ BELT_GUIDE = (-1.104, 1.60)                        # the outer belts' guides on 
 LIP_Z = 0.68 + RISE                                     # the foot of the cushion's front face (the photo's row 862 through the camera); the base is under it
 
 
-def _sec(a, b, top, bottom, ra, rb, n=17):
+def _sec(a, b, top, bottom, ra, rb, n=13):
     """A section across the car between y a and b: from a's foot over the top to b's foot, the edges rounded by ra and rb. top(y) is the upper surface's height."""
     up = [(y, top(y)) for y in np.linspace(a + ra, b - rb, n)]
     arc_b = [(b - rb + rb * math.sin(t), top(b - rb) - rb * (1 - math.cos(t))) for t in np.linspace(0.3, math.pi / 2, 4)] + [(b, bottom)]
@@ -49,7 +49,7 @@ def _blob(bm, c, half, mat, n=18, rings=9, power=3.5):
 def build(name='seat_bench_2'):
     M = {k: imats.m(v) for k, v in (('leather', 'seat_leather'), ('black', 'cabin_black'), ('red', 'cabin_red'), ('plastic', 'cabin_beige'), ('belt', 'seat_belt'), ('chrome', 'cabin_chrome'))}; idx = {k: i for i, k in enumerate(M)}; bm = bmesh.new(); z0 = C.FLOOR_Z
     # --- the cushion: sections across the car from under the backs to its nose ----------------------------------------------
-    x_r, x_f = FRONT_X - DEPTH - 0.06, FRONT_X; xs = np.r_[np.linspace(x_r, x_f - NOSE[0], 18), x_f - NOSE[0] + NOSE[0] * np.sin(np.linspace(0, 1, 9)[1:] * math.pi / 2)]
+    x_r, x_f = FRONT_X - DEPTH - 0.06, FRONT_X; xs = np.r_[np.linspace(x_r, x_f - NOSE[0], 13), x_f - NOSE[0] + NOSE[0] * np.sin(np.linspace(0, 1, 9)[1:] * math.pi / 2)]
     for side in (1, -1):                                                    # its two parts either side of the split
         st = []
         for x in xs:
@@ -66,13 +66,13 @@ def build(name='seat_bench_2'):
     # --- the backs: sections across the car at each height ------------------------------------------------------------------
     x_foot = FRONT_X - DEPTH; tl = math.tan(math.radians(LEAN)); TOP_R = 0.03
     for nm, (ya, yb) in BACKS.items():
-        z_hi = BACK_TOP[1 if nm == 'C' else 0]; z_lo = TOP_Z[0] - 0.05; zs = np.r_[np.linspace(z_lo, z_hi - TOP_R, 14), z_hi - TOP_R + TOP_R * np.sin(np.linspace(0.15, 1.0, 6) * math.pi / 2)]; st = []; ring = None
+        z_hi = BACK_TOP[1 if nm == 'C' else 0]; z_lo = TOP_Z[0] - 0.05; zs = np.r_[np.linspace(z_lo, z_hi - TOP_R, 10), z_hi - TOP_R + TOP_R * np.sin(np.linspace(0.15, 1.0, 6) * math.pi / 2)]; st = []; ring = None
         for z in zs:
             lim = WELL[0] + (HALF_W + 0.01 - WELL[0]) * _sstep((z - WELL[3]) / WELL[4]); a, b = max(ya, -lim), min(yb, lim)          # the outer backs' feet clear the wells
             u = max(0.0, (z - (z_hi - TOP_R)) / TOP_R); inset = TOP_R * (1 - math.sqrt(max(0.0, 1 - u * u))); hw = (b - a) / 2 - 0.004 - 1.2 * inset; yc = (a + b) / 2
             xf = x_foot - (z - TOP_Z[0]) * tl; bol = 0.0 if nm == 'C' else 0.028 * _sstep((z_hi - z) / 0.15)
             top = lambda ay, hw=hw, bol=bol, inset=inset: THICK - 2 * inset - bol * (1 - _sstep((ay - (hw - 0.15)) / 0.08))
-            ring = [(xf - THICK + inset + h, yc + y, z) for y, h in S3._section(hw, top, 0.0, n=15)]; st.append(ring)
+            ring = [(xf - THICK + inset + h, yc + y, z) for y, h in S3._section(hw, top, 0.0, n=11)]; st.append(ring)
         c = np.mean(ring, axis=0)
         for k, dz in ((0.80, 0.004), (0.45, 0.007), (0.12, 0.008)): st.append([(c[0] + (p[0] - c[0]) * k, c[1] + (p[1] - c[1]) * k, p[2] + dz) for p in ring])
         _loft(bm, st, idx['leather'])

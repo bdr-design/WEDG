@@ -12,9 +12,9 @@ bare hull is 0.5 to 0.9 % of the view: slivers along the glass's edges, where re
 the bench's and seats' finer shapes (bolsters, quilting, perforation, seams on the seating panel), the door's switch
 panel, the shifter, and the photo differences the reviews list.
 
-Game files (the owner's decision: layered detail): `../cabin.glb` is the whole cabin (84k triangles, one draw);
+Game files (the owner's decision: layered detail): `../cabin.glb` is the whole cabin (67k triangles, one draw);
 `../cabin_lod0.glb` is the layer the game loads while the player is inside (lod_cabin.py: the faces no occupant can
-see dropped, 55k, the same to look at). The owner's figure for it is about 40k: the rest is to come off at the
+see dropped, 44k, the same to look at: 0.1 to 1.3 % of pixels differ). The owner's figure for it is about 40k: the rest is to come off at the
 source (the wheel's rim, the seats' and the bench's lofts). The game must draw the black glass clear from inside.
 
 Five seats: the owner chose the official ZX's five seats (10 Nov), though rear_bench shows a third row's headrests.

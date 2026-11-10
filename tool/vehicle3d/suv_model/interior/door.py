@@ -41,8 +41,8 @@ def build(name='door_trim_FL', keep=None):
     beige_m = lab == DM.PARTS.index('beige')
     if keep is not None:
         rr, cc = np.mgrid[0:panel.shape[0], 0:panel.shape[1]]; kx, kz = to_xz(rr.ravel(), cc.ravel()); km = np.asarray(keep(np.asarray(kx), np.asarray(kz))).reshape(panel.shape); panel &= km; beige_m = beige_m & ndimage.binary_erosion(km, iterations=5)      # (the leather kept 5 px off the cut, not on the black's wall)
-    R.solid(bm, panel, to_xz, s, 2 * PANEL[0], PANEL[1], mat=idx['panel'], rings=2, spacing=0.012, fill=0.06)
-    R.solid(bm, beige_m, to_xz, s, 2 * BEIGE[0], BEIGE[1], mat=idx['beige'], rings=6, spacing=0.012, fill=0.06)
+    R.solid(bm, panel, to_xz, s, 2 * PANEL[0], PANEL[1], mat=idx['panel'], rings=2, spacing=0.020, fill=0.08)
+    R.solid(bm, beige_m, to_xz, s, 2 * BEIGE[0], BEIGE[1], mat=idx['beige'], rings=5, spacing=0.016, fill=0.08)
     # only the cabin's side is wanted: drop the caps that lie on the door's far side
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if min(v.co.y for v in f.verts) > 0.004], context='FACES')
     solids = set(bm.faces)                                      # (not a count: new faces take the slots the dropped caps left)

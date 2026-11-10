@@ -171,7 +171,7 @@ def build(name='dashboard'):
     for part, (pl, thick, rad, mat, _) in PARTS.items():
         if part in BODY: continue
         n0 = len(bm.verts); r, c = np.where(reg[part]); mpp = pl.metres_per_px(r.mean(), c.mean())
-        R.solid(bm, reg[part], pl.to_ab, mpp, thick, min(rad, thick / 2), y0=thick / 2, mat=idx[mat], rings=4 if rad > 0.02 else 2, spacing=0.014, fill=0.07)
+        R.solid(bm, reg[part], pl.to_ab, mpp, thick, min(rad, thick / 2), y0=thick / 2, mat=idx[mat], rings=4 if rad > 0.02 else 2, spacing=0.018, fill=0.08)
         bm.verts.ensure_lookup_table()
         for v in bm.verts[n0:]: v.co = pl.to_car(v.co); v[lay] = pl.mx @ Vector(v[lay])
         if part.startswith('console'): narrow.extend(bm.verts[n0:])
