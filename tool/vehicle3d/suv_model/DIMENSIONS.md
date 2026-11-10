@@ -93,8 +93,8 @@ Heights above the ground, in mm (real photo at 4.17 mm/px):
 - Behind the B pillar, the rear wheel, the rear door's rear edge and the rear handle are about 115 mm too far back
   (photo wheelbase 2969 mm, spec 2850 mm). The tail is in the right place, so the rear overhang is about 115 mm too
   short.
-- The wheels are 9 % too big: the tyre is 870 mm across, against 799.5 mm for the real 265/55R20 (870 / 799.5 =
-  1.088), and the rim's lip is 0.303 m out, a 23.9 inch rim. The hub is 67 mm too high (437 against 370). The owner
+- The wheels are 9 % too big: the tyre is 872 mm across, against 799.5 mm for the real 265/55R20 (872 / 799.5 =
+  1.09), and the rim's lip is 0.296 m out, a 23.3 inch rim. The hub is 63 mm too high (433 against 370). The owner
   has decided the model keeps these wheels as drawn (section 4).
 - The whole car is drawn about 5 % too tall: the rails top out at 2023 mm, against the official 1925 mm.
 - Widths: views.json scaled the front, rear and top photos by assuming a 2.2 m mirror-to-mirror width, which no
@@ -136,11 +136,13 @@ Heights above the ground, in mm (real photo at 4.17 mm/px):
 - Built directly in the real frame:
   - **Wheel openings** (ext_parts.ARCH_PTS): from the owner's photo, like the wheels: round each hub on 01_left,
     where the dark of the wheel well ends and the paint begins, every 10 degrees (tools/archphoto.py; black against
-    dark paint, so within about 15 mm). Both openings top out 911 mm up, 67 mm over the tyre; the nearest the tyres
-    come to the body is 47 mm front and 32 rear. The real photo's openings (tops 862 front, 930 rear) were used up
-    to r10 and do not hold the bigger wheel: 15 mm over the front tyre. The flare band over each opening keeps the
-    real photo's width, 66 and 78 mm (tops 977 and 989). The flares stand 26 mm out of the flank and stop at 0.990 m
-    a side, so the widest point of the car is the spec's 1980 mm.
+    dark paint, so within about 15 mm). Each point keeps its offset from the hub in the photo, unscaled, as the
+    wheel does. Both openings top out 948 mm up. Gaps round the tyre as seen from the side, model / photo: front
+    57 ahead, 98 over, 55 behind / 64, 104, 62; rear 71, 98, 41 / 79, 104, 48 (the flare's lip is 6 mm inside the
+    cut). The real photo's openings (tops 862 front, 930 rear) were used up to r10 and do not hold the bigger
+    wheel; r11 mapped the photo's openings with the body, which put the rear wheel forward in its opening. The
+    flare band over each opening keeps the real photo's width, 66 and 78 mm. The flares stand 26 mm out of the
+    flank and stop at 0.990 m a side, so the widest point of the car is the spec's 1980 mm.
   - **Door shut lines, handles, fuel flap** (sides.py), from the real photo: the front door's front edge 617, the B
     seam 1692 and the rear door's rear edge 2738 behind the front hub; door bottoms 429 up; handle centres 1522 and
     2473 behind the front hub, 1130 and 1152 up, 0.27 m long.
@@ -207,6 +209,7 @@ Silhouette IoU with `REAL=1`:
 | r9 | 0.989 | 0.970 | 0.950 | 0.989 | the tail's surface rebuilt from the side silhouette and the top photo's plan (section 7), side-glass surround |
 | r10 | 0.990 | 0.971 | 0.952 | 0.989 | the photos' wheels (owner's decision); outlines read to a fraction of a pixel |
 | r11 | 0.990 | 0.971 | 0.952 | 0.989 | wheels and wheel openings re-measured on the photo; windshield's side edges and surround |
+| r12 | 0.990 | 0.971 | 0.951 | 0.989 | wheel openings set round the hubs unscaled, like the wheels |
 
 Edge distance (mm) and colour error, side / front / rear / top:
 
@@ -218,6 +221,7 @@ Edge distance (mm) and colour error, side / front / rear / top:
 | r9 | 44.1 / 15.8 / 24.0 / 102.1 | 45.3 / 53.7 / 49.0 / 35.8 |
 | r10 | 46.1 / 16.6 / 24.1 / 97.0 | 44.5 / 53.8 / 48.9 / 35.8 |
 | r11 | 44.1 / 16.3 / 24.0 / 109.4 | 43.8 / 53.7 / 48.8 / 35.8 |
+| r12 | 43.7 / 16.3 / 24.2 / 109.5 | 43.6 / 53.6 / 48.9 / 35.7 |
 
 Those two numbers are dominated by reflections and highlights that the photos paint and a clean render does not
 have, so they are useful only for comparing one build with the next. The silhouette scores cannot see what r8 and r9
@@ -247,7 +251,10 @@ Because the model is not finished (later steps in PLAN.md):
   _iron; the review measured 0.26 to 0.33); the windshield frame's reflection on the hood's rear third is still wavy;
 - the quarter glass is a plain shape; the photo's kicks up at the rear and has a chrome surround;
 - no interior yet, so the rear lamps' housings and the far windows show through the glass;
-- the lug nuts are flat, the step tread has no ribs, there are no mud flaps and no number plate;
+- the lug nuts are flat, the step tread has no ribs, there are no mud flaps (the photo has one behind each wheel)
+  and no number plate;
+- the windshield's pane is narrower than the front photo's glass, by 27 mm a side at the foot and about 40 above
+  the knee (the r11 review's reading, not yet re-measured): the black surround lies where the photo has glass;
 - approach 29.7 and departure 24.0 degrees, measured on the model, against the official 32 and 25.
 
 ## 7. The rear

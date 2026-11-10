@@ -5,7 +5,7 @@ The owner's four photos are AI renders. Measured against the official figures an
 - the rear wheel, the rear door's rear edge and the rear handle sit about 115 mm too far back (photo wheelbase
   2.969 m, real 2.850 m), while the tail is in the right place (photo length 4.990 m on the knots below, 4.993
   measured on the silhouette; real 4.985 m);
-- the wheels are about 9 % too big (tyre 0.870 m across, real 265/55R20 is 0.800 m) and the whole car is drawn about
+- the wheels are about 9 % too big (tyre 0.872 m across, real 265/55R20 is 0.800 m) and the whole car is drawn about
   5 % too tall: the rails top out at 2.023 m, against the official 1.925 m (which is the height over the roof rails);
 - the front photo is 2.0125 m across its flares on its assumed scale, the spec sheet says 1.980 m.
 So everything measured on the photos is built in the photo frame and then mapped here: x through a piecewise-linear

@@ -154,20 +154,23 @@ def antenna(shell, mat):
     print(f'antenna: roof {roof(xp, 0.0):.4f} at the tip, top {zs.max():.4f}, {tall:.1f} mm tall, {2000 * ys.max():.1f} mm wide at the rim')
     return o
 
-# Wheel openings, real frame. The wheels are the size the owner's photos draw them (his decision), and the real car's
-# openings do not hold them: the real front opening tops out 0.862 m up, 15 mm over the bigger tyre. So the openings
-# are the owner's photo's too: on 01_left, round each hub, where the dark of the wheel well ends and the paint
-# begins, every 10 degrees (tools/archphoto.py; black against dark paint, so within about 15 mm). Each point is
-# (metres behind the axle, metres up), from the front foot over the top to the rear foot. Both openings top out
-# 0.911 m up, 67 mm over the tyre. (The real photo's, for the record: tops 0.862 front and 0.930 rear.)
+# Wheel openings. The wheels are the size the owner's photos draw them (his decision), and the real car's openings do
+# not hold them: the real front opening tops out 0.862 m up, 15 mm over the bigger tyre. So the openings are the
+# owner's photo's too: on 01_left, round each hub, where the dark of the wheel well ends and the paint begins, every
+# 10 degrees (tools/archphoto.py; black against dark paint, so within about 15 mm). Each point is (metres behind the
+# axle, metres up), from the front foot over the top to the rear foot, and it is the point's offset from the hub in
+# the photo, unscaled, set on the model's hub: the wheel is the photo's size unscaled, so the opening round it is
+# too. (Mapped with the body instead, the rear wheel sat 31 mm from the front of its opening and 90 from the back,
+# where the photo has 79 and 48, and the gap over the tyres was 66 mm for the photo's 104.) Both openings top out
+# 0.948 m up, 104 mm over the tyre.
 ARCH_PTS = (
-    ((-0.494, 0.20), (-0.494, 0.489), (-0.480, 0.570), (-0.454, 0.651), (-0.415, 0.731), (-0.362, 0.808), (-0.288, 0.870),
-     (-0.194, 0.900), (-0.097, 0.909), (-0.002, 0.911), (0.092, 0.911), (0.189, 0.903), (0.279, 0.867), (0.351, 0.805),
-     (0.404, 0.730), (0.442, 0.650), (0.469, 0.570), (0.483, 0.489), (0.483, 0.20)),
-    ((-0.468, 0.20), (-0.468, 0.492), (-0.449, 0.573), (-0.419, 0.652), (-0.378, 0.728), (-0.327, 0.802), (-0.263, 0.867),
-     (-0.177, 0.899), (-0.088, 0.909), (0.000, 0.911), (0.105, 0.911), (0.215, 0.906), (0.320, 0.876), (0.397, 0.807),
-     (0.449, 0.726), (0.494, 0.649), (0.515, 0.566), (0.527, 0.487), (0.527, 0.20)))
-FLARE_W = (0.066, 0.078)          # the flare band's width over the top of the opening: front, rear (from the real photo; on the owner's photo's openings the flares top out 0.977 front, 0.989 rear)
+    ((-0.493, 0.20), (-0.493, 0.495), (-0.478, 0.582), (-0.452, 0.669), (-0.414, 0.755), (-0.360, 0.837), (-0.286, 0.904),
+     (-0.192, 0.936), (-0.095, 0.945), (0.000, 0.948), (0.095, 0.948), (0.193, 0.939), (0.285, 0.901), (0.357, 0.834),
+     (0.411, 0.753), (0.450, 0.668), (0.477, 0.582), (0.491, 0.495), (0.491, 0.20)),
+    ((-0.507, 0.20), (-0.507, 0.497), (-0.487, 0.585), (-0.454, 0.670), (-0.409, 0.751), (-0.355, 0.831), (-0.285, 0.901),
+     (-0.192, 0.935), (-0.095, 0.945), (0.000, 0.948), (0.095, 0.948), (0.195, 0.943), (0.290, 0.910), (0.359, 0.836),
+     (0.407, 0.749), (0.447, 0.666), (0.466, 0.578), (0.477, 0.492), (0.477, 0.20)))
+FLARE_W = (0.066, 0.078)          # the flare band's width over the top of the opening: front, rear (the real photo's widths, on the owner's photo's openings)
 FLARE_Y, FLARE_END_Z = 0.990, 0.50   # the flares are the widest point of the car: the official 1.980 m; they end 0.50 m up
 FLARE_PROUD = 0.026                # how far a flare stands out of the body beside it (the flank is 0.961-0.967 out)
 
@@ -185,7 +188,7 @@ def arch_curve(i, offset=0.0, step=0.012):
     return np.column_stack([WH.AXLE_X[i] - p[:, 0], p[:, 1]])
 
 def arches(shell, paint, liner, flare_mat):
-    """Cut each wheel opening from the shell to the outline traced on the real photo, line it, and lay a flare band along
+    """Cut each wheel opening from the shell to the outline from the owner's photo (ARCH_PTS), line it, and lay a flare band along
     its edge that stands 26 mm proud of the body beside it, out to the official width. Runs in the real frame."""
     # where the body is beside each flare, before the openings are cut
     body_y = {}

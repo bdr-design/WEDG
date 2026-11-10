@@ -163,7 +163,7 @@ def glass_roof(shell, glass_mat, seal_mat):
     hy = float(np.abs(B[np.argsort(np.abs(B[:, 0] - xd))[:4]][:, 1]).min())
     ys = np.linspace(-hy, hy, 21); o = len(V)
     for y in ys: V += [(xd - 0.010, y, zr(xd - 0.010, y) - SEAL_DEPTH), (xd + 0.010, y, zr(xd + 0.010, y) - SEAL_DEPTH)]
-    for i in range(len(ys) - 1): a = o + 2 * i; F.append([a + 1, a, a + 2, a + 3])
+    for i in range(len(ys) - 1): a = o + 2 * i; F.append([a, a + 1, a + 3, a + 2])      # facing up: it is seen from above, through the gap
     seal = _mesh('roof_glass_seal', V, F, seal_mat)
 
     # the panes: the top face, a rounded edge and a skirt down to the seal
