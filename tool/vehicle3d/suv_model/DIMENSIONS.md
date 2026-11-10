@@ -236,6 +236,10 @@ Because the photos are wrong or disagree (not to be fixed):
 - the front under-cover shows in the orthographic rear view, where the rear photo has open air;
 - the rails follow the top photo, so they sit 3 to 4 cm further in than the rear photo draws them;
 - the mirrors follow the front photo;
+- behind the mirrors no photo shows the body's side (z 1.28 to 1.62 in the front photo: the shoulder under the
+  glass and most of the side glass). It is a smooth curve between the outline's slopes either side (35 degrees off
+  plumb under the belt, 15 above the mirrors); up to r16 it was a straight line that met the glass above at a fold of
+  9 to 15 degrees, a crease along the whole greenhouse, which the owner saw from the front;
 - the tail's heights follow 03_rear, so in the side view the bumper's shoulder is 8 to 12 cm lower than 01_left draws
   it and the tail lamp 1 to 3 cm lower (section 7);
 - the bumper stands out beyond the lamps by 01_left's 30 mm, not 04_top's 82;

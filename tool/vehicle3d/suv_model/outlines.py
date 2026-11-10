@@ -99,6 +99,17 @@ _zf = np.array(_zf[::-1]); _wf = np.array(_wf[::-1]) + _centred(_ff[::-1]) * cf[
 # mirrors: a bulge of more than 4 cm over the line between the rows either side of it
 mirror = (_zf > 1.30) & (_zf < 1.62)
 base = np.interp(_zf, _zf[~mirror], _wf[~mirror]); _wf = np.where(mirror & (_wf > base + 0.01), base, _wf)
+# Behind the mirrors no photo shows the body's side (z 1.28 to 1.62: the shoulder under the glass and most of the side
+# glass). A straight line across it met the glass above at a fold of 9 to 15 degrees, a crease along the whole
+# greenhouse (the owner saw it from the front, 10 Nov). The gap is bridged with a curve instead, leaving each end at
+# the slope the outline has there: 35 degrees off plumb under the belt, easing to 15 at the top of the mirrors.
+def _bridge(z, w, z0, z1):
+    a = (z > z0 - 0.04) & (z < z0); b = (z > z1) & (z < z1 + 0.07)
+    m0 = np.polyfit(z[a], w[a], 1)[0]; m1 = np.polyfit(z[b], w[b], 1)[0]; w0 = float(np.interp(z0, z, w)); w1 = float(np.interp(z1, z, w))
+    k = (z >= z0) & (z <= z1); t = (z[k] - z0) / (z1 - z0); h = z1 - z0; out = w.copy()
+    out[k] = (2 * t**3 - 3 * t**2 + 1) * w0 + (t**3 - 2 * t**2 + t) * h * m0 + (-2 * t**3 + 3 * t**2) * w1 + (t**3 - t**2) * h * m1
+    return out
+_wf = _bridge(_zf, _wf, 1.28, 1.63)
 _wf = np.where(_zf < 1.0, np.minimum(_wf, 0.985), _wf)      # below the fenders the tyres set the width: the body is 1.97 m
 _wf_s = _iron(_wf)
 def front_half(z): return np.interp(z, _zf, _wf_s)
