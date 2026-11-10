@@ -11,7 +11,16 @@ XF = 2.498; K = 1.034
 def interp(t, d): ds, vs = zip(*t); return float(np.interp(d, ds, vs))
 TOP = [(0.0, 1.13), (0.40, 1.215), (1.00, 1.245), (1.46, 1.26), (2.00, 1.27), (3.50, 1.285), (4.40, 1.30), (4.90, 1.30)]
 belt = lambda d: interp(TOP, d) * K
-def bplane(d): return belt(1.5) + (d - 1.5) / 2.9 * (belt(4.4) - belt(1.5))
+# The belt: the chrome line under the side glass on 01_left (its brightest row): z 1.336 at d 2.30, 1.356 at 3.10,
+# 1.371 at 3.50, 1.380 at 3.80 (d metres behind the nose, photo frame), a straight line within 2 mm. Up to r19 the
+# belt was 2 to 4.5 cm lower and rose half as fast. Behind d 3.88 the line kicks up under the quarter glass: 1.389 at
+# d 3.90, 1.409 at 4.00, 1.436 at 4.10, 1.462 at 4.20, 1.498 at 4.30, 1.518 at 4.33, where the glass ends (Q below, one
+# straight cut from the belt at d 3.88 to that corner: up to 13 mm over the photo's curve in the middle).
+BELT = (2.298, 1.336, 0.0293)
+def bplane(d): return BELT[1] + (d - BELT[0]) * BELT[2]
+Q_D = (3.878, 4.328)                    # the kick-up's foot on the belt, and the quarter glass's rear edge
+Q_TOP = 1.518
+def zlow(d): return max(bplane(d), bplane(Q_D[0]) + (d - Q_D[0]) / (Q_D[1] - Q_D[0]) * (Q_TOP - bplane(Q_D[0])))
 ZTOP, ZDOOR = 1.79 * K, 1.835 * K
 ZWS0, ZWS1 = 1.405 * K, 1.81 * K
 # The rear window, measured row by row on the rear photo (rearwork/seal.py, colrun.py; y on the front photo's scale):
@@ -33,7 +42,7 @@ def ws_half(z): return interp([(1.405, 0.733), (1.60, 0.684), (1.81, 0.625)], z 
 def line_plane(p0, p1):
     p0, p1 = Vector(p0), Vector(p1); return p0, (p1 - p0).cross(Vector((0, 1, 0))).normalized()
 A_CO, A_NO = line_plane((XF - 1.55, 0, 1.27 * K), (XF - 2.39, 0, 1.86 * K))
-Q_CO, Q_NO = line_plane((XF - 4.20, 0, bplane(4.20)), (XF - 4.42, 0, bplane(4.42) + 0.22 * K))
+Q_CO, Q_NO = line_plane((XF - Q_D[0], 0, bplane(Q_D[0])), (XF - Q_D[1], 0, Q_TOP))
 def plane_sign(co, no, ref):
     sg = 1 if (Vector(ref) - co).dot(no) > 0 else -1
     return lambda p: (Vector(p) - co).dot(no) * sg
@@ -63,7 +72,7 @@ def cut_outline(bm):
     for zc in (ZTOP, ZTOP + SURROUND, ZDOOR): bis(side(1.4, 4.75), (0, 0, zc), (0, 0, 1))
     bis(side(1.3, 2.8), A_CO, A_NO); bis(side(1.3, 2.8), A_OUT, A_NO)      # the pane's edge, and the surround's
     bis(side(1.3, 2.0), A_FOOT + A_BEV * 1.3 * SURROUND, A_BEV)
-    for dc in (*B_PILLAR, *C_PILLAR, 4.42, 4.42 + SURROUND, 1.565, 2.735, 2.775, 3.715): bis(side(dc - 0.6, dc + 0.6), (XF - dc, 0, 0), (1, 0, 0))
+    for dc in (*B_PILLAR, *C_PILLAR, Q_D[1], Q_D[1] + SURROUND, 1.565, 2.735, 2.775, 3.715): bis(side(dc - 0.6, dc + 0.6), (XF - dc, 0, 0), (1, 0, 0))
     bis(side(3.9, 4.75), Q_CO, Q_NO); bis(side(3.9, 4.75), Q_OUT, Q_NO)
     # The windshield's side edge leans, with a knee at z 1.60 K (ws_half): one plane per band of height, and the
     # surround's edge 3 cm outside each. (One plane from foot to head cut the chord across the knee, and the faces
@@ -96,7 +105,7 @@ def kind(c, n):
         if ay < rg_half(c.z) + RG_SEAL - E:
             if ZRG0 - RG_SEAL + E < c.z < ZRG_C + E: return 'seal'
             if ZRG_C - E < c.z < RG_UNDER and n.z < -0.3: return 'seal'      # the spoiler's underside
-    if ws_half(c.z) + 0.03 < ay < 0.95 and 1.4 < d < 4.5 and bplane(d) + E < c.z < ZTOP - E and behind_A(c) > E and d < 4.42 - E and above_Q(c) > E:
+    if ws_half(c.z) + 0.03 < ay < 0.95 and 1.4 < d < 4.5 and bplane(d) + E < c.z < ZTOP - E and behind_A(c) > E and d < Q_D[1] - E and above_Q(c) > E:
         if B_PILLAR[0] - E <= d <= B_PILLAR[1] + E or C_PILLAR[0] - E <= d <= C_PILLAR[1] + E: return 'pillar'
         return 'glass'
     return None
@@ -119,7 +128,7 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
     # shell's rows. The rear window has its own measured seal.
     def side_out(c):
         """How far outside the side glass's outline the point is, the farthest of its five edges; negative inside."""
-        return -min((c - BL0).dot(NB), ZTOP - c.z, behind_A(c), c.x - (XF - 4.42), above_Q(c))
+        return -min((c - BL0).dot(NB), ZTOP - c.z, behind_A(c), c.x - (XF - Q_D[1]), above_Q(c))
     gverts = {v for f in glass_faces for v in f.verts}
     edge_v = [v for v in gverts if any(f.material_index != gi for f in v.link_faces)]
     from mathutils.kdtree import KDTree
@@ -162,7 +171,7 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
     # chrome strips along the foot and the head of the side windows
     strips = []
     for s in (1, -1):
-        for nm, zf, d0, d1 in (('low', lambda d: bplane(d) - 0.004, 1.62, 4.20), ('top', lambda d: ZTOP + 0.012, 2.40, 4.45)):
+        for nm, zf, d0, d1 in (('low', lambda d: zlow(d) - 0.004, 1.62, Q_D[1]), ('top', lambda d: ZTOP + 0.012, 2.40, Q_D[1] + 0.03)):
             V, F = [], []
             ds = np.linspace(d0, d1, 60)
             for d in ds:

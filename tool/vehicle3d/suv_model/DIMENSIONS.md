@@ -256,7 +256,12 @@ Because the model is not finished (later steps in PLAN.md):
 - the bands the hood and the flanks showed in reflections were the photos' pixel steps (folds of 2 degrees between
   stations on the hood, median; 0.3 now that the outlines are read to a fraction of a pixel, outlines._frac and
   _iron; the review measured 0.26 to 0.33); the windshield frame's reflection on the hood's rear third is still wavy;
-- the quarter glass is a plain shape; the photo's kicks up at the rear and has a chrome surround;
+- the belt and the quarter glass (r20): the chrome line under the side glass on 01_left is at z 1.336 / 1.356 /
+  1.371 / 1.380 at 2.30 / 3.10 / 3.50 / 3.80 m behind the nose (photo frame), and kicks up behind 3.88 to 1.518 at
+  4.33, where the quarter glass ends. Up to r19 the belt was 2 to 4.5 cm lower, rose half as fast, and the quarter
+  glass ran 9 cm further back with a short steep corner. The kick-up is one straight cut (up to 13 mm over the
+  photo's curve), with the chrome strip along it; the photo's wide bright blade up the glass's rear edge and its
+  rounded upper rear corner are not modelled yet;
 - the glass is blacked out all round and opaque (the owner's decision, 10 Nov: the full dark tint), so nothing
   shows through it from outside; there is no interior yet;
 - the lug nuts are flat, the step tread has no ribs and there is no number plate. There are no mud flaps behind

@@ -92,5 +92,7 @@ Steps:
 - 10 Nov, build r19: the review of r18 confirmed the crease gone and found the mirrors left off the narrowed doors
   and the side glass hollow in section: the glass is flat now, the turn is in the shoulder under the belt, and the
   mirrors' arms reach the doors. r19, REAL=1: side 0.990, front 0.973, rear 0.951, top 0.989; 190,230 triangles.
+- 10 Nov, build r20: the belt line raised to the photo's chrome line (it was 2 to 4.5 cm low) and the quarter glass's
+  lower edge kicked up to its rear edge as in the photo, with the chrome strip along it. 189,764 triangles.
 - Next: the quarter glass's
   kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.
