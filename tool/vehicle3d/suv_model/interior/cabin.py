@@ -38,7 +38,13 @@ WHEEL = (0.420, 0.411, 1.176, 24.0)
 # (position, where it looks, degrees across, the column of the car's centre line or None, what to hide)
 CAMERAS = {'dash_front': ((-0.30, 0.0, 1.45), (-0.30 + math.cos(math.radians(18.6)), 0.0, 1.45 - math.sin(math.radians(18.6))), 89.2, 856, ('seat_',)),
            'driver_pov': ((-0.30, 0.42, 1.45), (0.75, 0.35, 1.12), 78.0, None, ('seat_',)),          # CHOICE, to be solved
-           'rear_bench': ((-0.05, 0.0, 1.20), (-1.6, 0.0, 1.05), 92.0, None, ('seat_',))}            # CHOICE, to be solved
+           # rear_bench: no camera fits all of it. Its bench is 1467 px wide at the cushion's front edge and its
+           # seat backs 1053 px across; taking the bench as 1.45 m wide, the backs as 1.40 m and 0.5 m further away
+           # gives 1447 px focal length (60 degrees across) 1.43 m ahead of the cushion's front edge; the cushion's top,
+           # 171 px deep for 0.5 m, is then seen from 23 degrees above, 0.73 m over it, looking down 16 degrees. At
+           # that the belts' webbing comes out 52 mm wide (47 is the standard). The cushion's front edge is taken 0.75 m
+           # behind the car's middle and 0.93 m up (CHOICE). The centre line is at column 840.
+           'rear_bench': ((0.68, 0.0, 1.66), (0.68 - math.cos(math.radians(16.0)), 0.0, 1.66 - math.sin(math.radians(16.0))), 60.0, 840, ('seat_F', 'dashboard', 'steering', 'door_trim_F'))}
 
 
 def _place(ob, loc, rot=(0, 0, 0)):
@@ -62,6 +68,7 @@ def build():
     # the wheel is built facing -y with z up: turn it to face the driver (-x) and lean its top forward
     w.rotation_euler = (0, math.radians(rake), -math.pi / 2) if False else (math.radians(-rake), 0, math.pi / 2); w.location = (x, y, z); out.append(w)
     import dash as DASH; out.append(DASH.build())
+    import bench as BENCH; out.append(BENCH.build())
     bpy.ops.mesh.primitive_plane_add(size=1); f = bpy.context.active_object; f.name = 'cabin_floor'; f.scale = (2.6, CABIN_W, 1); f.location = (-0.35, 0, FLOOR_Z)
     import seat as S2; f.data.materials.append(S2._mat('cabin_carpet', (0.42, 0.33, 0.22), rough=0.95)); out.append(f)
     return out
