@@ -31,3 +31,15 @@ CONSOLE = [
     ('flat', 'console', 'dark', -60.0, circle(792, 872, 57, 40)), ('flat', 'console', 'dark', -60.0, circle(964, 872, 57, 40)),            # the cup holders' floors
 ]
 SHIFTER = {'foot': (855, 775), 'knob': (825, 626, 903, 687), 'boot': (810, 687, 901, 817)}        # where it stands on the console, and its knob and boot as boxes on the photo
+
+# on the dashboard's faces either side of the stack (first readings off the whole photo and one enlargement)
+DASH = [
+    ('flat', 'screen', 'display', 0.3, box(709, 300, 1000, 403)),                  # the screen's display
+    ('flat', 'cluster', 'display', 0.0, [(330, 440), (345, 395), (420, 368), (560, 363), (568, 440), (560, 466), (345, 466)]),      # the instruments' display, behind the wheel
+    ('flat', 'upper', 'gloss', 0.5, box(150, 370, 229, 424)), ('flat', 'upper', 'gloss', 0.5, box(1400, 370, 1530, 424)),             # the outer vents
+    ('prism', 'upper', 'silver', 12.0, circle(659, 391, 20)), ('prism', 'upper', 'black', 14.0, circle(659, 391, 15)),                # the round switch right of the instruments
+    ('prism', 'lower', 'black', 2.0, box(603, 550, 655, 564)), ('prism', 'lower', 'black', 2.0, box(603, 568, 655, 582)), ('prism', 'lower', 'black', 2.0, box(603, 586, 655, 600)),
+    ('flat', 'lower', 'dark', 0.3, box(1056, 444, 1480, 447)), ('flat', 'lower', 'dark', 0.3, box(1056, 657, 1480, 660)),             # the glovebox's upper and lower seams
+    ('flat', 'lower', 'dark', 0.3, box(1056, 444, 1059, 660)), ('flat', 'lower', 'dark', 0.3, box(1477, 444, 1480, 660)),
+    ('flat', 'lower', 'dark', 0.5, box(1112, 474, 1198, 506)), ('prism', 'lower', 'silver', 1.5, circle(1132, 490, 9)),              # its latch
+]

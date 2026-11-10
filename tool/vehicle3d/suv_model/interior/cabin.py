@@ -16,11 +16,13 @@ FLOOR_Z = 0.555                                      # CHOICE: the headliner is 
 DOOR_Y = CABIN_W / 2                                 # the door trims' panel plane (the cabin's widest)
 FRONT_DOOR_X, REAR_DOOR_X = (0.9385, -0.1365), (-0.1365, -1.1825)
 TRIM_TOP_Z = 1.235                                   # the trims' top edge, at the window's sill (the belt is 1.229 to 1.261 along the front door)
-SEAT_X, SEAT_Y = -0.62, 0.443                        # CHOICE: the front seats' rearmost point (the cushion's front edge is then 0.23 m behind the wheel's rim); across, they are centred on the wheel
-# The steering wheel's centre x, y, z and its rake in degrees (top leaning forward). On dash_front its middle is at
-# column 408, row 520 and it is 384 px wide: through that photo's camera (below), a wheel 0.38 m across is 0.84 m
-# from the camera along its axis, which puts its middle here. The rake is a CHOICE.
-WHEEL = (0.479, 0.443, 1.136, 24.0)
+SEAT_X, SEAT_Y = -0.66, 0.411                        # CHOICE: the front seats' rearmost point (the cushion's front edge is then 0.23 m behind the wheel's rim); across, they are centred on the wheel
+# The steering wheel's centre x, y, z and its rake in degrees (top leaning forward). On dash_front its rim runs from
+# column 195 to 613 and from row 295 to 713: a circle 418 px across with its middle at (404, 504). Through that
+# photo's camera (below), a wheel 0.38 m tall is 0.77 m from the camera along its axis, which puts its middle here.
+# (The photo draws it as wide as it is tall; seen 30 degrees from the side it should be 0.87 as wide. The height is
+# used.) The rake is a CHOICE.
+WHEEL = (0.420, 0.411, 1.176, 24.0)
 # dash_front's camera, from four readings on the photo (none of them can be checked against a second one, so this
 # is a fit, not a measurement):
 #   the screen's display, 291 px wide; a 12.3 inch display is 0.292 m wide, so about 997 px per metre at the screen;
