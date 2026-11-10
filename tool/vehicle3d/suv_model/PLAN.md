@@ -15,6 +15,8 @@ References:
 Scoring: scratchpad/suv/compare_ext.py renders any model from the four exterior photo cameras. It prints the
 silhouette IoU, the edge distance in mm and the colour error, and writes side-by-sides and overlays. The goal is
 IoU ≥ 0.97 in every view, with the features (lamps, grille, windows, door lines, arches) within about 1 cm.
+As of r9 the side, front and top views meet it (0.989, 0.970, 0.989) and the rear does not (0.950): the rear photo
+disagrees with the spec's width and clearance, which the model keeps (DIMENSIONS.md sections 3, 4 and 6).
 
 Steps:
 1. Body shell: a quad loft of cross sections from the side, front and top outlines (mirrors and wheels removed
@@ -29,7 +31,8 @@ Steps:
 8. Doors and tailgate as hinged parts, the game hooks (as in suv_complete.py: door_*, wheel_*, steering,
    needle_*, eye/eye_look, tail_light/head_light materials), the game GLB and LOD, a performance check in the
    prototype.
-9. Agents review each step against the photos with compare_ext.py; fix; show the owner side by side.
+9. Agents review each step against the photos with compare_ext.py (brief: REVIEW.md); every finding is re-measured
+   before it is acted on; fix; show the owner side by side.
 
 ## Progress
 - Step 1 (body shell), the wheels, the arches, the mirrors and the roof rails are done. Build b3 scores IoU 0.982
@@ -41,8 +44,36 @@ Steps:
   z 0.32-0.66 with a chrome strip at 0.44; fog lamps at y +-0.88, z 0.48.
 - 9 Nov: the owner asked for the dimensions to come from the sources and the photos. DIMENSIONS.md has the official
   ZX figures (4985 x 1980 x 1925, wheelbase 2850, track 1665, 265/55R20) and a real side photo measured against the
-  owner's: the photos put the rear axle 119 mm too far back, the wheels 8 % too big and the car about 5 cm high.
+  owner's: the photos put the rear axle 119 mm too far back, the wheels 9 % too big and the car about 10 cm high.
   realframe.py maps everything built in the photo frame to the real frame; the arches, shut lines, handles and wheels
   are built in the real frame. The rim is now six V pairs of spokes, as in the photo. Two scorer bugs fixed (the
   front, rear and top renders ignored the photos' sideways stretch; the top camera was turned 180 degrees). Build r4,
   scored with REAL=1: IoU side 0.970, front 0.934, rear 0.943, top 0.986.
+- 9 Nov, review round 1 (independent agent, every finding re-measured and confirmed): the official 1925 mm is over
+  the roof rails, not the roof; the real photo's height scale is 4.17 mm/px, not 4.27; the wheel is 20 x 8J; the
+  photo's tyres are 9 % too big; the arches are not one circle and differ front to rear; the scorer cut nothing at
+  the ground and filled holes on one side only. Build r5: the z map now runs through four heights (ground, door
+  bottoms 429, window foot 1253, rail tops 1925), the hub is at the loaded 370 mm, the arches are traced on the real
+  photo (tops 862 front, 930 rear), and the body steps in under the doors to a black sill that carries the side steps.
+  r5, REAL=1: side 0.988, front 0.941, rear 0.951, top 0.986.
+- 9 Nov, build r6: the rails taper in plan with the roof and are 50 mm wide (top photo); a roof antenna fin; under
+  the floor, a rear rigid axle whose differential sits at the official 225 mm clearance, and the front under-cover
+  and lower arms (underbody.py); the shell's underside is matte. r6, REAL=1: side 0.988, front 0.965, rear 0.955,
+  top 0.986; 195,898 triangles before any LOD. DIMENSIONS.md section 6 lists what still differs and why.
+- 9 to 10 Nov, build r7: wheels closed and re-measured (8J rim), a glass roof from the top photo, the axle tunnel,
+  everything under the floor under one clearance rule, a last tidy pass over every mesh. 181,262 triangles.
+- 10 Nov, build r8: the rear re-measured on 03_rear and its parts rebuilt on the surface (lamps with level bands, plate
+  recess, shut line, reflectors, corner panels, chrome strip and silver plate, sensors, wiper, stop lamp); clear lamp
+  covers; a guard in every cut against stray faces. 175,706 triangles.
+- 10 Nov, build r9: the tail's surface itself. It was one smeared slope, up to 38 mm off; it is now the side photo's
+  silhouette, read to a fraction of a pixel, slid along the bumper's plan from the top photo: a shoulder on the bumper
+  that runs round the corners, an upright tailgate behind it, lamps that stand out over it, a crowned rear glass.
+  Within 4 mm of the silhouette from the tailgate to the lamps. The side glass's black surround is a clean band.
+  An independent review of r9 found two misreadings of the top photo and nine smaller faults; all but the three
+  listed at the end of DIMENSIONS.md 7.4 are corrected.
+  r9, REAL=1: side 0.989, front 0.970, rear 0.950, top 0.989; 187,918 triangles before any LOD. DIMENSIONS.md
+  section 7 has the measurements, section 6 what still differs and why.
+- Open questions for the owner: wheels at the real 20-inch size (current) or the photo's bigger look; the photo's
+  glass roof (current) or the real ZX's small moonroof.
+- Next: the hood's and flanks' surfacing (bands in reflections), the windshield's surround, the quarter glass's
+  kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.

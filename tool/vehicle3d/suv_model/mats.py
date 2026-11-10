@@ -29,8 +29,12 @@ def fascia(chrome, trim, black_gloss):
             'grille': M('grille_mesh', (0.012, 0.012, 0.013), rough=0.6),
             'lens_chrome': M('lamp_lens', (0.75, 0.76, 0.78), metal=1.0, rough=0.08),
             'proj_glass': M('lamp_projector', (0.03, 0.035, 0.04), rough=0.03, coat=1.0),
-            'lamp_cover': M('lamp_cover', (0.85, 0.9, 0.95), rough=0.02, coat=1.0, alpha=0.18),
+            # a clear lens has no colour of its own, only its gloss: a pale base turns it milky over the dark housing
+            'lamp_cover': M('lamp_cover', (0.02, 0.022, 0.025), rough=0.02, coat=1.0, alpha=0.18),
             'drl': emit('head_light', (1.0, 0.97, 0.92), 1.0, base=(0.9, 0.9, 0.9)),
             'drl_frost': emit('day_light', (1.0, 0.98, 0.95), 0.5, base=(0.8, 0.82, 0.85), rough=0.35),
             'tail': emit('tail_light', (0.8, 0.02, 0.01), 0.6, base=(0.35, 0.01, 0.01), rough=0.15),
-            'silver': M('silver_trim', (0.55, 0.56, 0.58), metal=1.0, rough=0.3)}
+            'silver': M('silver_trim', (0.55, 0.56, 0.58), metal=1.0, rough=0.3),
+            'red_lens': M('red_lens', (0.42, 0.015, 0.012), rough=0.2, coat=1.0),
+            'gunmetal': M('gunmetal', (0.16, 0.165, 0.17), metal=0.6, rough=0.42),
+            'groove': M('shut_line', (0.002, 0.002, 0.002), rough=0.9)}

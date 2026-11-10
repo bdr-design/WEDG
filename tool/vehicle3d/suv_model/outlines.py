@@ -42,6 +42,27 @@ _k = _step((_b[0] - _xr) / (_b[0] - _b[1])) * _step((_xr - _b[3]) / (_b[2] - _b[
 _zt_s = _zt_s * (1 - _k) + RF.z_photo(roof_centre(_xr)) * _k
 def side_top(x): return np.interp(x, _xs_ok, _zt_s)
 def side_bottom(x): return np.interp(x, _xs_ok, _zb_s)
+# the tail, row by row: the rear-most body point at each height (the middle of the last pixel). side_top gives one
+# height per column, so it cannot follow the notch under the roof spoiler; this does.
+_rows = np.arange(_side.shape[0]); _zr_rows = (c['v0'] - _rows) * c['s']; _xr_rows = np.full(len(_rows), np.nan)
+for j in _rows:
+    q = np.where(_side[j])[0]
+    if len(q): _xr_rows[j] = L / 2 - (q.max() + 0.5 - c['u0']) * c['s']
+_okr = ~np.isnan(_xr_rows); _zr_ok = _zr_rows[_okr][::-1]; _xr_ok = _xr_rows[_okr][::-1]
+def side_rear(z): return np.interp(z, _zr_ok, _xr_ok)
+def tail_contour(z0=0.66, z1=1.62):
+    """The car's rear line in the side photo to a fraction of a pixel: points (x, z) going up from the bumper's rear face
+    to the rear glass. A pixel on the car's edge is part car and part magenta background; how magenta it is says how
+    much of it is car, and the line runs where the car covers half. (side_rear above counts whole pixels: 2.9 mm.)"""
+    from skimage import measure
+    a = np.asarray(Image.open(f'{V}/Black_SUV_Views/01_left.png').convert('RGB')).astype(float); cs = CFG['side']
+    cov = 1 - np.clip((np.minimum(a[..., 0], a[..., 2]) - a[..., 1]) / 255.0, 0, 1)
+    cov *= ndimage.binary_dilation(_side, iterations=3)
+    q = max(measure.find_contours(cov, 0.5), key=len)
+    x = L / 2 - (q[:, 1] - cs['u0']) * cs['s']; z = (cs['v0'] - q[:, 0]) * cs['s']
+    k = np.flatnonzero((x < -2.0) & (z > z0) & (z < z1)); assert np.all(np.diff(k) == 1), 'the tail line is in pieces'
+    P = np.c_[x[k], z[k]]
+    return P if P[0, 1] < P[-1, 1] else P[::-1]
 _front = _mask('02_front'); cf = CFG['front']
 _zf, _wf = [], []
 for v in range(_front.shape[0]):
@@ -64,6 +85,22 @@ mir = (_xt > 0.35) & (_xt < 1.05)
 bt = np.interp(_xt, _xt[~mir], _wt[~mir]); _wt = np.where(mir & (_wt > bt + 0.008), bt, _wt)
 _wt_s = ndimage.gaussian_filter1d(_wt, 3)
 def top_half(x): return np.interp(x, _xt, _wt_s)
+def top_tail_plan(reach=0.32):
+    """The tail's plan in the top photo to a fraction of a pixel: half-widths (on the top photo's own scale, k applied)
+    from the centre line outward, and how far ahead of the car's rear end the outline is at each (the two sides
+    averaged, never falling). top_half above counts whole rows of 2.7 mm, so it is blind to the plan's first
+    millimetres: it makes the car's end dead flat out to 0.27 m a side, where the photo is 3 to 5 mm ahead."""
+    from skimage import measure
+    a = np.asarray(Image.open(f'{V}/Black_SUV_Views/04_top.png').convert('RGB')).astype(float); c = CFG['top']
+    cov = 1 - np.clip((np.minimum(a[..., 0], a[..., 2]) - a[..., 1]) / 255.0, 0, 1)
+    cov *= ndimage.binary_dilation(_top, iterations=3)
+    q = max(measure.find_contours(cov, 0.5), key=len); v, u = q[:, 0], q[:, 1]
+    d = (v.max() - v) * c['s']; y = (u - c['uc']) * c['s'] * c['k']; k = d < reach
+    ys = np.arange(0.0, np.abs(y[k]).max() - 0.005, 0.0025); out = np.zeros(len(ys))
+    for sgn in (1, -1):
+        j = k & (y * sgn >= -0.01); o = np.argsort(y[j] * sgn); out += np.interp(ys, (y[j] * sgn)[o], d[j][o]) / 2
+    out = ndimage.gaussian_filter1d(out, 3, mode='nearest'); out = np.maximum.accumulate(out - out[0])
+    return ys, out
 if __name__ == '__main__':
     print('length', X_REAR, X_FRONT)
     for xr in (0.3, 0.1, 0.02, -0.01, -0.04, -0.5, -0.95, -1.5, -1.9, -1.93, -1.96, -2.1):
