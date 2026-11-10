@@ -84,5 +84,7 @@ Steps:
   where the photo has them. r14, REAL=1: side 0.990, front 0.971, rear 0.952, top 0.989; 190,050 triangles.
 - 10 Nov, build r15: the owner's decisions: no mud flaps, and the glass blacked out all round (opaque black, the
   panes' lips marked sharp so the dark glass shades clean along leaning edges).
+- 10 Nov, build r16: the windshield's pane widened to the front photo's glass (it was 4 to 7 cm narrow a side).
+  190,126 triangles.
 - Next: the quarter glass's
   kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.

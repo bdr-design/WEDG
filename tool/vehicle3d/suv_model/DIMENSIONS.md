@@ -260,8 +260,9 @@ Because the model is not finished (later steps in PLAN.md):
   thinned by that much (29 and 41 mm for the real photo's 66 and 78), so their tops stay where the photo has them,
   979 and 991 mm up, clear of the head lamp's cover and 95 mm under the fuel flap;
 - the rear door's shut line breaks for about 10 mm where it steps onto the rear flare;
-- the windshield's pane is narrower than the front photo's glass, by 27 mm a side at the foot and about 40 above
-  the knee (the r11 review's reading, not yet re-measured): the black surround lies where the photo has glass;
+- the windshield (r16): on 02_front the glass ends at a dark line 1 cm wide, the gap to the A pillar, 0.75 m out
+  at z 1.50, 0.73 at 1.58, 0.71 at 1.66, 0.69 at 1.74 and 0.66 at 1.82 (photo frame, both sides alike). The pane
+  runs to 5 mm short of it with a 12 mm surround; up to r15 it was 4 to 7 cm narrower a side;
 - approach 29.7 and departure 24.0 degrees, measured on the model, against the official 32 and 25.
 
 ## 7. The rear

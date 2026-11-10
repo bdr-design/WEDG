@@ -24,7 +24,12 @@ ZRG_C = _B.notch_corner(); ZRG1 = ZRG_C - 0.004      # the glass stops 4 mm shor
 RG_EDGE = [(ZRG0, 0.7397), (1.52, 0.7241), (1.64, 0.7009), (1.76, 0.6718), (ZRG_C, 0.656)]
 RG_UNDER = _B.NOTCH_Z[3] + 0.012               # the spoiler's underside and the tip's lower edge end below this
 def rg_half(z): return interp(RG_EDGE, min(max(z, ZRG0), ZRG_C))
-def ws_half(z): return interp([(1.30, 0.67), (1.60, 0.65), (1.81, 0.58)], z / K) * K
+# The windshield's half-width by height (z / K, y / K). On 02_front the glass ends at a dark line 1 cm wide (the gap to
+# the A pillar), the same on both sides: 0.75 m out at z 1.50, 0.73 at 1.58, 0.71 at 1.66, 0.69 at 1.74, 0.66 at 1.82
+# (photo frame). The pane runs to 5 mm short of that line and the surround beside it is WS_SUR wide. (Up to r15 the
+# pane was 4 to 7 cm narrower: 0.682 at 1.50 and 0.617 at 1.82.)
+WS_SUR = 0.012
+def ws_half(z): return interp([(1.405, 0.733), (1.60, 0.684), (1.81, 0.625)], z / K) * K
 def line_plane(p0, p1):
     p0, p1 = Vector(p0), Vector(p1); return p0, (p1 - p0).cross(Vector((0, 1, 0))).normalized()
 A_CO, A_NO = line_plane((XF - 1.55, 0, 1.27 * K), (XF - 2.39, 0, 1.86 * K))
@@ -69,7 +74,7 @@ def cut_outline(bm):
     for za, zb in ((ZWS0, zk), (zk, ZWS1)):
         for s in (1, -1):
             p0 = Vector((0, s * ws_half(za), za)); p1 = Vector((0, s * ws_half(zb), zb)); n = (p1 - p0).cross(Vector((1, 0, 0))).normalized()
-            bis(ws(za, zb), p0, n); bis(ws(za, zb), p0 + Vector((0, s * SURROUND, 0)), n)
+            bis(ws(za, zb), p0, n); bis(ws(za, zb), p0 + Vector((0, s * WS_SUR, 0)), n)
     rg = lambda z0=1.1 * K, z1=9.0: geom_of(faces(lambda c, d: d > 4.4 and z0 < c.z < z1))
     for zc in (ZRG0 - RG_SEAL, ZRG0, *[z for z, _ in RG_EDGE[1:-1]], ZFRIT, ZRG1): bis(rg(), (0, 0, zc), (0, 0, 1))
     # the leaning side edge, one plane per band of height, and the seal's outer edge 6 mm outside it; the lowest band
@@ -128,7 +133,7 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
             if 0 < side_out(c) < SURROUND and (c - A_FOOT).dot(A_BEV) < 1.3 * SURROUND: f.material_index = ti
         elif edge_v and d < 2.7:      # round the windshield: a band beside its leaning side edges, whole faces above and below
             out = abs(c.y) - ws_half(c.z)
-            if (0 < out < SURROUND) if ZWS0 < c.z < ZWS1 and out > 0 else kd.find(c)[2] < SURROUND: f.material_index = ti
+            if (0 < out < WS_SUR) if ZWS0 < c.z < ZWS1 and out > 0 else kd.find(c)[2] < SURROUND: f.material_index = ti
     bm.to_mesh(me); bm.free()
     # lift the glass out into its own object and set it 8 mm in, with a lip back to the opening
     for o in bpy.context.selected_objects: o.select_set(False)
