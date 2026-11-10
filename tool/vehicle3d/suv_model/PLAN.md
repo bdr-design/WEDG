@@ -86,5 +86,8 @@ Steps:
   panes' lips marked sharp so the dark glass shades clean along leaning edges).
 - 10 Nov, build r16: the windshield's pane widened to the front photo's glass (it was 4 to 7 cm narrow a side).
   190,126 triangles.
+- 10 Nov, builds r17 and r18: the crease along the greenhouse's side that the owner saw from the front (the front
+  outline was bridged straight behind the mirrors), and the rear door's shut line stopped at the rear flare. The
+  review of r16 confirmed r13 to r16. 190,218 triangles.
 - Next: the quarter glass's
   kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.

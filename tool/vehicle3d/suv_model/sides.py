@@ -113,8 +113,8 @@ def _line(a, b, step=0.02):
 
 def seams(shell, groove, flares=None):
     """Shut lines round both doors (after the openings are cut): the front door's front edge, the B-pillar seam, the
-    rear door's rear edge, which on the real car runs straight down across the rear flare to the wheel opening (the
-    front part of that flare is on the door), and the door bottoms, which end at the rear opening."""
+    rear door's rear edge, which stops at the top of the rear flare (on the real car it runs on across the flare; on
+    the thinned flare band it showed as two broken nubs), and the door bottoms, which end at the rear opening."""
     import ext_parts as EP
     targets = [shell] + ([flares] if flares else [])
     z_open = max(z for x, z in EP.arch_curve(1) if abs(x - REAR_EDGE_X) < 0.012)
@@ -124,7 +124,7 @@ def seams(shell, groove, flares=None):
     for s in (1, -1):
         for k, pts in enumerate((_line((FRONT_EDGE_X, BELT_Z), (FRONT_EDGE_X, zd)),
                                  _line((B_SEAM_X, BELT_Z + 0.01), (B_SEAM_X, zd)),
-                                 _line((REAR_EDGE_X, BELT_Z + 0.03), (REAR_EDGE_X, z_open + 0.004)),
+                                 _line((REAR_EDGE_X, BELT_Z + 0.03), (REAR_EDGE_X, z_open + EP.FLARE_W[1] + 0.006)),
                                  _line((FRONT_EDGE_X, zd), (x_foot + 0.004, zd)))):
             o = _ribbon(targets, pts, s, groove, f'seam{k}_{"L" if s > 0 else "R"}')
             if o: out.append(o)
