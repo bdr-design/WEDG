@@ -15,7 +15,8 @@ from skimage.draw import polygon as _poly
 from mathutils import Matrix, Vector
 
 import photocam as PC
-CAM = PC.Camera('dash_front'); upright, level, ceiling = CAM.upright, CAM.level, CAM.ceiling
+CAM = PC.Camera('dash_front'); upright, ceiling = CAM.upright, CAM.ceiling; DZ = C.DASH_DZ
+level = lambda z: CAM.level(z + DZ)          # (every height below is as first fitted; DZ raises them with the camera: cabin.DASH_DZ)
 def pillar(foot, head, side):
     """The cabin's side of an A pillar: the plane through its foot and its head that faces the cabin's middle."""
     foot, head = np.array(foot, float), np.array(head, float); mid = (foot + head) / 2
@@ -33,17 +34,19 @@ def pillar(foot, head, side):
 # place behind the wheel is a CHOICE.
 def leaning(x, z, deg):
     """A face across the car through (x, 0, z) whose top leans forward by deg."""
-    t = math.radians(deg); return CAM.plane((x, 0, z), (math.cos(t), 0, -math.sin(t)), (math.sin(t), 0, math.cos(t)))
+    t = math.radians(deg); return CAM.plane((x, 0, z + DZ), (math.cos(t), 0, -math.sin(t)), (math.sin(t), 0, math.cos(t)))
 
 LIP_ROW = 370
 # name: (plane, thickness behind it, edge rounding, material, region: a box (col0, row0, col1, row1), corners [(col, row)...] or None)
 A_FOOT, A_HEAD = (1.00, 0.74, 1.27), (0.47, 0.60, 1.74)                 # the hull's A pillar inside the glass (hullspace.py): its foot and head, left side
 PARTS = {'upper': (upright(0.54), 0.12, 0.02, 'black', None), 'dash_top': (level(1.275), 0.12, 0.02, 'black', None), 'lower': (leaning(0.474, 1.170, 28.0), 0.30, 0.045, 'beige', None),
          'stack': (leaning(0.45, 1.165, 28.0), 0.30, 0.012, 'black', (688, 428, 1029, 572)), 'stack_low': (leaning(0.45, 1.165, 28.0), 0.30, 0.012, 'black', (703, 572, 983, 748)),
-         'screen': (leaning(0.531, 1.295, 27.0), 0.022, 0.004, 'gloss', (689, 283, 1023, 407)), 'cluster': (upright(0.62), 0.02, 0.004, 'black', (300, 350, 590, 480)),
+         'screen': (leaning(0.531, 1.295, 27.0), 0.022, 0.004, 'gloss', (689, 283, 1023, 407)), 'cluster': (upright(0.612), 0.02, 0.004, 'black', (300, 350, 590, 480)),      # (8 mm proud of the binnacle's face, which is at 0.620)
          'console_body': (level(0.985), 0.40, 0.02, 'beige', [(660, 748), (1060, 748), (1085, 941), (640, 941)]),
          'console': (level(0.99), 0.02, 0.008, 'wood', [(699, 748), (1031, 748), (1060, 917), (1060, 941), (681, 941), (681, 917)]),
-         'mirror': (upright(0.52), 0.03, 0.012, 'black', (716, 118, 990, 208))}      # (the headliner is shell.py's: seen this flat, a region of it cannot be laid on its plane)
+         'mirror': (upright(0.560), 0.03, 0.014, 'mirror_glass', [(730, 84), (976, 84), (988, 100), (986, 140), (968, 156), (738, 156), (720, 140), (718, 100)]),      # the mirror on the photo: columns 718 to 988, rows 82 to 156
+         'mirror_mount': (upright(0.540), 0.05, 0.012, 'black', [(700, 44), (978, 44), (950, 84), (728, 84)]),
+         'overhead': (upright(0.500), 0.07, 0.02, 'beige', [(688, 2), (1000, 2), (990, 30), (970, 44), (708, 44), (690, 30)])}      # the overhead console over the mirror (its lamps' panel is the black inset)      # (the headliner is shell.py's: seen this flat, a region of it cannot be laid on its plane)
 
 
 # The dashboard's own body is one surface, not a slab per face: sections along the car (x, z), the same across the
@@ -53,13 +56,13 @@ PARTS = {'upper': (upright(0.54), 0.12, 0.02, 'black', None), 'dash_top': (level
 # but for the hood's line (its top at row 300, 1.345 m up if it stands at x 0.50) and the instruments' window:
 # the binnacle's depths, the sill under the instruments and the underside are a CHOICE.
 BODY = ('upper', 'dash_top', 'lower', 'cluster')          # the faces the body carries (their planes stay, for the things on them)
-Y_END = 0.79
+Y_END = 0.775                                              # its ends stand against the front doors (whose trims give way there: cabin.DASH_END)
 BIN_Y, BIN_W, BIN_H = 0.430, (0.185, 0.225), 0.070       # the binnacle: its middle across the car, where it is whole and where it has ended, and its hood's height
 #            the car's body of the dashboard                 behind the wheel
-SECTION = [((1.000, 1.262), (1.000, 1.262), 0.0, 'black'),       # the windshield's foot
+SECTION = [((1.012, 1.270), (1.012, 1.270), 0.0, 'black'),       # the windshield's foot (inside the glass's foot, 1.02 m forward at 1.355 once raised)
            ((0.800, 1.275), (0.860, 1.275), 0.0, 'black'),       # the top
-           ((0.548, 1.275), (0.500, 1.275), 0.012, 'black'),     # the top's lip / the hood's lip (raised by the hood's height)
-           ((0.540, 1.267), (0.508, 1.252), 0.006, 'black'),     # the black band's head / the lip's underside
+           ((0.548, 1.275), (0.545, 1.275), 0.012, 'black'),     # the top's lip / the hood's lip (raised by the hood's height; 2 cm ahead of the rim's top)
+           ((0.540, 1.267), (0.553, 1.252), 0.006, 'black'),     # the black band's head / the lip's underside
            ((0.540, 1.213), (0.620, 1.285), 0.004, 'beige'),     # the band's foot / the instruments' head
            ((0.520, 1.213), (0.620, 1.125), 0.0, 'beige'),       # the ledge / the instruments' foot
            ((0.497, 1.213), (0.470, 1.105), 0.012, 'beige'),     # the beige face's head / the sill's edge
@@ -75,7 +78,7 @@ def _sstep(t): t = min(max(t, 0.0), 1.0); return t * t * (3 - 2 * t)
 def _section(y):
     """The body's section at y: (x, z) points with every corner rounded, and each stretch's material."""
     d = abs(y - BIN_Y); w = 1 - _sstep((d - BIN_W[0]) / (BIN_W[1] - BIN_W[0])); h = BIN_H * math.cos(min(d / BIN_W[1], 1.0) * math.pi / 2) ** 2
-    C = [np.array(a) * (1 - w) + np.array(b) * w + (np.array((0, h)) * w if k in (2, 3) else 0) for k, (a, b, _, _) in enumerate(SECTION)]
+    C = [np.array(a) * (1 - w) + np.array(b) * w + (np.array((0, h)) * w if k in (2, 3) else 0) + np.array((0, DZ)) for k, (a, b, _, _) in enumerate(SECTION)]
     pts, mats = [C[0]], []
     for k in range(1, len(C) - 1):
         r = SECTION[k][2]; d0, d1 = C[k] - C[k - 1], C[k + 1] - C[k]; l0, l1 = np.linalg.norm(d0), np.linalg.norm(d1); t = min(r, 0.4 * l0, 0.4 * l1); e = min(0.002, 0.1 * l0, 0.1 * l1)
@@ -103,6 +106,21 @@ def _body(bm, idx):
     for a, b in zip(rings, rings[1:]):
         for k in range(12): f = bm.faces.new((a[k], a[(k + 1) % 12], b[(k + 1) % 12], b[k])); f.material_index = idx['black']; f.smooth = True; fs.append(f)
     fs.append(bm.faces.new(rings[0])); fs[-1].material_index = idx['black']; bmesh.ops.recalc_face_normals(bm, faces=fs)
+
+
+CONSOLE_NARROW = 0.85                                     # 0.342 m on the photo, 0.29 laid in the car
+ARMREST = ((0.0, -0.42), 0.25, 0.06)                      # the box behind the console: from x to x, its width, and how far its leather lid stands over the console's top
+
+
+def _rbox(bm, box, r, mat, n=4):
+    """A box from x0 (front) to x1 (rear), half width hw, from z0 to z1, its upper edges rounded by r."""
+    x0, x1, hw, z0, z1 = box; sec = [(-hw, z0), (-hw, z1 - r)] + [(-hw + r - r * math.cos(t), z1 - r + r * math.sin(t)) for t in np.linspace(0, math.pi / 2, n + 1)[1:]]
+    sec = sec + [(-y, z) for y, z in sec[::-1]]
+    a = [bm.verts.new((x0, y, z)) for y, z in sec]; b = [bm.verts.new((x1, y, z)) for y, z in sec]; k = len(sec); fs = []
+    for i in range(k - 1): fs.append(bm.faces.new((a[i], a[i + 1], b[i + 1], b[i])))
+    fs += [bm.faces.new(a), bm.faces.new(b[::-1])]
+    for f in fs: f.material_index = mat; f.smooth = True
+    bmesh.ops.recalc_face_normals(bm, faces=fs)
 
 
 def regions():
@@ -133,19 +151,20 @@ def materials():
     return {'black': _mat('cabin_black', (0.03, 0.03, 0.031), rough=0.5), 'beige': _mat('trim_leather'),
             'gloss': _mat('cabin_black_gloss', (0.012, 0.012, 0.013), rough=0.12, coat=1.0), 'silver': _mat('cabin_silver', (0.50, 0.50, 0.50), metal=1.0, rough=0.38),
             'wood': _mat('cabin_wood_grey', (0.075, 0.072, 0.07), rough=0.4, coat=0.5), 'dark': _mat('cabin_shadow', (0.008, 0.008, 0.008), rough=0.8),
-            'red': _mat('cabin_red', (0.55, 0.03, 0.02), rough=0.4), 'display': _mat('cabin_display', (0.004, 0.006, 0.012), rough=0.05, coat=1.0)}
+            'red': _mat('cabin_red', (0.55, 0.03, 0.02), rough=0.4), 'display': _mat('cabin_display', (0.004, 0.006, 0.012), rough=0.05, coat=1.0), 'mirror_glass': _mat('cabin_mirror')}
 
 
 def build(name='dashboard'):
     reg, mag = regions(); Mt = materials(); idx = {k: i for i, k in enumerate(Mt)}; bm = bmesh.new()
     lay = bm.verts.layers.float_vector.new('relief_n')
-    _body(bm, idx)
+    _body(bm, idx); narrow = []
     for part, (pl, thick, rad, mat, _) in PARTS.items():
         if part in BODY: continue
         n0 = len(bm.verts); r, c = np.where(reg[part]); mpp = pl.metres_per_px(r.mean(), c.mean())
         R.solid(bm, reg[part], pl.to_ab, mpp, thick, min(rad, thick / 2), y0=thick / 2, mat=idx[mat], rings=4 if rad > 0.02 else 2, spacing=0.014, fill=0.07)
         bm.verts.ensure_lookup_table()
         for v in bm.verts[n0:]: v.co = pl.to_car(v.co); v[lay] = pl.mx @ Vector(v[lay])
+        if part.startswith('console'): narrow.extend(bm.verts[n0:])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     # the things on those faces (dash_features), each on its part's plane and standing out of it toward the camera
     for kind, part, mat, proud, shape in DF.STACK + DF.CONSOLE + DF.DASH:
@@ -157,10 +176,11 @@ def build(name='dashboard'):
         elif kind == 'ring': R.ring(bm, pts(shape[0]), pts(shape[1]), y, idx[mat], y_back=0.0)
         bm.verts.ensure_lookup_table(); bm.faces.ensure_lookup_table()
         for v in bm.verts[n0:]: v.co = pl.to_car(v.co)
+        if part == 'console': narrow.extend(bm.verts[n0:])
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces[nf:])
     # the shifter: a leather boot and a knob standing on the console where the photo has its foot
     pl = PARTS['console'][0]; a, b = pl.to_ab(np.array([DF.SHIFTER['foot'][1]], float), np.array([DF.SHIFTER['foot'][0]], float)); foot = pl.to_car(Vector((float(a[0]), 0.0, float(b[0]))))
-    cx, cy, z0 = foot.x, foot.y, foot.z
+    cx, cy, z0 = foot.x, foot.y * CONSOLE_NARROW, foot.z
     def frustum(z_lo, z_hi, half_lo, half_hi, lean, mat):
         lo = [bm.verts.new((cx + sx * half_lo[0], cy + sy * half_lo[1], z_lo)) for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
         hi = [bm.verts.new((cx - lean + sx * half_hi[0], cy + sy * half_hi[1], z_hi)) for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
@@ -170,6 +190,13 @@ def build(name='dashboard'):
     # (the two-view fit has the knob's top 0.105 m over the console's top, and the knob is 78 by 61 px on dash_front: 66 by 51 mm)
     frustum(z0, z0 + 0.055, (0.046, 0.044), (0.020, 0.019), 0.012, 'black'); frustum(z0 + 0.055, z0 + 0.062, (0.022, 0.024), (0.023, 0.026), 0.012, 'silver')
     frustum(z0 + 0.062, z0 + 0.105, (0.024, 0.030), (0.027, 0.033), 0.020, 'black')
+    # the console between the seats is narrower than its region on the photo, which takes in its sides seen from above
+    for v in narrow:
+        if v.is_valid: v.co.y *= CONSOLE_NARROW; v[lay] = (v[lay][0], v[lay][1] / CONSOLE_NARROW, v[lay][2])
+    # behind the photo's console: the box between the front seats with its armrest (no photo shows it: its size is a CHOICE, the usual one)
+    zt = 0.99 + DZ; x0 = float(min(v.co.x for v in narrow if v.is_valid))
+    _rbox(bm, (x0 + 0.01, ARMREST[0][0], ARMREST[1] / 2, C.FLOOR_Z + 0.002, zt), 0.02, idx['black'])
+    _rbox(bm, (ARMREST[0][0] + 0.02, ARMREST[0][1], ARMREST[1] / 2 + 0.005, zt - 0.02, zt + ARMREST[2]), 0.025, idx['beige'])
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for m in Mt.values(): me.materials.append(m)
     R.shade(me); ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); return ob

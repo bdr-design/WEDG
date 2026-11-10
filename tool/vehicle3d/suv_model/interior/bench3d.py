@@ -19,19 +19,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import imats, cabin as C, seat3d as S3
 _sstep, _loft = S3._sstep, S3._loft
 
-FRONT_X, DEPTH = -0.54, 0.50                     # the cushion's front edge and its depth to the backs' foot
-TOP_Z = (0.745, 0.770)                           # the cushion's top at its rear and at its front piping
+DEPTH, RISE, TOP_Z, LEAN, THICK, BACK_TOP, FRONT_X = C.BENCH      # where the bench stands and its main sizes: cabin.py says why
 HALF_W = 0.725
-WELL = (0.595, -0.85, 0.09, 0.95, 0.08)          # beside the wheels' wells: the bench's half width there; the wells' front (x) and the taper's length; their top (z) and the taper's height
-LEAN, THICK, BACK_TOP = 20.0, 0.13, (1.37, 1.34) # the backs' lean (degrees), thickness, and tops (outer, middle)
+WELL = (0.650, -0.78, 0.06, 1.06, 0.06)          # beside the wheels' wells: the bench's half width there; the wells' front (x) and the taper's length; their top (z) and the taper's height
 BACKS = {'L': (0.148, 0.734), 'C': (-0.140, 0.140), 'R': (-0.727, -0.150)}      # each back's edges across the car
-HEADS = {'L': (0.465, 0.25, 1.385, 1.575), 'C': (0.0, 0.26, 1.355, 1.475), 'R': (-0.465, 0.25, 1.385, 1.575)}      # each headrest: y, width, foot, top
+HEADS = {k: (y, w, a + RISE, b + RISE) for k, (y, w, a, b) in {'L': (0.465, 0.25, 1.385, 1.575), 'C': (0.0, 0.26, 1.355, 1.475), 'R': (-0.465, 0.25, 1.385, 1.575)}.items()}      # each headrest: y, width, foot, top
 HEAD_T = 0.11                                    # the headrests' thickness
 SPLIT_Y = 0.175                                  # the cushion's 60:40 split (the photo's column 1007; the camera looks back, so the photo's right is the car's left, +y)
 BUCKLES = (-0.197, 0.21)                         # the belt buckles at the cushion's rear (the photo's columns 690 and 995)
 NOSE = (0.07, 0.55)
-BELT = (0.655, -0.175, 1.07, 0.047)                # the belts: the outer ones' y on the backs, the middle one's, the height their tongues hang at, the webbing's width
-LIP_Z = 0.68                                     # the foot of the cushion's front face (the photo's row 862 through the camera); the base is under it
+BELT = (0.655, -0.175, 1.07 + RISE, 0.047)                # the belts: the outer ones' y on the backs, the middle one's, the height their tongues hang at, the webbing's width
+LIP_Z = 0.68 + RISE                                     # the foot of the cushion's front face (the photo's row 862 through the camera); the base is under it
 
 
 def _sec(a, b, top, bottom, ra, rb, n=17):
@@ -66,8 +64,8 @@ def build(name='seat_bench_2'):
             st.append([(x, y, h) for y, h in _sec(a_, b_, top, LIP_Z - 0.03, 0.012 if side > 0 else 0.045, 0.045 if side > 0 else 0.012)])
         _loft(bm, st, idx['leather'])
     # the base under the cushion, set back from its lip (the photo shows its covers; plain here)
-    vs = [bm.verts.new((x, y, z)) for z in (z0 + 0.003, LIP_Z - 0.01) for x, y in ((x_f - 0.07, -HALF_W + 0.03), (x_f - 0.07, HALF_W - 0.03), (WELL[1] + 0.08, HALF_W - 0.03), (WELL[1], WELL[0] - 0.01), (C.REAR_FLOOR[0] + 0.01, WELL[0] - 0.01), (C.REAR_FLOOR[0] + 0.01, -WELL[0] + 0.01), (WELL[1], -WELL[0] + 0.01), (WELL[1] + 0.08, -HALF_W + 0.03))]
-    for k in range(8): f = bm.faces.new((vs[k], vs[(k + 1) % 8], vs[8 + (k + 1) % 8], vs[8 + k])); f.material_index = idx['plastic']
+    hb = WELL[0] - 0.01; vs = [bm.verts.new((x, y, z)) for z in (z0 + 0.003, LIP_Z - 0.01) for x, y in ((x_f - 0.07, -hb), (x_f - 0.07, hb), (C.REAR_FLOOR[0] + 0.01, hb), (C.REAR_FLOOR[0] + 0.01, -hb))]
+    for k in range(4): f = bm.faces.new((vs[k], vs[(k + 1) % 4], vs[4 + (k + 1) % 4], vs[4 + k])); f.material_index = idx['plastic']
     # --- the backs: sections across the car at each height ------------------------------------------------------------------
     x_foot = FRONT_X - DEPTH; tl = math.tan(math.radians(LEAN)); TOP_R = 0.03
     for nm, (ya, yb) in BACKS.items():
@@ -102,7 +100,7 @@ def build(name='seat_bench_2'):
             if f.normal.x < 0: f.normal_flip()
     for sy in (1, -1):
         y = sy * BELT[0]; zs = np.linspace(BACK_TOP[0] - 0.035, BELT[2], 6)
-        strap([(-1.10, sy * 0.695, 1.56), (face(BACK_TOP[0], -THICK * 0.45), y + sy * 0.03, BACK_TOP[0] + 0.012), (face(BACK_TOP[0] - 0.02, 0.012), y, BACK_TOP[0] - 0.015)] + [(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
+        strap([(-1.15, sy * 0.655, 1.60), (face(BACK_TOP[0], -THICK * 0.45), y + sy * 0.03, BACK_TOP[0] + 0.012), (face(BACK_TOP[0] - 0.02, 0.012), y, BACK_TOP[0] - 0.015)] + [(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
         _blob(bm, (face(BELT[2] - 0.035, 0.014), y, BELT[2] - 0.035), (0.006, 0.024, 0.040), idx['black'], n=10, rings=5); _blob(bm, (face(BELT[2] - 0.085, 0.014), y, BELT[2] - 0.085), (0.002, 0.014, 0.022), idx['chrome'], n=8, rings=3)
     y = BELT[1]; zs = np.linspace(BACK_TOP[0] - 0.01, BELT[2] - 0.08, 6); strap([(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
     _blob(bm, (face(BELT[2] - 0.115, 0.014), y, BELT[2] - 0.115), (0.006, 0.024, 0.040), idx['black'], n=10, rings=5); _blob(bm, (face(BELT[2] - 0.165, 0.014), y, BELT[2] - 0.165), (0.002, 0.014, 0.022), idx['chrome'], n=8, rings=3)

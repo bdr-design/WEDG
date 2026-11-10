@@ -23,6 +23,7 @@ MATS = {
     'cabin_seam': ((0.006, 0.006, 0.006), 0.0, 0.90, 0.0),
     'wheel_thread': ((0.50, 0.50, 0.47), 0.0, 0.70, 0.0),
     'seat_belt': ((0.52, 0.44, 0.33), 0.0, 0.85, 0.0),               # the belts' webbing: 190 172 150 on rear_bench
+    'cabin_mirror': ((0.55, 0.56, 0.57), 1.0, 0.05, 0.0),             # the rear-view mirror's glass
     'seat_seam': ((0.33, 0.26, 0.17), 0.0, 0.80, 0.0),
     'seat_thread': ((0.70, 0.60, 0.44), 0.0, 0.70, 0.0),
 }

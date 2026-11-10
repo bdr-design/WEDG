@@ -11,11 +11,11 @@ import bpy, bmesh, os, sys, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import seatcam as SC, seat_measure as SM, seat_features as F, relief as R, imats
 
-SHAPE = dict(cushion_w=0.520, back_w=0.500, head_w=0.270, base_w=0.530,
+SHAPE = dict(cushion_w=0.550, back_w=0.530, head_w=0.285, base_w=0.560,
              bolster=0.045,            # how far the cushion's and backrest's side bolsters stand over the seating surface
-             bolster_in=(0.135, 0.205),   # across the seat: where a bolster starts to rise, and where it is at full height
+             bolster_in=(0.145, 0.218),   # across the seat: where a bolster starts to rise, and where it is at full height
              edge=0.045,               # the rounding of the cushion's and backrest's outer edges
-             post_y=0.075, post_d=0.013, rail_y=0.200, rail_w=0.045)
+             post_y=0.090, post_d=0.013, rail_y=0.200, rail_w=0.045)
 # lines read on the photo, (col, row), each lying at one distance across the seat (y)
 PIPING = [(499, 915), (676, 891), (852, 874), (941, 879), (1002, 903)]            # the cushion's near edge piping (y -0.24): the near bolster's top
 CUSHION_FOOT = [(441, 891), (499, 929), (547, 950), (617, 962), (735, 959), (852, 953), (941, 950), (1003, 953)]      # where the cushion meets the base, near side (y -0.255)
@@ -109,6 +109,21 @@ def _seams(bm, lines, mat, width=0.003, lift=0.0012, both=True, step=10.0):
                 f = bm.faces.new((a[i], a[i + 1], b[i + 1], b[i]) if sgn > 0 else (b[i], b[i + 1], a[i + 1], a[i])); f.material_index = mat; f.smooth = True
 
 
+def hpoint(ob):
+    """The seat's H-point in its own frame (x, z), estimated on the built seat's middle plane: 135 mm ahead of the
+    backrest's front face and 25 mm over the cushion's (uncompressed) top there; the SAE J826 manikin's hip joint
+    sits about so (its 97 mm over the cushion it presses down about 70)."""
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    me = ob.data; bm = bmesh.new(); bm.from_mesh(me); t = BVHTree.FromBMesh(bm); bm.free()
+    top = lambda x: t.ray_cast(Vector((x, 0.0, 1.5)), Vector((0, 0, -1)))[0].z           # the cushion's top on the middle plane
+    x0 = 0.45
+    z = top(x0) + 0.06
+    for _ in range(8):           # the backrest's front, by a ray back from over the cushion's middle; then the cushion's top there
+        hb = t.ray_cast(Vector((x0, 0.0, z)), Vector((-1, 0, 0))); x = hb[0].x + 0.135; z = top(x) + 0.025
+    return x, z
+
+
 def build(name='seat_front', mirror=False):
     S = SHAPE; M = {k: imats.m(v) for k, v in (('leather', 'seat_leather'), ('plastic', 'cabin_beige'), ('black', 'cabin_black'), ('chrome', 'cabin_chrome'), ('red', 'cabin_red'), ('seam', 'seat_seam'))}
     idx = {k: i for i, k in enumerate(M)}; bm = bmesh.new(); lay = bm.verts.layers.float_vector.new('relief_n')
@@ -176,7 +191,7 @@ def build(name='seat_front', mirror=False):
     _block(bm, P(oval(F.SLIDE_SWITCH, 16, 6.0)), yb - 0.010, yb, idx['plastic'])
     cx, cy, cr = F.LUMBAR_KNOB; _block(bm, P(disc((cx, cy), cr)), yb - 0.004, yb, idx['black']); _block(bm, P(disc((cx, cy), cr - 4)), yb - 0.011, yb, idx['plastic'])
     # the belt's buckle, inboard of the cushion (the photo shows it over the far bolster): its stalk and its head with the red button
-    yk = S['cushion_w'] / 2 + 0.025; A, B = np.array(BUCKLE[0], float), np.array(BUCKLE[1], float); u = (B - A) / np.linalg.norm(B - A); n = np.array((-u[1], u[0])) * BUCKLE[2] / 2
+    yk = S['cushion_w'] / 2 + 0.012; A, B = np.array(BUCKLE[0], float), np.array(BUCKLE[1], float); u = (B - A) / np.linalg.norm(B - A); n = np.array((-u[1], u[0])) * BUCKLE[2] / 2
     box = lambda t0, t1, k=1.0: [tuple(A + (B - A) * t + n * sg * k) for t, sg in ((t0, -1), (t1, -1), (t1, 1), (t0, 1))]
     _block(bm, P(box(0.0, 0.84), yk), yk - 0.015, yk + 0.015, idx['leather']); _block(bm, P(box(0.84, 1.0, 0.8), yk), yk - 0.012, yk + 0.012, idx['red'])
     # the headrest's posts: the photo shows both (the further one 3.5 px lower and 32 px to the right, as the camera has them); upright rods under the headrest

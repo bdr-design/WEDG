@@ -214,6 +214,7 @@ Silhouette IoU with `REAL=1`:
 | r22 | 0.990 | 0.973 | 0.952 | 0.989 | windshield's edges (r16), flat side glass and the belt on the photo's chrome line (r17 to r21), number plates |
 | r24 | 0.989 | 0.975 | 0.951 | 0.993 | the body side from the top photo (section 8): arc glass, shoulder on the belt, narrower doors, step and flares on the outline; plates seated |
 | r25 | 0.989 | 0.975 | 0.950 | 0.993 | the rear fender's swell round the wheel and a thinner flare leg at the rear door (the owner's decisions) |
+| r26 | 0.989 | 0.975 | 0.950 | 0.993 | the rear wheels' wells cut to 0.665 m from the middle (was 0.60): 35 mm inside the tyre's inner face, which the spec's track and tyre put 0.700 out; the wells were 0.1 m into the cabin where the second row sits |
 
 Edge distance (mm) and colour error, side / front / rear / top:
 

@@ -181,6 +181,11 @@ FLARE_Y, FLARE_END_Z = 0.990, 0.50   # the flares are the widest point of the ca
 # 0.981 at the rear door, where the door skin behind it is 5 cm further in; at the tail end it comes in to 0.957.
 # The official width is 1.980, 4 mm a side more than the photo's flares, and that is added all along. (Up to r22 a
 # flare stood 26 mm proud of the body beside it, which was right only while the doors were as wide as the fenders.)
+# how far in from the car's middle the wheel openings are cut, front and rear: the wheelhouses' inner walls. The rear
+# one stands 35 mm inside the tyre's inner face (the spec's 1665 mm track and 265 mm tyre put that face 0.700 m out);
+# the front one is left further in, for the tyre's swing when steered. Before r26 both were 0.60, which put the rear
+# wells 0.1 m into the cabin, where the second row sits.
+WELL_IN = (0.60, 0.665)
 FLARE_OVER = 0.004
 # The owner's decision (10 Nov, on r24's pictures): a flare stands no more than FLARE_PROUD out of the body beside it.
 # That thins the rear flare's front leg, which on the photo's outline stood 44 to 64 mm proud of the rear door, like a
@@ -219,7 +224,7 @@ def arches(shell, paint, liner, flare_mat):
         c = arch_curve(i); ring = [(c[0][0], -0.2)] + [tuple(q) for q in c[1:-1]] + [(c[-1][0], -0.2)]
         for s in (1, -1):
             me = bpy.data.meshes.new('cutter'); n = len(ring)
-            V = [(x, s * 0.60, z) for x, z in ring] + [(x, s * 1.30, z) for x, z in ring]
+            V = [(x, s * WELL_IN[i], z) for x, z in ring] + [(x, s * 1.30, z) for x, z in ring]
             F = [list(range(n)), list(range(n, 2 * n))] + [[j, (j + 1) % n, n + (j + 1) % n, n + j] for j in range(n)]
             me.from_pydata(V, [], F); me.update()
             o = bpy.data.objects.new('cutter', me); bpy.context.collection.objects.link(o)

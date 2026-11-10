@@ -4,14 +4,13 @@ posts, which stand one behind the other across the seat, are 32 px apart on it; 
 335 (its horizon), square to the seat, far enough that the seat fills the frame with a 1970 px focal length (35
 degrees across), which looks down 14 degrees onto the cushion and 23 onto the rail's feet.
 The seat's own frame: x forward (the photo's right) from its rearmost point, z up from the rail's foot, y across
-with the camera at -y. SIZE: nothing in the six photos gives the seat's size outright. HEIGHT, the headrest's top over the rail's foot, is
-set with the widths seat3d assumes (posts 0.15 m apart, 0.455 m from the near piping to the far bolster's crest): the
-photo has the posts 32 px apart and the far crest 136 to 148 px over the near piping (2 cm of that the crest's own
-height), and a camera this near gives them as HEIGHT falls: 1.10 gives 27 px and 112, 1.00 gives 29 and 121, 0.96
-gives 30 and 126. 1.00 is taken: with the floor at cabin.FLOOR_Z it also puts the cushion 0.845 m up, which is where
-a 1.77 m headliner and the type's published headroom put it."""
+with the camera at -y. SIZE: HEIGHT, the headrest's top over the rail's foot, is 1.10 m. The front head restraint's top must stand at least
+800 mm over the H-point along the torso line (FMVSS 202a); at 1.00 m this seat's stood 0.74 m over its cushion,
+short of that, and at 1.10 it stands 0.81. The photo's parallax then asks for the widths seat3d.SHAPE has (posts
+0.18 m apart, the cushion 0.55 wide): the posts come out 32 px apart (the photo's 32) and the far bolster's crest
+119 px over the near piping (the photo's 136 to 148, less the crest's own height, about 20)."""
 import math, numpy as np
-HEIGHT = 1.00
+HEIGHT = 1.10
 F, ROW_H, COL0, ROW0, X_REF_COL = 1970.0, 335.0, 627.0, 627.0, 152.0
 PITCH = math.atan((ROW0 - ROW_H) / F)
 _fwd = np.array((0.0, math.cos(PITCH), -math.sin(PITCH))); _up = np.array((0.0, math.sin(PITCH), math.cos(PITCH))); _right = np.array((1.0, 0.0, 0.0))
