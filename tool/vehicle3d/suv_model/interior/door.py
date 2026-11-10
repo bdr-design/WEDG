@@ -2,6 +2,7 @@
 standing out of it, each the photo's own region (relief.solid). How far anything stands out of the panel is not in
 this photo (it is square-on): DEPTH is a game choice until the cabin photos are measured."""
 import bpy, bmesh, os, sys, numpy as np
+from scipy import ndimage
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import door_measure as DM, relief as R
 from seat import _mat
@@ -39,7 +40,7 @@ def build(name='door_trim_FL', keep=None):
         r, c = _poly(p[:, 1], p[:, 0], panel.shape); panel[r, c] = False
     beige_m = lab == DM.PARTS.index('beige')
     if keep is not None:
-        rr, cc = np.mgrid[0:panel.shape[0], 0:panel.shape[1]]; kx, kz = to_xz(rr.ravel(), cc.ravel()); km = np.asarray(keep(np.asarray(kx), np.asarray(kz))).reshape(panel.shape); panel &= km; beige_m = beige_m & km
+        rr, cc = np.mgrid[0:panel.shape[0], 0:panel.shape[1]]; kx, kz = to_xz(rr.ravel(), cc.ravel()); km = np.asarray(keep(np.asarray(kx), np.asarray(kz))).reshape(panel.shape); panel &= km; beige_m = beige_m & ndimage.binary_erosion(km, iterations=5)      # (the leather kept 5 px off the cut, not on the black's wall)
     R.solid(bm, panel, to_xz, s, 2 * PANEL[0], PANEL[1], mat=idx['panel'], rings=2, spacing=0.012, fill=0.06)
     R.solid(bm, beige_m, to_xz, s, 2 * BEIGE[0], BEIGE[1], mat=idx['beige'], rings=6, spacing=0.012, fill=0.06)
     # only the cabin's side is wanted: drop the caps that lie on the door's far side

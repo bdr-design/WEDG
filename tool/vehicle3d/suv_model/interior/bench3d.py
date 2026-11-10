@@ -1,19 +1,15 @@
 """The second row's bench in three dimensions, in the car's frame (it faces +x).
-rear_bench.png shows it from ahead and above. One camera fits what it shows of the bench (the review of the first
-pass, re-measured: 0.31 m ahead of the car's middle and 1.30 m up, looking back and 11.5 degrees down, 1160 px focal
-length, the car's centre line at column 837.5); through it:
-  the cushion's front edge is 1475 px wide (columns 105 to 1580): 1.45 m, and its piping is 0.77 m up;
-  the seat backs stand between y 0.148 and 0.734 (the car's left, the photo's right), +-0.14 (middle) and -0.15 and
-    -0.727 (right), and their
-    top (row 185) is 1.37 m up; the middle one's is 1.34;
-  the outer headrests are 0.25 m wide, from 1.37 to 1.56 m up, at y +-0.465; the middle one 0.26 wide, to 1.47.
-The first pass laid the photo's regions on planes; these are lofted bodies with those measures.
-What the photo does not give is a CHOICE: how far back the bench stands (FRONT_X: the camera allows 0.12 m either
-way; it is set so that the cushion lies ahead of the rear wheels' wells and the backs' foot beside the C pillar, as
-the hull has them), the cushion's depth, the backs' lean and thickness, every rounding.
-The hull rules where they meet: the rear wheels' wells stand inside the cabin (the hull's inner wall is 0.60 m out
-from x -0.85 back at the floor and from -0.99 at the cushion's height, up to 0.92 m), so the cushion's rear corners
-and the outer backs' feet are narrower there than the photo's 1.45 m (WELL); shell.py covers the wells."""
+Where it stands and its main sizes are cabin.BENCH: its backs' rear end the official cabin length (1955 mm) behind
+the instrument panel's top lip (cabin.IP_REAR), and its cushion RISE over the first fit, which the LX 600's
+second-row headroom asks for. Across, rear_bench.png gives it through the one camera that fits what it shows of the
+bench (cabin.REAR_CAM, 1.06 m ahead of the cushion's front edge and 0.53 m over its top, 11.5 degrees down):
+  the cushion's front edge 1475 px wide (columns 105 to 1580): 1.45 m;
+  the backs between y 0.148 and 0.734 (the car's left, the photo's right), +-0.14 (middle) and -0.15 and -0.727;
+  the outer headrests 0.25 m wide at y +-0.465, the middle one 0.26.
+What neither gives is a CHOICE: the cushion's depth, the backs' lean and thickness, every rounding, the belts'
+guides (on the C pillars' rear edge: the hull has no other place for them).
+The hull rules where they meet: the rear wheels' wells stand 0.665 m out from x -0.85 back, up to 0.95 m, so the
+cushion's rear corners and the outer backs' feet are narrower there than the photo's 1.45 m (WELL)."""
 import bpy, bmesh, os, sys, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import imats, cabin as C, seat3d as S3

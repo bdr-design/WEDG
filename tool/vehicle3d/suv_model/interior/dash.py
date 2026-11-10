@@ -56,6 +56,7 @@ PARTS = {'upper': (upright(0.54), 0.12, 0.02, 'black', None), 'dash_top': (level
 # but for the hood's line (its top at row 300, 1.345 m up if it stands at x 0.50) and the instruments' window:
 # the binnacle's depths, the sill under the instruments and the underside are a CHOICE.
 BODY = ('upper', 'dash_top', 'lower', 'cluster')          # the faces the body carries (their planes stay, for the things on them)
+LOW_END = (0.60, 0.06)                                    # where across the car the lower panel begins to rise to the roll, and over how far
 Y_END = 0.775                                              # its ends stand against the front doors (whose trims give way there: cabin.DASH_END)
 BIN_Y, BIN_W, BIN_H = 0.430, (0.185, 0.225), 0.070       # the binnacle: its middle across the car, where it is whole and where it has ended, and its hood's height
 #            the car's body of the dashboard                 behind the wheel
@@ -67,8 +68,10 @@ SECTION = [((1.012, 1.270), (1.012, 1.270), 0.0, 'black'),       # the windshiel
            ((0.520, 1.213), (0.620, 1.125), 0.0, 'beige'),       # the ledge / the instruments' foot
            ((0.497, 1.213), (0.470, 1.105), 0.012, 'beige'),     # the beige face's head / the sill's edge
            ((0.396, 1.023), (0.405, 1.023), 0.030, 'beige'),     # the beige face's foot
-           ((0.430, 0.985), (0.435, 0.985), 0.030, 'black'),     # the roll under it
-           ((0.800, 0.960), (0.800, 0.960), 0.0, 'black')]       # the underside, to the firewall
+           ((0.450, 0.980), (0.450, 0.980), 0.030, 'black'),     # the roll under it
+           ((0.620, 0.900), (0.620, 0.900), 0.050, 'black'),     # the lower panel in front of the knees (the knee 7 cm behind it at 0.53, 0.95: CHOICE)
+           ((0.760, 0.810), (0.760, 0.810), 0.030, 'black'),
+           ((0.900, 0.810), (0.900, 0.810), 0.0, 'black')]       # its underside, over the pedals, to the firewall
 BIN_MAT = {3: 'black', 4: 'dark', 5: 'black'}             # behind the wheel the hood's underside, the instruments' face and the sill are black
 
 
@@ -84,7 +87,14 @@ def _section(y):
         r = SECTION[k][2]; d0, d1 = C[k] - C[k - 1], C[k + 1] - C[k]; l0, l1 = np.linalg.norm(d0), np.linalg.norm(d1); t = min(r, 0.4 * l0, 0.4 * l1); e = min(0.002, 0.1 * l0, 0.1 * l1)
         T0, T1 = C[k] - d0 / l0 * t, C[k] + d1 / l1 * t; m0 = SECTION[k - 1][3] if not (w > 0.5 and k - 1 in BIN_MAT) else BIN_MAT[k - 1]
         pts += [T0 - d0 / l0 * e, T0] + [(1 - u) ** 2 * T0 + 2 * u * (1 - u) * C[k] + u * u * T1 for u in (1 / 3, 2 / 3)] + [T1, T1 + d1 / l1 * e]; mats += [m0] * 6
-    pts.append(C[-1]); mats.append(SECTION[-2][3]); return pts, mats
+    pts.append(C[-1]); mats.append(SECTION[-2][3])
+    # beside the doors the lower panel rises to the roll's height: the front doors' trims stand there below it
+    t = _sstep((abs(y) - LOW_END[0]) / LOW_END[1])
+    if t > 0:
+        n_low = 6 * 7 + 1                                   # the points before the roll's own (each corner gives six; the first point one)
+        zr = pts[n_low][1] if len(pts) > n_low else C[8][1]
+        pts = pts[:n_low] + [np.array((p[0], p[1] + (max(p[1], zr) - p[1]) * t)) for p in pts[n_low:]]
+    return pts, mats
 
 
 def _body(bm, idx):

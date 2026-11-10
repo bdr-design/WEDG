@@ -3,18 +3,23 @@
 The owner's decision (10 Nov): the interior must match his six photos with no difference. The photos are in
 `tool/vehicle3d/suv_parts/interior/`; they are measured against, never projected.
 
-State: the whole cabin stands in the built car (front seats, steering wheel, dashboard and console, four door
-trims, second-row bench with its belts, headliner, A to D pillar trims, wheel-well and cargo trims, floor) and
-`inhull.py` finds none of it outside the hull. Still to do: most inner details (perforation, the cushion's own seams,
-vent slats, the instrument faces, stitching on the dashboard), the front belts, the third row (not built: the
-photos show a five-seat cabin with headrests behind), the materials' fine tuning, the GLB and its phone check.
+State: the whole cabin stands in the built car (front seats, steering wheel, dashboard with its lower panel,
+console and armrest, four door trims, the second-row bench with its belts, headliner, pillar trims, wheel-well and
+cargo trims, a liner over the rest of the hull's inside, floor). `inhull.py` tests vertices and triangles: what it
+still flags is 0.5 mm or less, apart from a few liner points beside the rear wells that its ray test misjudges. No
+two parts cross. Still to do: the bench's and seats' finer shapes (bolsters, quilting, perforation, seams on the
+seating panel), the door's switch panel, the shifter, the third review's photo differences, and a game LOD: the
+phone budget is 12k triangles a vehicle (docs/adr/0005) and the cabin alone is about 80k.
+
+Five seats: the owner chose the official ZX's five seats (10 Nov), though rear_bench shows a third row's headrests.
 
 When the photos disagree (they are AI renders: no camera fits all of any cabin photo, and the six do not agree
 with each other), the rule is:
 1. a part's own square-on photo rules its shape (wheel, seat_side, door_FL);
 2. the cabin photos (dash_front, driver_pov, rear_bench) rule where things stand and what is there;
 3. the hull rules the glass, the pillars, the wheel wells and the floor: nothing may stand outside it;
-4. what none of them gives is a choice, marked CHOICE where it is made, and kept inside real proportions.
+4. published measures (cabin.py lists them) override the photos where they disagree, with the owner's leave;
+5. what none of them gives is a choice, marked CHOICE where it is made, and kept inside real proportions.
 
 | File | What it is |
 |---|---|
@@ -31,9 +36,11 @@ with each other), the rule is:
 | `dash.py`, `dash_features.py` | the dashboard (one lofted body with the instruments' binnacle), the stack, screen, console and mirror |
 | `bench3d.py` | the second row's bench (`bench.py` is the superseded first pass) |
 | `shell.py` | headliner, pillar trims, wheel-well and cargo trims, firewall, pedals: from the hull's own measures |
-| `inhull.py` | checks every cabin vertex against the built car's body and glass |
+| `inhull.py` | checks every cabin vertex and triangle against the built car's body and glass |
+| `liner.py` | lines the hull's inside wherever no other part covers it, following the skin and leaving the glass clear |
+| `export_glb.py` | the cabin as one mesh with one palette material (one draw) |
 
-Measured so far, outline IoU against each part's own photo: steering wheel 0.985, front seat 0.964 through the
+Measured so far, outline IoU against each part's own photo: steering wheel 0.985, front seat 0.965 through the
 photo's perspective camera (the square-on first pass scored 0.994 square-on, which was the wrong test: 0.73 through
 the camera), door trim 0.9995 (the door photo fills its frame, so that figure says little). The cabin photos have
 no score: a score against a photo whose camera was fitted to the same photo is circular.
@@ -42,7 +49,4 @@ The six photos do not agree with each other or with one camera each (cabin.py li
 door trims are not door_FL's; its wheel is drawn round though seen from the side; rear_bench's bench, belts and
 cushion top each ask for a different camera.
 
-Not sourced: the wheel's diameter (0.380 m assumed; it makes the photo's grip 31.5 to 33 mm thick) and the seat's
-size (1.00 m from the rail's foot to the headrest's top: seatcam.py says why). The door trim's scale comes from the model's own
-door length (1.075 m). Not in any of the three photos: depth across the photo's plane. The wheel's `DISH`, `PLATE`
-and `PAD_RISE`, the seat's `WIDTHS` and the door's `DEPTH` are placeholders until the cabin photos are measured.
+Not sourced: the wheel's diameter (0.380 m assumed; it makes the photo's grip 31.5 to 33 mm thick). The seat's size is set by the head restraint rule (seatcam.py). The door trim's scale comes from the model's own door length (1.075 m).

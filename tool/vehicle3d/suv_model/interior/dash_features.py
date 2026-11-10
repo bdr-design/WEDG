@@ -16,6 +16,7 @@ STACK = [
     ('flat', 'stack', 'red', 3.3, [(858, 455), (866, 470), (850, 470)]),           # its triangle
     ('prism', 'stack', 'silver', 2.5, box(768, 459, 799, 463)), ('prism', 'stack', 'silver', 2.5, box(913, 459, 944, 463)),      # the vents' tabs
     ('prism', 'stack', 'silver', 3.0, box(705, 446, 720, 478)), ('prism', 'stack', 'silver', 3.0, box(995, 446, 1010, 478)),     # the wheels beside the vents
+] + [('prism', 'stack', 'black', 3.0, box(x0, r, x1, r + 2)) for r in (445, 453, 461, 469, 477, 484) for x0, x1 in ((724, 842), (874, 991))] + [      # the centre vents' slats (rows read off the enlargement)
     ('flat', 'stack', 'gloss', 0.5, box(723, 496, 992, 556)),                      # the heater panel
     ('prism', 'stack', 'silver', 4.0, box(753, 527, 965, 534)),                    # its row of switch tips
     ('prism', 'stack_low', 'silver', 3.0, box(688, 572, 703, 748)), ('prism', 'stack_low', 'silver', 3.0, box(983, 572, 1023, 748)),     # the silver posts either side
@@ -34,9 +35,10 @@ SHIFTER = {'foot': (855, 775), 'knob': (825, 626, 903, 687), 'boot': (810, 687, 
 
 # on the dashboard's faces either side of the stack (first readings off the whole photo and one enlargement)
 DASH = [
-    ('flat', 'screen', 'display', 0.3, box(709, 300, 1000, 403)),                  # the screen's display
-    ('flat', 'cluster', 'display', 0.0, [(330, 440), (345, 395), (420, 368), (560, 363), (568, 440), (560, 466), (345, 466)]),      # the instruments' display, behind the wheel
+    ('flat', 'screen', 'display', 1.0, box(709, 300, 1000, 403)),                  # the screen's display
+    ('flat', 'cluster', 'display', 1.0, [(330, 440), (345, 395), (420, 368), (560, 363), (568, 440), (560, 466), (345, 466)]),      # the instruments' display, behind the wheel
     ('flat', 'upper', 'gloss', 0.5, box(150, 370, 229, 424)), ('flat', 'upper', 'gloss', 0.5, box(1400, 370, 1530, 424)),             # the outer vents
+] + [('prism', 'upper', 'black', 3.0, box(x0, r, x1, r + 3)) for r in (378, 388, 398, 408, 417) for x0, x1 in ((152, 227), (1402, 1528))] + [      # their slats
     ('prism', 'upper', 'silver', 12.0, circle(659, 391, 20)), ('prism', 'upper', 'black', 14.0, circle(659, 391, 15)),                # the round switch right of the instruments
     ('prism', 'lower', 'black', 2.0, box(603, 550, 655, 564)), ('prism', 'lower', 'black', 2.0, box(603, 568, 655, 582)), ('prism', 'lower', 'black', 2.0, box(603, 586, 655, 600)),
     ('flat', 'lower', 'dark', 0.3, box(1056, 444, 1480, 447)), ('flat', 'lower', 'dark', 0.3, box(1056, 657, 1480, 660)),             # the glovebox's upper and lower seams

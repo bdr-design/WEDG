@@ -109,6 +109,21 @@ def _seams(bm, lines, mat, width=0.003, lift=0.0012, both=True, step=10.0):
                 f = bm.faces.new((a[i], a[i + 1], b[i + 1], b[i]) if sgn > 0 else (b[i], b[i + 1], a[i + 1], a[i])); f.material_index = mat; f.smooth = True
 
 
+def risers(ob, h):
+    """Blocks under the rails' feet, h tall (the brackets that stand a seat on the floor's mounts)."""
+    if h < 0.002: return
+    me = ob.data; bm = bmesh.new(); bm.from_mesh(me); V = np.array([v.co for v in bm.verts]); z0 = V[:, 2].min()
+    low = V[V[:, 2] < z0 + 0.01]; idx = list(me.materials).index(bpy.data.materials['cabin_black']) if 'cabin_black' in bpy.data.materials else 0
+    for sy in (-1, 1):
+        q = low[np.sign(low[:, 1]) == sy]
+        if not len(q): continue
+        for xc in (q[:, 0].min() + 0.04, q[:, 0].max() - 0.04):
+            yc = float(np.median(q[:, 1])); vs = [bm.verts.new((xc + dx, yc + dy, z)) for z in (z0 - h + 0.001, z0 + 0.002) for dx, dy in ((-0.03, -0.022), (0.03, -0.022), (0.03, 0.022), (-0.03, 0.022))]
+            for k in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
+                f = bm.faces.new([vs[i] for i in k]); f.material_index = idx; f.smooth = False
+    bm.to_mesh(me); bm.free()
+
+
 def hpoint(ob):
     """The seat's H-point in its own frame (x, z), estimated on the built seat's middle plane: 135 mm ahead of the
     backrest's front face and 25 mm over the cushion's (uncompressed) top there; the SAE J826 manikin's hip joint

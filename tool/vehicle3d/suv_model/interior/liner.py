@@ -9,17 +9,17 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 import imats, cabin as C
 
-LINER_IN = 0.008          # how far inside the skin
+LINER_IN = 0.020          # how far inside the skin
 STEP = 0.05               # the grid's spacing
 BEIGE_Z = 1.40            # beige above, black below
 # (kind, the grid's two ranges, extra): 'side' casts across the car from its middle line at (x, z); 'rear' casts back
 # from x -1.50 at (y, z); 'front' casts forward from x 0 at (y, z)
-REGIONS = [('side', (-2.42, 1.05), (1.12, 1.86)),         # above the doors' trims: the belt strips, pillars, roof rails, quarters
+REGIONS = [('side', (-2.42, 0.95), (1.12, 1.86)),         # above the doors' trims: the belt strips, pillars, roof rails, quarters
            ('side', (-0.95, 1.05), (0.57, 0.68)),         # the sills (further back the floor steps up over the axle)
            ('side', (-0.18, -0.09), (0.57, 1.30)),        # between the front and rear doors' trims (the B pillar's foot)
            ('side', (-1.25, -0.72), (0.64, 1.15)),        # round the rear wells' arches, where the rear doors' trims are cut
            ('side', (0.75, 1.10), (0.57, 1.15)),          # the footwells' sides
-           ('side', (-2.42, -1.15), (0.66, 1.15)),        # the cargo room's sides, behind the trims there
+           ('side', (-2.42, -1.80), (0.72, 1.15)),        # (beside the wells their trims and the cargo trims are enough)        # the cargo room's sides, behind the trims there
            ('rear', (-0.80, 0.80), (0.60, 1.86)),         # the tailgate and the roof's rear edge
            ('front', (-0.80, 0.80), (1.66, 1.86))]        # the windshield's header
 
@@ -36,7 +36,7 @@ def _cast(trees, p, d):
     best = None
     for nm, t in trees.items():
         h = t.ray_cast(Vector(p), Vector(d), 3.0)
-        if h[0] is not None and (best is None or h[3] < best[1]): best = (nm, h[3], h[0])
+        if h[0] is not None and (best is None or h[3] < best[1]): best = (nm, h[3], h[0], h[1])
     return best
 
 
@@ -58,16 +58,20 @@ def build(hull_path, cover=(), name='cabin_liner'):
                     if not h or h[0] != 'body': continue
                     q = h[2]
                     if (kind == 'side' and abs(q.y) < 0.55) or (kind == 'rear' and q.x > -2.0) or (kind == 'front' and q.x < 0.4): continue      # not the wall this pass is for
-                    if any((c := t.ray_cast(Vector(p), Vector(d), h[1]))[0] is not None and c[3] < h[1] - 0.003 for t in covers): continue      # already covered
-                    grid[i, j] = (h[1], q - Vector(d) * (LINER_IN if kind == 'side' else 0.016))
+                    if any((c := t.ray_cast(Vector(p), Vector(d), h[1]))[0] is not None and c[3] > h[1] - 0.05 for t in covers): continue      # already covered
+                    n = h[3] if h[3].dot(Vector(d)) < 0 else -h[3]
+                    if -n.dot(Vector(d)) < 0.5: continue          # met edge-on (a flange, an arch's lip): no liner there
+                    grid[i, j] = (h[1], q + n * (LINER_IN if kind == 'side' else 0.025), n)      # (off the skin along its own normal: where it curves, along the ray was not enough)
             verts = {}
-            for (i, j), (dist, q) in grid.items(): verts[i, j] = (dist, bm.verts.new(q))
+            for (i, j), (dist, q, n) in grid.items(): verts[i, j] = (dist, bm.verts.new(q), n)
             for i in range(len(A) - 1):
                 for j in range(len(B) - 1):
                     k = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
                     if not all(c in verts for c in k): continue
                     ds = [verts[c][0] for c in k]
-                    if max(ds) - min(ds) > 0.12: continue          # a jump from one wall to another: no face across it
+                    if max(ds) - min(ds) > 0.06: continue          # a jump from one wall to another: no face across it
+                    ns = [verts[c][2] for c in k]
+                    if min(ns[a].dot(ns[b]) for a in range(4) for b in range(a)) < 0.93: continue      # a tight fold: a flat face would cut through it
                     vs = [verts[c][1] for c in k]
                     if s < 0 and kind == 'side': vs = vs[::-1]
                     f = bm.faces.new(vs); f.smooth = True; f.material_index = 1 if f.calc_center_median().z > BEIGE_Z else 0

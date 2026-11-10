@@ -26,7 +26,10 @@ HEAD_Z = FLOOR_Z + CABIN_H
 # windshield's foot (the review of 10 Nov). Raised so that the top meets the glass, the wheel's centre is then
 # 0.35 m over the driver's H-point, as usual in this class.
 DASH_DZ = 0.075
-IP_REAR = 0.37                                       # the instrument panel's rear end on the centre line (the lower stack's foot is at 0.345, the beige face's at 0.396): the official length is measured from here
+IP_REAR = 0.548                                      # where the official length is taken from: the instrument panel's rear end at its top (the lip of the dashboard's top).
+# (Taken from its lower face, 0.37, the length put the second row's H-point at the rear door's rear edge, its eye behind the C pillar and its belt's
+# guide 0.38 m ahead of the shoulder, 1.2 m behind the driver's H-point where 0.95 to 1.0 is usual (the review of 10 Nov). From the top's lip it agrees
+# with the C pillar and with the LX 600's second-row legroom. Which point Toyota measures from is not published with the figure: CHOICE.)
 DOOR_Y = CABIN_W / 2                                 # the door trims' panel face at their foot (the cabin's widest)
 DOOR_LEAN = 5.5                                      # degrees: the trims lean in with the glass, so their top edge is 0.765 m out, inside the glass (0.81 at the belt)
 FRONT_DOOR_X, REAR_DOOR_X = (0.9385, -0.1365), (-0.1365, -1.1825)
@@ -85,7 +88,7 @@ CAMERAS = {'dash_front': (*_d((-0.30, 0.0, 1.45 + DASH_DZ), 0.0, 18.6), 89.2, 85
            # driver_pov: fitted with dash_front's camera held (twoview.py, 15 landmarks to 8.7 px): over the driver's
            # seat, looking down 35.6 degrees and 4.4 to the right, 76.5 degrees across. It is above a seated eye: the
            # photo was drawn from there. The game's own seated eye is SEATED_EYE.
-           'driver_pov': (*_d((-0.194, 0.433, 1.658 + DASH_DZ), -4.4, 35.6), 76.5, None, ('seat_',)),
+           'driver_pov': (*_d((-0.194, 0.433, min(1.658 + DASH_DZ, HEAD_Z - 0.035)), -4.4, 35.6), 76.5, None, ('seat_',)),      # (held 2 cm under the headliner: the fit's height is 1 cm above it)
            # rear_bench: one camera fits what it shows of the bench (REAR_CAM), not its belts' anchors; the centre line is at column 837.5
            'rear_bench': (*_rear_cam(), 71.6, 837.5, ('seat_F', 'dashboard', 'steering', 'door_trim_F'))}
 SEATED_EYE = (H_POINT[0] - 0.13, SEAT_Y, H_POINT[1] + 0.69)      # a seated eye over the driver's H-point (SAE J941's eyellipse centre, roughly: CHOICE)
@@ -98,14 +101,15 @@ def _place(ob, loc, rot=(0, 0, 0)):
 # the built car whose hull the cabin is fitted into: the repository's suv.blend beside this folder, or the working build
 HULL = os.environ.get('SUV_BLEND') or next(p for p in (os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'suv.blend'), os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'out', 'r26', 'suv.blend')) if os.path.exists(p))
 def _tidy(ob):
-    """Every object: duplicate vertices merged, zero-area faces and loose vertices dropped; and the faces of its open
-    sheets (screens, grilles, seams, trims, the floor: whatever has a free edge) turned to face the nearest occupant's
-    eye. Closed bodies keep the outward faces the builders gave them."""
-    eyes = [Vector(SEATED_EYE), Vector((SEATED_EYE[0], -SEATED_EYE[1], SEATED_EYE[2])), Vector((-1.05, 0.44, 1.55)), Vector((-1.05, -0.44, 1.55)), Vector((-1.05, 0.0, 1.55))]
-    me = ob.data; bm = bmesh.new(); bm.from_mesh(me); mw = ob.matrix_world.copy()
+    """Every object: duplicate vertices merged, zero-area faces and loose vertices dropped. Each open sheet (whatever
+    has a free edge: screens, grilles, seams, trims, the floor) is made consistent and turned as a whole so that most
+    of its area faces one of the occupants' eyes; closed bodies keep the outward faces the builders gave them. Last,
+    any shading normal (relief_n) that points against its faces is turned with them."""
+    eyes = [Vector(SEATED_EYE), Vector((SEATED_EYE[0], -SEATED_EYE[1], SEATED_EYE[2])), Vector((-1.0, 0.44, 1.52)), Vector((-1.0, -0.44, 1.52)), Vector((-1.0, 0.0, 1.52))]
+    me = ob.data; bm = bmesh.new(); bm.from_mesh(me); mw = ob.matrix_world.copy(); m3 = mw.to_3x3()
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=2e-6); bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=1e-7)
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
-    bm.faces.ensure_lookup_table(); seen = set(); flips = []
+    bm.faces.ensure_lookup_table(); seen = set()
     for f0 in bm.faces:
         if f0.index in seen: continue
         comp, stack = [], [f0]; seen.add(f0.index)
@@ -115,10 +119,16 @@ def _tidy(ob):
                 for g in e.link_faces:
                     if g.index not in seen: seen.add(g.index); stack.append(g)
         if not any(e.is_boundary for f in comp for e in f.edges): continue
+        bmesh.ops.recalc_face_normals(bm, faces=comp); score = 0.0
         for f in comp:
-            c = mw @ f.calc_center_median(); n = (mw.to_3x3() @ f.normal); e = min(eyes, key=lambda q: (q - c).length)
-            if n.dot(e - c) < 0: flips.append(f)
-    if flips: bmesh.ops.reverse_faces(bm, faces=flips)
+            c = mw @ f.calc_center_median(); n = m3 @ f.normal; score += f.calc_area() * (1 if any(n.dot(e - c) > 0 for e in eyes) else -1)
+        if score < 0: bmesh.ops.reverse_faces(bm, faces=comp)
+    lay = bm.verts.layers.float_vector.get('relief_n')
+    if lay is not None:
+        bm.normal_update()
+        for v in bm.verts:
+            n = Vector(v[lay])
+            if n.length > 0.5 and v.link_faces and n.dot(sum((f.normal for f in v.link_faces), Vector())) < 0: v[lay] = -n
     bm.to_mesh(me); bm.free()
     if me.attributes.get('relief_n') is not None:
         import relief as R; R.shade(me)
@@ -131,7 +141,8 @@ def build():
     for side, name in ((1, 'seat_FL'), (-1, 'seat_FR')):
         # the photo's seat has its controls on its right: it is the right-hand seat; the left one is its mirror
         ob = SEAT.build(name, mirror=side > 0); hx, hz = SEAT.hpoint(ob); zmin = min(v.co.z for v in ob.data.vertices)
-        out.append(_place(ob, (H_POINT[0] - hx, side * SEAT_Y, FLOOR_Z - zmin + 0.001)))        # (on the floor: its height is the seat's own)
+        rise = H_POINT[1] - hz - (FLOOR_Z - zmin); SEAT.risers(ob, rise)          # the seat stands on its rails' brackets, which take up what its own height lacks
+        out.append(_place(ob, (H_POINT[0] - hx, side * SEAT_Y, H_POINT[1] - hz)))
     # the front left trim as built faces -y with x forward: it stands on the left door as it is; the right one is its mirror
     s, _, _ = DM.frame(); H = 1024 * s; zb = TRIM_TOP_Z - H * (1 - 60 / 1024)
     for side in (1, -1):

@@ -13,7 +13,11 @@ HEAD_X = (0.47, -2.10)                           # from the windshield's header 
 PILLARS = {'B': (-0.274, -0.182), 'C': (-1.141, -1.067), 'D': (-2.080, -1.900)}
 CARGO = ((-2.30, -2.05, -1.19), (0.66, 0.78, 0.78), 1.285)      # the cargo room's side trims: their face's y by station (the hull's skin is 0.74 to 0.97 out there, rounding in to the tailgate at x -2.44), and their top, at the belt
 WELL_X, WELL_Y, WELL_Z = (-0.79, -1.78), 0.655, 0.96         # the rear wells' trim: its ends, its face and its top
-A_PILLAR = ((1.035, 0.800, 1.27), (0.333, 0.666, 1.76))      # the A pillar's middle line on the hull's inside (measured on the built car: between the windshield and the door's glass the body is 0.25 m long at each height, from (0.94, 0.74) to (0.70, 0.78) at z 1.42 and from (0.51, 0.66) to (0.27, 0.70) at 1.72), left side: at the dashboard's top and at the headliner
+# the A pillar on the built hull, seen from inside: at each height, its edge on the windshield and its edge on the door's glass (x, y), left side
+A_EDGES = [(1.40, (0.975, 0.745), (0.729, 0.782)), (1.42, (0.943, 0.740), (0.696, 0.778)), (1.50, (0.842, 0.720), (0.580, 0.762)), (1.58, (0.732, 0.698), (0.474, 0.742)),
+           (1.66, (0.611, 0.675), (0.357, 0.718)), (1.70, (0.540, 0.662), (0.300, 0.704))]
+A_BOW = 0.035                                    # how far the trim's middle stands in from the glass's line
+PEDAL_Y = (0.415, 0.265)                         # the brake's and the accelerator's middles across the car (the driver's seat is at 0.435)
 def glass_y(z): return float(np.interp(z, (1.26, 1.40, 1.55, 1.70, 1.756), (0.812, 0.785, 0.747, 0.702, 0.680)))      # the side glass's outer face (hull, mean of the door stations)
 TRIM_IN = 0.055                                  # a pillar trim's cabin face stands this far inside the glass's outer face
 
@@ -40,25 +44,30 @@ def build(name='cabin_shell'):
                 yo = glass_y(z); yi = yo - TRIM_IN
                 rows.append([bm.verts.new((x, s * y, z)) for x, y in ((x1 + 0.012, yo - 0.015), (x1 + 0.004, yi), (x0 - 0.004, yi), (x0 - 0.012, yo - 0.015))])
             _quad_strip(bm, rows, 0, smooth=False)
-    # the A pillars' trims: the hull's pillar inside the glass (hullspace.py), from under the dashboard's top to the headliner
+    # the A pillars' trims: across the whole of the hull's pillar at each height, from its edge on the windshield to its
+    # edge on the door's glass (measured on the built car, A_EDGES), bowed into the cabin
     for s_ in (1, -1):
-        foot, head = np.array((A_PILLAR[0][0], s_ * A_PILLAR[0][1], A_PILLAR[0][2])), np.array((A_PILLAR[1][0], s_ * A_PILLAR[1][1], A_PILLAR[1][2])); al = (head - foot) / np.linalg.norm(head - foot)
-        u = np.array((-1.0, 0, 0)); u = u - al * u.dot(al); u /= np.linalg.norm(u); v = np.array((0, -s_ * 1.0, 0)); v = v - al * v.dot(al) - u * v.dot(u); v /= np.linalg.norm(v)
-        rows = [[bm.verts.new(tuple(foot + al * t + u * a + v * b)) for a, b in ((-0.058, 0.018), (-0.045, 0.036), (0.0, 0.046), (0.055, 0.036), (0.072, 0.016))] for t in np.linspace(0.28, np.linalg.norm(head - foot) - 0.10, 7)]      # (from over the dashboard's top)
+        rows = []
+        for z, (ax, ay), (bx, by) in A_EDGES:
+            a, b = np.array((ax, s_ * ay, z)), np.array((bx, s_ * by, z)); m = (a + b) / 2; inn = np.array((-(b - a)[1], (b - a)[0], 0.0)); inn /= np.linalg.norm(inn)
+            if inn[1] * s_ > 0: inn = -inn                                   # toward the cabin's middle
+            rows.append([bm.verts.new(tuple(a + (b - a) * t + inn * (0.016 + A_BOW * math.sin(math.pi * t)))) for t in np.linspace(0.03, 0.97, 7)])
         _quad_strip(bm, rows, 0)
     # the firewall under the dashboard and the footwells' forward wall, in shadow; the pedals
     z0 = C.FLOOR_Z
-    for vs in (((1.05, -0.74, z0), (1.05, 0.74, z0), (0.82, 0.74, 1.04), (0.82, -0.74, 1.04)),):
+    for vs in (((1.05, -0.74, z0), (1.05, 0.74, z0), (0.905, 0.74, 0.878), (0.905, -0.74, 0.878)),):      # (up to the dashboard's lower panel)
         f = bm.faces.new([bm.verts.new(v) for v in vs]); f.material_index = 1
     def box(c, h, mat):
         vs = [bm.verts.new((c[0] + sx * h[0], c[1] + sy * h[1], c[2] + sz * h[2])) for sz in (-1, 1) for sy in (-1, 1) for sx in (-1, 1)]
         for q in ((0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)):
             f = bm.faces.new([vs[k] for k in q]); f.material_index = mat; f.smooth = False
-    # the pedals where dash_front has them (brake pad round column 520, row 736; accelerator 628, 736), at the stations
-    # the driver's reach puts them (cabin.AHP: the accelerator's pad 0.15 to 0.20 m ahead of the heel point; CHOICE)
-    for (px, py, pz), half, arm in (((0.85, 0.538, 0.690), (0.012, 0.045, 0.034), True), ((0.92, 0.383, 0.645), (0.010, 0.028, 0.062), False)):
+    # the pedals: fore and aft where the driver's reach puts them (cabin.AHP: the accelerator's pad 0.15 to 0.20 m ahead of
+    # the heel point); across, as usual, the brake's pad 20 mm and the accelerator's 170 mm inboard of the seat's middle.
+    # (dash_front has them about 0.12 m further out, brake at column 520 and accelerator at 628: the photo was left for
+    # the usual layout, with the owner's leave to use sources; CHOICE)
+    for (px, py, pz), half, arm in (((0.85, PEDAL_Y[0], 0.690), (0.012, 0.045, 0.034), True), ((0.92, PEDAL_Y[1], 0.645), (0.010, 0.028, 0.062), False)):
         box((px, py, pz), half, 1)
-        if arm: box((px + 0.03, py, (pz + 1.0) / 2), (0.008, 0.010, (1.0 - pz) / 2), 1)     # the brake hangs from under the dashboard
+        if arm: box((px + 0.03, py, (pz + 0.88) / 2), (0.008, 0.010, (0.88 - pz) / 2), 1)     # the brake hangs from under the dashboard's lower panel
     def well_top(x):
         if not WELL_X[1] <= x <= WELL_X[0]: return C.REAR_FLOOR[1]
         u = (x - WELL_X[0]) / (WELL_X[1] - WELL_X[0]); zl = z0 if x > C.REAR_FLOOR[0] else C.REAR_FLOOR[1]; return zl + (WELL_Z - zl) * (1 - (2 * u - 1) ** 4) ** 0.5 + 0.025
