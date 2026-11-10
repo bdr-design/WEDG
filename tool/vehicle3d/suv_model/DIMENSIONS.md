@@ -206,7 +206,7 @@ Edge distance (mm) and colour error, side / front / rear / top:
 | r6 | 46 / 25 / 53 / 93 | 45 / 62 / 50 / 38 |
 | r7 | 43.8 / 16.6 / 54.1 / 104.9 | 44.9 / 55.7 / 50.0 / 36.6 |
 | r8 | 44.5 / 15.8 / 28.3 / 100.7 | 44.7 / 53.8 / 49.9 / 36.4 |
-| r9 | 43.6 / 15.8 / 24.2 / 101.9 | 45.3 / 53.7 / 49.3 / 35.9 |
+| r9 | 44.7 / 15.8 / 24.0 / 102.0 | 45.3 / 53.7 / 49.0 / 35.8 |
 
 Those two numbers are dominated by reflections and highlights that the photos paint and a clean render does not
 have, so they are useful only for comparing one build with the next. The silhouette scores cannot see what r8 and r9
@@ -297,16 +297,20 @@ x = X_REAR + L(y, z) F + flat(pd(|y|)). pd is the bumper's plan from 04_top; L t
 Three things are read off the photos on top of that:
 - flat: the gate is flatter across its middle than the bumper. At the plate recess's heights the silhouette is the
   gate beside the recess, at |y| 0.5, and it is 3 to 6 mm ahead of the gate's middle, where the bumper's plan is
-  19 mm ahead. Up to 20 mm of the plan's first depth is taken out; it comes back between |y| 0.50 and 0.65, where
-  the lamps begin, and over the ledge above the lamps, so the glass and the spoiler have the plan whole.
+  19 mm ahead. A plan depth p loses 20 mm x tanh(p / 20 mm), 14.6 of the 18.6 mm at |y| 0.5; it comes back between
+  |y| 0.50 and 0.65, where the lamps begin, and over the ledge above the lamps, so the glass and the spoiler have
+  the plan whole.
 - at the plate recess's heights the line of the gate's middle is carried straight up (the silhouette there is not
   the middle);
-- between the lamps (inside |y| 0.38) the line runs straight past the lamp's own 5 mm step, as 03_rear shows it.
+- between the lamps (inside |y| 0.38) the line runs straight past the lamp's own 6 mm step, as 03_rear shows it.
 The last stations of the loft are a block standing proud of this surface, 5 mm apart, and one exact cut carves the
-surface, the notch under the spoiler and the spoiler's edge out of it.
+surface, the notch under the spoiler and the spoiler's edge out of it. The bumper's rear face takes the plan's
+first millimetres as well, and the spoiler's top comes down to its tip along the plan, so it ends in the same thin
+edge right across (its tip was 15 mm short of 01_left's before).
 
-One game choice, named in the code: where the bumper's step dies out along the body side (TAIL_FADE: whole to where
-the plan is 0.25 m ahead of the car's end, gone 0.30 m further on).
+Game choices, named in the code: where the bumper's step dies out along the body side (TAIL_FADE: whole to where
+the plan is 0.25 m ahead of the car's end, gone 0.30 m further on) and how far ahead of the tip the spoiler's top
+stops following the plan (TIP_REACH: whole to 3 cm, not at all 15 cm further on).
 
 ### 7.4 Result
 
@@ -320,14 +324,25 @@ The model's rear-most point at each height against 01_left's silhouette, real fr
 | 1.00 (crease) | −20 | −11: the crease is at 03_rear's height, 2 cm lower |
 | 0.65 and 0.70 (shoulder) | | +33 and +48: the shoulder is at 03_rear's heights, 8 to 12 cm lower |
 
-In r8 the gate, the shoulder and the lamps were one smeared slope. The independent review measured the first r9
-build's centre line against its own reading of 01_left: within 0.6 mm from the shoulder to the window (and r8
-53 to 19 mm off on the gate). The body is closed: its only open edges are the nine window and roof openings
-(tools/loops.py), no edge is shared by more than two faces, and no back face shows from outside (backface.py).
-54 objects, 24 materials, 91 draws, 187,918 triangles.
+In r8 the gate, the shoulder and the lamps were one smeared slope. The body is closed: its only open edges are the
+nine window and roof openings (tools/loops.py), no edge is shared by more than two faces, and no back face shows
+from outside (backface.py). 54 objects, 24 materials, 91 draws, 190,120 triangles.
 
-Left as it is: a ribbon under half a millimetre wide round the bumper's top corner and where the cut leaves the
-body side (it shades clean); the windshield's surround; the wiper's pivot 15 to 21 mm behind the silhouette.
+Two independent reviews. The first measured the centre line against its own reading of 01_left (within 0.6 mm from
+the shoulder to the window; r8 was 19 to 53 mm off on the gate) and found two misreadings of 04_top (the glass's and
+the spoiler's arcs) and nine smaller faults. The second confirmed the corrections on the rebuilt model (plan within
+0.6 mm of the photo out to |y| 0.75, glass 18.8 mm ahead at 0.5, bumper face ending at z 0.630, no step up the rear
+corners) and found four more: the spoiler's edge still straight in the middle, a shading band on the gate's flanks,
+the bumper's face off the new plan, two comments. Those are corrected and re-measured (spoiler's end 20 mm ahead of
+its middle at |y| 0.5 and 46 at 0.6; bumper face 0.5 / 2.9 / 4.6 mm ahead at 0.10 / 0.20 / 0.25).
+
+Left as it is:
+- the lamp's own step is no longer in the side silhouette: between the lamps the line runs straight, so at z 1.19 to
+  1.22 the model is 2 to 4 mm ahead of 01_left;
+- a ribbon under half a millimetre wide round the bumper's top corner (it shades clean);
+- the windshield's surround is still taken face by face, and a stair-stepped chrome line remains at the quarter
+  glass's lower rear corner;
+- the wiper's pivot is 15 to 21 mm behind the silhouette.
 
 ### 7.5 The parts on it (fascia_rear.py), decided in r8
 

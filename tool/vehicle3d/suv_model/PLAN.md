@@ -69,9 +69,10 @@ Steps:
   silhouette, read to a fraction of a pixel, slid along the bumper's plan from the top photo: a shoulder on the bumper
   that runs round the corners, an upright tailgate behind it, lamps that stand out over it, a crowned rear glass.
   Within 4 mm of the silhouette from the tailgate to the lamps. The side glass's black surround is a clean band.
-  An independent review of r9 found two misreadings of the top photo and nine smaller faults; all but the three
-  listed at the end of DIMENSIONS.md 7.4 are corrected.
-  r9, REAL=1: side 0.989, front 0.970, rear 0.950, top 0.989; 187,918 triangles before any LOD. DIMENSIONS.md
+  Two independent reviews of r9: the first found two misreadings of the top photo and nine smaller faults, the
+  second confirmed the corrections and found four more. All are corrected but those listed at the end of
+  DIMENSIONS.md 7.4.
+  r9, REAL=1: side 0.989, front 0.970, rear 0.950, top 0.989; 190,120 triangles before any LOD. DIMENSIONS.md
   section 7 has the measurements, section 6 what still differs and why.
 - Open questions for the owner: wheels at the real 20-inch size (current) or the photo's bigger look; the photo's
   glass roof (current) or the real ZX's small moonroof.

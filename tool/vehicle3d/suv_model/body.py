@@ -33,7 +33,14 @@ def crown(x, y):
 def section(x, n_side=64, n_top=10, n_bot=8, r_top=0.07, r_bot=0.05):
     zt, zb = float(O.side_top(x)), float(O.side_bottom(x))
     d = x - O.X_REAR; blk = d < TAIL_REACH
-    if blk and x < tail_profile()[-1][0]: zt = max(zt, TAIL_BLOCK_Z)      # the tail block (see below)
+    xt = tail_profile()[-1][0]; near = blk and xt <= x < xt + TIP_REACH[0] + TIP_REACH[1]
+    if blk and x < xt: zt = max(zt, TAIL_BLOCK_Z)      # the tail block (see below)
+    if near: zt = tip_top(x)
+    def top_at(y):
+        """The roof's height at half-width y: the centre line less the crown; near the spoiler's tip, the tip's own
+        top line slid forward with the plan, so the spoiler ends in the same thin edge right across."""
+        if not near: return zt - float(crown(x, y))
+        return tip_top(x - float(tail().pd(y)) * (1 - _step((x - xt - TIP_REACH[0]) / TIP_REACH[1]))) - float(crown(x, y))
     if zt - zb < 0.02: zt = zb + 0.02
     t = (1 - np.cos(np.linspace(0, math.pi, n_side))) / 2
     ze = zt                                    # the roof's height at its edge: the centre line less the crown there
@@ -47,9 +54,9 @@ def section(x, n_side=64, n_top=10, n_bot=8, r_top=0.07, r_bot=0.05):
         up = np.clip((zs - (ze - rt)) / rt, 0, 1); dn = np.clip(((zb + rb) - zs) / rb, 0, 1)
         w = w - rt * (1 - np.sqrt(np.clip(1 - up ** 2, 0, 1))) - rb * (1 - np.sqrt(np.clip(1 - dn ** 2, 0, 1)))
         w = np.maximum(w, 0.02)
-        ze = max(zt - float(crown(x, w[-1])), zb + 0.02)
+        ze = max(top_at(w[-1]), zb + 0.02)
     zs = zb + t * (ze - zb)
-    top = [(w[-1] * (1 - i / n_top), zt - float(crown(x, w[-1] * (1 - i / n_top)))) for i in range(1, n_top)]
+    top = [(w[-1] * (1 - i / n_top), top_at(w[-1] * (1 - i / n_top))) for i in range(1, n_top)]
     half = [(0.0, zb)] + [(w[0] * (i / n_bot), zb) for i in range(1, n_bot)] + list(zip(w, zs)) + top + [(0.0, zt)]
     # the closed loop: up the left side, then down the right side (mirrored), without repeating the centre points
     loop = [(x, y, z) for y, z in half] + [(x, -y, z) for y, z in half[-2:0:-1]]
@@ -96,9 +103,9 @@ TAIL_EXIT = (0.40, 0.50, 0.002)   # between plan depths 0.40 and 0.50 the cut tu
 TAIL_FLAT = (0.020, 0.0465, 0.0186, 0.058, 1.3116, 1.392)
                                # flat: the gate is flatter across its middle than the bumper is. At the plate
                                # recess's heights the silhouette is the gate beside the recess (|y| 0.5), and it is
-                               # 3 to 6 mm ahead of the gate's middle, where the bumper's plan is 19 mm ahead. So up
-                               # to 20 mm of the plan's first depth is taken out (all of it once the slide reaches
-                               # the gate's 46.5 mm). From plan depth 19 to 58 mm (|y| 0.50 to 0.65, where the lamps
+                               # 3 to 6 mm ahead of the gate's middle, where the bumper's plan is 19 mm ahead. So a
+                               # plan depth p loses 20 mm x tanh(p / 20 mm), 14.6 of the 18.6 mm at |y| 0.5 (in full
+                               # once the slide reaches the gate's 46.5 mm). From plan depth 19 to 58 mm (|y| 0.50 to 0.65, where the lamps
                                # begin) it comes back: round the corner the plan is the bumper's own. Over the ledge
                                # above the lamps (z 1.3116 to 1.392) the flattening goes, and the glass and the
                                # spoiler have the plan whole.
@@ -106,9 +113,12 @@ TAIL_RECESS = (0.885, 1.062)   # At these heights the silhouette is not the gate
                                # but the gate beside it, 3 to 6 mm ahead; the middle's line is carried straight up.
 TAIL_BETWEEN = (0.38, 0.46, 1.143, 1.2725)
                                # 03_rear shows the horizon's reflection unbroken across the gate between the lamps:
-                               # the lamp's own step (5 mm, the silhouette at z 1.17 to 1.20) is not there. Inside
+                               # the lamp's own step (6 mm, the silhouette at z 1.17 to 1.20) is not there. Inside
                                # |y| 0.38 the line runs straight between those two heights; it is the lamp's from 0.46.
 TAIL_SPINE = 0.25              # behind the surface the block is this wide a side at least: a thinner fin breaks the end cap's rounding
+TIP_REACH = (0.03, 0.15)       # the spoiler's top slides with the plan whole to 3 cm ahead of the tip, not at all 15 cm further on (a game choice)
+TAIL_ROWS = (0.012, 0.06)      # the cutter has a row this close either side of each fold of the line, and rows no farther apart than
+                               # 6 cm: smooth shading spreads a fold over the faces beside it, and a tall face showed as a band
 TAIL_START = 0.0035            # the cutter's line starts this far behind the bumper's rear face
 TAIL_DENSE = 0.32              # the block's stations are 5 mm apart this far from the car's end (see build)
 TAIL_REACH = 1.3               # stations this far from the car's end are shaped by the tail
@@ -213,6 +223,17 @@ class Tail:
         t = np.where((i > 0) & (g1 > g0), (d - g0) / np.where(g1 > g0, g1 - g0, 1.0), 0.0)
         w = self.W(p[j] + np.clip(t, 0, 1) * (p[i] - p[j]))
         return np.where(Ls[:, 0] > 0, np.maximum(w, TAIL_SPINE), w)
+_TOPB = None
+def tip_top(x):
+    """The spoiler's top line by its tip, from 01_left's contour: the loft's own top line is smoothed over 2 cm and
+    ended 15 mm short of the tip. From 3 to 4.5 cm ahead of the tip it hands over to the loft's line."""
+    global _TOPB
+    xt, z3 = tail_profile()[-1]
+    if _TOPB is None:
+        C = O.tail_contour(0.66, 2.05); k = (C[:, 1] > z3 + 0.0005) & (C[:, 0] > xt - 0.001) & (C[:, 0] < xt + 0.06); o = np.argsort(C[k, 0])
+        _TOPB = (np.r_[xt, C[k, 0][o]], np.r_[z3, np.maximum.accumulate(C[k, 1][o])])
+    t = _step((x - xt - 0.03) / 0.015); return float(np.interp(x, *_TOPB)) * (1 - t) + float(O.side_top(x)) * t
+
 _T = None
 def tail():
     global _T
@@ -236,10 +257,13 @@ def _tail_row(T, xl, z, m=34):
 
 def cut_tail(ob, x_out=-2.75, y_out=1.15):
     T = tail(); P = tail_profile(); rows = []
-    for (x0, z0), (x1, z1) in zip(P[:-2], P[1:-1]):      # the line's own points; no more than 4 cm apart up the glass
-        n = max(1, int(math.ceil((z1 - z0) / 0.04))) if z0 > TAIL_Z[-1][1] else 1
-        rows += [(x0 + (x1 - x0) * i / n, z0 + (z1 - z0) * i / n, None) for i in range(n)]
-    # the spoiler's edge has the plan too: above the tip the cutter stands straight up, and trims the spoiler's end
+    near, far = TAIL_ROWS
+    for (x0, z0), (x1, z1) in zip(P[:-2], P[1:-1]):      # the line's own points, and rows beside each of them (TAIL_ROWS)
+        h = math.hypot(x1 - x0, z1 - z0); ts = [0.0]
+        if h > 3 * near: e = near / h; m = max(1, int(math.ceil((1 - 2 * e) * h / far))); ts += [e + (1 - 2 * e) * i / m for i in range(m + 1)]
+        rows += [(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, None) for t in ts]
+    # the spoiler's edge has the plan too: above the tip the cutter stands straight up, where the spoiler's top
+    # (section's top_at) has come down to the tip's height at every width
     rows += [(*P[-2], None), (*P[-1], None), (P[-1][0], P[-1][1] + 0.16, P[-1][1])]; V = []; ring = []
     for xl, z, zf in rows:
         y, x = _tail_row(T, xl, z if zf is None else zf); pts = [(x[-1], -y_out)] + [(x[j], -y[j]) for j in range(len(y) - 1, 0, -1)] + \
@@ -296,6 +320,11 @@ def build(step=0.02):
     ob = bpy.data.objects.new('body', me); bpy.context.collection.objects.link(ob)
     bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     for f in [f for f in bm.faces if len(f.verts) == n]: _dome(bm, f, 1.0 if f.calc_center_median().x > 0 else -1.0)
+    # the rear cap is the bumper's rear face: across the car it takes the plan's first millimetres (0.5 / 3.0 / 4.5 mm
+    # ahead at |y| 0.10 / 0.20 / 0.25), which the dome's rings did not follow
+    T = tail()
+    for v in bm.verts:
+        if v.co.x < O.X_REAR + CAP_END - 1e-6: v.co.x = O.X_REAR + min(float(T.pd(v.co.y)), CAP_END)
     bm.to_mesh(me); bm.free()
     cut_tail(ob)
     for p in ob.data.polygons: p.use_smooth = True
