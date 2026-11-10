@@ -78,7 +78,7 @@ def score(name, path):
         ph = warp_photo(name, ph); Image.fromarray(ph.astype(np.uint8)).save(os.path.join(OUT, f'{name}_photo_real.jpg'))
     rd = np.asarray(Image.open(path).convert('RGBA')).astype(np.float32)
     if name != 'top':
-        # nothing shows below the ground: the model's rigid tyres stand on the loaded radius, so they reach 30 mm under
+        # nothing shows below the ground: the model's rigid tyres stand on the loaded radius, so they reach 28 mm under
         # z = 0, where the ground hides them (the photo's tyres stand on the ground row v0)
         rd = rd.copy(); rd[int(math.floor(CFG[name]['v0'])) + 1:, :, 3] = 0
     mag = (ph[..., 0] > 180) & (ph[..., 2] > 180) & (ph[..., 1] < 110)

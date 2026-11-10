@@ -154,18 +154,20 @@ def antenna(shell, mat):
     print(f'antenna: roof {roof(xp, 0.0):.4f} at the tip, top {zs.max():.4f}, {tall:.1f} mm tall, {2000 * ys.max():.1f} mm wide at the rim')
     return o
 
-# Wheel openings, real frame, traced on the real side photo (along the car 4.343 mm/px, up 4.17 mm/px; the arch lip is
-# 5 cm nearer the camera than the hub cap, which at 16 degrees of yaw moves it 14 mm, corrected here). Each point is
-# (metres behind the axle, metres up), from the front foot over the top to the rear foot. The front opening's top edge is
-# 0.862 m up and the rear one's 0.930; both are flat-topped with a rounder front shoulder and a straight rear slope.
+# Wheel openings, real frame. The wheels are the size the owner's photos draw them (his decision), and the real car's
+# openings do not hold them: the real front opening tops out 0.862 m up, 15 mm over the bigger tyre. So the openings
+# are the owner's photo's too: on 01_left, round each hub, where the dark of the wheel well ends and the paint
+# begins, every 10 degrees (tools/archphoto.py; black against dark paint, so within about 15 mm). Each point is
+# (metres behind the axle, metres up), from the front foot over the top to the rear foot. Both openings top out
+# 0.911 m up, 67 mm over the tyre. (The real photo's, for the record: tops 0.862 front and 0.930 rear.)
 ARCH_PTS = (
-    ((-0.459, 0.20), (-0.459, 0.463), (-0.455, 0.530), (-0.442, 0.596), (-0.420, 0.663), (-0.394, 0.721), (-0.359, 0.776),
-     (-0.316, 0.817), (-0.255, 0.846), (-0.194, 0.862), (0.179, 0.862), (0.231, 0.851), (0.292, 0.805), (0.335, 0.746),
-     (0.379, 0.680), (0.422, 0.613), (0.457, 0.555), (0.479, 0.509), (0.479, 0.20)),
-    ((-0.468, 0.20), (-0.468, 0.500), (-0.459, 0.584), (-0.446, 0.659), (-0.425, 0.726), (-0.399, 0.784), (-0.364, 0.842),
-     (-0.329, 0.884), (-0.286, 0.917), (-0.225, 0.930), (0.192, 0.930), (0.244, 0.922), (0.288, 0.892), (0.331, 0.842),
-     (0.374, 0.784), (0.418, 0.717), (0.453, 0.659), (0.483, 0.600), (0.496, 0.550), (0.496, 0.20)))
-FLARE_W = (0.066, 0.078)          # the flare band's width over the top of the opening: front, rear (flare tops 0.929 front, 1.008-1.010 rear; real photo 1.007)
+    ((-0.494, 0.20), (-0.494, 0.489), (-0.480, 0.570), (-0.454, 0.651), (-0.415, 0.731), (-0.362, 0.808), (-0.288, 0.870),
+     (-0.194, 0.900), (-0.097, 0.909), (-0.002, 0.911), (0.092, 0.911), (0.189, 0.903), (0.279, 0.867), (0.351, 0.805),
+     (0.404, 0.730), (0.442, 0.650), (0.469, 0.570), (0.483, 0.489), (0.483, 0.20)),
+    ((-0.468, 0.20), (-0.468, 0.492), (-0.449, 0.573), (-0.419, 0.652), (-0.378, 0.728), (-0.327, 0.802), (-0.263, 0.867),
+     (-0.177, 0.899), (-0.088, 0.909), (0.000, 0.911), (0.105, 0.911), (0.215, 0.906), (0.320, 0.876), (0.397, 0.807),
+     (0.449, 0.726), (0.494, 0.649), (0.515, 0.566), (0.527, 0.487), (0.527, 0.20)))
+FLARE_W = (0.066, 0.078)          # the flare band's width over the top of the opening: front, rear (from the real photo; on the owner's photo's openings the flares top out 0.977 front, 0.989 rear)
 FLARE_Y, FLARE_END_Z = 0.990, 0.50   # the flares are the widest point of the car: the official 1.980 m; they end 0.50 m up
 FLARE_PROUD = 0.026                # how far a flare stands out of the body beside it (the flank is 0.961-0.967 out)
 

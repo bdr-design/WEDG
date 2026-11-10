@@ -1,8 +1,9 @@
 """Step 6: wheels, modelled after the rim in the owner's side photo (suv/rim_rear.png).
 The rim: 12 spokes in six V pairs (each pair from one root between two studs, evenly 30 degrees apart at the lip),
 machined silver faces with dark bevels and pockets, a 30 mm dish toward the hub, six studs and a black centre cap.
-The size is the spec sheet's, not the photo's (the photo's wheels are 9 % bigger, see realframe.py): a 265/55R20 tyre,
-0.800 m across and 265 mm wide, on a 20 x 8J rim (lip 0.536 m across), six studs on a 139.7 mm circle; track 1665 mm.
+The size is the owner's photo's, by his decision (realframe.py): a tyre 0.872 m across on a rim whose lip ends 0.296 m
+out, where the spec's 265/55R20 is 0.800 m on a 20 inch rim. The width is the spec's (265 mm on an 8J rim), with six
+studs on a 139.7 mm circle; track 1665 mm.
 
 Every part is a closed solid whose faces look outward by construction (no automatic normal guessing), so a wheel
 mirrored to the right side stays right side out and the back of the wheel is closed when seen from under the car.
@@ -11,7 +12,7 @@ import bpy, bmesh, math, os, sys, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import realframe as RF
-R_TYRE, R_RIM, W_TYRE = RF.TYRE_D / 2, RF.RIM_R, 0.265      # the photos' wheel (realframe); the width is the spec's
+R_TYRE, R_RIM, W_TYRE = RF.TYRE_D / 2, RF.RIM_R - 0.004, 0.265      # the photos' wheel (realframe): the tyre's bead covers 4 mm of the rim; the width is the spec's
 # 8J is 8 inches (203 mm) between the rim flanges. Two flanges of 13 mm each make the rim 229 mm wide over all (the
 # flange thickness is a game choice), so the tyre's sidewall stands 18 mm out past the rim's face on each side.
 W_RIM = 8 * 0.0254 + 2 * 0.013

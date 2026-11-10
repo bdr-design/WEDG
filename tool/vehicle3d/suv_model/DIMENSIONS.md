@@ -76,9 +76,9 @@ Heights above the ground, in mm (real photo at 4.17 mm/px):
 
 | Feature | Owner's photo | Real photo / spec | Owner's photo, mapped |
 |---|---|---|---|
-| Hub (loaded) | 437 | 370 (88.4 px at 4.19) | 412 |
-| Tyre diameter | 870 | 799.5 (spec, 265/55R20) | built at the spec size |
-| Rim lip diameter | 588 | about 540 (20-inch) | built at 536 |
+| Hub (loaded) | 433 (the rims' centre; 437 from the tyre's edges) | 370 (88.4 px at 4.19) | 408 |
+| Tyre diameter | 872 | 799.5 (spec, 265/55R20) | the owner's photo's, by his decision: 872 as built |
+| Rim lip diameter | 592 | about 540 (20-inch) | 592 as built |
 | Door-bottom shut line | 455 | 429 (102.8 px) | 429 (knot) |
 | Window foot at the front door | 1340 | 1253 (300.5 px) | 1253 (knot) |
 | Roof at the rail foot | 1938 | 1859 (445.8 px) | 1842 |
@@ -120,9 +120,9 @@ Heights above the ground, in mm (real photo at 4.17 mm/px):
 - Length 4985, width 1980, height 1925 (over the roof rails), wheelbase 2850, track 1665, front overhang 937 (the
   owner's photo; the real photo agrees from the hub to the door), rear overhang 1198.
 - Axles at x = +1.5555 and −1.2945 (the car centred on x = 0, nose at +2.4925).
-- Tyres 265/55R20 (799.5 mm), rim 20 × 8J with its lip 536 mm across, six studs on a 139.7 mm circle. The hub is
-  370 mm up, the loaded radius measured on the real photo. The tyre is rigid, so it reaches 30 mm under the ground,
-  which hides it; that reads as a loaded tyre.
+- Wheels as the owner's photo draws them (below): tyre 872 mm, rim's lip 592 mm across, six studs on a 139.7 mm
+  circle, hub 408 mm up. The tyre is rigid, so it reaches 28 mm under the ground, which hides it; that reads as a
+  loaded tyre.
 - Everything measured on the owner's photos is built in the photo frame, then mapped:
   - x: piecewise linear through the nose, the front hub, the B-pillar seam, the rear hub and the tail
     (photo −937 / 0 / 1714 / 2969 / 4053 mm behind the front hub → −937 / 0 / 1692 / 2850 / 4048). The fit leaves
@@ -134,10 +134,13 @@ Heights above the ground, in mm (real photo at 4.17 mm/px):
   - y: × 1980 / 2012.5 (the body is built on the front photo's scale). The rear photo's y values go in at
     (1980 / 2076) / (1980 / 2012.5) = 0.9694 (fascia_rear.RY), and the top photo's at TOP_K / Y_SCALE (body.py).
 - Built directly in the real frame:
-  - **Wheel openings** (ext_parts.ARCH_PTS): traced point by point on the real photo. Both are flat-topped with a
-    rounder front shoulder and a straight rear slope; the top edge is 862 mm up at the front and 930 at the rear, and
-    the flare band over it is 66 and 78 mm wide (tops 929 and 1008 to 1010; the real photo's are 929 and 1007). The flares stand 26 mm out of the flank and stop
-    at 0.990 m a side, so the widest point of the car is the spec's 1980 mm.
+  - **Wheel openings** (ext_parts.ARCH_PTS): from the owner's photo, like the wheels: round each hub on 01_left,
+    where the dark of the wheel well ends and the paint begins, every 10 degrees (tools/archphoto.py; black against
+    dark paint, so within about 15 mm). Both openings top out 911 mm up, 67 mm over the tyre; the nearest the tyres
+    come to the body is 47 mm front and 32 rear. The real photo's openings (tops 862 front, 930 rear) were used up
+    to r10 and do not hold the bigger wheel: 15 mm over the front tyre. The flare band over each opening keeps the
+    real photo's width, 66 and 78 mm (tops 977 and 989). The flares stand 26 mm out of the flank and stop at 0.990 m
+    a side, so the widest point of the car is the spec's 1980 mm.
   - **Door shut lines, handles, fuel flap** (sides.py), from the real photo: the front door's front edge 617, the B
     seam 1692 and the rear door's rear edge 2738 behind the front hub; door bottoms 429 up; handle centres 1522 and
     2473 behind the front hub, 1130 and 1152 up, 0.27 m long.
@@ -160,18 +163,18 @@ Heights above the ground, in mm (real photo at 4.17 mm/px):
     the antenna at the same place, so positions along the roof are placed by proportion between the two. The real ZX
     has a small moonroof instead: the owner's decision is open.
   - **Wheels** (wheels.py, realframe.py): **the owner's decision, 10 Nov: the size his photos draw them, not the
-    spec's.** On 01_left, round both hubs: the tyre's edge is 148 px out (0.870 m across; the spec's 265/55R20 is
-    0.7995), the rim's bright lip ends 103 px out (0.303 m radius, a 23.9 inch rim against the spec's 20), and the hub
-    is 0.412 m up after mapping (the real photo's loaded hub: 0.370). The sidewall comes out the spec's all the same,
-    132 mm, and the width is kept at the spec's 265 on an 8J rim (203 mm between the flanges, 229 over all; the
-    flanges' 13 mm is a game choice). The tyre's crown is read on the rear photo (73 %, 84 % and 95 % of the width
-    at 6, 19 and 39 mm from the tread). The tyres clear the arches by 15 mm at the top of the front one and 24 mm
-    beside it, and touch nothing but their own axle and arms.
+    spec's.** On 01_left the rims' bright lips are circles centred 0.4327 m up in the photo, which maps to a hub
+    0.408 m up (the real photo's loaded hub: 0.370). The lip ends 100.5 px out (0.296 m: a 23.3 inch rim against the
+    spec's 20) and the tyre's edge 148.3 px out (0.872 m across; the spec's 265/55R20 is 0.7995). The sidewall is
+    140 mm. The width is kept at the spec's 265 on an 8J rim (203 mm between the flanges, 229 over all; the flanges'
+    13 mm is a game choice). The tyre's crown is read on the rear photo (73 %, 84 % and 95 % of the width at 6, 19
+    and 39 mm from the tread). (r10 had the lip at 0.303 and the hub at 0.412, read off one side of each wheel; the
+    review's circle fits corrected both.)
   - **Under the floor** (underbody.py). With the photos' wheels the hub is where the photos have it, so everything
-    under the floor is at the height the photos map to: the rear differential's underside at 0.267 (the photo 0.266;
-    the official minimum clearance of 225 mm is for the spec's tyre, whose hub is 42 mm lower: 225 + 42 = 267), the
-    rear links' eyes at 0.2255, the front under-cover at 0.238 to 0.245 and the front arms' outer ends at 0.221, the
-    lowest point of the car.
+    under the floor is at the height the photos map to: the rear differential's underside at 0.266 (the official
+    minimum clearance of 225 mm is for the spec's tyre, whose hub is 38 mm lower: 225 + 38 = 263), the rear links'
+    eyes at 0.2255, the front under-cover at 0.238 to 0.245 and the front arms' outer ends at 0.221, the lowest
+    point of the car.
 - No source for the width with mirrors: the model keeps the front photo's mirrors, which come out at 1.082 m a side
   (1.100 on the photo before its width is brought to the spec; the top photo draws them at 1.129).
 
@@ -203,6 +206,7 @@ Silhouette IoU with `REAL=1`:
 | r8 | 0.989 | 0.969 | 0.950 | 0.989 | rear parts re-measured on 03_rear and rebuilt (section 7), clear lamp covers, cut guard |
 | r9 | 0.989 | 0.970 | 0.950 | 0.989 | the tail's surface rebuilt from the side silhouette and the top photo's plan (section 7), side-glass surround |
 | r10 | 0.990 | 0.971 | 0.952 | 0.989 | the photos' wheels (owner's decision); outlines read to a fraction of a pixel |
+| r11 | 0.990 | 0.971 | 0.952 | 0.989 | wheels and wheel openings re-measured on the photo; windshield's side edges and surround |
 
 Edge distance (mm) and colour error, side / front / rear / top:
 
@@ -213,6 +217,7 @@ Edge distance (mm) and colour error, side / front / rear / top:
 | r8 | 44.5 / 15.8 / 28.3 / 100.7 | 44.7 / 53.8 / 49.9 / 36.4 |
 | r9 | 44.1 / 15.8 / 24.0 / 102.1 | 45.3 / 53.7 / 49.0 / 35.8 |
 | r10 | 46.1 / 16.6 / 24.1 / 97.0 | 44.5 / 53.8 / 48.9 / 35.8 |
+| r11 | 44.1 / 16.3 / 24.0 / 109.4 | 43.8 / 53.7 / 48.8 / 35.8 |
 
 Those two numbers are dominated by reflections and highlights that the photos paint and a clean render does not
 have, so they are useful only for comparing one build with the next. The silhouette scores cannot see what r8 and r9
@@ -235,9 +240,11 @@ Because the photos are wrong or disagree (not to be fixed):
   and above the car does not see them.
 
 Because the model is not finished (later steps in PLAN.md):
-- the windshield's surround is still taken face by face (small steps at its corners). The bands the hood and the
-  flanks showed in reflections were the photos' pixel steps (folds of 2 degrees between stations on the hood,
-  median; 0.24 now that the outlines are read to a fraction of a pixel, outlines._frac and _iron);
+- above and below the windshield the surround is still taken face by face (its leaning side edges are bands
+  since r11: the pane's edge was cut along the chord across its knee and stood 2 to 3 cm out of line, in steps);
+- the bands the hood and the flanks showed in reflections were the photos' pixel steps (folds of 2 degrees between
+  stations on the hood, median; 0.3 now that the outlines are read to a fraction of a pixel, outlines._frac and
+  _iron; the review measured 0.26 to 0.33); the windshield frame's reflection on the hood's rear third is still wavy;
 - the quarter glass is a plain shape; the photo's kicks up at the rear and has a chrome surround;
 - no interior yet, so the rear lamps' housings and the far windows show through the glass;
 - the lug nuts are flat, the step tread has no ribs, there are no mud flaps and no number plate;

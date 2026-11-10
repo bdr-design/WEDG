@@ -22,12 +22,13 @@ X_NOSE = L / 2
 AXLE_X = (X_NOSE - FRONT_OVERHANG, X_NOSE - FRONT_OVERHANG - WHEELBASE)
 TYRE_SPEC_D = (20 * 25.4 + 2 * 0.55 * 265) / 1000  # 265/55R20 -> 0.7995 m
 HUB_SPEC_Z = 0.370                           # its loaded radius on the real photo: hub 88.4 px over the ground at 4.19 mm/px
-# The owner's decision (10 Nov): the wheels are the size his photos draw them, not the spec's. On 01_left, round both
-# hubs: the tyre's edge is 148 px out (0.870 m across, 9 % over the spec's), the rim's bright lip ends 103 px out
-# (0.303 m: a 23.9 inch rim against the spec's 20), and the hub is 0.412 m up once the photo is mapped. The sidewall is
-# the spec's all the same (132 mm). A rigid tyre on this hub sinks 23 mm into the ground, which reads as a loaded tyre.
-TYRE_D, RIM_R = 0.870, 0.303
-HUB_Z = 0.412
+# The owner's decision (10 Nov): the wheels are the size his photos draw them, not the spec's. On 01_left the rims'
+# bright lips are circles (fitted in the r10 review: sd 0.16 px) centred 0.4327 m up in the photo, which maps to
+# 0.408 m; the lip ends 100.5 px out (0.296 m: a 23.3 inch rim against the spec's 20) and the tyre's edge 148.3 px out
+# (0.872 m across, 9 % over the spec's). The sidewall is 140 mm. A rigid tyre on this hub sinks 28 mm into the ground,
+# which reads as a loaded tyre.
+TYRE_D, RIM_R = 0.872, 0.296                 # RIM_R: where the lip ends, as seen from the side
+HUB_Z = 0.408
 
 # The photo frame (views.json, s 2.9422 mm/px): front hub at u 357.5 -> x 1.5609, rear hub at u 1366.5 -> x -1.4078.
 # (An independent re-measure reads the hubs at u 356.7 and 1366.6: 2 mm and 0.3 mm from these.)

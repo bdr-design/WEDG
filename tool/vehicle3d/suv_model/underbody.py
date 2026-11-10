@@ -10,9 +10,9 @@ What the owner's photos show below it (mapped to the real frame, measured by r7w
   by the tyres from the side. No spare wheel and no boxes are hung under the tail for that reason.
 
 HEIGHTS. The wheels are the size the owner's photos draw them (his decision; realframe), so the hub is where the
-photos have it, 0.412 m up, and everything under the floor is at the height the photos map to:
+photos have it, 0.408 m up, and everything under the floor is at the height the photos map to:
 - the rear differential's underside at 0.266. The official minimum ground clearance, 225 mm (toyota.jp, ZX), is for the
-  spec's tyre, whose hub is 42 mm lower: 225 + 42 = 267, so the photo's axle is the official one on a bigger wheel;
+  spec's tyre, whose hub is 38 mm lower: 225 + 38 = 263, so the photo's axle is the official one on a bigger wheel;
 - the lowest points are the front arms' outer ends, 0.221 (front photo 0.221-0.226), and the rear links' eyes, 0.2255.
   Nothing inboard of the tyres comes below 0.221.
 
@@ -24,9 +24,9 @@ import bpy, math
 from mathutils import Vector
 import realframe as RF, surf
 
-CLEARANCE = 0.225 + RF.HUB_Z - RF.HUB_SPEC_Z   # under the rear differential: the official 225 mm, lifted with the hub (0.267; the photo 0.266)
+CLEARANCE = 0.266                    # under the rear differential, the rear photo's (the official 225 mm lifted with the hub: 0.263)
 FLOOR_MIN = 0.221                    # the photos' lowest point inboard of the tyres (the front arms' outer ends)
-HUB_DROP = 0.412 - RF.HUB_Z          # the photos' hub height minus the model's: nothing, with the photos' wheels
+HUB_DROP = 0.0                       # the photos' hub height minus the model's: nothing, with the photos' wheels
 TYRE_IN = 0.700                      # the tyres' inner faces: half track 0.8325 - half width 0.1325
 
 

@@ -15,8 +15,8 @@ References:
 Scoring: scratchpad/suv/compare_ext.py renders any model from the four exterior photo cameras. It prints the
 silhouette IoU, the edge distance in mm and the colour error, and writes side-by-sides and overlays. The goal is
 IoU ≥ 0.97 in every view, with the features (lamps, grille, windows, door lines, arches) within about 1 cm.
-As of r9 the side, front and top views meet it (0.989, 0.970, 0.989) and the rear does not (0.950): the rear photo
-disagrees with the spec's width and clearance, which the model keeps (DIMENSIONS.md sections 3, 4 and 6).
+As of r11 the side, front and top views meet it (0.990, 0.971, 0.989) and the rear does not (0.952): the rear photo
+disagrees with the spec's width, which the model keeps (DIMENSIONS.md sections 3, 4 and 6).
 
 Steps:
 1. Body shell: a quad loft of cross sections from the side, front and top outlines (mirrors and wheels removed
@@ -25,7 +25,7 @@ Steps:
 3. Front: grille frame and bars, headlamp units (housing, lens, projectors, DRL strip), bumper, intake, skid plate.
 4. Rear: tail lamps, the chrome garnish, bumper, reflectors, tailgate seam.
 5. Sides: door seams, handles, mirrors, roof rails, running boards.
-6. Wheels: a modelled 12-spoke two-tone rim from the rim photo, 265/55R20 tyres with tread.
+6. Wheels: a modelled 12-spoke two-tone rim from the rim photo, tyres with tread (the owner's photo's size since r10).
 7. Interior from the six photos: dash, screen, cluster, centre stack with its silver frame, vents with slats,
    console, shifter, steering wheel, seats with bolsters and seams, door cards, headliner, pillars.
 8. Doors and tailgate as hinged parts, the game hooks (as in suv_complete.py: door_*, wheel_*, steering,
@@ -74,9 +74,11 @@ Steps:
   listed at the end of DIMENSIONS.md 7.4.
   r9, REAL=1: side 0.989, front 0.970, rear 0.950, top 0.989; 190,448 triangles before any LOD. DIMENSIONS.md
   section 7 has the measurements, section 6 what still differs and why.
-- 10 Nov, build r10: the owner's decisions: the wheels as his photos draw them (tyre 0.870 m, rim 0.303 m radius,
-  hub 0.412 m), and the glass roof stays. The outlines are read to a fraction of a pixel, which takes the bands out
+- 10 Nov, builds r10 and r11: the owner's decisions: the wheels as his photos draw them (tyre 0.872 m, rim's lip
+  0.296 m out, hub 0.408 m; r11 after the review's re-measurement, with the wheel openings from his photo too,
+  since the real car's do not hold the bigger wheel), and the glass roof stays. The windshield's side edges are cut
+  along their knee and its surround is a band (r11). The outlines are read to a fraction of a pixel, which takes the bands out
   of the hood's and the flanks' reflections. The model builds from the repository alone, and the built suv.blend is
-  kept beside the code. r10, REAL=1: side 0.990, front 0.971, rear 0.952, top 0.989; 190,408 triangles.
-- Next: the windshield's surround, the quarter glass's
+  kept beside the code. r11, REAL=1: side 0.990, front 0.971, rear 0.952, top 0.989; 189,996 triangles.
+- Next: the quarter glass's
   kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.

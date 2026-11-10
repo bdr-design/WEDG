@@ -60,11 +60,16 @@ def cut_outline(bm):
     bis(side(1.3, 2.0), A_FOOT + A_BEV * 1.3 * SURROUND, A_BEV)
     for dc in (*B_PILLAR, *C_PILLAR, 4.42, 4.42 + SURROUND, 1.565, 2.735, 2.775, 3.715): bis(side(dc - 0.6, dc + 0.6), (XF - dc, 0, 0), (1, 0, 0))
     bis(side(3.9, 4.75), Q_CO, Q_NO); bis(side(3.9, 4.75), Q_OUT, Q_NO)
-    ws = lambda: geom_of(faces(lambda c, d: d < 2.6 and c.z > 1.2 * K))
-    for zc in (ZWS0, ZWS1): bis(ws(), (0, 0, zc), (0, 0, 1))
-    for s in (1, -1):
-        p0 = Vector((0, s * ws_half(ZWS0), ZWS0)); p1 = Vector((0, s * ws_half(ZWS1), ZWS1))
-        bis(ws(), p0, (p1 - p0).cross(Vector((1, 0, 0))).normalized())
+    # The windshield's side edge leans, with a knee at z 1.60 K (ws_half): one plane per band of height, and the
+    # surround's edge 3 cm outside each. (One plane from foot to head cut the chord across the knee, and the faces
+    # between chord and knee were taken whole: a pane edge 2 to 3 cm out of line, in steps.)
+    ws = lambda z0=1.2 * K, z1=9.0: geom_of(faces(lambda c, d: d < 2.6 and z0 < c.z < z1))
+    zk = 1.60 * K
+    for zc in (ZWS0, zk, ZWS1): bis(ws(), (0, 0, zc), (0, 0, 1))
+    for za, zb in ((ZWS0, zk), (zk, ZWS1)):
+        for s in (1, -1):
+            p0 = Vector((0, s * ws_half(za), za)); p1 = Vector((0, s * ws_half(zb), zb)); n = (p1 - p0).cross(Vector((1, 0, 0))).normalized()
+            bis(ws(za, zb), p0, n); bis(ws(za, zb), p0 + Vector((0, s * SURROUND, 0)), n)
     rg = lambda z0=1.1 * K, z1=9.0: geom_of(faces(lambda c, d: d > 4.4 and z0 < c.z < z1))
     for zc in (ZRG0 - RG_SEAL, ZRG0, *[z for z, _ in RG_EDGE[1:-1]], ZFRIT, ZRG1): bis(rg(), (0, 0, zc), (0, 0, 1))
     # the leaning side edge, one plane per band of height, and the seal's outer edge 6 mm outside it; the lowest band
@@ -104,8 +109,9 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
         elif k == 'seal': f.material_index = ti
     # A black surround, 3 cm wide. Round the side glass it is the band between the pane's five edges and the same five
     # set 3 cm out, all of them cut into the shell (cut_outline): taking whole faces near an edge instead left a
-    # staircase wherever the edge leans across the shell's rows. Round the windshield it is still the faces within
-    # 3 cm of a glass edge; the rear window has its own measured seal.
+    # staircase wherever the edge leans across the shell's rows. The windshield's leaning side edges are done the same
+    # way; above and below it the surround is still the faces within 3 cm of the glass's edge, which run along the
+    # shell's rows. The rear window has its own measured seal.
     def side_out(c):
         """How far outside the side glass's outline the point is, the farthest of its five edges; negative inside."""
         return -min((c - BL0).dot(NB), ZTOP - c.z, behind_A(c), c.x - (XF - 4.42), above_Q(c))
@@ -120,8 +126,9 @@ def build(shell, glass_mat, black_gloss, trim, chrome):
         c = f.calc_center_median(); d = XF - c.x
         if abs(c.y) > 0.45 and abs(f.normal.y) > 0.6 and 1.3 < d < 4.6 and c.z > 1.0 * K:      # the body side
             if 0 < side_out(c) < SURROUND and (c - A_FOOT).dot(A_BEV) < 1.3 * SURROUND: f.material_index = ti
-        elif edge_v and d < 2.7:      # round the windshield
-            if kd.find(c)[2] < SURROUND: f.material_index = ti
+        elif edge_v and d < 2.7:      # round the windshield: a band beside its leaning side edges, whole faces above and below
+            out = abs(c.y) - ws_half(c.z)
+            if (0 < out < SURROUND) if ZWS0 < c.z < ZWS1 and out > 0 else kd.find(c)[2] < SURROUND: f.material_index = ti
     bm.to_mesh(me); bm.free()
     # lift the glass out into its own object and set it 8 mm in, with a lip back to the opening
     for o in bpy.context.selected_objects: o.select_set(False)

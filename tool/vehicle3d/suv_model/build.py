@@ -23,7 +23,7 @@ for o in list(bpy.data.objects):
     if o.type == 'MESH': RF.warp_object(o)
 # 3. in the real frame (measured on the real car or placed by real dimensions): the glass roof, the roof rails and the
 # antenna, the sill and the side steps, the wheel openings and flares round the real axles, the shut lines, the door
-# handles, the real 265/55R20 wheels, and under the floor the rear axle in its tunnel and the front suspension
+# handles, the wheels (the owner's photo's size), and under the floor the rear axle in its tunnel and the front suspension
 RO.glass_roof(shell, glass_m, trim)
 EP.roof_rails(shell, trim); EP.antenna(shell, paint)
 SD.sill(shell, trim)
