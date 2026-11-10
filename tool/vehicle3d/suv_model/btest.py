@@ -1,7 +1,7 @@
 """Quick look at the back alone: the cached bare body + the windows + the rear parts, mapped to the real frame.
 Run: blendenv/bin/python btest.py <out.blend> [norear] [front]"""
 import bpy, sys, os
-HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, '..', 'suv'))
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.path[1:1] = [os.path.join(HERE, '..'), os.path.join(HERE, '..', 'suv')]      # suv_exterior.py (the tyre's maps)
 OUT = [a for a in sys.argv if a.endswith('.blend')][-1]
 bpy.ops.wm.open_mainfile(filepath=os.path.join(HERE, 'out', 'body.blend'))
 import mats, greenhouse as GH, fascia_rear as FR, realframe as RF

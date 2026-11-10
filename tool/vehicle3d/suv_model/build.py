@@ -1,7 +1,7 @@
 """The SUV modelled from scratch in Blender: runs every step and writes the .blend.
 Run: blendenv/bin/python build.py <out_dir> [render]"""
 import bpy, sys, os, math
-HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, '..', 'suv'))
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.path[1:1] = [os.path.join(HERE, '..'), os.path.join(HERE, '..', 'suv')]      # suv_exterior.py (the tyre's maps)
 OUT = sys.argv[-2] if sys.argv[-1] == 'render' else sys.argv[-1]; RENDER = sys.argv[-1] == 'render'
 os.makedirs(OUT, exist_ok=True)
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -40,9 +40,9 @@ bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'suv.blend'))
 tri = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in bpy.data.objects if o.type == 'MESH')
 print('triangles', tri)
 if RENDER:
-    sys.path.insert(0, os.path.join(HERE, '..', 'camel')); from blend_common import desert_world, ground
+    sys.path[1:1] = [os.path.join(HERE, '..', '..', 'camel3d'), os.path.join(HERE, '..', 'camel')]; from blend_common import desert_world, ground
     sc = bpy.context.scene; sc.render.engine = 'CYCLES'; sc.cycles.samples = 32; sc.cycles.use_denoising = True; sc.cycles.device = 'CPU'
-    desert_world(sun_elev=34, sun_rot=215); ground(os.path.join(HERE, '..', 'assets_all', '01_terrain', 'najd.png'), size=120, tile_m=22)
+    desert_world(sun_elev=34, sun_rot=215); tex = os.path.join(HERE, '..', 'assets_all', '01_terrain', 'najd.png'); ground(tex if os.path.exists(tex) else None, size=120, tile_m=22)
     sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - Medium High Contrast'; sc.view_settings.exposure = -5.3
     from mathutils import Vector
     cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam); sc.camera = cam

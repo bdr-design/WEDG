@@ -15,7 +15,8 @@ box = (int(u(y1)), int(v(z1)), int(u(y0)) + 1, int(v(z0)) + 1)
 size = (int((box[2] - box[0]) * zoom), int((box[3] - box[1]) * zoom))
 # the crop's true edges in the photo frame
 ya, yb = (UC - box[2]) * SY, (UC - box[0]) * SY; za, zb = (V0 - box[3]) * S, (V0 - box[1]) * S
-im = Image.open(os.path.join(HERE, '..', 'vehicles', 'Black_SUV_Views', '03_rear.png')).convert('RGB')
+sys.path.insert(0, os.path.join(HERE, '..')); import outlines as _O
+im = Image.open(_O.photo('03_rear')).convert('RGB')
 photo = im.crop(box).resize(size, Image.LANCZOS)
 
 bpy.ops.wm.open_mainfile(filepath=blend); sc = bpy.context.scene

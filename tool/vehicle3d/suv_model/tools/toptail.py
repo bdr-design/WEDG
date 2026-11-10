@@ -5,7 +5,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import outlines as O, body as B
 from PIL import Image
-a = np.asarray(Image.open(O.V + '/Black_SUV_Views/04_top.png').convert('RGB')).astype(int); ct = O.ct
+a = np.asarray(Image.open(O.photo('04_top')).convert('RGB')).astype(int); ct = O.ct
 m = O._top; s = ct['s']; ky = s * ct['k'] * B.TOP_TO_FRONT
 red = (a[..., 0] > 110) & (a[..., 1] < 70) & (a[..., 2] < 80) & (a[..., 0] > a[..., 1] * 2.2)
 vend = np.flatnonzero(m.any(axis=1)).max(); print('rear end row', vend, ' x %.4f' % (O.L / 2 - (vend - ct['v0']) * s), 'ky', ky)

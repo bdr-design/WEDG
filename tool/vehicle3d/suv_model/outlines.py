@@ -7,10 +7,14 @@ from PIL import Image
 from scipy import ndimage
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import realframe as RF
-V = '/tmp/claude-0/-home-user-WEDG/d6dbc15a-e910-5754-8d25-3b30bd9632e4/scratchpad/vehicles'
-CFG = json.load(open(f'{V}/suv2/views.json')); L = CFG['L']
+HERE = os.path.dirname(os.path.abspath(__file__))
+# The owner's photos: assets_src/vehicles/Black_SUV_Views in the repository (SUV_VIEWS overrides); png or webp.
+VIEWS = next(d for d in (os.environ.get('SUV_VIEWS'), os.path.join(HERE, '..', '..', '..', 'assets_src', 'vehicles', 'Black_SUV_Views'),
+                         os.path.join(HERE, '..', 'vehicles', 'Black_SUV_Views')) if d and os.path.isdir(d))
+def photo(name): return next(p for p in (os.path.join(VIEWS, name + e) for e in ('.png', '.webp')) if os.path.exists(p))
+CFG = json.load(open(os.path.join(HERE, 'views.json'))); L = CFG['L']
 def _mask(name, fill=True):
-    a = np.asarray(Image.open(f'{V}/Black_SUV_Views/{name}.png').convert('RGB')).astype(int)
+    a = np.asarray(Image.open(photo(name)).convert('RGB')).astype(int)
     m = ~((a[..., 0] > 180) & (a[..., 2] > 180) & (a[..., 1] < 110))
     lab, n = ndimage.label(m); sizes = ndimage.sum(m, lab, range(1, n + 1)); m = lab == (1 + int(np.argmax(sizes)))
     return ndimage.binary_fill_holes(m) if fill else m
@@ -55,7 +59,7 @@ def tail_contour(z0=0.66, z1=1.62):
     to the rear glass. A pixel on the car's edge is part car and part magenta background; how magenta it is says how
     much of it is car, and the line runs where the car covers half. (side_rear above counts whole pixels: 2.9 mm.)"""
     from skimage import measure
-    a = np.asarray(Image.open(f'{V}/Black_SUV_Views/01_left.png').convert('RGB')).astype(float); cs = CFG['side']
+    a = np.asarray(Image.open(photo('01_left')).convert('RGB')).astype(float); cs = CFG['side']
     cov = 1 - np.clip((np.minimum(a[..., 0], a[..., 2]) - a[..., 1]) / 255.0, 0, 1)
     cov *= ndimage.binary_dilation(_side, iterations=3)
     q = max(measure.find_contours(cov, 0.5), key=len)
@@ -91,7 +95,7 @@ def top_tail_plan(reach=0.32):
     averaged, never falling). top_half above counts whole rows of 2.7 mm, so it is blind to the plan's first
     millimetres: it makes the car's end dead flat out to 0.27 m a side, where the photo is 3 to 5 mm ahead."""
     from skimage import measure
-    a = np.asarray(Image.open(f'{V}/Black_SUV_Views/04_top.png').convert('RGB')).astype(float); c = CFG['top']
+    a = np.asarray(Image.open(photo('04_top')).convert('RGB')).astype(float); c = CFG['top']
     cov = 1 - np.clip((np.minimum(a[..., 0], a[..., 2]) - a[..., 1]) / 255.0, 0, 1)
     cov *= ndimage.binary_dilation(_top, iterations=3)
     q = max(measure.find_contours(cov, 0.5), key=len); v, u = q[:, 0], q[:, 1]

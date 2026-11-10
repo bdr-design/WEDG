@@ -15,8 +15,9 @@ args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
 SRC, OUT = args[0], args[1]
 os.makedirs(OUT, exist_ok=True)
 HERE = os.path.dirname(os.path.abspath(__file__))
-VIEWS = os.environ.get('VIEWS_DIR') or os.path.join(HERE, '..', 'vehicles', 'Black_SUV_Views')
-CFG = json.load(open(os.environ.get('VIEWS_JSON') or os.path.join(HERE, '..', 'vehicles', 'suv2', 'views.json')))
+sys.path.insert(0, HERE); import outlines as _O
+VIEWS = os.environ.get('VIEWS_DIR') or _O.VIEWS
+CFG = json.load(open(os.environ.get('VIEWS_JSON') or os.path.join(HERE, 'views.json')))
 
 if SRC.endswith('.blend'):
     bpy.ops.wm.open_mainfile(filepath=SRC)
@@ -101,7 +102,7 @@ def warp_photo(name, ph):
     the photo as it would look at the real dimensions. Each output pixel is a real-frame point; it is looked up at
     the photo-frame point it came from."""
     import cv2
-    sys.path[:0] = [HERE, os.path.join(HERE, '..', 'suvm')]; import realframe as RF
+    sys.path[:0] = [HERE]; import realframe as RF
     c = CFG[name]; H_, W_ = ph.shape[:2]; s = c['s']
     u, v = np.meshgrid(np.arange(W_, dtype=np.float64), np.arange(H_, dtype=np.float64))
     if name == 'side':

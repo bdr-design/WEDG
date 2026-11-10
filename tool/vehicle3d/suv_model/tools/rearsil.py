@@ -10,7 +10,7 @@ from mathutils import Vector
 a = sys.argv[1:]; bpy.ops.wm.open_mainfile(filepath=a[0])
 z0, z1, dz = (float(v) for v in a[1:4]) if len(a) > 3 else (0.50, 1.10, 0.025)
 import outlines as O
-im = np.asarray(Image.open(O.V + '/Black_SUV_Views/01_left.png').convert('RGB')).astype(int)
+im = np.asarray(Image.open(O.photo('01_left')).convert('RGB')).astype(int)
 m = ~((im[..., 0] > 180) & (im[..., 2] > 180) & (im[..., 1] < 110)); s = 0.0029422169811320754
 cols = np.flatnonzero(m.any(axis=0)); uend = cols[-1]
 dg = bpy.context.evaluated_depsgraph_get(); sc = bpy.context.scene

@@ -1,6 +1,6 @@
 """Builds the bare body once (photo frame) and saves it, so fascia tests start in seconds."""
 import bpy, sys, os
-HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, '..', 'suv'))
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE); sys.path[1:1] = [os.path.join(HERE, '..'), os.path.join(HERE, '..', 'suv')]      # suv_exterior.py (the tyre's maps)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 import body
 paint = bpy.data.materials.new('paint'); paint.use_nodes = True; b = paint.node_tree.nodes['Principled BSDF']

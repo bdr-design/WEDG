@@ -6,7 +6,7 @@ import outlines as O
 from PIL import Image
 from skimage import measure
 from scipy import ndimage
-a = np.asarray(Image.open(O.V + '/Black_SUV_Views/01_left.png').convert('RGB')).astype(float)
+a = np.asarray(Image.open(O.photo('01_left')).convert('RGB')).astype(float)
 cov = 1 - np.clip((np.minimum(a[..., 0], a[..., 2]) - a[..., 1]) / 255.0, 0, 1)
 cov *= ndimage.binary_dilation(O._side, iterations=3)
 c = max(measure.find_contours(cov, 0.5), key=len); s = O.c['s']

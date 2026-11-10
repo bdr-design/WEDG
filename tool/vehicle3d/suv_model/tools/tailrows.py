@@ -6,7 +6,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import outlines as O
 from PIL import Image
-a = np.asarray(Image.open(O.V + '/Black_SUV_Views/01_left.png').convert('RGB')).astype(float); m = O._side
+a = np.asarray(Image.open(O.photo('01_left')).convert('RGB')).astype(float); m = O._side
 s = O.c['s']; v0 = O.c['v0']; uend = np.flatnonzero(m.any(axis=0)).max()
 out = []
 for v in range(int(v0 - 1.95 / s), int(v0 - 0.45 / s) + 1):
