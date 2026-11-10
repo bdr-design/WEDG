@@ -11,9 +11,17 @@ def tidy(o, merge=1e-6):
     if merge: bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=merge)
     bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=THIN)
     if o.name == 'body':
+        seen, fins = {}, set()          # a cut can leave a fin: two faces on the same corners, back to back, enclosing nothing
+        for f in bm.faces:
+            k = frozenset(v.index for v in f.verts)
+            if k in seen: fins |= {f, seen[k]}
+            else: seen[k] = f
+        if fins: print(f'tidy {o.name}: {len(fins) // 2} fins removed'); bmesh.ops.delete(bm, geom=list(fins), context='FACES'); new = [None]
+        wire = [e for e in bm.edges if not e.link_faces]
+        if wire: bmesh.ops.delete(bm, geom=wire, context='EDGES')
         edge = [e for e in bm.edges if len(e.link_faces) == 1]
-        new = bmesh.ops.holes_fill(bm, edges=edge, sides=HOLE)['faces'] if edge else []
-        if new: print(f'tidy {o.name}: {len(new)} cracks closed, the largest {max(f.calc_area() for f in new) * 1e6:.1f} mm2')
+        fill = bmesh.ops.holes_fill(bm, edges=edge, sides=HOLE)['faces'] if edge else []; new = new + fill
+        if fill: new = fill; print(f'tidy {o.name}: {len(new)} cracks closed, the largest {max(f.calc_area() for f in new) * 1e6:.1f} mm2')
     loose = [v for v in bm.verts if not v.link_faces]
     if loose: bmesh.ops.delete(bm, geom=loose, context='VERTS')
     zero = sum(1 for f in bm.faces if f.calc_area() < 1e-12); n1 = (len(bm.verts), len(bm.faces))

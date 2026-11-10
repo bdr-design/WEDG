@@ -74,7 +74,9 @@ Steps:
   listed at the end of DIMENSIONS.md 7.4.
   r9, REAL=1: side 0.989, front 0.970, rear 0.950, top 0.989; 190,448 triangles before any LOD. DIMENSIONS.md
   section 7 has the measurements, section 6 what still differs and why.
-- Open questions for the owner: wheels at the real 20-inch size (current) or the photo's bigger look; the photo's
-  glass roof (current) or the real ZX's small moonroof.
-- Next: the hood's and flanks' surfacing (bands in reflections), the windshield's surround, the quarter glass's
+- 10 Nov, build r10: the owner's decisions: the wheels as his photos draw them (tyre 0.870 m, rim 0.303 m radius,
+  hub 0.412 m), and the glass roof stays. The outlines are read to a fraction of a pixel, which takes the bands out
+  of the hood's and the flanks' reflections. The model builds from the repository alone, and the built suv.blend is
+  kept beside the code. r10, REAL=1: side 0.990, front 0.971, rear 0.952, top 0.989; 190,408 triangles.
+- Next: the windshield's surround, the quarter glass's
   kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.

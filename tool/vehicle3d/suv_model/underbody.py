@@ -9,13 +9,12 @@ What the owner's photos show below it (mapped to the real frame, measured by r7w
 - side photo: nothing under about 0.32 m behind the rear tyre or ahead of the front one, so everything low is hidden
   by the tyres from the side. No spare wheel and no boxes are hung under the tail for that reason.
 
-ONE RULE FOR HEIGHTS (the photos' hub is 42 mm too high: 0.412 m against the real loaded 0.370 m):
-- parts carried by the body (the front cover, the arms' inner pivots) keep the height the photo maps to;
-- parts carried by the wheels (the rear axle and everything bolted to it, the outer ends of the front arms) hang on
-  the real hub, so they sit 42 mm lower than the photo maps them;
-- the official minimum ground clearance, 225 mm (toyota.jp, ZX), is taken to be under the rear differential: the
-  source does not say where it is measured, a rigid axle's housing is the usual place, and the photo agrees
-  (0.266 - 0.042 = 0.224). Nothing else inboard of the tyres comes below 0.230 m (5 mm above it: a game choice).
+HEIGHTS. The wheels are the size the owner's photos draw them (his decision; realframe), so the hub is where the
+photos have it, 0.412 m up, and everything under the floor is at the height the photos map to:
+- the rear differential's underside at 0.266. The official minimum ground clearance, 225 mm (toyota.jp, ZX), is for the
+  spec's tyre, whose hub is 42 mm lower: 225 + 42 = 267, so the photo's axle is the official one on a bigger wheel;
+- the lowest points are the front arms' outer ends, 0.221 (front photo 0.221-0.226), and the rear links' eyes, 0.2255.
+  Nothing inboard of the tyres comes below 0.221.
 
 The shell is solid between the rear wheel wells, so a tunnel is cut there for the axle, its springs and dampers.
 Its cross-section stays inside the tyre's disc, so no daylight shows through the car from the side.
@@ -25,9 +24,9 @@ import bpy, math
 from mathutils import Vector
 import realframe as RF, surf
 
-CLEARANCE = 0.225                    # official minimum ground clearance (toyota.jp, ZX), taken under the rear differential
-FLOOR_MIN = 0.230                    # nothing else inboard of the tyres is lower (game choice: 5 mm over the official figure)
-HUB_DROP = 0.412 - RF.HUB_Z          # the photos' hub height minus the real loaded one
+CLEARANCE = 0.225 + RF.HUB_Z - RF.HUB_SPEC_Z   # under the rear differential: the official 225 mm, lifted with the hub (0.267; the photo 0.266)
+FLOOR_MIN = 0.221                    # the photos' lowest point inboard of the tyres (the front arms' outer ends)
+HUB_DROP = 0.412 - RF.HUB_Z          # the photos' hub height minus the model's: nothing, with the photos' wheels
 TYRE_IN = 0.700                      # the tyres' inner faces: half track 0.8325 - half width 0.1325
 
 
@@ -36,8 +35,8 @@ def unsprung(z_photo):
     return max(z_photo - HUB_DROP, FLOOR_MIN)
 
 
-BAND_Z = unsprung(0.280)             # rear photo's band 0.275-0.284 for |y| 0.20-0.54 -> 0.238: the stabiliser bar
-EYE_Z = unsprung(0.2255)             # rear photo's round mounts at |y| 0.60-0.64 -> clipped to 0.230: the lower link eyes
+BAND_Z = unsprung(0.280)             # rear photo's band 0.275-0.284 for |y| 0.20-0.54: the stabiliser bar
+EYE_Z = unsprung(0.2255)             # rear photo's round mounts at |y| 0.60-0.64: the lower link eyes
 ARM_Z = (0.243, unsprung(0.221))     # front lower arms: underside at the body pivot (photo), and from |y| 0.46 outward
 COVER_Z = (0.245, 0.238)             # front cover's underside for |y| <= 0.28, and at |y| 0.40 (front photo)
 DIFF = (0.150, 0.170, RF.HUB_Z - CLEARANCE)   # differential housing half sizes; y from the photo's 0.34 m low centre
@@ -196,7 +195,7 @@ def check(rear, front):
     """The rules above, measured on the finished parts: lowest points inboard of the tyres, and that everything under
     0.300 m is within the tyre's chord of its axle, so the tyres hide it from the side."""
     R = RF.TYRE_D / 2; ok = True
-    for o, xa, floor in ((rear, RF.AXLE_X[1], CLEARANCE), (front, RF.AXLE_X[0], FLOOR_MIN)):
+    for o, xa, floor in ((rear, RF.AXLE_X[1], FLOOR_MIN), (front, RF.AXLE_X[0], FLOOR_MIN)):
         V = [v.co for v in o.data.vertices]
         S = [V[e.vertices[0]].lerp(V[e.vertices[1]], k / 8) for e in o.data.edges for k in range(9)]   # along every edge
         inb = [v for v in S if abs(v.y) < TYRE_IN]
@@ -209,6 +208,7 @@ def check(rear, front):
         ok &= low.z > floor - 1e-4 and over[0] <= 0 and dup == 0
     low2 = min((v.co for v in rear.data.vertices if DIFF[1] + 0.02 < abs(v.co.y) < TYRE_IN), key=lambda v: v.z)
     print(f'axle_rear outside the differential: lowest {low2.z:.4f} at y {low2.y:+.3f} (limit {FLOOR_MIN})')
+    lowd = min(v.co.z for v in rear.data.vertices if abs(v.co.y) < DIFF[1]); print(f'differential underside {lowd:.4f} (meant {CLEARANCE:.4f})')
     assert ok and low2.z > FLOOR_MIN - 1e-4, 'underbody rule broken'
 
 

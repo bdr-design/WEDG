@@ -18,6 +18,26 @@ def _mask(name, fill=True):
     m = ~((a[..., 0] > 180) & (a[..., 2] > 180) & (a[..., 1] < 110))
     lab, n = ndimage.label(m); sizes = ndimage.sum(m, lab, range(1, n + 1)); m = lab == (1 + int(np.argmax(sizes)))
     return ndimage.binary_fill_holes(m) if fill else m
+# The outlines to a fraction of a pixel. A pixel on the car's edge is part car, part magenta background, and how
+# magenta it is says how much. Counting whole pixels (2 to 3 mm each) puts stairs in every gentle line: on the hood
+# they were folds of 2 to 9 degrees from one station of the loft to the next, which showed as bands in the paint's
+# reflections. Each line's fractions are centred on zero, so the whole-pixel calibration (views.json, realframe)
+# stands as it was.
+def _cov(name, m):
+    a = np.asarray(Image.open(photo(name)).convert('RGB')).astype(float)
+    return (1 - np.clip((np.minimum(a[..., 0], a[..., 2]) - a[..., 1]) / 255.0, 0, 1)) * ndimage.binary_dilation(m, iterations=3)
+def _frac(line, i, sign):
+    """How far past pixel i (the car's last whole-counted pixel on this line, going sign) the car's edge is, in pixels."""
+    k = np.arange(i - sign, i + 4 * sign, sign); k = k[(k >= 0) & (k < len(line))]; return float(np.clip(line[k].sum() - 2.0, -1.5, 1.5))
+def _centred(f): f = np.asarray(f, dtype=float); return f - np.nanmean(f)
+IRON = (10, 0.0004, 0.0004)      # pixels, metres, metres
+def _iron(v, sig=3):
+    """Smooth a line: over 3 pixels everywhere, and over 10 where that moves it less than 0.4 mm (fading out by
+    0.8 mm). What is left of the pixel steps on a gentle line is under half a millimetre and goes; a real corner or
+    crease moves more than that under the wide filter and stays as it was."""
+    a = ndimage.gaussian_filter1d(v, sig); b = ndimage.gaussian_filter1d(v, IRON[0])
+    w = np.clip(1 - (np.abs(b - a) - IRON[1]) / IRON[2], 0, 1); w = ndimage.gaussian_filter1d(ndimage.minimum_filter1d(w, 2 * IRON[0] + 1), IRON[0] / 2)
+    return a * (1 - w) + b * w
 def roof_centre(xr):
     """The roof's centre line in the real frame, where the rails and the antenna hide it in the side photo (real x
     -0.01 ... -1.93). A quartic through the silhouette either side: it meets the photo's line within 0.6 mm and with
@@ -29,9 +49,11 @@ ROOF_BRIDGE = (0.02, -0.04, -1.90, -1.96)      # real x: the photo's line down t
 _side = _mask('01_left'); c = CFG['side']; s = c['s']
 _cols = np.arange(_side.shape[1]); _xs = L / 2 - (_cols - c['u0']) * s
 _zt = np.full(len(_cols), np.nan); _zb = np.full(len(_cols), np.nan)
+_cs = _cov('01_left', _side); _ft = np.full(len(_cols), np.nan); _fb = np.full(len(_cols), np.nan)
 for i in _cols:
     r = np.where(_side[:, i])[0]
-    if len(r): _zt[i] = (c['v0'] - r.min()) * s; _zb[i] = (c['v0'] - r.max()) * s
+    if len(r): _zt[i] = (c['v0'] - r.min()) * s; _zb[i] = (c['v0'] - r.max()) * s; _ft[i] = _frac(_cs[:, i], r.min(), -1); _fb[i] = _frac(_cs[:, i], r.max(), 1)
+_zt = _zt + _centred(_ft) * s; _zb = _zb - _centred(_fb) * s
 ok = ~np.isnan(_zt); X_FRONT, X_REAR = _xs[ok].max(), _xs[ok].min()
 _xs_ok = _xs[ok][::-1]; _zt_ok = _zt[ok][::-1]; _zb_ok = _zb[ok][::-1]
 # wheels out of the lower line: where it drops below 0.2 m the tyre is there; bridge with the line either side
@@ -39,7 +61,7 @@ AXLES_X = (L / 2 - 0.941, L / 2 - 3.901)          # the hubs measured on the sid
 low = np.zeros(len(_zb_ok), bool)
 for ax in AXLES_X: low |= np.abs(_xs_ok - ax) < 0.52
 idx = np.arange(len(_zb_ok)); _zb_ok = _zb_ok.copy(); _zb_ok[low] = np.interp(idx[low], idx[~low], _zb_ok[~low])
-_zt_s = ndimage.gaussian_filter1d(_zt_ok, 3); _zb_s = ndimage.gaussian_filter1d(_zb_ok, 4)
+_zt_s = _iron(_zt_ok); _zb_s = ndimage.gaussian_filter1d(_zb_ok, 4)
 def _step(t): t = np.clip(t, 0, 1); return t * t * (3 - 2 * t)
 _xr = RF.x_real(_xs_ok); _b = ROOF_BRIDGE
 _k = _step((_b[0] - _xr) / (_b[0] - _b[1])) * _step((_xr - _b[3]) / (_b[2] - _b[3]))
@@ -69,25 +91,27 @@ def tail_contour(z0=0.66, z1=1.62):
     return P if P[0, 1] < P[-1, 1] else P[::-1]
 _front = _mask('02_front'); cf = CFG['front']
 _zf, _wf = [], []
+_cf = _cov('02_front', _front); _ff = []
 for v in range(_front.shape[0]):
     u = np.where(_front[v])[0]
-    if len(u): _zf.append((cf['v0'] - v) * cf['s']); _wf.append(((u.max() - u.min()) / 2) * cf['s'] * cf['k'])
-_zf = np.array(_zf[::-1]); _wf = np.array(_wf[::-1])
+    if len(u): _zf.append((cf['v0'] - v) * cf['s']); _wf.append(((u.max() - u.min()) / 2) * cf['s'] * cf['k']); _ff.append((_frac(_cf[v], u.max(), 1) + _frac(_cf[v], u.min(), -1)) / 2)
+_zf = np.array(_zf[::-1]); _wf = np.array(_wf[::-1]) + _centred(_ff[::-1]) * cf['s'] * cf['k']
 # mirrors: a bulge of more than 4 cm over the line between the rows either side of it
 mirror = (_zf > 1.30) & (_zf < 1.62)
 base = np.interp(_zf, _zf[~mirror], _wf[~mirror]); _wf = np.where(mirror & (_wf > base + 0.01), base, _wf)
 _wf = np.where(_zf < 1.0, np.minimum(_wf, 0.985), _wf)      # below the fenders the tyres set the width: the body is 1.97 m
-_wf_s = ndimage.gaussian_filter1d(_wf, 3)
+_wf_s = _iron(_wf)
 def front_half(z): return np.interp(z, _zf, _wf_s)
 _top = _mask('04_top'); ct = CFG['top']
 _xt, _wt = [], []
+_cq = _cov('04_top', _top); _fq = []
 for v in range(_top.shape[0]):
     u = np.where(_top[v])[0]
-    if len(u): _xt.append(L / 2 - (v - ct['v0']) * ct['s']); _wt.append(((u.max() - u.min()) / 2) * ct['s'] * ct['k'])
-_xt = np.array(_xt[::-1]); _wt = np.array(_wt[::-1])
+    if len(u): _xt.append(L / 2 - (v - ct['v0']) * ct['s']); _wt.append(((u.max() - u.min()) / 2) * ct['s'] * ct['k']); _fq.append((_frac(_cq[v], u.max(), 1) + _frac(_cq[v], u.min(), -1)) / 2)
+_xt = np.array(_xt[::-1]); _wt = np.array(_wt[::-1]) + _centred(_fq[::-1]) * ct['s'] * ct['k']
 mir = (_xt > 0.35) & (_xt < 1.05)
 bt = np.interp(_xt, _xt[~mir], _wt[~mir]); _wt = np.where(mir & (_wt > bt + 0.008), bt, _wt)
-_wt_s = ndimage.gaussian_filter1d(_wt, 3)
+_wt_s = _iron(_wt)
 def top_half(x): return np.interp(x, _xt, _wt_s)
 def top_tail_plan(reach=0.32):
     """The tail's plan in the top photo to a fraction of a pixel: half-widths (on the top photo's own scale, k applied)

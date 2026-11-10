@@ -11,7 +11,7 @@ import bpy, bmesh, math, os, sys, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import realframe as RF
-R_TYRE, R_RIM, W_TYRE = RF.TYRE_D / 2, 0.268, 0.265
+R_TYRE, R_RIM, W_TYRE = RF.TYRE_D / 2, RF.RIM_R, 0.265      # the photos' wheel (realframe); the width is the spec's
 # 8J is 8 inches (203 mm) between the rim flanges. Two flanges of 13 mm each make the rim 229 mm wide over all (the
 # flange thickness is a game choice), so the tyre's sidewall stands 18 mm out past the rim's face on each side.
 W_RIM = 8 * 0.0254 + 2 * 0.013
