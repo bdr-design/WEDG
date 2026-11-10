@@ -23,11 +23,9 @@ STITCH = (8.0, 172.0, math.pi + 0.30)        # the stitching: from, to (degrees 
 WOOD = ((182.0, 0.10), (190.0, 0.50), (196.0, 0.63), (232.0, 0.60), (238.0, 0.45), (244.0, 0.27), (252.0, 0.10))
 
 
-def _mat(name, color, metal=0.0, rough=0.5, coat=0.0):
-    m = bpy.data.materials.get(name) or bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (*color, 1); b.inputs['Metallic'].default_value = metal
-    b.inputs['Roughness'].default_value = rough; b.inputs['Coat Weight'].default_value = coat
-    return m
+def _mat(name, *args, **kw):
+    import imats
+    return imats.m(name)
 
 
 def materials():

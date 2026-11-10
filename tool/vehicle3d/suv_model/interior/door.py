@@ -18,7 +18,7 @@ OUT = {'rim': 0.032, 'lever': 0.026, 'lock': 0.020, 'slat': 0.033, 'switch_panel
 
 
 def materials():
-    return {'panel': _mat('cabin_black', (0.03, 0.03, 0.031), rough=0.5), 'beige': _mat('seat_leather', (0.60, 0.49, 0.34), rough=0.55),
+    return {'panel': _mat('cabin_black', (0.03, 0.03, 0.031), rough=0.5), 'beige': _mat('trim_leather'),
             'wood': _mat('cabin_wood_brown', (0.16, 0.075, 0.035), rough=0.3, coat=0.7), 'silver': _mat('cabin_silver', (0.50, 0.50, 0.50), metal=1.0, rough=0.38),
             'gloss': _mat('cabin_black_gloss', (0.012, 0.012, 0.013), rough=0.12, coat=1.0), 'dark': _mat('cabin_shadow', (0.008, 0.008, 0.008), rough=0.8),
             'grille': _mat('cabin_grille', (0.018, 0.018, 0.019), rough=0.75), 'red': _mat('cabin_red', (0.55, 0.03, 0.02), rough=0.4),

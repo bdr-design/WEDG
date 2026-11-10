@@ -15,11 +15,9 @@ POST_Y, POST_D = 0.075, 0.013
 RAIL_Y, RAIL_W = 0.200, 0.045
 
 
-def _mat(name, color, metal=0.0, rough=0.5, coat=0.0):
-    m = bpy.data.materials.get(name) or bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (*color, 1); b.inputs['Metallic'].default_value = metal
-    b.inputs['Roughness'].default_value = rough; b.inputs['Coat Weight'].default_value = coat
-    return m
+def _mat(name, *args, **kw):
+    import imats
+    return imats.m(name)
 
 
 def materials():
