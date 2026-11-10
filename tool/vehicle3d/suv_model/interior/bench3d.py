@@ -24,6 +24,9 @@ HEAD_T = 0.11                                    # the headrests' thickness
 SPLIT_Y = 0.175                                  # the cushion's 60:40 split (the photo's column 1007; the camera looks back, so the photo's right is the car's left, +y)
 BUCKLES = (-0.197, 0.21)                         # the belt buckles at the cushion's rear (the photo's columns 690 and 995)
 NOSE = (0.07, 0.55)
+WING = (0.045, 0.11, 0.05)                        # the outer backs' side bolsters: how far they stand forward of the insert, their width, and the width of their rise
+SEAM_Z = 0.62                                    # the seam across each outer back: its height up the back (the photo's row 265)
+CUSHION_SEAM = -0.238                            # the cushion's seam between the middle and the right places (the photo's column 600)
 BELT = (0.655, -0.175, 1.07 + RISE, 0.047)
 BELT_GUIDE = (-1.104, 1.60)                        # the outer belts' guides on the C pillars' trims (the pillar's middle; x, z)                # the belts: the outer ones' y on the backs, the middle one's, the height their tongues hang at, the webbing's width
 LIP_Z = 0.68 + RISE                                     # the foot of the cushion's front face (the photo's row 862 through the camera); the base is under it
@@ -46,8 +49,24 @@ def _blob(bm, c, half, mat, n=18, rings=9, power=3.5):
     _loft(bm, st, mat)
 
 
+def _seam(bm, tree, origins, d, mat, width=0.004, lift=0.0012):
+    """A narrow dark band along the surface under rays from origins in direction d: a seam."""
+    from mathutils import Vector
+    P, N = [], []
+    for o in origins:
+        h = tree.ray_cast(Vector(o), Vector(d))
+        if h[0] is not None: P.append(np.array(h[0])); N.append(-np.array(d) if np.dot(h[1], d) > 0 else np.array(h[1]))
+    if len(P) < 2: return
+    P = np.array(P); N = np.array(N); T = np.gradient(P, axis=0); S = np.cross(N, T); S /= np.linalg.norm(S, axis=1)[:, None] + 1e-12
+    a = [bm.verts.new(tuple(P[i] + N[i] * lift + S[i] * width / 2)) for i in range(len(P))]; b = [bm.verts.new(tuple(P[i] + N[i] * lift - S[i] * width / 2)) for i in range(len(P))]
+    for i in range(len(P) - 1):
+        if np.linalg.norm(P[i + 1] - P[i]) > 0.08: continue
+        f = bm.faces.new((a[i], a[i + 1], b[i + 1], b[i])); f.material_index = mat; f.smooth = True
+        if np.dot(np.array(f.normal), N[i]) < 0: f.normal_flip()
+
+
 def build(name='seat_bench_2'):
-    M = {k: imats.m(v) for k, v in (('leather', 'seat_leather'), ('black', 'cabin_black'), ('red', 'cabin_red'), ('plastic', 'cabin_beige'), ('belt', 'seat_belt'), ('chrome', 'cabin_chrome'))}; idx = {k: i for i, k in enumerate(M)}; bm = bmesh.new(); z0 = C.FLOOR_Z
+    M = {k: imats.m(v) for k, v in (('leather', 'seat_leather'), ('black', 'cabin_black'), ('red', 'cabin_red'), ('plastic', 'cabin_beige'), ('belt', 'seat_belt'), ('chrome', 'cabin_chrome'), ('seam', 'seat_seam'))}; idx = {k: i for i, k in enumerate(M)}; bm = bmesh.new(); z0 = C.FLOOR_Z
     # --- the cushion: sections across the car from under the backs to its nose ----------------------------------------------
     x_r, x_f = FRONT_X - DEPTH - 0.06, FRONT_X; xs = np.r_[np.linspace(x_r, x_f - NOSE[0], 13), x_f - NOSE[0] + NOSE[0] * np.sin(np.linspace(0, 1, 9)[1:] * math.pi / 2)]
     for side in (1, -1):                                                    # its two parts either side of the split
@@ -70,8 +89,8 @@ def build(name='seat_bench_2'):
         for z in zs:
             lim = WELL[0] + (HALF_W + 0.01 - WELL[0]) * _sstep((z - WELL[3]) / WELL[4]); a, b = max(ya, -lim), min(yb, lim)          # the outer backs' feet clear the wells
             u = max(0.0, (z - (z_hi - TOP_R)) / TOP_R); inset = TOP_R * (1 - math.sqrt(max(0.0, 1 - u * u))); hw = (b - a) / 2 - 0.004 - 1.2 * inset; yc = (a + b) / 2
-            xf = x_foot - (z - TOP_Z[0]) * tl; bol = 0.0 if nm == 'C' else 0.028 * _sstep((z_hi - z) / 0.15)
-            top = lambda ay, hw=hw, bol=bol, inset=inset: THICK - 2 * inset - bol * (1 - _sstep((ay - (hw - 0.15)) / 0.08))
+            xf = x_foot - (z - TOP_Z[0]) * tl; bol = 0.0 if nm == 'C' else WING[0] * _sstep((z_hi - z) / 0.15)
+            top = lambda ay, hw=hw, bol=bol, inset=inset: THICK - 2 * inset - bol * (1 - _sstep((ay - (hw - WING[1])) / WING[2]))
             ring = [(xf - THICK + inset + h, yc + y, z) for y, h in S3._section(hw, top, 0.0, n=11)]; st.append(ring)
         c = np.mean(ring, axis=0)
         for k, dz in ((0.80, 0.004), (0.45, 0.007), (0.12, 0.008)): st.append([(c[0] + (p[0] - c[0]) * k, c[1] + (p[1] - c[1]) * k, p[2] + dz) for p in ring])
@@ -87,6 +106,16 @@ def build(name='seat_bench_2'):
     for y in BUCKLES:
         _blob(bm, (x_foot + 0.035, y, TOP_Z[0] + 0.012), (0.022, 0.026, 0.030), idx['black'], n=10, rings=5); _blob(bm, (x_foot + 0.035, y, TOP_Z[0] + 0.043), (0.014, 0.018, 0.004), idx['red'], n=10, rings=3)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    # --- the seams, as the photo has them: across each outer back between its upper and lower panels, down either side
+    # of its insert, and along the cushion where the middle place meets the right one (the photo's column 600)
+    from mathutils.bvhtree import BVHTree
+    tree = BVHTree.FromBMesh(bm)
+    for nm in ('L', 'R'):
+        ya, yb = BACKS[nm]; yc = (ya + yb) / 2; hw = (yb - ya) / 2; zs = TOP_Z[0] + SEAM_Z * (BACK_TOP[0] - TOP_Z[0])
+        _seam(bm, tree, [(0.0, y, zs) for y in np.linspace(ya + 0.07, yb - 0.07, 24)], (-1.0, 0.0, 0.0), idx['seam'])
+        for sy in (-1, 1):
+            _seam(bm, tree, [(0.0, yc + sy * (hw - WING[1]), z) for z in np.linspace(TOP_Z[0] + 0.06, BACK_TOP[0] - 0.07, 24)], (-1.0, 0.0, 0.0), idx['seam'])
+    _seam(bm, tree, [(x, CUSHION_SEAM, 1.3) for x in np.linspace(FRONT_X - 0.02, FRONT_X - DEPTH + 0.04, 20)], (0.0, 0.0, -1.0), idx['seam'])
     # --- the belts, as the photo has them at rest: the outer ones from the C pillars over the backs' shoulders and down their
     # outer bolsters to the tongues; the middle one down the right back's inner edge (the photo's left of the middle) ------------
     face = lambda z, proud: x_foot - (z - TOP_Z[0]) * tl + proud
