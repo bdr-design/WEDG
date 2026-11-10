@@ -30,7 +30,7 @@ for o in obs:
 bpy.ops.object.select_all(action='DESELECT')
 for o in obs: o.select_set(True)
 bpy.context.view_layer.objects.active = obs[0]; bpy.ops.object.transform_apply(location=True, rotation=True, scale=True); bpy.ops.object.join(); ob = bpy.context.view_layer.objects.active; ob.name = 'cabin'
-one = bpy.data.materials.new('cabin'); one.use_nodes = True; nt = one.node_tree; b = nt.nodes['Principled BSDF']
+one = bpy.data.materials.new('cabin'); one.use_backface_culling = True; one.use_nodes = True; nt = one.node_tree; b = nt.nodes['Principled BSDF']
 t1 = nt.nodes.new('ShaderNodeTexImage'); t1.image = ib; t1.interpolation = 'Closest'; nt.links.new(t1.outputs['Color'], b.inputs['Base Color'])
 t2 = nt.nodes.new('ShaderNodeTexImage'); t2.image = im_; t2.interpolation = 'Closest'; sep = nt.nodes.new('ShaderNodeSeparateColor'); nt.links.new(t2.outputs['Color'], sep.inputs['Color'])
 nt.links.new(sep.outputs['Green'], b.inputs['Roughness']); nt.links.new(sep.outputs['Blue'], b.inputs['Metallic'])

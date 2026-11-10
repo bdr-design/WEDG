@@ -3,13 +3,19 @@
 The owner's decision (10 Nov): the interior must match his six photos with no difference. The photos are in
 `tool/vehicle3d/suv_parts/interior/`; they are measured against, never projected.
 
-State: the whole cabin stands in the built car (front seats, steering wheel, dashboard with its lower panel,
-console and armrest, four door trims, the second-row bench with its belts, headliner, pillar trims, wheel-well and
-cargo trims, a liner over the rest of the hull's inside, floor). `inhull.py` tests vertices and triangles: what it
-still flags is 0.5 mm or less, apart from a few liner points beside the rear wells that its ray test misjudges. No
-two parts cross. Still to do: the bench's and seats' finer shapes (bolsters, quilting, perforation, seams on the
-seating panel), the door's switch panel, the shifter, the third review's photo differences, and a game LOD: the
-phone budget is 12k triangles a vehicle (docs/adr/0005) and the cabin alone is about 80k.
+State: the whole cabin stands in the built car (front seats on their rail brackets, steering wheel, dashboard with
+its lower panel, console and armrest, four door trims, the second-row bench with its belts and their guides,
+headliner, pillar trims, wheel-well and cargo trims, a liner over the rest of the hull's inside, floor). `inhull.py`
+tests vertices and triangles: what it still flags is 1 mm or less, apart from a few liner points beside the rear
+wells that its ray test misjudges. About 25 pairs of triangles still cross, all behind trims. From the seats the
+bare hull is 0.5 to 0.9 % of the view: slivers along the glass's edges, where real cars have seals. Still to do:
+the bench's and seats' finer shapes (bolsters, quilting, perforation, seams on the seating panel), the door's switch
+panel, the shifter, and the photo differences the reviews list.
+
+Game files (the owner's decision: layered detail): `../cabin.glb` is the whole cabin (84k triangles, one draw);
+`../cabin_lod0.glb` is the layer the game loads while the player is inside (lod_cabin.py: the faces no occupant can
+see dropped, 55k, the same to look at). The owner's figure for it is about 40k: the rest is to come off at the
+source (the wheel's rim, the seats' and the bench's lofts). The game must draw the black glass clear from inside.
 
 Five seats: the owner chose the official ZX's five seats (10 Nov), though rear_bench shows a third row's headrests.
 
@@ -38,7 +44,8 @@ with each other), the rule is:
 | `shell.py` | headliner, pillar trims, wheel-well and cargo trims, firewall, pedals: from the hull's own measures |
 | `inhull.py` | checks every cabin vertex and triangle against the built car's body and glass |
 | `liner.py` | lines the hull's inside wherever no other part covers it, following the skin and leaving the glass clear |
-| `export_glb.py` | the cabin as one mesh with one palette material (one draw) |
+| `export_glb.py` | the cabin as one mesh with one palette material (one draw, back faces culled) |
+| `lod_cabin.py` | the cabin's game layer: faces no occupant can see dropped |
 
 Measured so far, outline IoU against each part's own photo: steering wheel 0.985, front seat 0.965 through the
 photo's perspective camera (the square-on first pass scored 0.994 square-on, which was the wrong test: 0.73 through

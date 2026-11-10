@@ -41,7 +41,7 @@ LIP_ROW = 370
 A_FOOT, A_HEAD = (1.00, 0.74, 1.27), (0.47, 0.60, 1.74)                 # the hull's A pillar inside the glass (hullspace.py): its foot and head, left side
 PARTS = {'upper': (upright(0.54), 0.12, 0.02, 'black', None), 'dash_top': (level(1.275), 0.12, 0.02, 'black', None), 'lower': (leaning(0.474, 1.170, 28.0), 0.30, 0.045, 'beige', None),
          'stack': (leaning(0.45, 1.165, 28.0), 0.30, 0.012, 'black', (688, 428, 1029, 572)), 'stack_low': (leaning(0.45, 1.165, 28.0), 0.30, 0.012, 'black', (703, 572, 983, 748)),
-         'screen': (leaning(0.531, 1.295, 27.0), 0.022, 0.004, 'gloss', (689, 283, 1023, 407)), 'cluster': (upright(0.612), 0.02, 0.004, 'black', (300, 350, 590, 480)),      # (8 mm proud of the binnacle's face, which is at 0.620)
+         'screen': (leaning(0.524, 1.295, 27.0), 0.022, 0.004, 'gloss', (689, 283, 1023, 407)), 'cluster': (upright(0.612), 0.02, 0.004, 'black', (300, 350, 590, 480)),      # (8 mm proud of the binnacle's face, which is at 0.620)
          'console_body': (level(0.985), 0.40, 0.02, 'beige', [(660, 748), (1060, 748), (1085, 941), (640, 941)]),
          'console': (level(0.99), 0.02, 0.008, 'wood', [(699, 748), (1031, 748), (1060, 917), (1060, 941), (681, 941), (681, 917)]),
          'mirror': (upright(0.560), 0.03, 0.014, 'mirror_glass', [(730, 84), (976, 84), (988, 100), (986, 140), (968, 156), (738, 156), (720, 140), (718, 100)]),      # the mirror on the photo: columns 718 to 988, rows 82 to 156
@@ -60,7 +60,7 @@ LOW_END = (0.60, 0.06)                                    # where across the car
 Y_END = 0.775                                              # its ends stand against the front doors (whose trims give way there: cabin.DASH_END)
 BIN_Y, BIN_W, BIN_H = 0.430, (0.185, 0.225), 0.070       # the binnacle: its middle across the car, where it is whole and where it has ended, and its hood's height
 #            the car's body of the dashboard                 behind the wheel
-SECTION = [((1.012, 1.270), (1.012, 1.270), 0.0, 'black'),       # the windshield's foot (inside the glass's foot, 1.02 m forward at 1.355 once raised)
+SECTION = [((1.012, 1.277), (1.012, 1.277), 0.0, 'black'),       # the windshield's foot (inside the glass's foot, 1.02 m forward at 1.355 once raised)
            ((0.800, 1.275), (0.860, 1.275), 0.0, 'black'),       # the top
            ((0.548, 1.275), (0.545, 1.275), 0.012, 'black'),     # the top's lip / the hood's lip (raised by the hood's height; 2 cm ahead of the rim's top)
            ((0.540, 1.267), (0.553, 1.252), 0.006, 'black'),     # the black band's head / the lip's underside
@@ -68,10 +68,10 @@ SECTION = [((1.012, 1.270), (1.012, 1.270), 0.0, 'black'),       # the windshiel
            ((0.520, 1.213), (0.620, 1.125), 0.0, 'beige'),       # the ledge / the instruments' foot
            ((0.497, 1.213), (0.470, 1.105), 0.012, 'beige'),     # the beige face's head / the sill's edge
            ((0.396, 1.023), (0.405, 1.023), 0.030, 'beige'),     # the beige face's foot
-           ((0.450, 0.980), (0.450, 0.980), 0.030, 'black'),     # the roll under it
-           ((0.620, 0.900), (0.620, 0.900), 0.050, 'black'),     # the lower panel in front of the knees (the knee 7 cm behind it at 0.53, 0.95: CHOICE)
-           ((0.760, 0.810), (0.760, 0.810), 0.030, 'black'),
-           ((0.900, 0.810), (0.900, 0.810), 0.0, 'black')]       # its underside, over the pedals, to the firewall
+           ((0.470, 0.995), (0.470, 0.995), 0.030, 'black'),     # the roll under it
+           ((0.660, 0.945), (0.660, 0.945), 0.050, 'black'),     # the lower panel in front of the knees (CHOICE: a 50th-percentile knee about 5 cm under the roll, a 95th about 2 cm)
+           ((0.800, 0.850), (0.800, 0.850), 0.030, 'black'),
+           ((0.920, 0.850), (0.920, 0.850), 0.0, 'black')]       # its underside, over the pedals, to the firewall
 BIN_MAT = {3: 'black', 4: 'dark', 5: 'black'}             # behind the wheel the hood's underside, the instruments' face and the sill are black
 
 

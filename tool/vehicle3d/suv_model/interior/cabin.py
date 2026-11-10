@@ -23,7 +23,7 @@ FLOOR_Z = 0.555                                      # CHOICE: with the official
 HEAD_Z = FLOOR_Z + CABIN_H
 # The dashboard and everything dash_front's camera places stand DASH_DZ higher than first fitted: the photo fixes
 # them against its camera, whose height was a guess (1.45 m), and at that the dashboard's top was 95 mm under the
-# windshield's foot (the review of 10 Nov). Raised so that the top meets the glass, the wheel's centre is then
+# windshield's foot (the review of 10 Nov). Raised so that the top meets the glass's foot (3 mm under it), the wheel's centre is then
 # 0.35 m over the driver's H-point, as usual in this class.
 DASH_DZ = 0.075
 IP_REAR = 0.548                                      # where the official length is taken from: the instrument panel's rear end at its top (the lip of the dashboard's top).
@@ -88,7 +88,7 @@ CAMERAS = {'dash_front': (*_d((-0.30, 0.0, 1.45 + DASH_DZ), 0.0, 18.6), 89.2, 85
            # driver_pov: fitted with dash_front's camera held (twoview.py, 15 landmarks to 8.7 px): over the driver's
            # seat, looking down 35.6 degrees and 4.4 to the right, 76.5 degrees across. It is above a seated eye: the
            # photo was drawn from there. The game's own seated eye is SEATED_EYE.
-           'driver_pov': (*_d((-0.194, 0.433, min(1.658 + DASH_DZ, HEAD_Z - 0.035)), -4.4, 35.6), 76.5, None, ('seat_',)),      # (held 2 cm under the headliner: the fit's height is 1 cm above it)
+           'driver_pov': (*_d((-0.194, 0.433, 1.658 + DASH_DZ), -4.4, 35.6), 76.5, None, ('seat_', 'cabin_headliner')),      # (1 cm over the headliner, as the fit has it: the comparison leaves the headliner out)
            # rear_bench: one camera fits what it shows of the bench (REAR_CAM), not its belts' anchors; the centre line is at column 837.5
            'rear_bench': (*_rear_cam(), 71.6, 837.5, ('seat_F', 'dashboard', 'steering', 'door_trim_F'))}
 SEATED_EYE = (H_POINT[0] - 0.13, SEAT_Y, H_POINT[1] + 0.69)      # a seated eye over the driver's H-point (SAE J941's eyellipse centre, roughly: CHOICE)
@@ -162,8 +162,8 @@ def build():
     w.rotation_euler = (math.radians(-rake), 0, -math.pi / 2); w.location = (x, y, z); out.append(w)
     import dash as DASH; out.append(DASH.build())
     import bench3d as BENCH; out.append(BENCH.build())
-    import shell as SHELL; out.append(SHELL.build())
-    import liner as LINER; out.append(LINER.build(HULL, cover=[o for o in out if o.name.startswith(('door_trim', 'dashboard', 'cabin_shell', 'seat_bench'))]))
+    import shell as SHELL; out.extend(SHELL.build())
+    import liner as LINER; out.append(LINER.build(HULL, cover=[o for o in out if o.name.startswith(('door_trim', 'dashboard', 'cabin_shell', 'cabin_headliner', 'seat_bench'))]))
     # the floor: flat (a choice: no photo shows the tunnel or the footwells' shape), between the doors and, further back, between the rear wheels' wells
     import imats; X0, X1 = SHELL.WELL_X; Y = SHELL.WELL_Y - 0.002; xs, zs = REAR_FLOOR      # (the floor's edge just inside the wells' trims, which stand on it)
     front = [(0.93, 0.835), (X0, 0.835), (X0, Y), (xs, Y)]; rear = [(xs, Y), (X1 - 0.05, Y), (X1 - 0.05, 0.74), (-2.05, 0.74), (-2.38, 0.62)]

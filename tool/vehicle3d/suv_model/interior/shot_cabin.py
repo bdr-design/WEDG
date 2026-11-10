@@ -17,7 +17,7 @@ for o in bpy.data.objects:
     if hide and o.name.startswith(tuple(hide)): o.hide_render = True
 if col0 is not None: cam.data.shift_x = -(col0 - W / 2) / W          # the car's centre line is not at the photo's middle column
 cam.rotation_euler = (Vector(look) - Vector(pos)).to_track_quat('-Z', 'Y').to_euler()
-lamp = bpy.data.objects.new('lamp', bpy.data.lights.new('lamp', 'POINT')); lamp.data.energy = 60; lamp.location = (pos[0], pos[1], pos[2] + 0.2); sc.collection.objects.link(lamp)
+lamp = bpy.data.objects.new('lamp', bpy.data.lights.new('lamp', 'POINT')); lamp.data.energy = 60; lamp.location = (pos[0], pos[1], min(pos[2] + 0.2, C.HEAD_Z - 0.05))      # (under the headliner: above it the roof shades it); sc.collection.objects.link(lamp)
 for o in bpy.data.objects:
     if o.type == 'MESH': o.shadow_terminator_shading_offset = 0.35; o.shadow_terminator_geometry_offset = 0.4
 sc.view_settings.view_transform = 'Standard'; sc.render.filepath = os.path.abspath(out); bpy.ops.render.render(write_still=True)

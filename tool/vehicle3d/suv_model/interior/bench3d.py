@@ -12,7 +12,7 @@ The hull rules where they meet: the rear wheels' wells stand 0.665 m out from x 
 cushion's rear corners and the outer backs' feet are narrower there than the photo's 1.45 m (WELL)."""
 import bpy, bmesh, os, sys, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import imats, cabin as C, seat3d as S3
+import imats, cabin as C, seat3d as S3, shell as SH
 _sstep, _loft = S3._sstep, S3._loft
 
 DEPTH, RISE, TOP_Z, LEAN, THICK, BACK_TOP, FRONT_X = C.BENCH      # where the bench stands and its main sizes: cabin.py says why
@@ -24,7 +24,8 @@ HEAD_T = 0.11                                    # the headrests' thickness
 SPLIT_Y = 0.175                                  # the cushion's 60:40 split (the photo's column 1007; the camera looks back, so the photo's right is the car's left, +y)
 BUCKLES = (-0.197, 0.21)                         # the belt buckles at the cushion's rear (the photo's columns 690 and 995)
 NOSE = (0.07, 0.55)
-BELT = (0.655, -0.175, 1.07 + RISE, 0.047)                # the belts: the outer ones' y on the backs, the middle one's, the height their tongues hang at, the webbing's width
+BELT = (0.655, -0.175, 1.07 + RISE, 0.047)
+BELT_GUIDE = (-1.104, 1.60)                        # the outer belts' guides on the C pillars' trims (the pillar's middle; x, z)                # the belts: the outer ones' y on the backs, the middle one's, the height their tongues hang at, the webbing's width
 LIP_Z = 0.68 + RISE                                     # the foot of the cushion's front face (the photo's row 862 through the camera); the base is under it
 
 
@@ -96,7 +97,8 @@ def build(name='seat_bench_2'):
             if f.normal.x < 0: f.normal_flip()
     for sy in (1, -1):
         y = sy * BELT[0]; zs = np.linspace(BACK_TOP[0] - 0.035, BELT[2], 6)
-        strap([(-1.15, sy * 0.655, 1.60), (face(BACK_TOP[0], -THICK * 0.45), y + sy * 0.03, BACK_TOP[0] + 0.012), (face(BACK_TOP[0] - 0.02, 0.012), y, BACK_TOP[0] - 0.015)] + [(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
+        gy = SH.glass_y(BELT_GUIDE[1] + 0.03) - SH.TRIM_IN - 0.016; _blob(bm, (BELT_GUIDE[0], sy * (gy - 0.004), BELT_GUIDE[1]), (0.022, 0.012, 0.032), idx['black'], n=10, rings=5)      # the guide on the pillar's trim
+        strap([(BELT_GUIDE[0], sy * gy, BELT_GUIDE[1] - 0.02), (face(BACK_TOP[0], -THICK * 0.45), y - sy * 0.01, BACK_TOP[0] + 0.012), (face(BACK_TOP[0] - 0.02, 0.012), y, BACK_TOP[0] - 0.015)] + [(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
         _blob(bm, (face(BELT[2] - 0.035, 0.014), y, BELT[2] - 0.035), (0.006, 0.024, 0.040), idx['black'], n=10, rings=5); _blob(bm, (face(BELT[2] - 0.085, 0.014), y, BELT[2] - 0.085), (0.002, 0.014, 0.022), idx['chrome'], n=8, rings=3)
     y = BELT[1]; zs = np.linspace(BACK_TOP[0] - 0.01, BELT[2] - 0.08, 6); strap([(face(z, 0.008), y, z) for z in zs], BELT[3], idx['belt'])
     _blob(bm, (face(BELT[2] - 0.115, 0.014), y, BELT[2] - 0.115), (0.006, 0.024, 0.040), idx['black'], n=10, rings=5); _blob(bm, (face(BELT[2] - 0.165, 0.014), y, BELT[2] - 0.165), (0.002, 0.014, 0.022), idx['chrome'], n=8, rings=3)

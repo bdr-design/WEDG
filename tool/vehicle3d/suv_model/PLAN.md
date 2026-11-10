@@ -32,8 +32,13 @@ Steps:
    (the glass is blacked out, so it is seen from the driver's eye and through open doors). The photos are in
    tool/vehicle3d/suv_parts/interior/: three square-on (wheel, seat_side, door_FL), measured like the exterior's,
    and three in perspective (dash_front, driver_pov, rear_bench), which need a camera each. They are measured
-   against, never projected. Official cabin size (a Japanese listing's catalogue figures, to be checked against
-   Toyota's sheet): 2775 x 1635 x 1215 mm long, wide, high. The steering wheel's diameter has no source yet.
+   against, never projected. The owner's further decisions (10 Nov): published sources may override his photos
+   where they conflict; five seats (the official ZX's, though rear_bench shows a third row's headrests); layered
+   detail for the game (the player's car close up about 40k outside and the interior about 40k, loaded only from
+   inside; 12k at a distance; an impostor far off). Official cabin of the five-seat ZX: 1955 x 1640 x 1190 mm long,
+   wide, high (Toyota's 主要諸元表, kakaku.com, carsensor); the seated positions from the Lexus LX 600's published SAE
+   figures (same frame and wheelbase). The steering wheel's diameter has no source yet. The state is in
+   interior/README.md.
 8. Doors and tailgate as hinged parts, the game hooks (as in suv_complete.py: door_*, wheel_*, steering,
    needle_*, eye/eye_look, tail_light/head_light materials), the game GLB and LOD, a performance check in the
    prototype.
@@ -109,5 +114,12 @@ Steps:
   3 cm proud of the door. IoU side 0.989, front 0.975, rear 0.950, top 0.993.
 - 10 Nov, build r20: the belt line raised to the photo's chrome line (it was 2 to 4.5 cm low) and the quarter glass's
   lower edge kicked up to its rear edge as in the photo, with the chrome strip along it. 189,764 triangles.
-- Next: the quarter glass's
-  kick-up and chrome surround, lug nuts, step tread; then the interior (step 7), opening doors, GLB and LOD.
+- 10 Nov, build r26: the rear wheels' wells cut to 0.665 m from the middle (0.60 before), out of the cabin.
+- 10 Nov, the interior (step 7), four rounds of independent review: the whole cabin stands inside the hull, laid
+  out from the official cabin and the LX 600's seated positions, with the photos' shapes; no two parts cross. Its
+  near layer (lod_cabin.py: faces no occupant sees dropped) is 54k triangles and draws once. The outside's layers
+  (lod_ext.py, bake_lod.py) are a first trial: thinned to 40k the outline holds but the light on the panels and
+  glass does not yet.
+- Next: the outside's layers with baked normals done properly; the interior's remaining photo differences (the
+  bench's and seats' finer shapes, the door's switch panel, the shifter); the quarter glass's kick-up and chrome
+  surround, lug nuts, step tread; opening doors.

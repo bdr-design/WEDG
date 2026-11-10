@@ -273,7 +273,8 @@ Because the model is not finished (later steps in PLAN.md):
   photo's curve), with the chrome strip along it; the photo's wide bright blade up the glass's rear edge and its
   rounded upper rear corner are not modelled yet;
 - the glass is blacked out all round and opaque (the owner's decision, 10 Nov: the full dark tint), so nothing
-  shows through it from outside; there is no interior yet;
+  shows through it from outside (the interior, interior/, is seen from inside; the game must draw the glass clear
+  from inside, which is the engine's to do);
 - the lug nuts are flat and the step tread has no ribs. There are no mud flaps behind the wheels, by the owner's
   decision (10 Nov), though his photo has them;
 - number plates (plate.py, r22), the owner's choice: a Saudi private plate reading ا م ن 1, front and rear. Four

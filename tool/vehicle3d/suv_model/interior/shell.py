@@ -14,8 +14,8 @@ PILLARS = {'B': (-0.274, -0.182), 'C': (-1.141, -1.067), 'D': (-2.080, -1.900)}
 CARGO = ((-2.30, -2.05, -1.19), (0.66, 0.78, 0.78), 1.285)      # the cargo room's side trims: their face's y by station (the hull's skin is 0.74 to 0.97 out there, rounding in to the tailgate at x -2.44), and their top, at the belt
 WELL_X, WELL_Y, WELL_Z = (-0.79, -1.78), 0.655, 0.96         # the rear wells' trim: its ends, its face and its top
 # the A pillar on the built hull, seen from inside: at each height, its edge on the windshield and its edge on the door's glass (x, y), left side
-A_EDGES = [(1.40, (0.975, 0.745), (0.729, 0.782)), (1.42, (0.943, 0.740), (0.696, 0.778)), (1.50, (0.842, 0.720), (0.580, 0.762)), (1.58, (0.732, 0.698), (0.474, 0.742)),
-           (1.66, (0.611, 0.675), (0.357, 0.718)), (1.70, (0.540, 0.662), (0.300, 0.704))]
+A_EDGES = [(1.42, (0.943, 0.740), (0.696, 0.778)), (1.50, (0.842, 0.720), (0.580, 0.762)), (1.58, (0.732, 0.698), (0.474, 0.742)),
+           (1.66, (0.611, 0.675), (0.357, 0.718))]      # (to under the headliner's front edge, which dips 2 cm toward the windshield)
 A_BOW = 0.035                                    # how far the trim's middle stands in from the glass's line
 PEDAL_Y = (0.415, 0.265)                         # the brake's and the accelerator's middles across the car (the driver's seat is at 0.435)
 def glass_y(z): return float(np.interp(z, (1.26, 1.40, 1.55, 1.70, 1.756), (0.812, 0.785, 0.747, 0.702, 0.680)))      # the side glass's outer face (hull, mean of the door stations)
@@ -34,12 +34,16 @@ def build(name='cabin_shell'):
     ys = np.r_[np.linspace(-1, 1, 21) * HEAD_EDGE[0]]; prof = [(y, HEAD_Z - (HEAD_Z - HEAD_EDGE[1]) * abs(y / HEAD_EDGE[0]) ** 3) for y in ys]
     edge = [(s * (HEAD_EDGE[0] + 0.035), HEAD_EDGE[1] - 0.012) for s in (-1, 1)] + [(s * (glass_y(1.756) - 0.02), 1.70) for s in (-1, 1)]
     prof = [edge[2], edge[0]] + prof + [edge[1], edge[3]]
-    rows = [[bm.verts.new((x, y, z - 0.03 * max(0.0, (x - 0.30) / 0.17) ** 2)) for y, z in prof] for x in np.linspace(HEAD_X[0], HEAD_X[1], 28)]
-    _quad_strip(bm, rows, 0)
+    hb = bmesh.new(); rows = [[hb.verts.new((x, y, z - 0.03 * max(0.0, (x - 0.30) / 0.17) ** 2)) for y, z in prof] for x in np.linspace(HEAD_X[0], HEAD_X[1], 28)]
+    _quad_strip(hb, rows, 0); bmesh.ops.recalc_face_normals(hb, faces=hb.faces)
+    for f in hb.faces:
+        if f.normal.z > 0: f.normal_flip()                                   # seen from below
+    hm = bpy.data.meshes.new('cabin_headliner'); hb.to_mesh(hm); hb.free(); hm.materials.append(mats[0])
+    head = bpy.data.objects.new('cabin_headliner', hm); bpy.context.collection.objects.link(head)      # (its own object: the photo comparisons from over a seated eye leave it out)
     # the pillars' trims: a cabin-side face following the glass's lean, with returns to the glass either end
     for (x0, x1) in PILLARS.values():
         for s in (1, -1):
-            zs = np.linspace(1.29, HEAD_EDGE[1] - 0.005, 8); rows = []      # (from over the doors' trims, whose top follows the belt up to 1.28)
+            zs = np.linspace(1.29, HEAD_EDGE[1] - 0.025, 8); rows = []      # (from over the doors' trims, whose top follows the belt up to 1.28)
             for z in zs:
                 yo = glass_y(z); yi = yo - TRIM_IN
                 rows.append([bm.verts.new((x, s * y, z)) for x, y in ((x1 + 0.012, yo - 0.015), (x1 + 0.004, yi), (x0 - 0.004, yi), (x0 - 0.012, yo - 0.015))])
@@ -51,11 +55,11 @@ def build(name='cabin_shell'):
         for z, (ax, ay), (bx, by) in A_EDGES:
             a, b = np.array((ax, s_ * ay, z)), np.array((bx, s_ * by, z)); m = (a + b) / 2; inn = np.array((-(b - a)[1], (b - a)[0], 0.0)); inn /= np.linalg.norm(inn)
             if inn[1] * s_ > 0: inn = -inn                                   # toward the cabin's middle
-            rows.append([bm.verts.new(tuple(a + (b - a) * t + inn * (0.016 + A_BOW * math.sin(math.pi * t)))) for t in np.linspace(0.03, 0.97, 7)])
+            rows.append([bm.verts.new(tuple(a + (b - a) * t + inn * (0.020 + A_BOW * math.sin(math.pi * t)))) for t in np.linspace(0.0, 1.0, 7)])      # (a little past the pillar's edges, over the glass's edges, as trims lie)
         _quad_strip(bm, rows, 0)
     # the firewall under the dashboard and the footwells' forward wall, in shadow; the pedals
     z0 = C.FLOOR_Z
-    for vs in (((1.05, -0.74, z0), (1.05, 0.74, z0), (0.905, 0.74, 0.878), (0.905, -0.74, 0.878)),):      # (up to the dashboard's lower panel)
+    for vs in (((1.05, -0.74, z0), (1.05, 0.74, z0), (0.925, 0.74, 0.918), (0.925, -0.74, 0.918)),):      # (up to the dashboard's lower panel)
         f = bm.faces.new([bm.verts.new(v) for v in vs]); f.material_index = 1
     def box(c, h, mat):
         vs = [bm.verts.new((c[0] + sx * h[0], c[1] + sy * h[1], c[2] + sz * h[2])) for sz in (-1, 1) for sy in (-1, 1) for sx in (-1, 1)]
@@ -67,7 +71,7 @@ def build(name='cabin_shell'):
     # the usual layout, with the owner's leave to use sources; CHOICE)
     for (px, py, pz), half, arm in (((0.85, PEDAL_Y[0], 0.690), (0.012, 0.045, 0.034), True), ((0.92, PEDAL_Y[1], 0.645), (0.010, 0.028, 0.062), False)):
         box((px, py, pz), half, 1)
-        if arm: box((px + 0.03, py, (pz + 0.88) / 2), (0.008, 0.010, (0.88 - pz) / 2), 1)     # the brake hangs from under the dashboard's lower panel
+        if arm: box((px + 0.03, py, (pz + 0.92) / 2), (0.008, 0.010, (0.92 - pz) / 2), 1)     # the brake hangs from under the dashboard's lower panel
     def well_top(x):
         if not WELL_X[1] <= x <= WELL_X[0]: return C.REAR_FLOOR[1]
         u = (x - WELL_X[0]) / (WELL_X[1] - WELL_X[0]); zl = z0 if x > C.REAR_FLOOR[0] else C.REAR_FLOOR[1]; return zl + (WELL_Z - zl) * (1 - (2 * u - 1) ** 4) ** 0.5 + 0.025
@@ -93,4 +97,4 @@ def build(name='cabin_shell'):
         if f.material_index == 0 and f.normal.x * to_mid[0] + f.normal.y * to_mid[1] + f.normal.z * to_mid[2] < 0: f.normal_flip()
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for m in mats: me.materials.append(m)
-    ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); return ob
+    ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); return ob, head
