@@ -22,7 +22,8 @@ def materials():
             'wood': _mat('cabin_wood_brown', (0.16, 0.075, 0.035), rough=0.3, coat=0.7), 'silver': _mat('cabin_silver', (0.50, 0.50, 0.50), metal=1.0, rough=0.38),
             'gloss': _mat('cabin_black_gloss', (0.012, 0.012, 0.013), rough=0.12, coat=1.0), 'dark': _mat('cabin_shadow', (0.008, 0.008, 0.008), rough=0.8),
             'grille': _mat('cabin_grille', (0.018, 0.018, 0.019), rough=0.75), 'red': _mat('cabin_red', (0.55, 0.03, 0.02), rough=0.4),
-            'lamp': _mat('cabin_lamp', (0.8, 0.8, 0.78), rough=0.3)}
+            'lamp': _mat('cabin_lamp', (0.8, 0.8, 0.78), rough=0.3), 'seam': _mat('seat_seam', (0.33, 0.26, 0.17), rough=0.8),
+            'thread': _mat('seat_thread', (0.70, 0.60, 0.44), rough=0.7)}
 
 
 def build(name='door_trim_FL'):
@@ -49,6 +50,10 @@ def build(name='door_trim_FL'):
     R.prism(bm, xz(snap(F.WOOD)), -OUT['wood'], -PANEL[0], idx['wood'])
     R.ngon(bm, xz(snap(F.SPEAKER)), -OUT['speaker'], idx['grille']); R.prism(bm, xz(F.LAMP), -OUT['lamp'], -PANEL[0], idx['lamp'])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    # on the beige: the seam that parts the armrest's pad from the band under it, and the stitching along its upper sweep
+    beige = lab == DM.PARTS.index('beige'); y_at = R.near_face(beige, s, 2 * BEIGE[0], BEIGE[1])
+    R.ribbon(bm, F.ARMREST_SEAM, to_xz, y_at, 0.0022, idx['seam']); R.ribbon(bm, F.STITCH, to_xz, y_at, 0.0016, idx['thread'])
+    R.ribbon(bm, [(x, y + 7) for x, y in F.STITCH], to_xz, y_at, 0.0016, idx['thread'])
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for m in M.values(): me.materials.append(m)
     R.shade(me); ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); return ob

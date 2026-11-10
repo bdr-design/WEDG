@@ -14,6 +14,8 @@ DISH = 0.012          # the spokes' face is this far behind the rim's middle pla
 PLATE = 0.024         # the spokes' thickness
 PAD_RISE = 0.014      # the pad's face stands this far out of the spokes'
 SEG, RING = 180, 14   # the rim: stations round it, points round its section
+SEAMS = (44.0, 136.0, 270.0)          # where the rim's leather is joined, degrees from the photo's right, anticlockwise
+STITCH = (8.0, 172.0, math.pi + 0.30)        # the stitching: from, to (degrees round the rim) and where on the tube's section (pi is the inner edge; more is toward the driver)
 # The wood: an inlay on the rim's lower sides, on its inner part only (the outer part stays leather), pointed at both
 # ends. Read on the photo as the part of the rim that is warm (red over blue by 3 or more of 255) and grained: how
 # far across the rim's width it reaches (0 the inner edge, 1 the outer), by angle from the photo's right,
@@ -31,7 +33,8 @@ def _mat(name, color, metal=0.0, rough=0.5, coat=0.0):
 def materials():
     return {'leather': _mat('wheel_leather', (0.035, 0.035, 0.036), rough=0.62), 'plastic': _mat('cabin_black', (0.03, 0.03, 0.031), rough=0.5),
             'silver': _mat('cabin_silver', (0.50, 0.50, 0.50), metal=1.0, rough=0.38), 'wood': _mat('cabin_wood_grey', (0.075, 0.062, 0.052), rough=0.4, coat=0.5),
-            'gloss': _mat('cabin_black_gloss', (0.012, 0.012, 0.013), rough=0.12, coat=1.0)}
+            'gloss': _mat('cabin_black_gloss', (0.012, 0.012, 0.013), rough=0.12, coat=1.0),
+            'seam': _mat('cabin_seam', (0.006, 0.006, 0.006), rough=0.9), 'thread': _mat('wheel_thread', (0.50, 0.50, 0.47), rough=0.7)}
 
 
 def _closed(c, n):
@@ -73,6 +76,20 @@ def build(name='steering_wheel'):
         for j in range(RING):
             f = bm.faces.new((ring[i][j], ring[(i + 1) % SEG][j], ring[(i + 1) % SEG][(j + 1) % RING], ring[i][(j + 1) % RING]))
             f.material_index = idx['leather']; f.smooth = True
+    # the leather's joins: across the rim at 44 and 136 degrees and at the foot (the photo: from (210, 226) on the outer
+    # edge to (273, 291) on the inner, and the same mirrored; a line down the middle of the lower spoke's foot), as
+    # dark bands 1.2 mm wide round the tube; and the stitching, a pale thread along the rim's inner edge from pod to
+    # pod over the top (the photo shows it right on the inner outline)
+    def tube(a_deg, p, extra):
+        tt = float(np.interp(a_deg % 360, th, t, period=360)) + extra; c = float(np.interp(a_deg % 360, th, rc, period=360)); ar = math.radians(a_deg); rr = c + tt * math.cos(p)
+        return (rr * math.cos(ar), 1.10 * tt * math.sin(p), rr * math.sin(ar))
+    for a_deg in SEAMS:
+        r0 = [bm.verts.new(tube(a_deg - 0.18, 2 * math.pi * k / 24, 0.0004)) for k in range(24)]; r1 = [bm.verts.new(tube(a_deg + 0.18, 2 * math.pi * k / 24, 0.0004)) for k in range(24)]
+        for k in range(24):
+            f = bm.faces.new((r0[k], r1[k], r1[(k + 1) % 24], r0[(k + 1) % 24])); f.material_index = idx['seam']
+    rows = [[bm.verts.new(tube(a_deg, STITCH[2] + dp, 0.0006)) for dp in (-0.035, 0.035)] for a_deg in np.arange(STITCH[0], STITCH[1] + 0.01, 1.0)]
+    for r0, r1 in zip(rows, rows[1:]):
+        f = bm.faces.new((r0[0], r1[0], r1[1], r0[1])); f.material_index = idx['thread']
     # the wood inlays: thin shells 0.5 mm over the tube, from a little way round the inner side to the inlay's edge
     wa, wf = zip(*WOOD)
     for side in (1, -1):

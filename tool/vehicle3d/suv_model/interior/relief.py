@@ -100,3 +100,24 @@ def ring(bm, outer, inner, y, mat, y_back=None):
             b = [bm.verts.new((v.co.x, y_back, v.co.z)) for v in loop]
             for k in range(len(loop)):
                 f = bm.faces.new((loop[k], loop[(k + 1) % len(loop)], b[(k + 1) % len(loop)], b[k])); f.material_index = mat
+
+
+def near_face(mask, scale, width, radius, y0=0.0):
+    """Where solid()'s near face is: a function (row, column) -> y, for laying lines on it."""
+    radius = min(radius, width / 2); edt = ndimage.distance_transform_edt(np.pad(mask, 2))[2:-2, 2:-2] * scale
+    def f(rr, cc):
+        d = np.clip(ndimage.map_coordinates(edt, [np.asarray(rr, float), np.asarray(cc, float)], order=1), 0, None)
+        return y0 - (width / 2 - radius + np.sqrt(np.clip(radius ** 2 - (radius - np.minimum(d, radius)) ** 2, 0, None)))
+    return f
+
+
+def ribbon(bm, line, to_xz, y_at, width, mat, lift=0.0005, step=6.0):
+    """A thin band along a line of the photo ((col, row) points), lying on a surface whose depth y_at gives: a seam or
+    a row of stitching. width in metres; the line is walked in steps of `step` pixels."""
+    p = np.asarray(line, float); d = np.r_[0, np.cumsum(np.hypot(*np.diff(p, axis=0).T))]; n = max(2, int(d[-1] / step) + 1)
+    t = np.linspace(0, d[-1], n); c = np.interp(t, d, p[:, 0]); r = np.interp(t, d, p[:, 1])
+    x, z = to_xz(r, c); y = y_at(r, c) - lift; tx, tz = np.gradient(x), np.gradient(z); ln = np.hypot(tx, tz) + 1e-12; nx, nz = -tz / ln * width / 2, tx / ln * width / 2
+    a = [bm.verts.new((x[i] + nx[i], y[i], z[i] + nz[i])) for i in range(n)]; b = [bm.verts.new((x[i] - nx[i], y[i], z[i] - nz[i])) for i in range(n)]
+    for i in range(n - 1):
+        f = bm.faces.new((a[i], a[i + 1], b[i + 1], b[i])); f.material_index = mat
+        if f.normal.y > 0: f.normal_flip()
