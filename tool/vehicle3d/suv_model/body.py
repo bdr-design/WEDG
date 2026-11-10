@@ -226,13 +226,16 @@ class Tail:
 _TOPB = None
 def tip_top(x):
     """The spoiler's top line by its tip, from 01_left's contour: the loft's own top line is smoothed over 2 cm and
-    ended 15 mm short of the tip. From 3 to 4.5 cm ahead of the tip it hands over to the loft's line."""
+    ended 15 mm short of the tip. The contour's pixel steps are smoothed out (3 mm, from 4 to 12 mm ahead of the tip
+    on), and from 3 to 9 cm ahead of the tip it hands over to the loft's line, which lies 2 mm lower."""
     global _TOPB
     xt, z3 = tail_profile()[-1]
     if _TOPB is None:
-        C = O.tail_contour(0.66, 2.05); k = (C[:, 1] > z3 + 0.0005) & (C[:, 0] > xt - 0.001) & (C[:, 0] < xt + 0.06); o = np.argsort(C[k, 0])
-        _TOPB = (np.r_[xt, C[k, 0][o]], np.r_[z3, np.maximum.accumulate(C[k, 1][o])])
-    t = _step((x - xt - 0.03) / 0.015); return float(np.interp(x, *_TOPB)) * (1 - t) + float(O.side_top(x)) * t
+        C = O.tail_contour(0.66, 2.05); k = (C[:, 1] > z3 + 0.0005) & (C[:, 0] > xt - 0.001) & (C[:, 0] < xt + 0.13); o = np.argsort(C[k, 0])
+        xs = np.arange(xt, xt + 0.12, 0.001); raw = np.interp(xs, np.r_[xt, C[k, 0][o]], np.r_[z3, np.maximum.accumulate(C[k, 1][o])])
+        w = np.clip((xs - xt - 0.004) / 0.008, 0, 1); w = w * w * (3 - 2 * w)
+        _TOPB = (xs, np.maximum.accumulate(raw * (1 - w) + ndimage.gaussian_filter1d(raw, 3, mode='nearest') * w))
+    t = _step((x - xt - 0.03) / 0.06); return float(np.interp(x, *_TOPB)) * (1 - t) + float(O.side_top(x)) * t
 
 _T = None
 def tail():
@@ -258,13 +261,13 @@ def _tail_row(T, xl, z, m=34):
 def cut_tail(ob, x_out=-2.75, y_out=1.15):
     T = tail(); P = tail_profile(); rows = []
     near, far = TAIL_ROWS
-    for (x0, z0), (x1, z1) in zip(P[:-2], P[1:-1]):      # the line's own points, and rows beside each of them (TAIL_ROWS)
+    for (x0, z0), (x1, z1) in zip(P[:-1], P[1:]):      # the line's own points, and rows beside each of them (TAIL_ROWS)
         h = math.hypot(x1 - x0, z1 - z0); ts = [0.0]
         if h > 3 * near: e = near / h; m = max(1, int(math.ceil((1 - 2 * e) * h / far))); ts += [e + (1 - 2 * e) * i / m for i in range(m + 1)]
         rows += [(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, None) for t in ts]
     # the spoiler's edge has the plan too: above the tip the cutter stands straight up, where the spoiler's top
     # (section's top_at) has come down to the tip's height at every width
-    rows += [(*P[-2], None), (*P[-1], None), (P[-1][0], P[-1][1] + 0.16, P[-1][1])]; V = []; ring = []
+    rows += [(*P[-1], None), (P[-1][0], P[-1][1] + 0.16, P[-1][1])]; V = []; ring = []
     for xl, z, zf in rows:
         y, x = _tail_row(T, xl, z if zf is None else zf); pts = [(x[-1], -y_out)] + [(x[j], -y[j]) for j in range(len(y) - 1, 0, -1)] + \
             [(x[j], y[j]) for j in range(len(y))] + [(x[-1], y_out)]
@@ -320,8 +323,8 @@ def build(step=0.02):
     ob = bpy.data.objects.new('body', me); bpy.context.collection.objects.link(ob)
     bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     for f in [f for f in bm.faces if len(f.verts) == n]: _dome(bm, f, 1.0 if f.calc_center_median().x > 0 else -1.0)
-    # the rear cap is the bumper's rear face: across the car it takes the plan's first millimetres (0.5 / 3.0 / 4.5 mm
-    # ahead at |y| 0.10 / 0.20 / 0.25), which the dome's rings did not follow
+    # the rear cap is the bumper's rear face: across the car it takes the plan's first millimetres (0.5 and 3.0 mm
+    # ahead at |y| 0.10 and 0.20; from 4 mm on it is the block's side), which the dome's rings did not follow
     T = tail()
     for v in bm.verts:
         if v.co.x < O.X_REAR + CAP_END - 1e-6: v.co.x = O.X_REAR + min(float(T.pd(v.co.y)), CAP_END)
