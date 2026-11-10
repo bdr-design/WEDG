@@ -11,8 +11,10 @@ if len(sys.argv) > 4:
 sc = bpy.context.scene; sc.render.engine = 'CYCLES'; sc.cycles.samples = 24; sc.cycles.use_denoising = True; sc.cycles.device = 'CPU'
 sc.render.resolution_x, sc.render.resolution_y = W, H; sc.render.film_transparent = True
 w = bpy.data.worlds.new('w'); sc.world = w; w.use_nodes = True; w.node_tree.nodes['Background'].inputs[0].default_value = (0.9, 0.9, 0.9, 1); w.node_tree.nodes['Background'].inputs[1].default_value = 1.0
-pos, look, fov, col0, near_x = C.CAMERAS[name]; cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam); sc.camera = cam
-cam.data.sensor_fit = 'HORIZONTAL'; cam.data.angle = np.radians(fov); cam.data.clip_start = 0.02 if near_x is None else abs(near_x - pos[0]); cam.location = pos
+pos, look, fov, col0, hide = C.CAMERAS[name]; cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam); sc.camera = cam
+cam.data.sensor_fit = 'HORIZONTAL'; cam.data.angle = np.radians(fov); cam.data.clip_start = 0.02; cam.location = pos
+for o in bpy.data.objects:
+    if hide and o.name.startswith(tuple(hide)): o.hide_render = True
 if col0 is not None: cam.data.shift_x = -(col0 - W / 2) / W          # the car's centre line is not at the photo's middle column
 cam.rotation_euler = (Vector(look) - Vector(pos)).to_track_quat('-Z', 'Y').to_euler()
 lamp = bpy.data.objects.new('lamp', bpy.data.lights.new('lamp', 'POINT')); lamp.data.energy = 60; lamp.location = (pos[0], pos[1], pos[2] + 0.2); sc.collection.objects.link(lamp)
