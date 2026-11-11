@@ -89,7 +89,10 @@ def door_split(body):
     na = Vector((bz - az, 0, ax - bx)).normalized()              # the A pillar line's normal in the side plane, pointing forward and up
     xa = lambda z: ax + (z - az) * (bx - ax) / (bz - az)
     bm = bmesh.new(); bm.from_mesh(body.data)
-    left = lambda: [e for e in bm.verts[:] + bm.edges[:] + bm.faces[:] if (e.co.y if hasattr(e, 'co') else sum((v.co.y for v in e.verts), 0) / len(e.verts)) > 0.3]
+    # (only what lies round the door is cut: planes across the whole side split faces far from it, about 5k triangles more)
+    near_door = lambda c: c.y > 0.3 and DOOR_X[0] - 0.06 < c.x < MIRROR[0][1] + 0.16 and DOOR_Z[0] - 0.06 < c.z < DOOR_Z[2] + 0.04
+    mid = lambda e: e.co if hasattr(e, 'co') else sum((v.co for v in e.verts), Vector()) / len(e.verts)
+    left = lambda: [e for e in bm.verts[:] + bm.edges[:] + bm.faces[:] if near_door(mid(e))]
     for co, no in (((DOOR_X[0], 0, 0), (1, 0, 0)), ((DOOR_X[1], 0, 0), (1, 0, 0)), ((0, 0, DOOR_Z[0]), (0, 0, 1)), ((0, 0, DOOR_Z[1]), (0, 0, 1)), ((0, 0, DOOR_Z[2]), (0, 0, 1)), ((ax, 0, az), tuple(na))):
         bmesh.ops.bisect_plane(bm, geom=left(), plane_co=co, plane_no=no)
     bm.faces.ensure_lookup_table()
@@ -116,6 +119,34 @@ def door_split(body):
     return parts
 
 
+def seen_both_sides(test, occluders, E):
+    """For each object of test, the set of its polygon indices seen from one of the eyes E: lod_cabin.py's visible_faces,
+    except that a face seen from behind counts too. The car's paint and trim go out two-sided (only the glass culls its
+    back faces), so from inside their backs show where the cabin leaves a gap (the A pillar between the windshield and
+    the side window went missing when only front faces counted)."""
+    from mathutils.bvhtree import BVHTree
+    obs = list(test) + list(occluders)
+    V, P, owner = [], [], []
+    for k, o in enumerate(obs):
+        mw = o.matrix_world; n0 = len(V); V += [mw @ v.co for v in o.data.vertices]
+        for p in o.data.polygons: P.append([n0 + i for i in p.vertices]); owner.append((k, p.index))
+    tree = BVHTree.FromPolygons(V, P, epsilon=0.0); seen = [set() for _ in test]
+    for fi, (verts, (k, pi)) in enumerate(zip(P, owner)):
+        if k >= len(test): continue
+        pts = [Vector(V[i]) for i in verts]; c = sum(pts, Vector()) / len(pts)
+        probes = [c] + [q + (c - q) * 0.05 for q in pts[:4]] + [(pts[i] + pts[(i + 1) % len(pts)]) * 0.5 * 0.95 + c * 0.05 for i in range(min(4, len(pts)))]
+        hit = False
+        for e in E:
+            for q in probes:
+                d = q - e; L = d.length
+                if L < 1e-6: continue
+                h = tree.ray_cast(e, d / L, L + 1e-4)
+                if h[0] is None or h[2] == fi or (h[0] - q).length < 1e-4: hit = True; break
+            if hit: break
+        if hit: seen[k].add(pi)
+    return seen
+
+
 OUT_MIN = 3000            # triangles: a material's unseen part goes apart (one draw more from outside) only past this
 
 
@@ -130,7 +161,6 @@ def seat_split(parts, wheels, cabin_glb):
     seen from the seat."""
     import bmesh
     import cabin as C
-    from lod_cabin import visible_faces
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=os.path.abspath(cabin_glb))
     imported = [o for o in bpy.data.objects if o not in before]
@@ -143,7 +173,7 @@ def seat_split(parts, wheels, cabin_glb):
         bpy.ops.object.modifier_apply(modifier='tri')
     cx, cy, cz = C.SEATED_EYE
     E = [Vector((cx, cy, cz))] + [Vector((cx + dx, cy + dy, cz + dz)) for dx in (-0.12, 0.06) for dy in (-0.20, 0.15) for dz in (-0.10, 0.08)]
-    seen = visible_faces(test + cab, E)[:len(test)]
+    seen = seen_both_sides(test, cab, E)
     for o in imported: bpy.data.objects.remove(o)
     root = bpy.data.objects.new('outside', None); bpy.context.collection.objects.link(root)
     wheel_seen = False
