@@ -4,7 +4,10 @@
 // boxes and circles from the yard layout.
 import * as THREE from 'three';
 import { createCar, makeSoftness, LC300 } from './car_physics.js';
-const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;      // below this the tyres count as aired down
+const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;
+// the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
+// changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the card shown beside the car
+const CREDIT = '<small class="pl-credit" dir="ltr">Model: Ddiaz Design · CC BY-NC-SA 4.0 · modified</small>';      // below this the tyres count as aired down
 
 const WALK = 1.25, RUN = 3.5;                 // the speeds the walk and run clips were made for (m/s, measured on the planted foot)
 let WHEELBASE = 2.85, TRACK = 1.64;           // Land Cruiser 300; replaced by the model's own wheel positions when it has them
@@ -352,7 +355,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     // near the driver's door: the car's options
     const near = driverDoor(doorPoint).distanceTo(man.pos) < 1.8;
     if (near) loadCabin();
-    if (near) setCard('near' + carState.locked, carState.locked ? '<button data-c="lock">افتح القفل</button>' : '<button data-c="in" class="pri">اركب</button><button data-c="lock">قفّل</button>');
+    if (near) setCard('near' + carState.locked, (carState.locked ? '<button data-c="lock">افتح القفل</button>' : '<button data-c="in" class="pri">اركب</button><button data-c="lock">قفّل</button>') + (rigged ? CREDIT : ''));
     else setCard('', '');
     if (near) placeCard(tmp2.copy(carState.pos).setY(carState.pos.y + 2.4));
   }
