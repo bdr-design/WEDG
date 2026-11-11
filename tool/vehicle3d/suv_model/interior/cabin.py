@@ -100,6 +100,10 @@ def _place(ob, loc, rot=(0, 0, 0)):
 
 # the built car whose hull the cabin is fitted into: the repository's suv.blend beside this folder, or the working build
 HULL = os.environ.get('SUV_BLEND') or next(p for p in (os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'suv.blend'), os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'out', 'r26', 'suv.blend')) if os.path.exists(p))
+def _photo_of(ob):
+    return 'door_FL' if ob.name.startswith('door_trim') else 'seat_side' if ob.name.startswith('seat_F') else 'wheel' if ob.name.startswith('steering') else None
+
+
 def _tidy(ob):
     """Every object: duplicate vertices merged, zero-area faces and loose vertices dropped. Each open sheet (whatever
     has a free edge: screens, grilles, seams, trims, the floor) is made consistent and turned as a whole so that most
@@ -174,6 +178,14 @@ def build():
     f = bpy.data.objects.new('cabin_floor', me); bpy.context.collection.objects.link(f); out.append(f)
     bpy.context.view_layer.update()                  # (the objects' world matrices: the faces are turned in the car's frame)
     for ob in out: _tidy(ob)
+    import photo_tex as PT
+    TEX_DIR = os.environ.get('CABIN_TEX') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tex'); os.makedirs(TEX_DIR, exist_ok=True)
+    for photo, src in (('door_FL', 'door_trim_FL'), ('seat_side', 'seat_FR'), ('wheel', 'steering_wheel')):
+        png = os.path.join(TEX_DIR, photo + '.png'); PT.bake(photo, [bpy.data.objects[src]], png)
+        if os.path.exists(png.replace('.png', '_id.npy')): os.remove(png.replace('.png', '_id.npy'))      # (a working file)
+        for ob in out:
+            if ob.data.uv_layers.get('photo') is not None and ob.data.attributes.get('photo_seen') is not None and _photo_of(ob) == photo: PT.materials(ob, photo, png)
+    for im in bpy.data.images: im.pack()
     return out
 
 

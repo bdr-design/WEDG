@@ -4,7 +4,7 @@ this photo (it is square-on): DEPTH is a game choice until the cabin photos are 
 import bpy, bmesh, os, sys, numpy as np
 from scipy import ndimage
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import door_measure as DM, relief as R
+import door_measure as DM, relief as R, masks as M_
 from seat import _mat
 
 import door_features as F, wheel_features as WF
@@ -67,7 +67,9 @@ def build(name='door_trim_FL', keep=None):
         bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for m in M.values(): me.materials.append(m)
-    R.shade(me); ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); return ob
+    R.shade(me); ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob)
+    import photo_tex as PT; H = M_.rgb('door_FL').shape[0]                    # the photo's detail on the faces it sees (photo_tex)
+    PT.project(ob, 'door_FL', lambda co: (co.x / s, H - co.z / s), lambda co: (0.0, -1.0, 0.0)); return ob
 
 
 if __name__ == '__main__':

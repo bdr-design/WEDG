@@ -223,7 +223,11 @@ def build(name='seat_front', mirror=False):
         for v in bm.verts: v[lay] = (v[lay][0], -v[lay][1], v[lay][2])
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for m in M.values(): me.materials.append(m)
-    R.shade(me); ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); return ob
+    R.shade(me); ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob)
+    import photo_tex as PT; k = -1.0 if mirror else 1.0                      # the photo's detail on the faces its camera sees (the mirrored seat read as the photo's)
+    def toward(co):
+        d = SC.POS - np.array((co.x, k * co.y, co.z)); d /= np.linalg.norm(d); return (d[0], k * d[1], d[2])
+    PT.project(ob, 'seat_side', lambda co: SC.pixel((co.x, k * co.y, co.z)), toward); return ob
 
 
 if __name__ == '__main__':

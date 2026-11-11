@@ -173,6 +173,8 @@ def build(name='steering_wheel'):
     for mt in mats: me.materials.append(mt)
     ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob)
     bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(me); bm.free()
+    import photo_tex as PT; cx, cy = m['centre']; su, sv = m['scale'], m['scale_v']            # the photo's detail on the faces it sees (photo_tex)
+    PT.project(ob, 'wheel', lambda co: (co.x / su + cx, cy - co.z / sv), lambda co: (0.0, -1.0, 0.0))
     return ob
 
 

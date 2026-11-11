@@ -45,6 +45,17 @@ Steps:
 9. Agents review each step against the photos with compare_ext.py (brief: REVIEW.md); every finding is re-measured
    before it is acted on; fix; show the owner side by side.
 
+## Two versions of the car (the owner's decision, 11 Nov)
+
+- **Our own, built by code** (this folder: the hull from the owner's photos at the official dimensions, the
+  interior from the six photos and published measures, with the photos' detail as textures). Everything in it is
+  ours, so it may be used if the game is ever sold. Its last state before any outside model was added is commit
+  `<HASH>` on this branch. Keep it that way: nothing from an outside model goes into these files.
+- **A private one with a downloaded model** (the owner's game is private and earns nothing): a free Sketchfab model
+  of the LC300 (Ddiaz Design, licence CC BY-NC-SA 4.0: no commercial use, the author credited, changes shared alike).
+  It goes in its own folder, `thirdparty/`, with its licence and credit beside it, and is never mixed into the
+  code-built files. If the game ever earns anything, that folder is dropped and the code-built version used.
+
 ## Progress
 - Step 1 (body shell), the wheels, the arches, the mirrors and the roof rails are done. Build b3 scores IoU 0.982
   side, 0.925 front, 0.911 rear, 0.889 top (TOP_K 1.026). Next: the greenhouse (glass panes recessed, black frames,
