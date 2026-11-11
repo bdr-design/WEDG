@@ -1129,8 +1129,9 @@ async function loadVehicles() {
     return o;
   };
   const hay = new THREE.MeshStandardMaterial({ color: '#b3a256', roughness: 1 });
-  // the player's SUV: the full model (doors, wheels, cabin) up close, the light 12k model beyond 20 m.
-  // Both share the photo paint (same texture atlas); the glass and the cabin cast no shadow.
+  // the player's SUV, ours (tool/vehicle3d/suv_model/ours_game.py): the near layer up close (150k triangles: the driver's
+  // door on its hinge, the wheels on their corners, each view drawing only what it can see), the far layer (15k) beyond
+  // 20 m, the cabin loaded apart; the car casts no shadow (the owner's word), it receives the yard's.
   const heroCar = () => {
     const full = models.suvfull.clone(true), far = models.suvfar.clone(true);
     // the player's car casts no shadow (the owner's word, 11 Nov: "no need for its shadow, leave it without"); it still

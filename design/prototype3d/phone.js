@@ -23,6 +23,16 @@ const CSS = `
   .phone[data-state="big"] .dim { display: block; }
   .phone[data-state="big"] .dev { left: 50%; top: 0; margin-left: ${-W / 2}px; transform-origin: 50% 0; transform: translateY(var(--y)) scale(var(--sb, 1)); pointer-events: auto; will-change: transform; }
   [data-go], .liveban, .back, button { cursor: pointer; }
+  /* enlarged on a short screen the whole upright phone is drawn smaller than true size (0.59 at 956 x 440), so its own
+     content is magnified back (--k, set once as it enlarges): what the phone shows sits at its true size on the screen,
+     the smallest text 11 pt and every target at least 44 x 44 pt (Apple's minimums; the owner's proxy, 12 Nov: the
+     buttons were 12 px tall and the text 6.5 px). Only an app's content scrolls; its top bar and the dock stay. */
+  .phone[data-state="big"] .scr { width: calc(100% / var(--k, 1)); height: calc(100% / var(--k, 1)); zoom: var(--k, 1); border-radius: calc(42px / var(--k, 1)); }
+  .phone[data-state="big"] .scr .pill { top: calc(9px / var(--k, 1)); width: calc(92px / var(--k, 1)); height: calc(27px / var(--k, 1)); border-radius: calc(14px / var(--k, 1)); }
+  .phone[data-state="big"] .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  .phone[data-state="big"] .nav { position: sticky; top: 0; z-index: 3; min-height: 44px; background: var(--bg); }
+  .phone[data-state="big"] .dock { position: sticky; bottom: 0; z-index: 3; }
+  .phone[data-state="big"] .back, .phone[data-state="big"] [data-go], .phone[data-state="big"] .liveban, .phone[data-state="big"] button { min-height: 44px; min-width: 44px; }
   * { box-sizing: border-box; margin: 0; }
   .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #0b8a5c; --acc-soft: #e3f4ec; --red: #e5372b; --amber: #c27a12; }
   .num { font-family: "Alexandria", "IBM Plex Sans Arabic", sans-serif; }
@@ -326,6 +336,7 @@ export function createPhone({ host }) {
   function pan(y) {
     const sb = st.state === 'big' ? bigScale() : 1, room = host.clientHeight - H * sb;
     box.style.setProperty('--sb', sb.toFixed(4));
+    box.style.setProperty('--k', (st.state === 'big' ? Math.max(1, 1 / sb) : 1).toFixed(4));      // (the content's magnification: true size on the screen)
     st.y = room >= 2 * EDGE - 0.5 ? room / 2 : Math.max(room - EDGE, Math.min(EDGE, y));
     box.style.setProperty('--y', st.y.toFixed(1) + 'px');
   }

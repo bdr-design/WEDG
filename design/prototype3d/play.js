@@ -12,8 +12,8 @@ const PEDAL_UP = 0.05;           // a pedal under this is up
 const SHIFT_V = 0.8;             // m/s: under this a fresh press of the other pedal takes the other gear (under the 5 km/h an automatic creeps at, so a dab of the brake at a creep is only a brake; over 0.4, so the press still counts when the car has rolled on a little down a slope; game choice)
 const STEER_RATE = 8;            // 1/s: how fast the front wheels follow the pad (a hand's quick turn of the wheel: 90% in about a quarter of a second; game choice)
 const STEER_RATIO = 15;          // the steering wheel's turn per road-wheel turn (the LC300's about 15-16: about 1.4 turns to lock here)
-// the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
-// changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the loading screen (farm.html)
+// the private car is ours, built by code from the owner's photos (tool/vehicle3d/suv_model; the owner's choice of 11 Nov
+// over the downloaded model of tool/vehicle3d/suv_model/thirdparty, which is no longer in the game)
 
 const WALK = 1.25, RUN = 3.5;                 // walking and running pace, m/s (a walk of 4.5 km/h, a jog of 12.6: game choice)
 let WHEELBASE = 2.85, TRACK = 1.64;           // Land Cruiser 300; replaced by the model's own wheel positions when it has them
@@ -25,16 +25,16 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   // ---------------------------------------------------------------- obstacles (yard layout, metres)
   const rects = [];
   const C = LAYOUT.compound, T = 0.25;
-  const wall = (x0, x1, z0, z1) => rects.push({ x0, x1, z0, z1, wall: true });
+  const wall = (x0, x1, z0, z1) => rects.push({ x0, x1, z0, z1, wall: true, h: 2.1 });      // (h: the height the chase camera must clear to see over it; world.js builds the wall 2.1 m)
   wall(C.x0 - T, C.x1 + T, C.z0 - T, C.z0 + T);                                   // north
   wall(C.x0 - T, C.x0 + T, C.z0, C.z1); wall(C.x1 - T, C.x1 + T, C.z0, C.z1);     // west, east
   wall(C.x0 - T, LAYOUT.gate.x0, C.z1 - T, C.z1 + T); wall(LAYOUT.gate.x1, C.x1 + T, C.z1 - T, C.z1 + T);   // south, with the gate
   for (const p of Object.values(LAYOUT.pens)) rects.push({ x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1 });
-  rects.push({ x0: 0.7, x1: 11.3, z0: 3.4, z1: 9.6 });        // the room
-  rects.push({ x0: -18, x1: -6, z0: 4.2, z1: 9.8 });          // the goat-hair tent
-  rects.push({ x0: 34, x1: 40, z0: 4.4, z1: 7.6 });           // the shepherds' cabin
-  rects.push({ x0: 13.4, x1: 15.4, z0: 4.2, z1: 9.4 });       // the white shas under the shade
-  rects.push({ x0: 25.2, x1: 27.6, z0: -16.9, z1: -11.5 });   // the shas by the feed shed
+  rects.push({ x0: 0.7, x1: 11.3, z0: 3.4, z1: 9.6, h: 4.6 });        // the room
+  rects.push({ x0: -18, x1: -6, z0: 4.2, z1: 9.8, h: 3.3 });          // the goat-hair tent
+  rects.push({ x0: 34, x1: 40, z0: 4.4, z1: 7.6, h: 3.0 });           // the shepherds' cabin
+  rects.push({ x0: 13.4, x1: 15.4, z0: 4.2, z1: 9.4, h: 2.1 });       // the white shas under the shade
+  rects.push({ x0: 25.2, x1: 27.6, z0: -16.9, z1: -11.5, h: 2.1 });   // the shas by the feed shed
   const posts = [];
   for (const dx of [-1.4, 1.4]) for (const dz of [-1.4, 1.4]) posts.push({ x: 30 + dx, z: -40 + dz, r: 0.18 });
   for (const dx of [-3.2, 3.2]) for (const dz of [-6.2, 0, 6.2]) posts.push({ x: 32 + dx, z: -21 + dz, r: 0.15 });
@@ -574,7 +574,20 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
   }
   const CHASE_BACK = 5.6, CHASE_UP = 2.05, CHASE_TURN = 4;      // m behind and above the car's middle; 1/s: how fast the camera's heading follows the car's (game choice)
-  let camYaw = 0, camY = null;
+  let camYaw = 0, camY = null, camVy = 0, camPrevY = 0;
+  // where along the segment (x0, z0) to (x1, z1) it enters the box b, from 0 to 1, or 1 if it does not (the slab test;
+  // no array made per call)
+  function slab(p, d, lo, hi, r) {
+    if (Math.abs(d) < 1e-9) return p >= lo && p <= hi;
+    let a = (lo - p) / d, c = (hi - p) / d; if (a > c) { const q = a; a = c; c = q; }
+    r.t0 = Math.max(r.t0, a); r.t1 = Math.min(r.t1, c); return r.t0 <= r.t1;
+  }
+  const SEG = { t0: 0, t1: 1 };
+  function segBox(x0, z0, x1, z1, b) {
+    SEG.t0 = 0; SEG.t1 = 1;
+    if (!slab(x0, x1 - x0, b.x0, b.x1, SEG) || !slab(z0, z1 - z0, b.z0, b.z1, SEG)) return 1;
+    return SEG.t0 > 0 ? SEG.t0 : 1;
+  }
   function updateCamera(dt) {
     if (state.mode === 'walk') {
       // on foot: the walker's own eyes (first person only)
@@ -601,8 +614,22 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         camYaw += dy * Math.min(1, dt * CHASE_TURN);
         const back = CHASE_BACK + Math.min(1.2, Math.abs(carState.v) * 0.03);
         camPos.set(carState.pos.x - Math.cos(camYaw) * back, 0, carState.pos.z + Math.sin(camYaw) * back);      // (behind: the car's forward is (cos yaw, 0, -sin yaw))
-        const want = Math.max(carState.pos.y + CHASE_UP, ground(camPos.x, camPos.z) + 1.0);
-        camY = camY === null ? want : camY + (want - camY) * Math.min(1, dt * 6);
+        // the car's climb, smoothed: the height eases at 6/s, so it lagged a climb by its rate over 6 (0.6 m over the car's base
+        // on a 25 degree slope at 70 km/h, the car hiding the slope ahead); led by that much, it keeps its height over the car
+        if (camY === null) { camVy = 0; camPrevY = carState.pos.y; }
+        if (dt > 0) { camVy += ((carState.pos.y - camPrevY) / dt - camVy) * Math.min(1, dt * 4); camPrevY = carState.pos.y; }
+        let want = Math.max(carState.pos.y + CHASE_UP + Math.max(-2, Math.min(2, camVy / 6)), ground(camPos.x, camPos.z) + 1.0);
+        // a wall or a building between the camera and the car: up over it, looking down (with the tail by the yard's
+        // 2.1 m wall the camera stood behind it and saw only the wall)
+        const lookY = carState.pos.y + 1.05, cy0 = camY === null ? want : camY;
+        let over = 0;
+        for (const b of rects) {
+          if (!b.h) continue;
+          const t = segBox(carState.pos.x, carState.pos.z, camPos.x, camPos.z, b);
+          if (t < 1 && lookY + (cy0 - lookY) * t < b.h + 0.3) over = Math.max(over, b.h + 0.6);
+        }
+        want = Math.max(want, over);
+        camY = camY === null ? want : camY + (want - camY) * Math.min(1, dt * (want > camY && over ? 14 : 6));
         camPos.y = camY; camera.position.copy(camPos);
         camLook.copy(carState.pos).addScaledVector(fwd, 2.2).add(tmp.set(0, 1.05, 0)); camera.lookAt(camLook);
       }

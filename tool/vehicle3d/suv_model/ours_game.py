@@ -27,6 +27,13 @@ def join(objs, name):
     """objs joined into one mesh object called name (transforms applied)."""
     objs = [o for o in objs if o.type == 'MESH' and len(o.data.polygons)]
     if not objs: return None
+    for o in objs:                                   # one name for every part's UV map, so the join keeps one map (named apart, the
+        uvs = o.data.uv_layers                       # plate's UVs went to a second map and its image never showed: the review)
+        if not len(uvs): continue
+        act = next((l for l in uvs if l.active_render), uvs[0])
+        for l in uvs:
+            if l != act and l.name == 'UVMap': l.name = 'UVMap_other'
+        act.name = 'UVMap'
     for o in bpy.context.view_layer.objects: o.select_set(False)
     for o in objs: o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
