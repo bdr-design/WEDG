@@ -507,11 +507,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     carFwd(carState.yaw, fwd);
     carState.pos.addScaledVector(fwd, carState.v * dt);
     { const side = phys.s.slide + phys.s.vlat; if (side) { right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, side * dt); } }      // sideways: sliding down a side slope too steep to hold, and the tyres' own slide in a turn
-    // ground too steep across the car (past about 40 degrees it would tip): it does not go further onto it, as against
-    // a wall. Only a move that makes the lean worse is undone: one that eases it (backing out, sliding down) goes
-    // through, or a car that had slid onto such a slope was held there for good.
+    // ground too steep across the car (past about 40 degrees it would tip): it does not drive further onto it, as against
+    // a wall. Only a move that makes the lean worse is undone, and of it only what the car does itself (its run and
+    // turn, and its tyres' slide in a turn): the slide down the slope is gravity's and goes through, or a car sliding
+    // from a 32 degree slope onto a 45 degree face below it was held at the brink for good (the review: 30 s, frozen).
+    // (A real car would roll there; the game does not roll it: a game choice.)
     { const tilt = sideTilt();
-      if (tilt > 2 * geo.half * TIP && tilt > tiltWas + 1e-4) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, -(phys.s.slide + phys.s.vlat) * dt); carState.v = 0; phys.s.v = 0; phys.s.vyL = phys.s.r = 0; phys.s.stuck = 0; } }      // (the turn and the sideways move undone too, and not counted as stuck: it is a slope, not sand)
+      if (tilt > 2 * geo.half * TIP && tilt > tiltWas + 1e-4) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, -phys.s.vlat * dt); carState.v = 0; phys.s.v = 0; phys.s.vyL = phys.s.r = 0; phys.s.stuck = 0; } }      // (the turn and the sideways move undone too, and not counted as stuck: it is a slope, not sand)
     POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw;
     if (!settled) { phys.settle(POSE, env); settled = true; }
     phys.s.v = carState.v;
