@@ -110,8 +110,10 @@ def radiator(obs):
     bm.to_mesh(o.data); bm.free()
 
 
-SHELLS = [((1.0, 2.2), (-0.80, 0.80), (0.45, 1.10))] + [((hx - 0.48, hx + 0.48), (s * 0.40, s * 0.90) if s > 0 else (s * 0.90, s * 0.40), (0.05, 0.85)) for hx in (1.556, -1.294) for s in (1, -1)] + [((-2.55, -2.05), (-0.85, 0.85), (0.25, 0.75))]
-# boxes inside the body whose faces look inward: the engine bay, the four wheel wells, the rear bumper. From outside a
+SHELLS = [((1.0, 2.2), (-0.80, 0.80), (0.50, 1.10))] + [((hx - 0.48, hx + 0.48), (s * 0.40, s * 0.88) if s > 0 else (s * 0.88, s * 0.40), (0.50, 0.85)) for hx in (1.556, -1.294) for s in (1, -1)]
+# (their floors at 0.5 m, inside the body: reaching lower, below the bumpers and the sills, they showed as black boxes
+# under the car; one inside the rear bumper showed below it at any height, and went)
+# boxes inside the body whose faces look inward: the engine bay and the four wheel wells. From outside a
 # box's own faces are back faces (unseen); through a gap the far inside of it shows, dark, where the cull had left the sky
 
 
