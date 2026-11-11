@@ -21,7 +21,8 @@ const CSS = `
   .dev:focus { outline: none; }
   .phone[data-state="small"] .dev { right: var(--r); bottom: var(--b); transform-origin: 100% 100%; transform: scale(var(--s)); pointer-events: none; }
   .phone[data-state="big"] .dim { display: block; }
-  .phone[data-state="big"] .dev { left: 50%; top: 0; margin-left: ${-W / 2}px; transform: translateY(var(--y)); pointer-events: auto; will-change: transform; }
+  .phone[data-state="big"] .dev { left: 50%; top: 0; margin-left: ${-W / 2}px; transform-origin: 50% 0; transform: translateY(var(--y)) scale(var(--sb, 1)); pointer-events: auto; will-change: transform; }
+  [data-go], .liveban, .back, button { cursor: pointer; }
   * { box-sizing: border-box; margin: 0; }
   .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #0b8a5c; --acc-soft: #e3f4ec; --red: #e5372b; --amber: #c27a12; }
   .num { font-family: "Alexandria", "IBM Plex Sans Arabic", sans-serif; }
@@ -319,8 +320,15 @@ export function createPhone({ host }) {
     box.style.setProperty('--b', 'calc(10px + max(0px, var(--edge-b, 12px) - 12px))');
     pan(st.y);
   }
-  // (a screen taller than the phone holds it whole, in the middle; a shorter one lets it slide between its ends)
-  function pan(y) { const room = host.clientHeight - H; st.y = room >= 2 * EDGE ? room / 2 : Math.max(room - EDGE, Math.min(EDGE, y)); box.style.setProperty('--y', st.y.toFixed(1) + 'px'); }
+  // enlarged, the whole phone in the screen, in the middle: as large as the screen's height allows, never larger than
+  // true size (the owner: "half of it under the screen", its dock and buttons out of reach; it must sit balanced)
+  const bigScale = () => Math.min(1, (host.clientHeight - 2 * EDGE) / H, (host.clientWidth - 2 * EDGE) / W);
+  function pan(y) {
+    const sb = st.state === 'big' ? bigScale() : 1, room = host.clientHeight - H * sb;
+    box.style.setProperty('--sb', sb.toFixed(4));
+    st.y = room >= 2 * EDGE - 0.5 ? room / 2 : Math.max(room - EDGE, Math.min(EDGE, y));
+    box.style.setProperty('--y', st.y.toFixed(1) + 'px');
+  }
   function set(state) {
     if (state === st.state) return;
     endPress();

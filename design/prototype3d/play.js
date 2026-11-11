@@ -573,6 +573,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       p.age = 0; p.s.visible = true;
     }
   }
+  const CHASE_BACK = 5.6, CHASE_UP = 2.05, CHASE_TURN = 4;      // m behind and above the car's middle; 1/s: how fast the camera's heading follows the car's (game choice)
+  let camYaw = 0, camY = null;
   function updateCamera(dt) {
     if (state.mode === 'walk') {
       // on foot: the walker's own eyes (first person only)
@@ -590,11 +592,19 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         else { camera.position.copy(tmp.set(hasCabin ? -0.17 : 0.0, hasCabin ? 1.57 : 1.46, hasCabin ? -0.40 : -0.42).applyMatrix4(car.matrixWorld)); camLook.copy(tmp.set(6, hasCabin ? 1.25 : 1.15, -0.36).applyMatrix4(car.matrixWorld)); }
         camera.lookAt(camLook);
       } else {
-        const back = 7.2 + Math.abs(carState.v) * 0.05;
-        camPos.copy(carState.pos).addScaledVector(fwd, -back).add(tmp.set(0, 2.9, 0));
-        camPos.y = Math.max(camPos.y, ground(camPos.x, camPos.z) + 1.0);
-        camera.position.lerp(camPos, state.snap ? 1 : Math.min(1, dt * 3.5));
-        camLook.copy(carState.pos).addScaledVector(fwd, 2.5).add(tmp.set(0, 1.2, 0)); camera.lookAt(camLook);
+        // from behind: a set distance and height behind the car, the camera's heading following the car's with a short
+        // lag (it swings round in a turn), its height easing over bumps. (It used to ease its whole place toward a point
+        // behind the car, so it fell back by the speed over the easing rate: 8 m more at 100 km/h, the owner: far away
+        // and loose while moving.) 5.6 m from the middle is about 3 m behind the bumper (game choice).
+        if (state.snap) { camYaw = carState.yaw; camY = null; }
+        const dy = Math.atan2(Math.sin(carState.yaw - camYaw), Math.cos(carState.yaw - camYaw));
+        camYaw += dy * Math.min(1, dt * CHASE_TURN);
+        const back = CHASE_BACK + Math.min(1.2, Math.abs(carState.v) * 0.03);
+        camPos.set(carState.pos.x - Math.cos(camYaw) * back, 0, carState.pos.z + Math.sin(camYaw) * back);      // (behind: the car's forward is (cos yaw, 0, -sin yaw))
+        const want = Math.max(carState.pos.y + CHASE_UP, ground(camPos.x, camPos.z) + 1.0);
+        camY = camY === null ? want : camY + (want - camY) * Math.min(1, dt * 6);
+        camPos.y = camY; camera.position.copy(camPos);
+        camLook.copy(carState.pos).addScaledVector(fwd, 2.2).add(tmp.set(0, 1.05, 0)); camera.lookAt(camLook);
       }
     }
     state.snap = false;
