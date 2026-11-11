@@ -1,0 +1,369 @@
+// The in-game phone: a complete device, always upright (the owner's word of 11 Nov 2026). It opens small at the side
+// of the screen, the game going on beside it: a look at the balance and at the red dots, nothing more (a tap on it
+// does nothing; a drag over it turns the view as anywhere else). A long press on it enlarges it to a phone's true size
+// in the middle of the screen, the scene dimmed behind: it is taller than the landscape screen, so it is slid up and
+// down by the finger; a tap outside it makes it small again. Its screens are the approved design's (design/ui/
+// phone.html: home, bank, market, auction, a talk with a buyer, weather and grazing), unchanged; what they show is
+// example content until the game's engine feeds them. The other apps on the home screen are not built yet.
+// Light: plain DOM in a shadow root (its styles and the page's cannot touch each other), no canvas, no blur; while it
+// is enlarged the page stops drawing the 3D scene (farm.html).
+const SMALL = 0.4, SMALL_ROOM = 105;      // the small phone's scale at most, and the height left clear above it (the top row of buttons), px
+const LONG_PRESS = 450, SLOP = 10;        // ms held, and px moved at most, for a long press
+const W = 334, H = 712, EDGE = 10;        // the device at true size, and its margin from the screen's top and bottom when enlarged, px
+
+const CSS = `
+  :host { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
+  .phone { position: absolute; inset: 0; overflow: hidden; }
+  .dim { position: absolute; inset: 0; background: rgba(12, 8, 4, 0.55); display: none; pointer-events: auto; }
+  .dev { position: absolute; width: ${W}px; height: ${H}px; border-radius: 50px; padding: 9px; background: linear-gradient(145deg, #4a4036, #1d1813 40%, #2b241d);
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .12), 0 16px 34px rgba(0, 0, 0, .5); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  .phone[data-state="closed"] .dev { display: none; }
+  .phone[data-state="small"] .dev { right: var(--r); bottom: var(--b); transform-origin: 100% 100%; transform: scale(var(--s)); pointer-events: none; }
+  .phone[data-state="big"] .dim { display: block; }
+  .phone[data-state="big"] .dev { left: 50%; top: 0; margin-left: ${-W / 2}px; transform: translateY(var(--y)); pointer-events: auto; will-change: transform; }
+  * { box-sizing: border-box; margin: 0; }
+  .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #0b8a5c; --acc-soft: #e3f4ec; --red: #e5372b; --amber: #c27a12; }
+  .num { font-family: "Alexandria", "IBM Plex Sans Arabic", sans-serif; }
+  svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  .scr { position: relative; width: 100%; height: 100%; border-radius: 42px; overflow: hidden; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; }
+  .scr .pill { position: absolute; top: 9px; left: 50%; translate: -50% 0; width: 92px; height: 27px; border-radius: 14px; background: #000; z-index: 5; }
+  .sbar { height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 26px 0; font: 600 14px/1 "Alexandria", sans-serif; }
+  .sbar .r { display: flex; gap: 5px; align-items: center; direction: ltr; }
+  .sbar .bat { width: 22px; height: 11px; border-radius: 3.5px; border: 1.3px solid currentColor; position: relative; opacity: .85; }
+  .sbar .bat::after { content: ""; position: absolute; inset: 1.3px; width: 60%; border-radius: 1.5px; background: currentColor; }
+  .body { flex: 1; min-height: 0; overflow: hidden; padding: 2px 14px 0; display: flex; flex-direction: column; gap: 12px; }
+  .hb { height: 4px; width: 110px; border-radius: 2px; background: rgba(0,0,0,.75); margin: 8px auto 8px; flex: none; }
+  .ink2 { color: var(--ink2); }
+  /* ---------- shared app pieces ---------- */
+  .nav { display: flex; align-items: center; gap: 8px; height: 30px; }
+  .nav .back { display: flex; align-items: center; gap: 2px; color: var(--acc); font-size: 14px; font-weight: 500; }
+  .nav .back svg { width: 18px; height: 18px; stroke-width: 2.2; }
+  .nav .end { margin-inline-start: auto; color: var(--acc); }
+  .title { font: 700 27px/1.1 "Alexandria", sans-serif; letter-spacing: -.01em; }
+  .group { background: var(--card); border-radius: 16px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 36px 1fr auto; column-gap: 11px; align-items: center; padding: 9px 12px; min-height: 52px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; inset-inline: 59px 0; height: .5px; background: var(--line); }
+  .row .lead { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--acc-soft); color: var(--acc); grid-row: span 2; }
+  .row .lead svg { width: 18px; height: 18px; }
+  .row b { font-size: 13.5px; font-weight: 600; }
+  .row small { font-size: 11.5px; color: var(--ink2); }
+  .row .amt { grid-row: span 2; font: 600 14px/1 "Alexandria", sans-serif; direction: ltr; unicode-bidi: isolate; }
+  .pos { color: var(--acc); }
+  .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+  .sec { font-size: 12px; font-weight: 600; color: var(--ink2); padding-inline: 4px; margin-bottom: -6px; }
+  .btn { height: 44px; border-radius: 14px; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding-inline: 16px; }
+  .btn.pri { background: var(--acc); color: #fff; }
+  .btn.ghost { background: var(--acc-soft); color: var(--acc); }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 7px; background: var(--acc-soft); color: var(--acc); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+  .badge svg { width: 11px; height: 11px; stroke-width: 2.6; }
+  .badge.amber { background: #fdf0dc; color: var(--amber); }
+  .badge.red { background: #fde6e4; color: var(--red); }
+  /* ---------- home ---------- */
+  .home { background: url(phone/wall_camel.png) 0% 104% / 124% auto no-repeat, linear-gradient(180deg, #cfe3f2 0%, #efe3cf 55%, #e2c9a2 100%); }
+  .home .body { padding: 6px 18px 0; gap: 14px; }
+  .widgets { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .wg { border-radius: 22px; padding: 12px 13px; background: rgba(255,255,255,.78); -webkit-backdrop-filter: none; height: 136px; display: flex; flex-direction: column; box-shadow: 0 4px 14px rgba(70,50,20,.10); }
+  .wg small { font-size: 11.5px; font-weight: 600; color: var(--ink2); }
+  .wg .big { font: 700 34px/1 "Alexandria", sans-serif; margin-top: 6px; }
+  .wg .big2 { font: 700 21px/1.1 "Alexandria", sans-serif; margin-top: 8px; }
+  .wg .ln { font-size: 11.5px; font-weight: 500; margin-top: auto; }
+  .wg .rain { color: #1f6fd6; font-weight: 700; }
+  .apps { display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 14px; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #2b2116; position: relative; }
+  .app .ic { width: 56px; height: 56px; border-radius: 15px; display: grid; place-items: center; background: #fff; color: var(--acc); box-shadow: 0 3px 8px rgba(70,50,20,.14); }
+  .app .ic svg { width: 27px; height: 27px; stroke-width: 1.8; }
+  .app .bd { position: absolute; top: -5px; left: 2px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px "Alexandria", sans-serif; text-align: center; padding: 0 5px; }
+  .app .live { position: absolute; top: -5px; left: -2px; height: 18px; padding: 0 6px; border-radius: 9px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; }
+  .dock { margin-top: auto; border-radius: 28px; padding: 10px 10px; background: rgba(255,255,255,.55); display: grid; grid-template-columns: repeat(4, 1fr); }
+  .dock .app span:last-child { display: none; }
+  /* ---------- bank ---------- */
+  .balance { background: var(--card); border-radius: 20px; padding: 14px 16px; }
+  .balance small { font-size: 12px; color: var(--ink2); font-weight: 500; }
+  .balance .v { font: 700 32px/1.1 "Alexandria", sans-serif; margin-top: 4px; letter-spacing: -.01em; }
+  .balance .v span { font-size: 15px; font-weight: 600; color: var(--ink2); margin-inline-start: 4px; }
+  .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+  .q { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; }
+  .q .c { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--acc-soft); color: var(--acc); }
+  .q.pri .c { background: var(--acc); color: #fff; }
+  .q .c svg { width: 20px; height: 20px; stroke-width: 2; }
+  .due { background: var(--card); border-radius: 16px; padding: 10px 12px; display: grid; grid-template-columns: 36px 1fr auto; column-gap: 11px; align-items: center; }
+  .due .lead { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #fdf0dc; color: var(--amber); grid-row: span 2; }
+  .due b { font-size: 13.5px; font-weight: 600; }
+  .due small { font-size: 11.5px; color: var(--ink2); }
+  .due .btn { height: 36px; border-radius: 11px; font-size: 13px; padding-inline: 14px; grid-row: span 2; }
+  /* ---------- haraj ---------- */
+  .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 2px; border-radius: 10px; background: #e3e3e8; }
+  .seg span { text-align: center; padding: 6px 0; border-radius: 8px; font-weight: 600; font-size: 12.5px; color: #3a3a3f; }
+  .seg span.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); color: var(--ink); }
+  .liveban { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1.5px #f3c2bd; }
+  .liveban .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px #fde6e4; flex: none; }
+  .liveban b { font-size: 13.5px; }
+  .liveban small { font-size: 11.5px; color: var(--ink2); display: block; }
+  .liveban .go { margin-inline-start: auto; color: var(--red); font-weight: 700; font-size: 13px; }
+  .lst { display: flex; flex-direction: column; gap: 8px; padding-bottom: 56px; }
+  .it { display: grid; grid-template-columns: 70px 1fr; column-gap: 11px; padding: 8px; border-radius: 16px; background: var(--card); align-items: center; }
+  .it .ph { width: 70px; height: 70px; border-radius: 12px; background: linear-gradient(180deg, #f3eadc, #e2cfae); overflow: hidden; grid-row: span 4; }
+  .it .ph img { width: 100%; height: 100%; object-fit: contain; }
+  .it b { font-size: 13.5px; font-weight: 700; }
+  .it small { font-size: 11.5px; color: var(--ink2); }
+  .it .pr { display: flex; align-items: center; }
+  .it .bgs { display: flex; gap: 5px; margin-top: 3px; }
+  .it .pr .price { font: 700 15px/1 "Alexandria", sans-serif; margin-inline-end: auto; }
+  .it .pr .price.open { font: 700 13px/1 "IBM Plex Sans Arabic", sans-serif; color: var(--amber); }
+  .sell { position: absolute; bottom: 26px; inset-inline: 14px; height: 46px; border-radius: 15px; background: var(--acc); color: #fff; font-weight: 700; font-size: 14.5px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 6px 16px rgba(11,138,92,.35); z-index: 4; }
+  .sell svg { width: 18px; height: 18px; stroke-width: 2.4; }
+  /* ---------- auction ---------- */
+  .lot { background: var(--card); border-radius: 20px; padding: 12px; display: flex; flex-direction: column; align-items: center; }
+  .lot .ph { width: 100%; height: 150px; border-radius: 14px; background: linear-gradient(180deg, #f3eadc, #e2cfae); display: grid; place-items: center; overflow: hidden; }
+  .lot .ph img { height: 150px; }
+  .lot .hd { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .lot .hd b { font-size: 15px; }
+  .lot .cur { width: 100%; display: flex; align-items: flex-end; justify-content: space-between; margin-top: 8px; }
+  .lot .cur .v { font: 700 30px/1 "Alexandria", sans-serif; color: var(--acc); }
+  .lot .cur .v span { font-size: 13px; color: var(--ink2); margin-inline-start: 3px; font-weight: 600; }
+  .timer { display: flex; align-items: center; gap: 6px; font: 700 18px/1 "Alexandria", sans-serif; color: var(--red); }
+  .timer svg { width: 30px; height: 30px; }
+  .bids { display: flex; gap: 8px; }
+  .bids .btn { flex: 1; }
+  .bids .btn.step { flex: 0 0 auto; background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  /* ---------- chat ---------- */
+  .chathd { display: flex; align-items: center; gap: 9px; }
+  .chathd .av { width: 34px; height: 34px; border-radius: 50%; background: #d9cbb4; display: grid; place-items: center; font: 700 15px/1 "Alexandria", sans-serif; color: #4a3720; }
+  .chathd b { font-size: 14.5px; display: block; line-height: 1.2; }
+  .chathd small { font-size: 11px; color: var(--ink2); }
+  .strip { display: flex; align-items: center; gap: 10px; padding: 7px; border-radius: 14px; background: var(--card); }
+  .strip .ph { width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(180deg, #f3eadc, #e2cfae); overflow: hidden; }
+  .strip .ph img { width: 100%; height: 100%; object-fit: contain; }
+  .strip b { font-size: 13px; display: block; }
+  .strip small { font-size: 11px; color: var(--ink2); }
+  .strip .lim { margin-inline-start: auto; text-align: end; font-size: 11px; color: var(--ink2); }
+  .strip .lim span { display: block; font: 700 14px/1.1 "Alexandria", sans-serif; color: var(--ink); }
+  .chat { flex: 1; display: flex; flex-direction: column; gap: 6px; justify-content: flex-end; min-height: 0; }
+  .msg { max-width: 76%; padding: 7px 11px; border-radius: 17px; font-size: 13.5px; line-height: 1.4; }
+  .msg.them { align-self: flex-start; background: #e9e9eb; border-end-start-radius: 5px; }
+  .msg.me { align-self: flex-end; background: var(--acc); color: #fff; border-end-end-radius: 5px; }
+  .ofr { align-self: flex-start; padding: 8px 12px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1.5px #f1d4a3; border-end-start-radius: 5px; }
+  .ofr small { font-size: 11px; color: var(--amber); font-weight: 600; display: block; }
+  .ofr span { font: 700 19px/1.2 "Alexandria", sans-serif; }
+  .ofr span em { font-style: normal; font-size: 12px; color: var(--ink2); margin-inline-start: 3px; }
+  .sum { background: var(--card); border-radius: 16px; padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; row-gap: 3px; font-size: 12.5px; }
+  .sum .n { font: 600 13px/1.3 "Alexandria", sans-serif; text-align: end; direction: ltr; unicode-bidi: isolate; }
+  .sum .tot { font-weight: 700; font-size: 13.5px; }
+  .sum .tot + .n { font-weight: 700; color: var(--acc); font-size: 14px; }
+  .sum .chk { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .deal { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+  .deal .x { width: 44px; padding: 0; background: #fff; color: var(--ink2); box-shadow: inset 0 0 0 1px var(--line); }
+  /* ---------- weather ---------- */
+  .wnow { background: linear-gradient(170deg, #5aa8ea, #2f7fcf); color: #fff; border-radius: 20px; padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; }
+  .wnow small { font-size: 12px; font-weight: 600; opacity: .9; }
+  .wnow .t { font: 600 46px/1 "Alexandria", sans-serif; margin-top: 4px; }
+  .wnow .d { font-size: 12.5px; font-weight: 500; margin-top: 4px; }
+  .wnow svg { width: 54px; height: 54px; stroke: #fff; stroke-width: 1.5; }
+  .days { background: var(--card); border-radius: 16px; display: grid; grid-template-columns: repeat(6, 1fr); padding: 10px 4px; text-align: center; }
+  .days div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; }
+  .days svg { width: 22px; height: 22px; color: #e59c1a; }
+  .days .r svg { color: #1f6fd6; }
+  .days em { font-style: normal; font-size: 11px; color: #1f6fd6; font-weight: 700; }
+  .days b { font: 600 12.5px/1 "Alexandria", sans-serif; }
+  .graze .lead { background: #e6f3dc; color: #3d8a1f; }
+  .green { display: inline-flex; gap: 2px; }
+  .green i { width: 9px; height: 5px; border-radius: 2px; background: #dfe7d6; display: block; }
+  .green i.on { background: #4f9e2a; }
+  .row .move { font-size: 11px; font-weight: 600; color: var(--amber); }
+`;
+
+const I = {
+    bank: '<path d="M3.5 9.5 12 4l8.5 5.5"/><path d="M5.5 10v7.5M10 10v7.5M14 10v7.5M18.5 10v7.5"/><path d="M3.5 20h17"/>',
+    tag: '<path d="M3.5 12.4V5c0-.8.7-1.5 1.5-1.5h7.4l8.1 8.1c.6.6.6 1.5 0 2.1l-7.4 7.4c-.6.6-1.5.6-2.1 0z"/><circle cx="8.2" cy="8.2" r="1.6"/>',
+    gavel: '<path d="m13 4 7 7M10.5 6.5l7 7M14.5 5.5l-5 5M18.5 9.5l-5 5"/><path d="M11.5 12.5 4 20"/><path d="M3.5 20.5h8"/>',
+    chat: '<path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12z"/>',
+    cloud: '<path d="M7 18.5a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 18 10.5a4 4 0 0 1-.5 8z"/>',
+    rain: '<path d="M7 15.5a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 18 7.5a4 4 0 0 1-.5 8z"/><path d="M8 18.5l-1 2M12 18.5l-1 2M16 18.5l-1 2"/>',
+    sun: '<circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+    truck: '<path d="M2.5 6.5h11v9.5h-11z"/><path d="M13.5 9.5h4.2l3.3 3.6V16h-7.5"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+    vet: '<path d="M6 3.5v5a4 4 0 0 0 8 0v-5"/><path d="M10 12.5v2.5a4.5 4.5 0 0 0 9 0v-2"/><circle cx="19" cy="11" r="2"/>',
+    water: '<path d="M12 3.5s6 6.4 6 10.6a6 6 0 0 1-12 0C6 9.9 12 3.5 12 3.5z"/>',
+    feed: '<rect x="4" y="7" width="16" height="11" rx="2"/><path d="M9.5 7v11M14.5 7v11"/>',
+    cup: '<path d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.8c0 2.4 1.2 3.8 3.2 4.2M16.5 6h2.7c0 2.4-1.2 3.8-3.2 4.2"/><path d="M12 14v3.5M9.5 17.5h5v3h-5z"/>',
+    people: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.6c2.3.1 4 1.6 4.5 4.4"/>',
+    up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    doc: '<path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20z"/><path d="M14 3.5V8h4M9 12h6M9 15.5h6"/>',
+    back: '<path d="M9 6l6 6-6 6"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    camel: '<path d="M3 8.5c0-1 .8-1.6 1.7-1.6h.9c.9 0 1.5.7 1.4 1.6l-.2 1.2c-.1.8.2 1.5.8 2 .5.4 1.1.4 1.6 0 .5-.5.9-1 1.1-1.6.9-1.7 2.5-2.8 4.4-2.7 1.1.1 2.1.8 2.7 1.8.5.8 1.1 1.3 2 1.6 1.1.4 1.9 1.5 1.9 2.8V15c0 .6-.4 1.2-.9 1.5V20"/><path d="M6.4 12.2V20M9.5 15.5V20M15 15.5V20"/>',
+    leaf: '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/>',
+  };
+const svg = (k) => `<svg class="i" viewBox="0 0 24 24">${I[k]}</svg>`;
+const sbar = `<div class="sbar"><span>3:20</span><span class="r"><svg width="16" height="11" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35"/></svg><span class="bat"></span></span></div>`;
+const nav = (end = '') => `<div class="nav"><button class="back">${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
+const ok = (t) => `<span class="badge">${svg('check')}${t}</span>`;
+const APP_GO = { gavel: 'auction', bank: 'bank', tag: 'haraj', chat: 'chat', cloud: 'weather' };      // the apps that open a screen (the rest are not built yet)
+const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;
+
+const S = {
+    home: () => `<div class="body">
+      <div class="widgets">
+        <div class="wg"><small>أبانات</small><div class="big">27°</div><div class="ln">مشمس</div><div class="ln rain" style="margin-top:2px">مطر الخميس <span class="ltr">60%</span></div></div>
+        <div class="wg"><small>الرصيد</small><div class="big2">486,300</div><div class="ln ink2">ريال</div><div class="ln"><span class="pos ltr">+4,875</span> اليوم</div></div>
+      </div>
+      <div class="apps">
+        ${app('gavel', 'المزاد', '<span class="live">مباشر</span>')}
+        ${app('people', 'الرعاة')}
+        ${app('truck', 'النقل')}
+        ${app('vet', 'البيطري')}
+        ${app('water', 'الوايت')}
+        ${app('feed', 'العلف')}
+        ${app('cup', 'المزاين')}
+        ${app('doc', 'الأوراق')}
+      </div>
+      <div class="dock">
+        ${app('bank', 'البنك')}
+        ${app('tag', 'الحراج', '<span class="bd">2</span>')}
+        ${app('chat', 'المحادثات', '<span class="bd">3</span>')}
+        ${app('cloud', 'الطقس')}
+      </div></div>`,
+    bank: () => `<div class="body">${nav()}<div class="title">البنك</div>
+      <div class="balance"><small>حساب عزبة الصفوة</small><div class="v">486,300<span>ريال</span></div>
+        <div class="quick">
+          <div class="q pri"><span class="c">${svg('up')}</span>تحويل</div>
+          <div class="q"><span class="c">${svg('down')}</span>طلب مبلغ</div>
+          <div class="q"><span class="c">${svg('people')}</span>الرواتب</div>
+          <div class="q"><span class="c">${svg('doc')}</span>الكشف</div>
+        </div></div>
+      <div class="due"><span class="lead">${svg('people')}</span><b>رواتب الرعاة</b><button class="btn pri">ادفع</button><small>3 رعاة · 3,900 ريال · بعد 5 أيام</small></div>
+      <div class="sec">آخر العمليات</div>
+      <div class="group">
+        <div class="row"><span class="lead">${svg('camel')}</span><b>بيع حقة وضحاء</b><span class="amt pos">+4,875</span><small>5,000 ناقص السعي · اليوم</small></div>
+        <div class="row"><span class="lead">${svg('water')}</span><b>وايت ماء</b><span class="amt">−350</span><small>أمس</small></div>
+        <div class="row"><span class="lead">${svg('feed')}</span><b>علف: برسيم وشعير</b><span class="amt">−6,800</span><small>قبل 3 أيام</small></div>
+        <div class="row"><span class="lead">${svg('vet')}</span><b>البيطري: علاج جرب</b><span class="amt">−1,200</span><small>قبل 4 أيام</small></div>
+      </div></div>`,
+    haraj: () => `<div class="body">${nav()}<div class="title">الحراج</div>
+      <div class="seg"><span class="on">بسعر</span><span>على السوم</span><span>إعلاناتي</span></div>
+      <div class="liveban"><span class="dot"></span><span><b>مزاد بريدة · مباشر</b><small>12 ناقة · المعروضة الحين: لقية وضحاء</small></span><span class="go">ادخل</span></div>
+      <div class="lst">
+        <div class="it"><span class="ph"><img src="phone/thumb_shaqh.png" alt=""></span><b>جذعة شقحاء مقانية</b><small>حائل · 225 كم · بو مشعل</small><span class="pr"><span class="price num">33,500</span></span><span class="bgs">${ok('محصنة')}${ok('شهادة صحية')}</span></div>
+        <div class="it"><span class="ph"><img src="phone/thumb_shaal.png" alt=""></span><b>ثنية شعلاء فردية</b><small>الخرج · 480 كم · بو ناصر</small><span class="pr"><span class="price num">85,000</span></span><span class="bgs">${ok('محصنة')}${ok('شهادة صحية')}</span></div>
+        <div class="it"><span class="ph"><img src="phone/thumb_safra.png" alt=""></span><b>حقة صفراء</b><small>عنيزة · 113 كم · بو عبدالله</small><span class="pr"><span class="price num">4,500</span></span><span class="bgs">${ok('محصنة')}${ok('شهادة صحية')}</span></div>
+      </div>
+      <button class="sell">${svg('plus')}اعرض ناقة للبيع</button></div>`,
+    auction: () => `<div class="body">${nav('<span class="badge red">مباشر</span>')}<div class="title">مزاد بريدة</div>
+      <div class="lot"><span class="ph"><img src="phone/camel_side_wodh.png" alt=""></span>
+        <div class="hd"><b>لقية وضحاء مقانية</b>${ok('محصنة')}${ok('شهادة صحية')}</div>
+        <div class="cur"><span><small class="ink2" style="font-size:11.5px;display:block">آخر سوم · بو ناصر</small><span class="v">21,500<span>ريال</span></span></span><span class="timer"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="none" stroke="#fde6e4" stroke-width="3"/><circle cx="15" cy="15" r="12" fill="none" stroke="#e5372b" stroke-width="3" stroke-linecap="round" stroke-dasharray="45 75.4" transform="rotate(-90 15 15) scale(1 -1) translate(0 -30)"/></svg>0:18</span></div></div>
+      <div class="group">
+        <div class="row"><span class="lead">${svg('gavel')}</span><b>بو ناصر</b><span class="amt">21,500</span><small>قبل 4 ثواني</small></div>
+        <div class="row"><span class="lead">${svg('gavel')}</span><b>أنت</b><span class="amt pos">21,000</span><small>قبل 9 ثواني</small></div>
+        <div class="row"><span class="lead">${svg('gavel')}</span><b>بو مشعل</b><span class="amt">20,000</span><small>قبل 15 ثانية</small></div>
+      </div>
+      <div class="bids"><button class="btn step num"><span class="ltr">+500</span></button><button class="btn step num"><span class="ltr">+1,000</span></button><button class="btn pri">زايد 22,000</button></div></div>`,
+    chat: () => `<div class="body">
+      <div class="nav"><button class="back">${svg('back')}</button><div class="chathd"><span class="av">ف</span><span><b>بو فهد</b><small>حائل · من الحراج</small></span></div></div>
+      <div class="strip"><span class="ph"><img src="phone/thumb_majaheem.png" alt=""></span><span><b>الهيفاء</b><small>ثنية · مجاهيم · مقانية</small></span><span class="lim">حدّك<span>40,000</span></span></div>
+      <div class="chat">
+        <div class="msg them">السلام عليكم، الهيفاء للبيع؟</div>
+        <div class="msg me">وعليكم السلام، إيه وعليها شهادة</div>
+        <div class="ofr"><small>سوم بو فهد</small><span>30,000<em>ريال</em></span></div>
+        <div class="msg me">ما تجي، حدها 40</div>
+        <div class="ofr"><small>آخر سوم</small><span>34,000<em>ريال</em></span></div>
+        <div class="msg them">أعطيك 34 ونقضي</div>
+      </div>
+      <div class="sum"><span>السعر</span><span class="n">34,000</span><span>السعي <span class="ltr">2.5%</span></span><span class="n">−850</span><span class="tot">يوصلك (ريال)</span><span class="n">33,150</span>
+        <span class="chk">${ok('محصنة')}${ok('شهادة صحية')}${ok('نقل الشريحة والجواز')}<span class="badge amber">تصريح نقل لحائل</span></span></div>
+      <div class="deal"><button class="btn pri">أبيعها بـ 34,000</button><button class="btn ghost">حدّي…</button><button class="btn x" aria-label="رفض">${svg('x')}</button></div></div>`,
+    weather: () => `<div class="body">${nav()}<div class="title">الطقس والمرعى</div>
+      <div class="wnow"><span><small>أبانات · الآن</small><div class="t">27°</div><div class="d">مشمس · رياح شمالية خفيفة</div></span>${svg('sun')}</div>
+      <div class="days">
+        <div><span>اليوم</span>${svg('sun')}<b>28°</b></div>
+        <div><span>الثلاثاء</span>${svg('sun')}<b>27°</b></div>
+        <div><span>الأربعاء</span>${svg('cloud')}<b>25°</b></div>
+        <div class="r"><span>الخميس</span>${svg('rain')}<b>22°</b><em class="ltr">60%</em></div>
+        <div class="r"><span>الجمعة</span>${svg('rain')}<b>21°</b><em class="ltr">40%</em></div>
+        <div><span>السبت</span>${svg('cloud')}<b>23°</b></div>
+      </div>
+      <div class="sec">وين المرعى</div>
+      <div class="group graze">
+        <div class="row"><span class="lead">${svg('leaf')}</span><b>وادي الرمة بين الأبانين</b><span class="green"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><small>سال قبل 3 أسابيع · 10 كم</small></div>
+        <div class="row"><span class="lead">${svg('leaf')}</span><b>جنوب أبان الأسمر</b><span class="green"><i class="on"></i><i class="on"></i><i></i><i></i></span><small>عشب خفيف · 9 كم</small></div>
+        <div class="row"><span class="lead">${svg('leaf')}</span><b>عقلة الصقور</b><span class="green"><i class="on"></i><i></i><i></i><i></i></span><small>مطر 8 ملم · 72 كم · <span class="move" style="white-space:nowrap">يبي نقلة</span></small></div>
+      </div></div>`,
+  };
+
+export function createPhone({ host }) {
+  const el = document.createElement('div'), root = el.attachShadow({ mode: 'open' });
+  root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar"><div class="dim"></div><div class="dev"><div class="scr"></div></div></div>`;
+  host.appendChild(el);
+  const box = root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim');
+  const st = { state: 'closed', play: false, screen: 'home', y: EDGE, s: SMALL };
+  const listeners = new Set();
+  function show(v) {
+    st.screen = v; scr.classList.toggle('home', v === 'home');
+    scr.innerHTML = `<span class="pill"></span>${sbar}${S[v]()}<div class="hb"></div>`;
+  }
+  // the small phone's size and place: by the screen's height (it leaves the top row of buttons clear), at the right
+  // edge on the map, and left of the door's buttons and the pedals in play
+  function layout() {
+    const w = host.clientWidth, h = host.clientHeight, u = Math.min(w / 100, 9.5);
+    st.s = Math.max(0.2, Math.min(SMALL, (h - SMALL_ROOM) / H));
+    box.style.setProperty('--s', st.s.toFixed(3));
+    box.style.setProperty('--r', `calc(${st.play ? Math.round(28 * u) : 56}px + max(0px, var(--edge-r, 12px) - 12px))`);
+    box.style.setProperty('--b', 'calc(10px + max(0px, var(--edge-b, 12px) - 12px))');
+    pan(st.y);
+  }
+  function pan(y) { st.y = Math.max(Math.min(EDGE, host.clientHeight - H - EDGE), Math.min(EDGE, y)); box.style.setProperty('--y', st.y.toFixed(1) + 'px'); }
+  function set(state) {
+    if (state === st.state) return;
+    if (st.state === 'closed') show('home');
+    st.state = state; box.dataset.state = state;
+    if (state === 'big') st.y = EDGE;
+    layout();
+    for (const f of listeners) f(state);
+  }
+  // is a point of the game's frame on the small phone? (the small phone takes no pointer itself: the page asks)
+  function hit(x, y) {
+    if (st.state !== 'small') return false;
+    const x1 = dev.offsetLeft + W, y1 = dev.offsetTop + H;
+    return x <= x1 && x >= x1 - W * st.s && y <= y1 && y >= y1 - H * st.s;
+  }
+  // a long press on the small phone enlarges it. Watched on the window: the small phone lets every pointer through,
+  // so a drag over it still turns the view
+  let press = null, lastDown = 0, bigAt = 0;
+  const endPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
+  // (when the time is up the press is confirmed one task later, after pointer events already waiting in the queue
+  // have been read; not on the next frame: on slow frames the finger had lifted before it came)
+  const confirmPress = (mine) => setTimeout(() => { if (press === mine) { press = null; bigAt = performance.now(); set('big'); } }, 0);
+  addEventListener('pointerdown', (e) => { lastDown = performance.now(); endPress(); if (hit(e.clientX, e.clientY)) { const mine = { id: e.pointerId, x: e.clientX, y: e.clientY }; mine.timer = setTimeout(() => confirmPress(mine), LONG_PRESS); press = mine; } }, true);
+  addEventListener('pointermove', (e) => { if (press && e.pointerId === press.id && Math.hypot(e.clientX - press.x, e.clientY - press.y) > SLOP) endPress(); }, true);
+  addEventListener('pointerup', (e) => { if (press && e.pointerId === press.id) endPress(); }, true);
+  addEventListener('pointercancel', endPress, true);
+  // enlarged: a drag slides the phone up and down; a tap outside it makes it small again; a tap on it is the phone's
+  let drag = null, slid = false;
+  dev.addEventListener('pointerdown', (e) => { if (st.state === 'big') { drag = { id: e.pointerId, y: e.clientY, y0: st.y }; slid = false; } });
+  dev.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!slid && Math.abs(e.clientY - drag.y) > SLOP) slid = true;
+    if (slid) pan(drag.y0 + e.clientY - drag.y);
+  });
+  const endDrag = (e) => { if (drag && e.pointerId === drag.id) drag = null; };
+  dev.addEventListener('pointerup', endDrag); dev.addEventListener('pointercancel', endDrag); dev.addEventListener('pointerleave', endDrag);
+  dim.addEventListener('click', () => { if (lastDown > bigAt) set('small'); });      // (not the lift of the very finger whose long press enlarged it: its click lands on the dim, now on top)
+  scr.addEventListener('click', (e) => {
+    if (slid) { slid = false; return; }                 // (the finger slid the phone: not a tap)
+    const t = e.target.closest('[data-go], .back, .liveban');
+    if (!t) return;
+    show(t.dataset.go || (t.classList.contains('liveban') ? 'auction' : 'home'));
+  });
+  addEventListener('resize', () => { if (st.state !== 'closed') layout(); });
+  return {
+    toggle: () => set(st.state === 'closed' ? 'small' : 'closed'), close: () => set('closed'), hit,
+    enlarge: () => { if (st.state !== 'closed') { bigAt = performance.now(); set('big'); } },
+    setPlay: (on) => { st.play = on; if (st.state !== 'closed') layout(); },
+    onChange: (f) => listeners.add(f),
+    get state() { return st.state; }, get big() { return st.state === 'big'; },
+  };
+}

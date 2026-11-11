@@ -1,10 +1,10 @@
 <title>عزبة الصفوة</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=Alexandria:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=Alexandria:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <style>
   /* Layout: landscape only, and nothing written floats over the game. The 3D yard is the whole screen and the map is
-     the menu: a column of three icon buttons in the top left corner (walk, camera, wallet), icon pins over the places
+     the menu: a column of three icon buttons in the top left corner (walk, camera, phone), icon pins over the places
      (a tap on a pin or on its 3D object docks the place's card on the side and glides the camera so the place stays in
      view), and a context card at the bottom only while a camel or the followed herd is picked. Far places (the market,
      the festival) are pins on the horizon in their real direction, or on the screen edge with an arrow when out of
@@ -48,11 +48,10 @@
   svg.i.fill { fill: currentColor; stroke: none; }
   svg.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* ---------- the map's three buttons, icons only: walk, camera (drone or close), wallet (the farm, the date, the money) */
+  /* ---------- the map's three buttons, icons only: walk, camera (drone or close), the phone (phone.js: the money and the rest are in it) */
   .side { position: fixed; top: var(--edge-t); left: var(--edge-l); display: flex; flex-direction: column; gap: 8px; }
   .side button { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; color: var(--ink); transition: background 0.2s, color 0.2s; }
   .side button[aria-pressed="true"] { background: var(--najdi); color: var(--on-najdi); border-color: transparent; }
-  .money svg { color: var(--warn); }
 
   /* ---------- context card: the camel you picked, or the herd you follow */
   .card { position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; padding: 12px; border-radius: var(--r-island); display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; box-sizing: border-box; }
@@ -129,8 +128,8 @@
   /* ---------- play: icons at the edges only, in from them by the system's gesture margins. Top left: the view and
      back to the map. Walking: a stick under the left thumb where it lands; by the driver's door, get in and lock
      (bottom right). Driving: the steering pad bottom left, the pedals bottom right (the brake left of the gas, as
-     in a car; the further up the thumb, the deeper the pedal), and the car's own buttons in a row top right, shown
-     only while it stands (moving, the gear alone stays). */
+     in a car; the further up the thumb, the deeper the pedal), and the car's own buttons top right, shown only
+     while it stands: the gear and the car's button, which unfolds the rest in a row (moving, the gear alone stays). */
   .play { position: fixed; inset: 0; pointer-events: none; z-index: 20; font-family: var(--display); color: #fff;
     --px: max(calc(var(--u) * 6), var(--edge-l), var(--edge-r)); --pb: max(calc(var(--u) * 6), var(--edge-b)); --pt: max(calc(var(--u) * 4.5), var(--edge-t)); --gap: calc(var(--u) * 1.2); }
   .play button, .pl-pedal, .pl-steer { pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
@@ -148,6 +147,8 @@
   .pl-tl { left: var(--px); }
   .pl-car { right: var(--px); flex-direction: row-reverse; }                 /* the gear first, at the corner */
   .pl-car.moving > :not([data-c="gear"]) { display: none; }
+  .pl-car:not(.open) > .fold { display: none; }                             /* folded behind the car's button */
+  .pl-ib .dot { position: absolute; right: 4%; top: 4%; width: 24%; height: 24%; border-radius: 50%; background: #e8b46c; box-shadow: 0 0 0 2px #1b130a; }
   .pl-stick { position: absolute; width: max(96px, calc(var(--u) * 13)); height: max(96px, calc(var(--u) * 13)); border-radius: 50%; background: rgba(28, 20, 12, 0.22); }
   .pl-knob { position: absolute; left: 29%; top: 29%; width: 42%; height: 42%; border-radius: 50%; background: rgba(255, 255, 255, 0.88); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
   .pl-door { position: absolute; right: var(--px); bottom: var(--pb); display: flex; flex-direction: row-reverse; align-items: flex-end; gap: calc(var(--u) * 2); direction: ltr; }
@@ -174,7 +175,7 @@
 <div class="side" dir="ltr" role="group" aria-label="أزرار الخريطة">
   <button class="glass" id="cam-play" type="button" aria-label="تمشّى بنفسك"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4.5" r="2"/><path d="M10 21l2.2-6.2L14.5 17v4M8 11.5l2.6-4.2c.4-.6 1.1-.9 1.8-.7l2.1.6 2.5 2.8M10.6 7.5 12 13l2.5 4"/></svg></button>
   <button class="glass" id="cam-view" type="button" aria-pressed="false" aria-label="الكاميرا: درون أو قريب"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2.5h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
-  <button class="glass money" id="wallet" type="button" aria-label="العزبة: التاريخ والرصيد"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v3"/><rect x="3" y="8" width="18" height="11" rx="2.5"/><path d="M16 13.5h2"/></svg></button>
+  <button class="glass" id="phone-btn" type="button" aria-pressed="false" aria-label="الجوال"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></button>
 </div>
 
 <section class="card glass" id="card" dir="rtl" aria-live="polite" hidden>
@@ -212,6 +213,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createPlay } from './play.js';
+import { createPhone } from './phone.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWorld, LAYOUT, VEHICLES, drapeOnTerrain, updateScatter } from './world.js';
@@ -590,6 +592,7 @@ const labels = PLACES.map((pl) => {
   const el = document.createElement('button'); el.type = 'button';
   el.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (finger && phone.hit(finger[0], finger[1])) return;       // (under the small phone: a tap there does nothing)
     const r = rectOf(el);
     if (finger && (finger[0] < r.left || finger[0] > r.right || finger[1] < r.top || finger[1] > r.bottom) && tapWorld(finger[0], finger[1])) return;
     openPlace(pl);
@@ -691,6 +694,7 @@ function placeLabels() {
 
 // ------------------------------------------------------------ the place card, docked; the camera glides to keep the place in view
 function openPlace(pl, keep) {
+  phone.close();
   if (pop && pop.place === pl && !keep) return closePop();
   const c = pl.open();
   $('pop-title').textContent = c.title; $('pop-sub').textContent = c.sub || '';
@@ -778,10 +782,11 @@ function view(kind) {
   if (!follow && !followHerd) { if (selected) showCamel(selected); else hideCard(); }
 }
 $('cam-view').addEventListener('click', () => view(viewKind === 'near' ? 'drone' : 'near'));
-// the wallet: the farm's name, the date and the money, in the place card (nothing of them stays on the map)
-const WALLET = { el: $('wallet'), open: () => ({ title: 'عزبة الصفوة', sub: '8 نوفمبر · العصر 3:20 · الوسم',
-  html: row({ lead: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--warn)"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7"/><path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg>', title: 'الرصيد', end: '<span class="num">486,300</span> ريال' }) }) };
-$('wallet').addEventListener('click', () => { if (pop && pop.place === WALLET) closePop(); else openPlace(WALLET, true); });
+// the phone (phone.js): the map's third button opens it small and closes it; a place's card and the phone do not
+// stand open together (they share the right side)
+const phone = createPhone({ host: root });
+$('phone-btn').addEventListener('click', () => { if (phone.state === 'closed') closePop(); phone.toggle(); });
+phone.onChange((state) => { $('phone-btn').setAttribute('aria-pressed', String(state !== 'closed')); });
 
 const STATE = { graze: 'ترعى', walk: 'تمشي', idle: 'واقفة' };
 const COAT_HEX = { wodh: '#f4f1ea', shaqh: '#ead7b5', homr: '#a8694a', majaheem: '#2c2622' };
@@ -834,7 +839,7 @@ $('s-clear').addEventListener('click', () => showHerd());
 
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let downAt = null;
-renderer.domElement.addEventListener('pointerdown', (e) => { if (play && play.on) { downAt = null; return; } downAt = [e.clientX, e.clientY]; ease.k = 1; });      // (in play a tap on the scene is not a tap on the map: it opened a place's card behind the hidden HUD)
+renderer.domElement.addEventListener('pointerdown', (e) => { if ((play && play.on) || phone.hit(e.clientX, e.clientY)) { downAt = null; return; } downAt = [e.clientX, e.clientY]; ease.k = 1; });      // (in play a tap on the scene is not a tap on the map: it opened a place's card behind the hidden HUD)
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!downAt || (play && play.on) || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   if (!tapWorld(e.clientX, e.clientY)) closePop();
@@ -915,7 +920,7 @@ async function loadVehicles() {
 let playCar = null, play = null;
 loadVehicles().then(async () => {
   const t = await terrainReady;
-  play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root,
+  play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root, phone,
     onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); ease.k = 1; controls.update(); measureHud(); } });      // (the HUD measured again: hidden in play, a turn of the phone there left its boxes stale)
   window.__play = play;
 }).catch((e) => console.error(e));
@@ -997,7 +1002,7 @@ function tick(now) {
   if (shadowMoved) { sun.position.copy(sunFocus).addScaledVector(sunDir, 160); sun.target.position.copy(sunFocus); }
   if (shadowMoved || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
   if (!playing) { controls.update(); placeLabels(); }
-  renderer.render(scene, camera);
+  if (!phone.big) renderer.render(scene, camera);      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
   requestAnimationFrame(tick);
 }
 tick();

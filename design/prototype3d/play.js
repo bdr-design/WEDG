@@ -8,7 +8,7 @@ import { createCar, makeSoftness, LC300 } from './car_physics.js';
 const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;      // below this the tyres count as aired down
 const GEAR_TOP = [0, 18, 34, 52, 72, 96, 130];      // the rpm needle's simple gears: each one's top speed, km/h (allocated once)
 const TIP = Math.tan(40 / 57.3);  // the steepest side slope it goes onto (its static stability: track 1.63 m over twice a cg of 0.8 m, about 45 degrees, with a margin)
-const REVERSE_HOLD = 0.35;       // s: a pedal held this long with the car stopped takes the other gear (game choice)
+const PEDAL_UP = 0.05;           // a pedal under this is up
 const STEER_RATE = 8;            // 1/s: how fast the front wheels follow the pad (a hand's quick turn of the wheel: 90% in about a quarter of a second; game choice)
 const STEER_RATIO = 15;          // the steering wheel's turn per road-wheel turn (the LC300's about 15-16: about 1.4 turns to lock here)
 // the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
@@ -19,7 +19,7 @@ let WHEELBASE = 2.85, TRACK = 1.64;           // Land Cruiser 300; replaced by t
 const ACCEL = 3.6, BRAKE = 8.0, VMAX = 140 / 3.6, VREV = 20 / 3.6;
 const UP = new THREE.Vector3(0, 1, 0);
 
-export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAYOUT, loadLod, onExit, host = document.body }) {
+export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAYOUT, loadLod, onExit, host = document.body, phone = null }) {
   const ground = (x, z) => (heightAt ? heightAt(x, z) : 0);
   // ---------------------------------------------------------------- obstacles (yard layout, metres)
   const rects = [];
@@ -96,7 +96,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const inYard = (x, z) => x > C.x0 - 12 && x < C.x1 + 12 && z > C.z0 - 12 && z < C.z1 + 25;
   const soft = makeSoftness(ground, inYard);
   const env = { height: ground, soft };
-  let settled = false, parked = true, shiftHold = 0;                 // a car one gets into stands in park, as one left it
+  let settled = false, parked = true, stopWas = 0;                 // a car one gets into stands in park, as one left it
   const BODY_CIRCLES = [[-1.55, 0, 1.02], [0, 0, 1.02], [1.55, 0, 1.02], [2.25, 0.72, 0.28], [2.25, -0.72, 0.28], [-2.2, 0.72, 0.28], [-2.2, -0.72, 0.28]];
   const PEDALS = { gas: 0, brake: 0 }, POSE = { x: 0, z: 0, yaw: 0 };      // (reused every frame)
   const needles = { speed: part('needle_speed'), rpm: part('needle_rpm') };
@@ -217,6 +217,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
     back: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
     trc: '<svg viewBox="0 0 24 24"><path d="M6 12l1.5-4h9L18 12v4H6z"/><path d="M4 20c1.5-1 2.5-1 4 0s2.5 1 4 0 2.5-1 4 0 2.5 1 4 0"/></svg>',
+    phone: '<svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>',
+    car: '<svg viewBox="0 0 24 24"><path d="M5 13l1.5-4.5h11L19 13v5H5z"/><circle cx="8.5" cy="15.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/></svg>',
     tyre: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="2.5"/><path d="M12 6V3M10 3h4"/></svg>',
     dig: '<svg viewBox="0 0 24 24"><path d="M14 4l6 6M17 7L8 16"/><path d="M8 16l-3.5 1-1.5 4 4-1.5 1-3.5z"/></svg>',
     out: '<svg viewBox="0 0 24 24"><path d="M14 4h5v16h-5"/><path d="M10 8l-4 4 4 4M6 12h9"/></svg>',
@@ -230,14 +232,16 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     <div class="pl-tl">
       <button class="pl-ib" data-a="view" aria-label="بدّل المنظور: من ورا أو من عيونك">${I.eye}</button>
       <button class="pl-ib" data-a="exit" aria-label="رجوع للخريطة">${I.back}</button>
+      <button class="pl-ib" data-a="phone" aria-label="الجوال">${I.phone}</button>
     </div>
     <div class="pl-car" hidden>
       <button class="pl-ib on" data-c="gear" aria-label="القير"><span>D</span></button>
-      <button class="pl-ib" data-c="low" aria-label="الدبل الثقيل"><span>4L</span></button>
-      <button class="pl-ib" data-c="trc" aria-label="منع التزحلق">${I.trc}</button>
-      <button class="pl-ib" data-c="air" aria-label="تنفيس الكفرات وتعبئتها">${I.tyre}</button>
+      <button class="pl-ib" data-c="more" aria-label="أزرار السيارة" aria-expanded="false">${I.car}<i class="dot" hidden></i></button>
       <button class="pl-ib on" data-c="dig" aria-label="غرّزت: احفر حول الكفرات" hidden>${I.dig}</button>
-      <button class="pl-ib" data-c="out" aria-label="انزل">${I.out}</button>
+      <button class="pl-ib fold" data-c="low" aria-label="الدبل الثقيل"><span>4L</span></button>
+      <button class="pl-ib fold" data-c="trc" aria-label="منع التزحلق">${I.trc}</button>
+      <button class="pl-ib fold" data-c="air" aria-label="تنفيس الكفرات وتعبئتها">${I.tyre}</button>
+      <button class="pl-ib fold" data-c="out" aria-label="انزل">${I.out}</button>
     </div>
     <div class="pl-stick" hidden><span class="pl-knob"></span></div>
     <div class="pl-door" hidden>
@@ -293,6 +297,9 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   };
   tap(ui.querySelector('[data-a="exit"]'), () => stop());
   tap(ui.querySelector('[data-a="view"]'), () => toggleView());
+  // the phone (phone.js): opened small and closed by its button; not while the car moves (the button goes, and an open phone is put away)
+  const phoneBtn = ui.querySelector('[data-a="phone"]');
+  if (phone) { tap(phoneBtn, () => phone.toggle()); phone.onChange((state) => phoneBtn.classList.toggle('on', state !== 'closed')); } else phoneBtn.hidden = true;
   ui.querySelectorAll('[data-c]').forEach((b) => tap(b, () => act(b.dataset.c)));
 
   // the screen: the left half moves (a stick that appears under the thumb), the right half looks around
@@ -335,10 +342,15 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   const doorPoint = new THREE.Vector3();
   function driverDoor(out) { carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); return out.copy(carState.pos).addScaledVector(right, -(geo.half + 0.62)).addScaledVector(fwd, geo.front - 1.2); }
-  // the car's buttons (top right), shown only while the car stands or is stuck; moving, the gear alone. The slow jobs
-  // take game time and need the car standing (airing four tyres down is a few minutes' work: shortened, a game
-  // choice); the button of the job under way pulses.
-  let job = null, standing = true, nearDoor = false, rowKey = -1;
+  // The car's buttons (top right), shown only while the car stands or is stuck; moving, the gear alone. Two show: the
+  // gear and the car's button, which unfolds the rest beside it (low range, traction control, the tyres, getting out)
+  // and folds them again FOLD_AFTER seconds after the last touch, or when the car is driven off; they stay out while a
+  // job runs. A dot on the car's button says something behind it is not as it stands by default (low range on,
+  // traction control off, the tyres aired down). Stuck, the dig button comes out on its own. The slow jobs take game
+  // time and need the car standing (airing four tyres down is a few minutes' work: shortened, a game choice); the
+  // button of the job under way pulses.
+  const FOLD_AFTER = 4;
+  let job = null, standing = true, nearDoor = false, rowKey = -1, carOpen = false, carOpenT = 0;
   const JOBS = { air: 8, dig: 10 };
   const btn = (c) => carRow.querySelector(`[data-c="${c}"]`);
   function driveCard() {
@@ -347,9 +359,12 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const stuckNow = p.stuck > 1.5 || dug > 0.08, speed = Math.abs(carState.v);
     standing = speed < 0.3 || (standing && speed < 1.0);                   // (shown below 0.3 m/s, hidden above 1: no flicker between)
     const full = standing || stuckNow || !!job;
-    const key = (full ? 1 : 0) | (aired ? 2 : 0) | (p.low ? 4 : 0) | (p.trc ? 8 : 0) | (p.gear === 'R' ? 16 : 0) | (stuckNow ? 32 : 0) | (job ? (job.kind === 'air' ? 64 : 128) : 0);
+    const open = carOpen || !!job;
+    const key = (full ? 1 : 0) | (aired ? 2 : 0) | (p.low ? 4 : 0) | (p.trc ? 8 : 0) | (p.gear === 'R' ? 16 : 0) | (stuckNow ? 32 : 0) | (job ? (job.kind === 'air' ? 64 : 128) : 0) | (open ? 256 : 0);
     if (key === rowKey) return; rowKey = key;
-    carRow.classList.toggle('moving', !full);
+    carRow.classList.toggle('moving', !full); carRow.classList.toggle('open', open);
+    if (phone) { phoneBtn.hidden = !standing; if (!standing) phone.close(); }
+    btn('more').classList.toggle('on', open); btn('more').setAttribute('aria-expanded', String(open)); btn('more').querySelector('.dot').hidden = open || !(p.low || !p.trc || aired);
     btn('gear').firstElementChild.textContent = p.gear === 'R' ? 'R' : 'D';
     btn('low').classList.toggle('on', p.low);
     btn('trc').classList.toggle('cut', !p.trc);
@@ -364,6 +379,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     lock.setAttribute('aria-label', carState.locked ? 'افتح القفل' : 'قفّل السيارة');
   }
   function act(c) {
+    carOpenT = 0;
+    if (c === 'more') { carOpen = !carOpen; driveCard(); return; }
     if (c === 'in') enter();
     else if (c === 'out') exit();
     else if ((c === 'air' || c === 'dig') && !job && Math.abs(carState.v) < 1) job = { kind: c, t: 0 };
@@ -383,7 +400,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.35);
     state.mode = 'drive'; carState.v = 0; viewBtn.hidden = false; state.snap = true;
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = false; stick.hidden = true; stickId = null; input.mx = input.mz = 0;
-    nearDoor = false; doorButtons(); rowKey = -1; driveCard();
+    nearDoor = false; doorButtons(); rowKey = -1; carOpen = false; driveCard();
     loadCabin();
   }
   function exit() {
@@ -392,7 +409,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     state.mode = 'walk'; carState.v = 0; job = null; parked = true;
     if (rigged) { POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
     driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading; man.way = undefined;
-    viewBtn.hidden = true; state.snap = true;
+    viewBtn.hidden = true; state.snap = true; if (phone) phoneBtn.hidden = false;
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; pedal.gas = pedal.brake = 0; pad.reset();
   }
 
@@ -449,23 +466,27 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         job = null;
       }
     }
+    if (carOpen && !job) { carOpenT += dt; if (carOpenT > FOLD_AFTER || PEDALS.gas > 0) carOpen = false; }      // (PEDALS.gas: the last frame's, the car driven off)
     driveCard();
     // The pedals go forward and back without the gear button (the owner's word: forward and back while driving). The
-    // right pedal goes forward and the left one back: in D the right is the gas and the left the brake; held with the
-    // car stopped, the left pedal takes reverse after REVERSE_HOLD and becomes the gas, the right one the brake, until
-    // the right is held at a stop and takes D again. The gear's button still changes it by hand. A pedal against the
-    // way the car rolls always brakes first. (A real automatic wants the lever moved: this is a game choice.)
+    // right pedal goes forward and the left one back: in D the right is the gas and the left the brake. With the car
+    // stopped, a fresh press of the left pedal takes reverse and it becomes the gas, the right one the brake, until a
+    // fresh press of the right at a stop takes D again. A pedal kept down through the stop only holds the car (so it
+    // waits on a slope on its brake, and does not back down it under power): lift and press again to go the other
+    // way. The gear's button still changes it by hand. A pedal against the way the car rolls always brakes first.
+    // (A real automatic wants the lever moved: this is a game choice.)
     const reversing = phys.s.gear === 'R';
     const go = reversing ? brake : gas, stop = reversing ? gas : brake, way = reversing ? -1 : 1, rolling = carState.v * way;
     const ctl = PEDALS; ctl.gas = 0; ctl.brake = 0; ctl.analog = analog;
     if (gas || brake) parked = false;
-    if (job || parked) { ctl.brake = 1; shiftHold = 0; }                       // parked (got in, or the driver working outside) until a pedal is pressed
+    if (job || parked) ctl.brake = 1;                                          // parked (got in, or the driver working outside) until a pedal is pressed
     else {
+      // (a press is fresh when the pedal was up on the frame before)
+      if (stop > PEDAL_UP && stopWas <= PEDAL_UP && go <= PEDAL_UP && Math.abs(carState.v) < 0.4) { phys.s.gear = reversing ? 'D' : 'R'; driveCard(); stopWas = 0; return updateDrive(0); }
       if (go) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = go; }
       if (stop) ctl.brake = Math.max(ctl.brake, stop);                        // (both feet: the engine pulls against the brakes, each by how far it is pressed)
-      shiftHold = stop > 0.1 && go < 0.05 && Math.abs(carState.v) < 0.4 ? shiftHold + dt : 0;
-      if (shiftHold > REVERSE_HOLD) { phys.s.gear = reversing ? 'D' : 'R'; shiftHold = 0; driveCard(); }
     }
+    stopWas = job || parked ? 1 : stop;                                       // (parked or at a job: the pedal that wakes the car is not a fresh press for the other gear)
     // steering: the pad's travel is the whole lock at a crawl and, quicker, what takes the car to the tyres' grip there
     // (car_physics.js's steerAsk); the hand follows it in about a quarter of a second, and it returns to centre on its own
     carState.steer += (phys.steerAsk(steer, Math.abs(carState.v)) - carState.steer) * Math.min(1, dt * STEER_RATE);
@@ -476,7 +497,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     { const side = phys.s.slide + phys.s.vlat; if (side) { right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, side * dt); } }      // sideways: sliding down a side slope too steep to hold, and the tyres' own slide in a turn
     // ground too steep across the car (past about 40 degrees it would tip): it does not go there, as against a wall
     { right.crossVectors(fwd, UP); const e = geo.half, hl = ground(carState.pos.x - right.x * e, carState.pos.z - right.z * e), hr = ground(carState.pos.x + right.x * e, carState.pos.z + right.z * e);
-      if (Math.abs(hl - hr) > 2 * e * TIP) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; carState.v = 0; phys.s.v = 0; phys.s.vyL = phys.s.r = 0; phys.s.stuck = 0; } }      // (the turn undone too, and not counted as stuck: it is a slope, not sand)
+      if (Math.abs(hl - hr) > 2 * e * TIP) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; carState.pos.addScaledVector(right, -(phys.s.slide + phys.s.vlat) * dt); carState.v = 0; phys.s.v = 0; phys.s.vyL = phys.s.r = 0; phys.s.stuck = 0; } }      // (the turn undone too, and not counted as stuck: it is a slope, not sand)
     POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw;
     if (!settled) { phys.settle(POSE, env); settled = true; }
     phys.s.v = carState.v;
@@ -555,11 +576,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
 
   function start() {
     state.on = true; state.mode = 'walk'; ui.hidden = false; document.body.classList.add('playing'); state.snap = true; viewBtn.hidden = true;
+    if (phone) { phone.close(); phone.setPlay(true); phoneBtn.hidden = false; }
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; nearDoor = false; doorButtons();
     man.pos.y = ground(man.pos.x, man.pos.z); input.yaw = man.heading; man.way = undefined;
     camera.near = 0.08; camera.updateProjectionMatrix();
   }
   function stop() {
+    if (phone) { phone.close(); phone.setPlay(false); }
     state.on = false; ui.hidden = true; document.body.classList.remove('playing'); stickId = lookId = null; stick.hidden = true; knob.style.transform = ''; input.mx = input.mz = 0; input.run = false; man.speed = 0; keys.clear(); pedal.gas = pedal.brake = 0; pad.reset();
     cabin.visible = false;
     if (!hasCabin) for (const m of carMats) { m.side = THREE.DoubleSide; m.needsUpdate = true; }

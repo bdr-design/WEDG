@@ -26,7 +26,7 @@ export const LC300 = {
   roadKPa: 230, airedKPa: 100,     // tyre pressure: the door placard's (about 2.3 bar), and aired down for sand (15 psi, the custom in the Nafud)
   turnRadius: 5.9,         // m, the least turning radius, at the outer front tyre (Toyota): the front wheels' full lock is the angle that gives it
   gyrYaw: 1.45,            // m, radius of gyration about the vertical (game choice: about half the wheelbase)
-  cornerF: 7.0, cornerR: 10.0,     // the axles' cornering stiffness per unit of load, per radian (game choice: all-terrain tyres; the softer front gives an understeer of about 2.5 degrees per g)
+  cornerF: 9.0, cornerR: 13.0,     // the axles' cornering stiffness per unit of load, per radian (game choice: all-terrain tyres; the softer front gives an understeer of about 2 degrees per g)
   rearTorque: 0.6,         // of the drive to the rear axle (the centre differential's nominal 40:60; about)
   rollBar: 73e3,           // N m per radian, the anti-roll bars over the springs (game choice: the body leans about 6 degrees per g; on the springs alone it was near 10)
   antiDive: 0.6,           // of the pitching moment reaching the springs (game choice: the suspension's anti-dive and anti-squat geometry; the nose dipped 3.7 degrees in a full stop)
@@ -50,12 +50,25 @@ export const LC300 = {
 // drag per m/s in soft sand (less aired down). Low range: a key's pedal comes in at half the rate (a finer foot; the touch pedal is the thumb's own), and off
 // the pedal the engine holds a descent to a crawl (up to LOW_HOLD of the weight; high range ENGINE_BRAKE). An
 // automatic creeps at idle (CREEP of the weight). These shares are game choices.
-// Sideways. LO to HI (m/s): where the car goes over from following its wheels to the slip-angle model. FLOOR: the least
-// share of an axle's grip left sideways whatever the drive or the brakes take (a spinning or locked tyre still pushes
-// a little). TC_USE, ABS_USE: the most of an axle's grip that traction control and the anti-lock brakes let the tyres
-// use along the car (ABS_MIN: the least they leave the brakes in a turn). SAND_SIDE: how much softer sideways a tyre is in loose sand. VSC: the yaw-rate error it allows
-// (rad/s) and the rear slip angle it allows (rad), its gain (1/s), the share of the grip its braking may use, and the most it cuts the engine. Game choices.
-const LAT = { LO: 1.5, HI: 4.5, FLOOR: 0.25, TC_USE: 0.8, ABS_USE: 0.85, SAND_SIDE: 0.55, ABS_MIN: 0.3, VSC_BAND: 0.1, VSC_SLIP: 0.14, VSC_GAIN: 9, VSC_BRAKE: 0.35, VSC_CUT: 0.8, PAD_ASK: 1.0, PAD_MORE: 0.035 };
+// Sideways. Game choices, all of them.
+const LAT = {
+  LO: 1.5, HI: 4.5,         // m/s: under LO the car follows its wheels; over HI the tyres' slip-angle model; blended between
+  FOLLOW: 12,               // 1/s: how fast the model's states follow the wheels' path at a crawl
+  SLIP_V: 0.1,              // m/s added under a slip angle, so it stays finite at no speed
+  FZ_MIN: 0.1,              // the least share of the weight an axle is taken to carry (a hard stop or a hard pull must not leave an axle none)
+  FLOOR: 0.25,              // the least share of an axle's grip left sideways whatever the drive or the brakes take (a spinning or locked tyre still pushes a little; the tyres' whole force can so pass their grip by 3%)
+  TC_USE: 0.8,              // the most of an axle's grip traction control lets the drive use
+  ABS_STEER: 0.6, ABS_SIDE: 0.95, ABS_MIN: 0.3,      // braking in a turn: the share of the car's grip the steering may claim, of an axle's own grip that may go sideways, and the least the brakes keep
+  SAND_SIDE: 0.55,          // how much softer sideways a tyre is in loose sand
+  KIN_GRIP: 0.95,           // of the grip: the tightest turn the wheels' own path takes (at a crawl and backing)
+  VSC_BAND: 0.1, VSC_BAND_V: 15,     // rad/s: the yaw-rate error the stability control allows; narrower over VSC_BAND_V m/s, by the speed
+  VSC_SLIP: 0.14,           // rad: the rear slip angle it allows
+  VSC_GRIP: 0.9,            // of the grip left sideways: the turn it takes the steering to ask for at most
+  VSC_GAIN: 9, VSC_GAIN_SLIP: 18,    // 1/s and 1/s per rad: its yaw moment per error
+  VSC_BRAKE: 0.5,           // the share of the grip its braking may use, at half the track (with 0.35, one drive in thirty of random hard driving still slid past 30 degrees; with 0.5, one in ninety, all on sand above 130 km/h)
+  VSC_CUT: 0.8, VSC_CUT_YAW: 3, VSC_CUT_SLIP: 5, VSC_ON: 20, VSC_OFF: 3,      // the most it cuts the engine, how much per error, and how fast the cut comes and goes (1/s)
+  PAD_ASK: 1.0, PAD_MORE: 0.035, PAD_EASE: 2,        // the steering pad: the share of the grip its full travel asks for, the angle added at its end (rad), and how fast it follows a change of ground (1/s)
+};
 const SAND = { SINK0: 0.07, N: 1.1, PLANE: 25, DIG: 0.05, DIG_SLIP: 0.15, CLIMB: 0.25, F0: 0.015, SAND_F: 0.08, SAND_V: 0.006, DIG_V: 4, RUT: 1.6, MU_HARD: 0.85, MU_SAND: 0.53, MU_AIRED: 0.05,
   BELLY: 0.45, MAXSINK: 0.36, TRC_LOSS: 0.12, ENGINE_BRAKE: 0.03, LOW_HOLD: 0.6, CREEP: 0.07, BACK_OUT: 0.2, MAX_TILT: 0.3 };
 
@@ -73,7 +86,7 @@ export function createCar(geo, spec = LC300) {
   const understeer = 1 / spec.cornerF - 1 / spec.cornerR;                     // rad of steer per g of turn (the softer front)
   const vCh2 = wb * g / understeer;                                           // the characteristic speed, squared
   const s = {
-    v: 0, thr: 0, gear: 'D', hillHold: 0, slide: 0, vyL: 0, r: 0, vlat: 0, beta: 0, mu: 0.85, vscCut: 0, low: false, trc: true, kPa: spec.roadKPa, yc: 0, vy: 0, pitch: 0, vp: 0, roll: 0, vr: 0, aLong: 0, aLat: 0, yawRate: 0,
+    v: 0, thr: 0, gear: 'D', hillHold: 0, slide: 0, vyL: 0, r: 0, vlat: 0, beta: 0, mu: SAND.MU_HARD, padMu: SAND.MU_HARD, padSoft: 0, vscCut: 0, low: false, trc: true, kPa: spec.roadKPa, yc: 0, vy: 0, pitch: 0, vp: 0, roll: 0, vr: 0, aLong: 0, aLat: 0, yawRate: 0,
     slip: 0, stuck: 0, spinAngle: 0, wheels, xcg, wb,
   };
 
@@ -86,7 +99,7 @@ export function createCar(geo, spec = LC300) {
     s.pitch = Math.atan2((gs[0] + gs[1]) - (gs[2] + gs[3]), 2 * wb);
     s.roll = Math.atan2((gs[0] + gs[2]) - (gs[1] + gs[3]), 4 * geo.half);
     s.vy = s.vp = s.vr = 0; s.vyL = s.r = s.vlat = s.yawRate = s.vscCut = 0;
-    for (const w of wheels) { w.u = w.uPrev = 0; w.F = w.load; }
+    for (let j = 0; j < 4; j++) { const w = wheels[j]; w.u = w.uPrev = 0; w.F = w.load; w.gLast = gs[j]; }
   }
 
   function groundAt(pose, w, env) {
@@ -108,7 +121,7 @@ export function createCar(geo, spec = LC300) {
     // engine answers it in about 0.2 s
     const want = Math.min(1, Math.max(0, +ctl.gas || 0)), bk = Math.min(1, Math.max(0, +ctl.brake || 0));
     s.thr += (want - s.thr) * Math.min(1, dt * (want > s.thr ? (ctl.analog ? 5 : s.low ? 0.7 : 1.4) : 6));
-    for (let j = 0; j < 4; j++) gs[j] = groundAt(pose, wheels[j], env);       // (one array for the car's life: no garbage each frame)
+    for (let j = 0; j < 4; j++) { gs[j] = groundAt(pose, wheels[j], env); if (wheels[j].gLast === undefined) wheels[j].gLast = gs[j]; }       // (one array for the car's life: no garbage each frame)
     // the tyres in the sand: how deep each sits, how much it resists and grips
     const press = Math.pow(s.kPa / spec.roadKPa, 1 / SAND.N);
     // Resistance and grip come from each wheel's share of the car's weight on the ground (the springs' static loads,
@@ -171,65 +184,80 @@ export function createCar(geo, spec = LC300) {
     s.v = Math.min(spec.vmax, s.v);
     // Turning: a single-track model about the centre of gravity (lateral speed and yaw rate; + to the left, as the
     // steer). Each axle's tyres pull sideways by their slip angle (stiffness times the angle, bending over to the
-    // grip: tanh), on what the friction circle leaves of the axle's grip after the drive (40:60 front to rear) or the
-    // brakes (shared by the axles' loads, as the car's electronic brake distribution does: with a fixed share the
-    // lightened rear locked first and the car spun, braking in a turn); the axles' loads shift with the car's acceleration. Traction control and the anti-lock brakes
-    // keep the tyres from using more than TC_USE of their grip along the car, so it still steers; off, a foot held
-    // down takes the rear's grip and the tail swings out. On sand the tyres are softer sideways (SAND_SIDE).
-    // Below about 16 km/h, and backing, the car follows its wheels (kinematic: no slip angle is defined at a
-    // standstill); the two are blended between LO and HI.
-    const a = geo.front - xcg, b = xcg - geo.rear, vx = s.v, muAvg = sumF > 0 ? grip / sumF : 0;
+    // grip: tanh), on what the friction circle leaves of the axle's grip after the drive and the brakes; the axles'
+    // loads shift with the car's acceleration.
+    // - The drive goes 40:60 front to rear while both axles hold it; what an axle cannot hold goes to the other (the
+    //   centre differential), so with every wheel spinning both ends lose their side grip together.
+    // - The brakes are shared by the axles' loads (electronic brake distribution: with a fixed share the lightened
+    //   rear locked first and the car spun, braking in a turn), and the anti-lock brakes ease them to leave the tyres
+    //   the side force the steering asks for (up to ABS_STEER of the grip; never below ABS_MIN of an axle's own).
+    // - Traction control keeps the tyres from using more than TC_USE of their grip along the car, so it still steers;
+    //   off, a foot held down takes the rear's grip first and the tail swings out.
+    // - On sand the tyres are softer sideways (SAND_SIDE).
+    // - At a crawl (under LO, blended up to HI, by the car's whole speed: a car sliding sideways stays with the
+    //   tyres' model), and backing, the car follows its wheels, within the grip (no slip angle is defined at a standstill).
+    const a = geo.front - xcg, b = xcg - geo.rear, vx = s.v, muAvg = sumF > 0 ? grip / sumF : s.mu;      // (off the ground: the grip it last had)
     const tyreDrive = (holding && !ctl.gas) || (ctl.brake && ctl.gas && Math.abs(s.v) < 0.05) ? 0 : Math.abs(drive), tyreBrake = Math.abs(s.v) > 0.05 ? Math.min(grip, brake) : 0;
     const shift = m * s.aLong * spec.cgHeight / wb;                           // load from the front axle to the rear, speeding up
-    const FzF = Math.max(0.1 * m * g, m * g * spec.frontShare - shift) * touching, FzR = Math.max(0.1 * m * g, m * g * (1 - spec.frontShare) + shift) * touching;
+    const FzF = Math.max(LAT.FZ_MIN * m * g, m * g * spec.frontShare - shift) * touching, FzR = Math.max(LAT.FZ_MIN * m * g, m * g * (1 - spec.frontShare) + shift) * touching;
     const muF = (wheels[0].mu + wheels[1].mu) / 2, muR = (wheels[2].mu + wheels[3].mu) / 2, softF = (wheels[0].soft + wheels[1].soft) / 2, softR = (wheels[2].soft + wheels[3].soft) / 2;
     const capF = muF * FzF, capR = muR * FzR, aided = s.trc ? LAT.TC_USE : 1;
+    const driveR0 = Math.min(spec.rearTorque * tyreDrive, aided * capR), driveF = Math.min(tyreDrive - driveR0, aided * capF), driveR = Math.min(tyreDrive - driveF, aided * capR);
     const brakeF = FzF / Math.max(1, FzF + FzR);                              // the front axle's share of the braking: its share of the load
-    // braking in a turn: the anti-lock brakes ease each axle's brakes to leave the tyres the side force the turn is
-    // taking (never below ABS_MIN of the axle's grip); what they ease off is given back to the car's speed below
-    const turn = Math.abs(s.aLat) * m, leftF = Math.sqrt(Math.max(0, capF * capF - (turn * b / wb) ** 2)), leftR = Math.sqrt(Math.max(0, capR * capR - (turn * a / wb) ** 2));
+    const ask = Math.min(LAT.ABS_STEER * grip, m * Math.abs(vx * vx * Math.tan(steer) / wb));      // the side force the steering asks for
+    const leftF = Math.sqrt(Math.max(0, capF * capF - Math.min(ask * b / wb, LAT.ABS_SIDE * capF) ** 2)), leftR = Math.sqrt(Math.max(0, capR * capR - Math.min(ask * a / wb, LAT.ABS_SIDE * capR) ** 2));
     const brF = Math.min(brakeF * tyreBrake, Math.max(LAT.ABS_MIN * capF, leftF)), brR = Math.min((1 - brakeF) * tyreBrake, Math.max(LAT.ABS_MIN * capR, leftR));
     const eased = Math.max(0, tyreBrake - brF - brR);                         // (none in a straight line: there each axle brakes to its own grip)
-    const driveF = Math.min((1 - spec.rearTorque) * tyreDrive, aided * capF), driveR = Math.min(spec.rearTorque * tyreDrive, aided * capR);
-    const useF = driveF + Math.min(brF, LAT.ABS_USE * capF), useR = driveR + Math.min(brR, LAT.ABS_USE * capR);
-    const spare = (Math.max(0, leftF - brF - driveF) + Math.max(0, leftR - brR - driveR)) / m;      // what the tyres have left along the car beside the turn's need, for the stability control's braking
+    const useF = driveF + brF, useR = driveR + brR;
+    const spare = (Math.max(0, leftF - useF) + Math.max(0, leftR - useR)) / m;      // what the tyres have left along the car beside the turn's need, for the stability control's braking
     const DF = Math.max(LAT.FLOOR * capF, Math.sqrt(Math.max(0, capF * capF - useF * useF))), DR = Math.max(LAT.FLOOR * capR, Math.sqrt(Math.max(0, capR * capR - useR * useR)));
     const CF = spec.cornerF * FzF * (1 - LAT.SAND_SIDE * softF), CR = spec.cornerR * FzR * (1 - LAT.SAND_SIDE * softR);
-    const rK = vx * Math.tan(steer) / wb, vyK = b * rK;                       // the wheels' own path: the rear axle does not slip
-    const k = vx > LAT.LO ? Math.min(1, (vx - LAT.LO) / (LAT.HI - LAT.LO)) : 0, kk = k * k * (3 - 2 * k), cs = Math.cos(steer), sn = Math.sin(steer);
-    let ay = 0, cut = 0;
+    const rGrip = LAT.KIN_GRIP * muAvg * g / Math.max(1, Math.abs(vx)), rK = Math.max(-rGrip, Math.min(rGrip, vx * Math.tan(steer) / wb)), vyK = b * rK;      // the wheels' own path (the rear axle does not slip), no tighter than the grip turns the car
+    const whole = vx > -0.5 ? Math.hypot(vx, s.vyL) : Math.abs(s.vyL);          // (backing, the wheels' path: only a slide brings the tyres' model in)
+    const k = whole > LAT.LO ? Math.min(1, (whole - LAT.LO) / (LAT.HI - LAT.LO)) : 0, kk = k * k * (3 - 2 * k), cs = Math.cos(steer), sn = Math.sin(steer);
+    let ay = 0, cut = 0, spun = 0;
     if (kk > 0 && eased > 0) s.v += Math.sign(s.v) * eased / m * kk * dt;         // (the braking the anti-lock brakes eased off in the turn)
     for (let i = 0; i < n; i++) {
       if (kk > 0) {
-        const aF = steer - Math.atan2(s.vyL + a * s.r, vx), aR = -Math.atan2(s.vyL - b * s.r, vx);
-        const FyF = DF * Math.tanh(CF * aF / DF), FyR = DR * Math.tanh(CR * aR / DR);
-        // stability control (VSC, standard; off with traction control): when the yaw rate strays from what the
-        // steering asks within the grip, the brakes turn the car back and the engine is cut
+        // each axle's slip angle: between the way its wheels point and the way they go over the ground, rolling
+        // forward or back (at no forward speed, a wheel sliding sideways: a right angle); SLIP_V keeps it finite
+        const vF = s.vyL + a * s.r, vR = s.vyL - b * s.r;
+        const aF = -Math.atan2(vF * cs - vx * sn, Math.abs(vx * cs + vF * sn) + LAT.SLIP_V), aR = -Math.atan2(vR, Math.abs(vx) + LAT.SLIP_V);
+        const FyF = DF > 1 ? DF * Math.tanh(CF * aF / DF) : 0, FyR = DR > 1 ? DR * Math.tanh(CR * aR / DR) : 0;      // (no load on an axle, off the ground: no force; 0/0 made the speed NaN for good)
+        // stability control (VSC, standard; here it goes off with traction control: a game choice, the real button
+        // wants a long press for that): when the yaw rate strays from what the steering asks within the grip, or the
+        // rear tyres' slip angle passes VSC_SLIP, the brakes turn the car back and the engine is cut
         let Mv = 0;
-        if (s.trc) {
+        if (s.trc && vx > LAT.LO) {
           // (what the steering asks: the wheels' own path, less this car's understeer, and no more than the grip left
-          // after the braking or the pull turns the car; and the rear tyres' slip angle held under VSC_SLIP: braking
-          // hard in a turn the lightened rear slid out while the yaw rate itself stayed modest)
-          const latLeft = 0.9 * Math.sqrt(Math.max(0, (muAvg * g) ** 2 - s.aLong * s.aLong)), lim = latLeft / Math.max(vx, LAT.HI);
-          const ref = Math.max(-lim, Math.min(lim, rK / (1 + vx * vx / vCh2))), e = s.r - ref, over = Math.abs(e) - LAT.VSC_BAND, slid = Math.abs(aR) - LAT.VSC_SLIP;
-          const mMax = LAT.VSC_BRAKE * grip * geo.half;
-          if (over > 0) { Mv = -Math.sign(e) * Math.min(mMax, LAT.VSC_GAIN * over * Iz); cut = Math.max(cut, Math.min(LAT.VSC_CUT, over * 3)); }
-          if (slid > 0 && aR * s.r > 0) { Mv = Math.max(-mMax, Math.min(mMax, Mv - Math.sign(s.r) * LAT.VSC_GAIN * 2 * slid * Iz)); cut = Math.max(cut, Math.min(LAT.VSC_CUT, slid * 5)); }
+          // after the braking or the pull turns the car. The band it allows narrows with the speed: a yaw rate that
+          // is nothing at 40 km/h is a third of a g at 140)
+          const latLeft = LAT.VSC_GRIP * Math.sqrt(Math.max(0, (muAvg * g) ** 2 - s.aLong * s.aLong)), lim = latLeft / Math.max(vx, LAT.HI);
+          const ref = Math.max(-lim, Math.min(lim, (vx * Math.tan(steer) / wb) / (1 + vx * vx / vCh2))), e = s.r - ref;
+          const over = Math.abs(e) - LAT.VSC_BAND * Math.min(1, LAT.VSC_BAND_V / vx), slid = Math.abs(aR) - LAT.VSC_SLIP, mMax = LAT.VSC_BRAKE * grip * geo.half;
+          if (over > 0) { Mv = -Math.sign(e) * Math.min(mMax, LAT.VSC_GAIN * over * Iz); cut = Math.max(cut, Math.min(LAT.VSC_CUT, over * LAT.VSC_CUT_YAW)); }
+          if (slid > 0 && aR * s.r > 0) { Mv = Math.max(-mMax, Math.min(mMax, Mv - Math.sign(s.r) * LAT.VSC_GAIN_SLIP * slid * Iz)); cut = Math.max(cut, Math.min(LAT.VSC_CUT, slid * LAT.VSC_CUT_SLIP)); }
         }
         ay = (FyF * cs + FyR) / m;
         s.vyL += (ay - s.r * vx) * h; s.r += (a * FyF * cs - b * FyR + Mv) / Iz * h;
-        s.v += (-FyF * sn / m + s.r * s.vyL - Math.sign(s.v) * Math.min(spare, Math.abs(Mv) / (geo.half * m))) * kk * h;      // the turned front tyres' drag, the slide's share of the speed, and the stability control's braking (within what the tyres have left: braking at the limit it moves the brakes from side to side, adding none)
+        // the car's speed along itself: the turned front tyres' drag and the stability control's braking (within what
+        // the tyres have left: braking at the limit it moves the brakes from side to side, adding none); and, apart,
+        // the share of a slide's speed that the car's turning brings along its own length (no force: kept out of aLong)
+        s.v += (-FyF * sn / m - Math.sign(s.v) * Math.min(spare, Math.abs(Mv) / (geo.half * m))) * kk * h;
+        const turned = s.r * s.vyL * kk * h; s.v += turned; spun += turned;
       }
-      if (kk < 1) { const p = (1 - kk) * Math.min(1, h * 12); s.r += (rK - s.r) * p; s.vyL += (vyK - s.vyL) * p; }      // (at a crawl the states follow the wheels, ready for the blend)
+      if (kk < 1) { const p = (1 - kk) * Math.min(1, h * LAT.FOLLOW); s.r += (rK - s.r) * p; s.vyL += (vyK - s.vyL) * p; }      // (at a crawl the states follow the wheels, ready for the blend)
     }
-    s.vscCut += (cut - s.vscCut) * Math.min(1, dt * (cut > s.vscCut ? 20 : 3));      // (cut at once, given back over a third of a second)
-    s.aLong = (s.v - vStart) / dt;                                            // (with the turn's drag and the eased brakes: the next step's loads and the body's pitch follow what the car really did)
+    s.vscCut += (cut - s.vscCut) * Math.min(1, dt * (cut > s.vscCut ? LAT.VSC_ON : LAT.VSC_OFF));      // (cut at once, given back over a third of a second)
+    s.aLong = (s.v - vStart - spun) / dt;                                     // (with the turn's drag and the eased brakes: the next step's loads and the body's pitch follow what the tyres really did to the car)
     s.yawRate = rK + (s.r - rK) * kk;
     const vyOut = vyK + (s.vyL - vyK) * kk;
     s.vlat = -(vyOut - xcg * s.yawRate);                                      // the model's origin's speed to the car's right (the origin lies xcg behind the centre of gravity): the caller moves the car by it
     s.aLat = kk > 0 ? ay * kk + rK * vx * (1 - kk) : rK * vx;                 // for the body's roll
-    s.beta = vx > LAT.LO ? Math.atan2(-s.vyL + b * s.r, vx) : 0;              // the rear axle's slide (for the dust and the sound)
-    s.mu = muAvg;
+    s.beta = kk > 0 && vx > LAT.LO ? Math.atan2(-s.vyL + b * s.r, vx) : 0;    // the rear axle's slide (for the dust and the sound)
+    if (touching > 0) {                                                       // what the steering pad's travel is measured against: the ground's grip and softness, eased (a jump from hard ground to sand must not jump the wheels)
+      const q = Math.min(1, dt * LAT.PAD_EASE); s.mu = muAvg; s.padMu += (muAvg - s.padMu) * q; s.padSoft += ((softF + softR) / 2 - s.padSoft) * q;
+    }
     // across a slope steeper than the tyres hold, the car slides down it (s.slide, m/s toward the car's right; the
     // caller moves it): it cannot drive along a 40 degree side slope on two wheels
     const cross = Math.atan2((gs[0] + gs[2]) - (gs[1] + gs[3]), 4 * geo.half);  // + : the left side higher, the slope falls to the right
@@ -254,7 +282,11 @@ export function createCar(geo, spec = LC300) {
       let Fy = -m * g, Mp = touching * m * s.aLong * spec.cgHeight * spec.antiDive, Mr = touching * (m * s.aLat * spec.cgHeight - spec.rollBar * (s.roll - groundRoll));
       for (let j = 0; j < 4; j++) {
         const w = wheels[j];
-        const wheelY = gs[j] + geo.tyre - w.sink;                               // where the ground holds the wheel's centre
+        // where the ground holds the wheel's centre: the ground under it eased in over the sub-steps from where it was
+        // a frame ago. (Read once a frame, a slope came to the dampers as a 3 cm step every frame at 50 km/h; their
+        // push up was kept and their pull down, which a wheel cannot give, was dropped: the car floated off an 8 degree
+        // climb, all four wheels in the air a third of the time.)
+        const wheelY = w.gLast + (gs[j] - w.gLast) * (i + 1) / n + geo.tyre - w.sink;
         const hub = bodyAt(w.x, w.z) + geo.tyre;                              // where the body holds it at ride height
         let u = wheelY - hub;                                                 // + : pushed up into the body (bump)
         w.contact = u > -spec.droop;
@@ -273,6 +305,7 @@ export function createCar(geo, spec = LC300) {
       if (Math.abs(s.pitch - gp) > SAND.MAX_TILT) { s.pitch = gp + Math.sign(s.pitch - gp) * SAND.MAX_TILT; s.vp = 0; }
       if (Math.abs(s.roll - gr) > SAND.MAX_TILT) { s.roll = gr + Math.sign(s.roll - gr) * SAND.MAX_TILT; s.vr = 0; }
     }
+    for (let j = 0; j < 4; j++) wheels[j].gLast = gs[j];
     // the wheels' turning: rolling with the car, faster when they spin in the sand
     s.spinAngle += (s.v + dir * slipV) * dt / geo.tyre;
     return s;
@@ -283,12 +316,12 @@ export function createCar(geo, spec = LC300) {
   // The steering. Its full lock is the single-track angle whose outer front tyre runs the least turning radius.
   // steerAsk(p, v): the front wheels' angle for a pad (or key) at p of its travel, -1 to 1, at a speed. At a crawl
   // the pad's travel is the whole lock; quicker, its full travel asks no more than takes the car to the tyres' grip
-  // there (PAD_ASK of it) with the steer this car's understeer adds, and a little past it at the pad's end (PAD_MORE,
+  // there (PAD_ASK of it) with the steer this car's understeer adds (more on sand, where the tyres are softer), and a little past it at the pad's end (PAD_MORE,
   // by the cube: the middle of the pad stays even). A thumb on a pad is not two hands on a wheel: with the whole
   // lock at speed, half the pad was already the tyres' limit. Game choice.
   const lock = Math.atan(wb / (Math.sqrt(spec.turnRadius ** 2 - wb ** 2) - geo.half));
   const steerAsk = (p, v) => {
-    const a = LAT.PAD_ASK * s.mu * g, lin = Math.min(lock, Math.atan(wb * a / Math.max(1, v * v)) + understeer * a / g), full = Math.min(lock, lin + LAT.PAD_MORE), q = Math.abs(p);
+    const a = LAT.PAD_ASK * s.padMu * g, lin = Math.min(lock, Math.atan(wb * a / Math.max(1, v * v)) + understeer * a / g / (1 - LAT.SAND_SIDE * s.padSoft)), full = Math.min(lock, lin + LAT.PAD_MORE), q = Math.abs(p);
     return Math.sign(p) * (q * lin + q * q * q * (full - lin));
   };
   return { s, step, settle, originY, wheels, SAND, lock, steerAsk };
