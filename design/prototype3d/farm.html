@@ -1255,11 +1255,14 @@ function tick(now) {
     const darkGlass = playCar.userData.darkGlass, doorOpen = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
     const seat = playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive';
     if (cabin) cabin.visible = near && (seat || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6));
-    // what the driver cannot see from the seat (ours_game.py's seat_split: about 109k of the near layer's 150k triangles,
-    // behind the cabin's trim or out of the eye's sight) is not drawn there; the door standing open shows it again
-    if (playCar.userData.outside === undefined) { playCar.userData.outside = playCar.getObjectByName('outside') || null; playCar.userData.seatWheels = playCar.getObjectByName('seat_hides_wheels') ? ['FL', 'FR', 'RL', 'RR'].map((k) => playCar.getObjectByName('wheel_' + k)).filter(Boolean) : []; }
-    const outside = playCar.userData.outside, showOut = near && (!seat || doorOpen);
-    if (outside && outside.visible !== showOut) { outside.visible = showOut; for (const w of playCar.userData.seatWheels) w.visible = showOut; }
+    // what a view cannot see is not drawn there (ours_game.py's view_split): from the seat, the top and 'seat_only';
+    // from behind, the top and 'chase_only'; on foot, on the map and while the door stands open, all of it
+    const vs = playCar.userData.viewSplit || (playCar.userData.viewSplit = ['seat_only', 'chase_only', 'outside'].map((n) => playCar.getObjectByName(n)));
+    const chase = playing && play.debug.state.view === 3 && play.debug.state.mode === 'drive', all = doorOpen || (!seat && !chase);
+    const want0 = near && (all || seat), want1 = near && (all || chase), want2 = near && all;
+    if (vs[0] && vs[0].visible !== want0) vs[0].visible = want0;
+    if (vs[1] && vs[1].visible !== want1) vs[1].visible = want1;
+    if (vs[2] && vs[2].visible !== want2) vs[2].visible = want2;
   }
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk

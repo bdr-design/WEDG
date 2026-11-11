@@ -3,15 +3,15 @@ ours_game.py near <near.blend> <out.glb> [cabin.glb]
                                               the near layer: parts merged by material (one draw each), the wheels on
                                               their corners (corner_XX steers and rides its spring, wheel_XX spins in
                                               it), the seated driver's eye ('eye', 'eye_look' 6 m ahead of it); with the
-                                              cabin, what the driver cannot see from the seat goes under 'outside'
-                                              (seat_split), which the game hides in the seat view
+                                              cabin, what the seat view or the chase view cannot see is sorted out
+                                              (view_split) for the game to leave undrawn there
 ours_game.py far <far.blend> <out.glb>        the far layer: everything merged by material, wheels and all
 ours_game.py cabin <cabin.glb> <out.glb>      the cabin layer (interior/lod_cabin.py's cabin_lod0.glb) under an empty
                                               'interior', as play.js loads it while the player is at the car
 play.js reads these names (part(), getObjectByName). The player's car casts no shadow (the owner's word, 11 Nov).
 The owner's choice (11 Nov): this car, ours and built by code from his photos, replaces the downloaded model.
 """
-import bpy, sys, os
+import bpy, sys, os, math
 from mathutils import Vector, Matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, 'interior'))
@@ -147,58 +147,78 @@ def seen_both_sides(test, occluders, E):
     return seen
 
 
-OUT_MIN = 3000            # triangles: a material's unseen part goes apart (one draw more from outside) only past this
+OUT_MIN = 500             # triangles: a group goes apart only past this (it costs a draw only on foot and on the map, where all are drawn)
 
 
-def seat_split(parts, wheels, cabin_glb):
-    """What the driver cannot see from the seat goes under an empty 'outside', which the game hides in the seat view
-    (the seat view was over the 400k triangle budget, ADR 0005). A face is seen if one of its points is in plain view,
-    facing it, from one of nine eyes round the seated eye (interior/cabin.py's SEATED_EYE; the box's corners: the head
-    leaning and turning, as lod_cabin.py allows), past the cabin (cabin_glb, which hides the body from inside) and
-    through the glass (its back faces are culled, so from inside it hides nothing; it is itself unseen from inside). A
-    face touching a seen one is kept too (no gap at the edge of what is seen). A material's unseen part goes apart
-    only when it is worth a draw (OUT_MIN triangles); a material wholly unseen goes whole. Returns whether a wheel is
-    seen from the seat."""
+def chase_eyes():
+    """The chase camera's places round the car (play.js: 5.6 m behind the middle, 2.05 m up; its heading lags the car's
+    in a turn, about the yaw rate over 4/s, so a fan of +-60 degrees behind, held through spins under about 4 rad/s; and
+    higher and lower for its easing over bumps)."""
+    out = []
+    for a in range(-60, 61, 15):
+        for up in (1.6, 2.05, 2.6):
+            r = math.radians(a); out.append(Vector((-5.6 * math.cos(r), 5.6 * math.sin(r), up)))
+    return out
+
+
+def view_split(parts, wheels, cabin_glb):
+    """What a view cannot see is not drawn in it (the seat view was 449k triangles and the view from behind 411k against
+    the 400k budget, ADR 0005). Each material's faces are sorted by whether the driver sees them from the seat (nine eyes
+    round interior/cabin.py's SEATED_EYE, past the cabin, cabin_glb, and through the glass, whose back faces are culled)
+    and whether the chase camera sees them (chase_eyes, past the car itself): seen by both stay at the top; seen only
+    from the seat go under 'seat_only', only from behind under 'chase_only', by neither under 'outside'. The game draws
+    the top and 'seat_only' in the seat view, the top and 'chase_only' from behind, and all of it on foot, on the map and
+    while the door stands open. Faces seen from behind count (the paint and trim go out two-sided). A face touching a
+    seen one counts as seen (no gap at the edge); a part smaller than OUT_MIN stays at the top (drawn everywhere: not
+    worth a draw of its own). The wheels spin in their corners and are left whole."""
     import bmesh
     import cabin as C
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=os.path.abspath(cabin_glb))
     imported = [o for o in bpy.data.objects if o not in before]
     cab = [o for o in imported if o.type == 'MESH']
-    test = [p for p in parts if p.name != 'glass'] + list(wheels.values())
-    for o in test:                                   # triangles first, as lod_cabin.py does (a long face can hide all its probes)
+    for o in parts:                                  # triangles first, as lod_cabin.py does (a long face can hide all its probes)
         for x in bpy.context.view_layer.objects: x.select_set(False)
         bpy.context.view_layer.objects.active = o; o.select_set(True)
         m = o.modifiers.new('tri', 'TRIANGULATE'); m.keep_custom_normals = True; m.quad_method = 'BEAUTY'; m.ngon_method = 'BEAUTY'
         bpy.ops.object.modifier_apply(modifier='tri')
     cx, cy, cz = C.SEATED_EYE
     E = [Vector((cx, cy, cz))] + [Vector((cx + dx, cy + dy, cz + dz)) for dx in (-0.12, 0.06) for dy in (-0.20, 0.15) for dz in (-0.10, 0.08)]
-    seen = seen_both_sides(test, cab, E)
+    inside = [p for p in parts if p.name != 'glass']
+    seat = dict(zip(inside, seen_both_sides(inside + list(wheels.values()), cab, E)))
     for o in imported: bpy.data.objects.remove(o)
-    root = bpy.data.objects.new('outside', None); bpy.context.collection.objects.link(root)
-    wheel_seen = False
+    chase = dict(zip(parts, seen_both_sides(parts + list(wheels.values()), [], chase_eyes())))
+    roots = {k: bpy.data.objects.new(k, None) for k in ('seat_only', 'chase_only', 'outside')}
+    for r in roots.values(): bpy.context.collection.objects.link(r)
     tri = lambda o: (o.data.calc_loop_triangles(), len(o.data.loop_triangles))[1]
-    for o, s in zip(test, seen):
-        if o in wheels.values():
-            wheel_seen = wheel_seen or bool(s); continue
-        bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table()
-        keep = set(s)
-        for i in list(s):                            # and every face touching a seen one
+    def grown(o, s):
+        bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table(); out = set(s)
+        for i in s:
             for v in bm.faces[i].verts:
-                for f in v.link_faces: keep.add(f.index)
-        n_out = len(bm.faces) - len(keep)
-        if not keep:
-            o.parent = root; print('  %-18s %6d triangles, none seen: outside' % (o.name, len(bm.faces))); bm.free(); continue
-        if n_out < OUT_MIN:
-            print('  %-18s %6d triangles, %6d unseen: kept whole' % (o.name, len(bm.faces), n_out)); bm.free(); continue
-        twin = o.copy(); twin.data = o.data.copy(); bpy.context.collection.objects.link(twin); twin.name = twin.data.name = o.name + '_out'; twin.parent = root
-        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in keep], context='FACES'); bm.to_mesh(o.data); bm.free()
-        b2 = bmesh.new(); b2.from_mesh(twin.data); b2.faces.ensure_lookup_table()
-        bmesh.ops.delete(b2, geom=[f for f in b2.faces if f.index in keep], context='FACES'); b2.to_mesh(twin.data); b2.free()
-        print('  %-18s seen %6d, outside %6d' % (o.name, tri(o), tri(twin)))
-    for p in parts:
-        if p.name == 'glass': p.parent = root; print('  glass              %6d triangles: outside (unseen from inside by its nature)' % tri(p))
-    return wheel_seen
+                for f in v.link_faces: out.add(f.index)
+        n = len(bm.faces); bm.free(); return out, n
+    for o in parts:
+        S, n = grown(o, seat.get(o, set())); Cs, _ = grown(o, chase[o])
+        group = {'top': {i for i in range(n) if i in S and i in Cs}, 'seat_only': S - Cs, 'chase_only': Cs - S, 'outside': set(range(n)) - S - Cs}
+        for k in ('seat_only', 'chase_only', 'outside'):
+            if 0 < len(group[k]) < OUT_MIN: group['top'] |= group[k]; group[k] = set()
+        made = []
+        for k in ('seat_only', 'chase_only', 'outside'):
+            if not group[k]: continue
+            if len(group[k]) == n:                   # the whole part in one group: moved, not copied
+                o.parent = roots[k]; made.append('all %s' % k); group['top'] = set(); break
+            twin = o.copy(); twin.data = o.data.copy(); bpy.context.collection.objects.link(twin)
+            twin.name = twin.data.name = o.name + '_' + k; twin.parent = roots[k]
+            b2 = bmesh.new(); b2.from_mesh(twin.data); b2.faces.ensure_lookup_table()
+            bmesh.ops.delete(b2, geom=[f for f in b2.faces if f.index not in group[k]], context='FACES'); b2.to_mesh(twin.data); b2.free()
+            made.append('%s %d' % (k, tri(twin)))
+        print('  %-16s %6d: top %6d, %s' % (o.name, n, len(group['top']), ', '.join(made) or 'all at the top'))
+        if not group['top']:
+            if o.parent not in roots.values(): bpy.data.objects.remove(o)      # (split among the groups, none at the top: the original goes)
+            continue
+        if len(group['top']) < n:
+            bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table()
+            bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in group['top']], context='FACES'); bm.to_mesh(o.data); bm.free()
 
 
 def near(src, out, cabin_glb=None):
@@ -211,8 +231,7 @@ def near(src, out, cabin_glb=None):
     body = join(rest, 'body')
     door_split(body)
     parts = by_material(body)
-    if cabin_glb and not seat_split(parts, wheels, cabin_glb):
-        e = bpy.data.objects.new('seat_hides_wheels', None); bpy.context.collection.objects.link(e)      # (no wheel is seen from the seat: the game hides them there too)
+    if cabin_glb: view_split(parts, wheels, cabin_glb)
     for k, w in wheels.items():
         # the wheel's mesh about its own middle (its hub), under an empty corner_XX at the same place
         bpy.context.view_layer.objects.active = w
