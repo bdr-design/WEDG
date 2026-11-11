@@ -1,5 +1,8 @@
 # Outside models (private use only)
 
+Since 11 Nov the game uses our code-built car again (the owner's choice; see `../PLAN.md`). The downloaded model
+below is kept here, with its build scripts, but is no longer in the game's files.
+
 Models made by others, kept apart from the code-built car. Each is used under its own licence, recorded here.
 
 The owner's game is private and earns nothing (his word, 11 Nov). If that ever changes, everything in this folder

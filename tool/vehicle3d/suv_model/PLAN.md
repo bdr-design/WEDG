@@ -143,3 +143,22 @@ Steps:
 - Next: the outside's layers with baked normals done properly; the interior's remaining photo differences (the
   bench's and seats' finer shapes, the door's switch panel, the shifter); the quarter glass's kick-up and chrome
   surround, lug nuts, step tread; opening doors.
+
+## Back to our car in the game (the owner's decision, 11 Nov, after trying the game on his phone)
+
+The downloaded model, thinned from 1.1 million triangles to 65k for the phone, showed facets and odd shading. The
+owner chose our code-built car (this folder) for the game again. `ours_game.py` makes its game files from
+`suv.blend`:
+- `lod_ext.py ... 150000 game`: the near layer, 150k triangles (185k of 210k are seen; the wheels, arches and chrome
+  keep more).
+- `lod_ext.py ... 15000 far`: the far layer.
+- The wheels sit on their corners for the springs and steering. The driver's eye comes from `interior/cabin.py`'s
+  SEATED_EYE, and the cabin from `cabin_lod0.glb` (44k).
+
+The game files are `design/prototype3d/models/veh_suvfull.json`, `veh_suvfar.json` and `veh_suvcabin.json`. The
+player's car casts no shadow (the owner's word).
+
+Not yet done:
+- The driver's door is part of the body, so it does not swing.
+- The steering wheel is part of the cabin's one mesh, so it does not turn.
+

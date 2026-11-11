@@ -199,7 +199,7 @@
   <div class="acts" id="pop-acts"></div>
 </section>
 
-<div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p><small dir="ltr">LC300 model: Ddiaz Design · CC BY-NC-SA 4.0 · modified</small></div>
+<div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p></div>
 <div class="meter glass num" id="meter" dir="rtl" hidden aria-live="off"></div>
 </div>
 
@@ -1045,37 +1045,10 @@ async function loadVehicles() {
   // Both share the photo paint (same texture atlas); the glass and the cabin cast no shadow.
   const heroCar = () => {
     const full = models.suvfull.clone(true), far = models.suvfar.clone(true);
-    let paint = null;
-    // only the outer skin, lamps and wheels cast: the cabin, its linings and the glass are inside or see-through
-    // (the private car: everything of its outside but the glass, the plates and what lies under the skin)
-    const casts = (m) => /_paint$|_light$|tyre|rim_photo|barrel|^trim$|^CarPaint$|^BlackPlastic|^Chrome$|^Wheel$|^MetalBlack$/.test(m.name);
-    full.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = casts(n.material); if (!paint && /_paint$/.test(n.material.name)) paint = n.material; } });
-    far.traverse((n) => { if (n.isMesh) { if (paint && /_paint$/.test(n.material.name)) n.material = paint; n.castShadow = true; n.receiveShadow = true; } });
-    // the shadow by rigid part: each part's casting meshes merged into one shadow-only mesh that moves with it (the same
-    // geometry, so the same shadow): the body, each corner's hub (it steers), each wheel (it spins), the driver's door
-    // (it swings). 26 shadow draws become 10. Every caster in the shadow pass is then a stand-in that receives no shadow:
-    // a caster that also receives one makes three.js switch the shadow pass's program back and forth (8 times a frame
-    // with the hubs left casting). The far model: its opaque outside as one mesh (it used to cast from its glass and
-    // lamps too, unlike the near model).
-    const rel = new THREE.Matrix4();
-    const standIn = (parent, list) => {
-      list = list.filter(plainCaster); if (!list.length) return;
-      full.updateMatrixWorld(true); const inv = parent.matrixWorld.clone().invert();
-      const m = new THREE.Mesh(mergeCasters(list, (o) => rel.multiplyMatrices(inv, o.matrixWorld)), shadowOnly(list[0].material.side, list[0].material.shadowSide));
-      m.castShadow = true; m.receiveShadow = false; m.name = 'shadow'; m.userData.shadowOnly = true; parent.add(m);
-      for (const o of list) o.castShadow = false;
-      return m;
-    };
-    const sameSide = (list) => list.every((o) => o.material.side === list[0].material.side && o.material.shadowSide === list[0].material.shadowSide);
-    const meshesOf = (o, deep) => (deep ? (() => { const a = []; o.traverse((n) => { if (n.isMesh) a.push(n); }); return a; })() : o.children.filter((n) => n.isMesh));
-    const corners = ['FL', 'FR', 'RL', 'RR'].map((k) => full.getObjectByName('corner_' + k));
-    for (const part of [full, ...corners, ...['FL', 'FR', 'RL', 'RR'].map((k) => full.getObjectByName('wheel_' + k)), full.getObjectByName('door_FL')]) {
-      if (!part) continue;
-      const list = meshesOf(part, part !== full && !corners.includes(part)).filter((n) => n.castShadow);
-      if (sameSide(list)) standIn(part, list);
-    }
-    far.traverse((n) => { if (n.isMesh) n.castShadow = casts(n.material); });
-    { const list = meshesOf(far, true).filter((n) => n.castShadow); if (sameSide(list)) standIn(far, list); }
+    // the player's car casts no shadow (the owner's word, 11 Nov: "no need for its shadow, leave it without"); it still
+    // receives the yard's and the camels'. (Its shadow cost 40k to 125k triangles a shadow redraw.)
+    full.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = false; } });
+    far.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = false; } });
     full.userData.nearParts = [...full.children]; full.userData.far = far; far.visible = false; full.add(far);
     return full;
   };
