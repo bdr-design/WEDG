@@ -183,13 +183,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     for (const w of phys.wheels) {
       if (w.front || w.soft < 0.3 || w.wx === undefined) continue;
       const last = trackLast[w.k];
-      if (Math.hypot(w.wx - last.x, w.wz - last.z) < 0.4) continue;
+      { const gx = w.wx - last.x, gz = w.wz - last.z; if (gx * gx + gz * gz < 0.16) continue; }
       if (last.x > 1e8) { last.px = w.wx; last.pz = w.wz; }
       last.x = w.wx; last.z = w.wz;
       const e = 0.3, gx = ground(w.wx + e, w.wz) - ground(w.wx - e, w.wz), gz = ground(w.wx, w.wz + e) - ground(w.wx, w.wz - e);
       trackN.set(-gx, 2 * e, -gz).normalize();
       trackP.set(w.wx, ground(w.wx, w.wz) + 0.02, w.wz); trackQ.setFromUnitVectors(UP, trackN).multiply(trackQ2.setFromAxisAngle(UP, carState.yaw + Math.PI / 2));
-      trackS.set(1, 1, Math.max(1, Math.hypot(w.wx - last.px, w.wz - last.pz) / 0.42)); last.px = w.wx; last.pz = w.wz;     // (quick, a mark stretches over the gap since the last)
+      trackS.set(1, 1, Math.max(1, Math.sqrt((w.wx - last.px) ** 2 + (w.wz - last.pz) ** 2) / 0.42)); last.px = w.wx; last.pz = w.wz;     // (quick, a mark stretches over the gap since the last)
       trackM.compose(trackP, trackQ, trackS); trackMesh.setMatrixAt(trackI, trackM);
       trackMesh.setColorAt(trackI, trackC.copy(trackLight).lerp(trackDark, Math.min(1, w.sink / 0.12)));
       trackMesh.instanceMatrix.addUpdateRange(trackI * 16, 16); trackMesh.instanceMatrix.needsUpdate = true;
@@ -441,7 +441,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       mz = (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) - (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0);
       run = keys.has('ShiftLeft') || keys.has('ShiftRight');
     }
-    const amt = Math.min(1, Math.hypot(mx, mz));
+    const amt = Math.min(1, Math.sqrt(mx * mx + mz * mz));
     const target = amt < 0.08 ? 0 : run ? RUN : WALK * Math.max(0.55, amt);
     man.speed += (target - man.speed) * Math.min(1, dt * 6);
     // the stick is read relative to where the eyes look: up is ahead, the sides step sideways

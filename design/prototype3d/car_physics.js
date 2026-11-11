@@ -160,7 +160,7 @@ export function createCar(geo, spec = LC300) {
     const gear = spec.first * spec.final * (s.low ? spec.low : 1);
     const vTop = s.low ? 45 / 3.6 : spec.vmax;
     const dir = s.gear === 'R' ? -1 : 1;
-    const rise = (gs[0] + gs[1] - gs[2] - gs[3]) / 2, slope = rise / Math.hypot(wb, rise);      // the ground's slope under the wheels (not the body's pitch on its springs)
+    const rise = (gs[0] + gs[1] - gs[2] - gs[3]) / 2, slope = rise / Math.sqrt(wb * wb + rise * rise);      // the ground's slope under the wheels (not the body's pitch on its springs)
     // an automatic in gear creeps at idle (CREEP of the weight, falling off by 2 m/s: about 5 km/h on the flat);
     // hill-start assist (standard on the LC300; on a slope only) holds the brakes after they are let off at a stop,
     // until the engine pulls harder than the slope, or 2 s
@@ -233,7 +233,7 @@ export function createCar(geo, spec = LC300) {
     const FzF0 = m * g * spec.frontShare, FzR0 = m * g * (1 - spec.frontShare), stiff = (Fz, Fz0) => { const x = Fz / Fz0; return Fz0 * 1.25 * x / (1 + x * x / 4); };
     const CF = spec.cornerF * stiff(FzF, FzF0) * (1 - LAT.SAND_SIDE * softF), CR = spec.cornerR * stiff(FzR, FzR0) * (1 - LAT.SAND_SIDE * softR);
     const rGrip = LAT.KIN_GRIP * muAvg * g / Math.max(1, Math.abs(vx)) /* (under 1 m/s the wheels' own turn is always within it) */, rK = Math.max(-rGrip, Math.min(rGrip, vx * Math.tan(steer) / wb)), vyK = b * rK;      // the wheels' own path (the rear axle does not slip), no tighter than the grip turns the car
-    const whole = Math.hypot(vx > 0 ? vx : Math.min(0, vx + LAT.BACK_KIN), s.vyL);      // (backing up to BACK_KIN, the wheels' path: only a slide, or going backward faster than a gearbox backs, brings the tyres' model in)
+    const vxW = vx > 0 ? vx : Math.min(0, vx + LAT.BACK_KIN), whole = Math.sqrt(vxW * vxW + s.vyL * s.vyL);      // (backing up to BACK_KIN, the wheels' path: only a slide, or going backward faster than a gearbox backs, brings the tyres' model in)
     const k = whole > LAT.LO ? Math.min(1, (whole - LAT.LO) / (LAT.HI - LAT.LO)) : 0, cs = Math.cos(steer), sn = Math.sin(steer);
     // the blend's weight eases toward k's smooth step no faster than keeps the blended motion's change within the
     // tyres' reach (1.5 of the grip) for the gap between the states and the wheels' path: when a slide ended, the weight
@@ -399,7 +399,7 @@ export function makeSoftness(height, inYard, westEdge = -35000) {
   return (x, z) => {
     if (inYard(x, z)) return 0.08;
     const e = 2, dx = (height(x + e, z) - height(x - e, z)) / (2 * e), dz = (height(x, z + e) - height(x, z - e)) / (2 * e);
-    const slope = Math.hypot(dx, dz);
+    const slope = Math.sqrt(dx * dx + dz * dz);
     const patch = 0.6 * noise(x / 45, z / 45) + 0.4 * noise(x / 11 + 7.3, z / 11 - 2.1);
     const west = Math.min(0.3, Math.max(0, -x / Math.abs(westEdge)) * 0.6);
     // sand lies soft on the dunes' gentle faces; the steep slopes round here are the hills' rock (Aban), hard

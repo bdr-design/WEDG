@@ -1068,42 +1068,15 @@ async function loadVehicles() {
     };
     const sameSide = (list) => list.every((o) => o.material.side === list[0].material.side && o.material.shadowSide === list[0].material.shadowSide);
     const meshesOf = (o, deep) => (deep ? (() => { const a = []; o.traverse((n) => { if (n.isMesh) a.push(n); }); return a; })() : o.children.filter((n) => n.isMesh));
-    const shadowOf = {};
     const corners = ['FL', 'FR', 'RL', 'RR'].map((k) => full.getObjectByName('corner_' + k));
     for (const part of [full, ...corners, ...['FL', 'FR', 'RL', 'RR'].map((k) => full.getObjectByName('wheel_' + k)), full.getObjectByName('door_FL')]) {
       if (!part) continue;
       const list = meshesOf(part, part !== full && !corners.includes(part)).filter((n) => n.castShadow);
-      if (sameSide(list)) shadowOf[part === full ? 'body' : part.name] = standIn(part, list);
+      if (sameSide(list)) standIn(part, list);
     }
     far.traverse((n) => { if (n.isMesh) n.castShadow = casts(n.material); });
     { const list = meshesOf(far, true).filter((n) => n.castShadow); if (sameSide(list)) standIn(far, list); }
-    // While the driver's door is shut, the body's shadow comes from the far model's outside: 9k triangles, not 54k, and
-    // the same outline at the shadow map's 9 cm texels. Its wheels are left out (the near wheels cast their own: they
-    // steer, spin and ride their springs). With the door open, the exact body and the door cast instead (the doorway lets
-    // the sun through, and the far body's door is shut).
-    const lite = (() => {
-      if (!shadowOf.body) return null;
-      full.updateMatrixWorld(true); far.updateMatrixWorld(true);
-      const wheels = ['FL', 'FR', 'RL', 'RR'].map((k) => full.getObjectByName('wheel_' + k)).filter(Boolean).map((w) => new THREE.Box3().setFromObject(w));
-      if (wheels.length < 4) return null;
-      const inWheel = (p) => wheels.some((w) => { const r = (w.max.y - w.min.y) / 2 + 0.03, cx = (w.min.x + w.max.x) / 2, cy = (w.min.y + w.max.y) / 2, cz = (w.min.z + w.max.z) / 2;
-        return (p.x - cx) ** 2 + (p.y - cy) ** 2 < r * r && Math.abs(p.z - cz) < (w.max.z - w.min.z) / 2 + 0.03; });
-      const keep = [], v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], mid = new THREE.Vector3();
-      far.traverse((n) => {
-        if (!n.isMesh || n.userData.shadowOnly || !casts(n.material) || n.material.name === 'Wheel' || n.material.side !== THREE.FrontSide) return;
-        const pos = n.geometry.attributes.position, idx = n.geometry.index, tris = (idx ? idx.count : pos.count) / 3;
-        for (let t = 0; t < tris; t++) {
-          for (let j = 0; j < 3; j++) v[j].fromBufferAttribute(pos, idx ? idx.getX(t * 3 + j) : t * 3 + j).applyMatrix4(n.matrixWorld);
-          if (inWheel(mid.copy(v[0]).add(v[1]).add(v[2]).divideScalar(3))) continue;
-          for (const p of v) keep.push(p.x, p.y, p.z);
-        }
-      });
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(keep), 3)); g.computeBoundingSphere();
-      const m = new THREE.Mesh(g, shadowOnly()); m.castShadow = true; m.receiveShadow = false; m.name = 'shadow'; m.userData.shadowOnly = true; full.add(m);
-      return m;
-    })();
-    if (lite) full.userData.shadowBody = { lite, exact: shadowOf.body, door: shadowOf.door_FL || null };
-    full.userData.nearParts = full.children.filter((c) => c !== lite && c !== shadowOf.body); full.userData.far = far; far.visible = false; full.add(far);
+    full.userData.nearParts = [...full.children]; full.userData.far = far; far.visible = false; full.add(far);
     return full;
   };
   for (const v of VEHICLES) {
@@ -1123,9 +1096,10 @@ let playCar = null, play = null;
 const vehiclesReady = loadVehicles();
 // the fixed shadows are built once the vehicles and terrain are in, or have failed (the yard's casters gave up their own
 // shadows when they were taken, so the build must run either way)
-Promise.allSettled([vehiclesReady, terrainReady]).then(() => bakeStaticShadows());
+const baked = Promise.allSettled([vehiclesReady, terrainReady]).then(() => bakeStaticShadows());
 vehiclesReady.then(async () => {
   const t = await terrainReady;
+  await baked;      // (the bake first, always: then nothing play adds can ever be taken for a fixed caster)
   play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root, phone,
     onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); ease.k = 1; controls.update(); measureHud(); } });      // (the HUD measured again: hidden in play, a turn of the phone there left its boxes stale)
   window.__play = play;
@@ -1185,7 +1159,7 @@ function tick(now) {
     tmpAway.lerpVectors(ease.o0, ease.o1, e).applyAxisAngle(UPV, ease.yaw * e);
     camera.position.copy(controls.target).add(tmpAway);
   }
-  updateScatter(camera.position, sun.target.position);
+  updateScatter(camera.position, sun.target.position, sunDir, sun.shadow.camera.right);
   if (playCar) {           // the player's car: full model near (or while playing), light model far
     const near = (playing && play.debug.state.mode === 'drive') || camera.position.distanceTo(playCar.position) < 20;
     if (playCar.userData.lodNear !== near) {
@@ -1199,8 +1173,6 @@ function tick(now) {
     if (playCar.userData.darkGlass === undefined) playCar.userData.darkGlass = !!playCar.getObjectByName('corner_FL');      // the private car's glass is dark: its interior shows only from the driver's seat or through the open door
     const darkGlass = playCar.userData.darkGlass, doorOpen = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
     if (cabin) cabin.visible = near && ((playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive') || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6));
-    const sb = playCar.userData.shadowBody;      // the body's shadow: the light one with the door shut, the exact one and the door's with it open
-    if (sb) { sb.lite.visible = near && !doorOpen; sb.exact.visible = near && doorOpen; if (sb.door) sb.door.visible = doorOpen; }
   }
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk

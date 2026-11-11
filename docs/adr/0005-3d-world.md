@@ -127,17 +127,19 @@ sideways), every draw call of a frame that redraws the shadow map counted:
 
 | View | Before: draws / triangles | After |
 |---|---|---|
-| Map, drone view | 317 / 282k | 161 / 288k |
-| Map, close view | 98 / 232k | 58 / 258k |
-| On foot, at the start | 224 / 334k | 111 / 289k |
-| On foot, by the car | 282 / 402k | 143 / 350k |
-| In the car, from the seat | 276 / 476k | 164 / 434k |
-| In the car, from behind | 280 / 395k | 161 / 353k |
-| In the car, out on the sand | 94 / 236k | 69 / 182k |
+| Map, drone view | 317 / 282k | 178 / 280k |
+| Map, close view | 98 / 232k | 67 / 234k |
+| On foot, at the start | 224 / 334k | 123 / 337k |
+| On foot, by the car | 282 / 402k | 159 / 397k |
+| In the car, from the seat | 276 / 476k | 174 / 483k |
+| In the car, from behind | 280 / 395k | 173 / 403k |
+| In the car, out on the sand | 94 / 236k | 73 / 238k |
 
-WebGL calls per frame fell by 38 to 48% in every view (for example, the drone
-view from 3,162 to 1,693 with the shadow map redrawn). Texture memory, counted
-uncompressed with mipmaps, fell from 132 to 103 MiB.
+WebGL calls per frame fell by 33 to 40% in the views above (the drone view from
+3,162 to 1,911 with the shadow map redrawn); an independent count found 20% on
+the open sand. Texture memory, counted uncompressed with mipmaps, fell from 132
+to 103 MiB once a camel has been seen up close. Before that it is a little
+higher than it was, since the near colour map is now sent with the first camel.
 
 **What made the difference:**
 - **Shadow-only stand-ins are no longer drawn in the picture.** They write no
@@ -148,34 +150,43 @@ uncompressed with mipmaps, fell from 132 to 103 MiB.
   troughs and parked vehicles. They are the same geometry, so the shadows are
   the same. The yard's shadow draws fell from 37 to about 12.
 - **The player's car casts by rigid part:** the body, each hub, each wheel and
-  the driver's door, 26 shadow draws down to 10. While the door is shut, the
-  body's shadow comes from the far model with its wheels cut out (9k
-  triangles, not 54k). Close-up renders against the exact shadow differ in
-  under 1% of pixels, all at shadow edges. With the door open, the exact body
-  casts.
+  the driver's door, 26 shadow draws down to 10, with the same geometry.
+  - A lighter body shadow, from the far model with its wheels cut out, was
+    tried and dropped. Review found it changed the car's shadow by about 8% of
+    its area, widening the light through the windows. It would have saved
+    55k shadow triangles per redraw.
+  - Whether to trade that for weight is the owner's call.
 - **The yard merges by look, not by material.** Plain materials that differ
   only in colour, roughness and metalness share one mesh. Those values are
   stored per vertex and read by the shader, so the picture is unchanged.
-- **Ground-cover cells are larger:** 50 m for grass and stones, 160 m for
-  bushes. Each cell's density band is taken from its nearest edge, so nothing
-  thins near the viewer. Ground-cover draws in the drone view fell from 124
-  to 45.
+- **Ground-cover cells are larger:** 35 m for grass and stones, 160 m for
+  bushes.
+  - A cell whose nearest edge is within the first band is drawn whole, so
+    nothing thins near the viewer. Further out, a cell is drawn by its
+    middle, as before, so the grass drawn stays as it was.
+  - Ground-cover draws in the drone view fell from 124 to 58.
+  - Bush cells cast while any of them can lie in the sun's shadow square,
+    tested along its real axes. On the ground that square stretches along the
+    sun, to 144 × 354 m.
 - **The camel's coat textures are shared.** The three detail levels use one
   copy, since the middle and far copies were the same atlas made smaller.
   The normal map is kept at 1024, because the 2048 one held nothing finer (a
   round trip through 1024 differs by 56 dB PSNR).
-- **The wheel tracks are one single-pass decal.** three.js draws a
-  see-through two-sided material twice and rebuilt its program state 8 times
-  a frame.
+- **The wheel tracks are one decal, wound to face up and drawn once.**
+  three.js draws a see-through two-sided material twice and rebuilt its
+  program state 8 times a frame. They are drawn after the ground's other
+  decals.
 - **No shadow caster also receives a shadow.** Before, the shadow pass
   switched programs 8 times a frame.
-- **`Math.hypot` is gone from the per-frame loops,** because it left garbage
-  on every call.
+- **`Math.hypot` is gone from the per-frame code,** because it left garbage
+  on every call. Only pointer handlers still use it.
 
 **What is still over or open:**
-- **From the driver's seat:** 434k triangles, 8% over 400k. The cabin built
-  from the owner's photos is 85k of these. Lightening it is a trade of
-  realism for weight, so it is the owner's decision.
+- **From the driver's seat:** 483k triangles, 21% over 400k.
+  - The cabin built from the owner's photos is 85k of these, and the car's
+    exact shadow is 70k.
+  - Lightening either trades realism for weight, so it is the owner's
+    decision.
 - **Skinned meshes:** up to 30 camels are skinned in the prototype. Their
   measured CPU cost is about 0.25 ms per frame on the test machine. The
   three-tier herd above is the Flutter build's plan.
