@@ -2,6 +2,7 @@
 // Coordinates in metres: x east, z south, y up. Everything repeated is instanced.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const rand = mulberry(1108);
@@ -75,6 +76,10 @@ const tamariskTexture = () => canvasTex(256, 256, (g, w, h) => {
 
 // ------------------------------------------------------------ layout (real metres)
 // meshes laid on the ground that must follow the real terrain beyond the flat yard
+// cell sizes (game choice, measured 2026-11-11): one draw per cell, so larger cells mean fewer draws. With the bands taken
+// from each cell's nearest edge, 50 m grass and stone cells and 160 m bush cells cut the ground cover from 124 draws to
+// 45 in the drone view, for 10k more triangles of cheap cards.
+const GRASS_CELL = 50, BUSH_CELL = 160, STONE_CELL = 50;
 export const DRAPE = [];
 // ground cover is cut into cells; each cell draws all, part or none of its instances by distance
 export const SCATTER = [];
@@ -92,23 +97,28 @@ function scatterCells(geo, mat, items, { cell = 25, bands, cast = false, receive
     const m = new THREE.InstancedMesh(geo, mat, list.length);
     let cx = 0, cz = 0;
     list.forEach((it, i) => { m.setMatrixAt(i, it.m); if (it.c) m.setColorAt(i, it.c); cx += it.x; cz += it.z; });
+    cx /= list.length; cz /= list.length;
+    let r = 0; for (const it of list) r = Math.max(r, Math.hypot(it.x - cx, it.z - cz));
     m.castShadow = cast; m.receiveShadow = receive;
     m.computeBoundingSphere();
     group.add(m);
-    SCATTER.push({ m, n: list.length, x: cx / list.length, z: cz / list.length, bands, cast, shadowDist });
+    SCATTER.push({ m, n: list.length, x: cx, z: cz, r, bands, cast, shadowDist });
   }
   return group;
 }
-// bands: [[distance, share of instances drawn], ...], nothing beyond the last band
+// bands: [[distance, share of instances drawn], ...], nothing beyond the last band. The distance is to the cell's
+// nearest edge, not its middle: every instance is drawn at least as densely as its own distance asks, so the cells
+// can be large (one draw each) without the cover thinning near the viewer.
 export function updateScatter(cam, shadowCenter = cam) {
   for (const c of SCATTER) {
-    const d = Math.hypot(cam.x - c.x, cam.z - c.z, cam.y * 0.5);
+    const dx = cam.x - c.x, dz = cam.z - c.z, edge = Math.max(0, Math.sqrt(dx * dx + dz * dz) - c.r), dy = cam.y * 0.5;
+    const d = Math.sqrt(edge * edge + dy * dy);      // (not Math.hypot: it left garbage behind on every call, 300 cells a frame)
     let share = 0;
-    for (const [dist, k] of c.bands) if (d < dist) { share = k; break; }
+    for (let i = 0; i < c.bands.length; i++) if (d < c.bands[i][0]) { share = c.bands[i][1]; break; }
     const n = Math.round(c.n * share);
     c.m.visible = n > 0;
     c.m.count = n;
-    if (c.cast) c.m.castShadow = Math.hypot(shadowCenter.x - c.x, shadowCenter.z - c.z) < c.shadowDist;   // only cells inside the shadow area cast
+    if (c.cast) { const sx = shadowCenter.x - c.x, sz = shadowCenter.z - c.z; c.m.castShadow = Math.sqrt(sx * sx + sz * sz) - c.r < c.shadowDist; }   // only cells that reach into the shadow area cast
   }
 }
 export function drapeOnTerrain(heightAt) {
@@ -198,6 +208,9 @@ export function buildWorld(scene, renderer, sandTex) {
     for (let i = 0; i < 600; i++) { g.fillStyle = `rgba(255,240,220,${rand() * 0.15})`; g.fillRect(rand() * w, rand() * h, 2, 2); }
   });
   trackTex.name = 'track'; trackTex.wrapT = THREE.RepeatWrapping;
+  // the wheel tracks, all one mesh: a flat see-through decal, drawn in one pass (three.js draws a see-through two-sided
+  // material twice, back faces then front, and rebuilds its program state at each; a decal on the ground shows one side)
+  const tracks = [];
   const ribbon = (pts, width) => {
     const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => V(x, 0, z)));
     const n = Math.max(8, Math.round(curve.getLength() / 2)), pos = [], uv = [], idx = [];
@@ -208,13 +221,16 @@ export function buildWorld(scene, renderer, sandTex) {
       if (i < n) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
-    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: trackTex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -3, side: THREE.DoubleSide }));
-    m.receiveShadow = true; scene.add(m);
+    tracks.push(g);
   };
   ribbon([[24, 10], [24, 40], [27, 70], [30, 95], [30, LAYOUT.roadZ - 4]], 6);
   ribbon([[24, 14], [24, -2], [10, -3], [-34, -3]], 5);
   ribbon([[24, -3], [36, -3], [37, -30], [36, -48]], 5);
   ribbon([[24, 18], [0, 60], [-60, 120], [-130, 170], [-196, 226], [-226, 244]], 3.6);   // the track out to the grazing ground (about 330 m)
+  {
+    const m = new THREE.Mesh(mergeGeometries(tracks, false), new THREE.MeshStandardMaterial({ map: trackTex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -3, side: THREE.DoubleSide, forceSinglePass: true }));
+    m.receiveShadow = true; scene.add(m); tracks.forEach((g) => g.dispose());
+  }
 
   // ---------- the camel yard wall: corrugated "shinko" sheets on steel posts, a double gate
   {
@@ -535,7 +551,7 @@ export function buildWorld(scene, renderer, sandTex) {
     }
     // every tuft up close, a thinning sample further out, none past 260 m (the sand texture carries the colour)
     scene.add(scatterCells(tuft, new THREE.MeshStandardMaterial({ map: grassTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
-      { bands: [[45, 1], [90, 0.45], [160, 0.2], [260, 0.08]] }));
+      { cell: GRASS_CELL, bands: [[45, 1], [90, 0.45], [160, 0.2], [260, 0.08]] }));
   }
   {
     const g = cardCluster(1.2, 1.0, 3, true);
@@ -549,13 +565,14 @@ export function buildWorld(scene, renderer, sandTex) {
         c: new THREE.Color().setHSL(0.12 + R(-0.02, 0.04), 0.1, 0.82 + R(-0.1, 0.1)) });
       k++;
     }
+    // (shadowDist 102 m: the half-diagonal of the sun's 144 m shadow square, so a cell casts whenever any of it can lie inside)
     scene.add(scatterCells(g, new THREE.MeshStandardMaterial({ map: bushTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
-      { cell: 80, cast: true, shadowDist: 120, bands: [[120, 1], [260, 0.5], [450, 0.25]] }));
+      { cell: BUSH_CELL, cast: true, shadowDist: 102, bands: [[120, 1], [260, 0.5], [450, 0.25]] }));
     // stones: 8 triangles each (they are a few centimetres across), only near the camera
     const sg = new THREE.OctahedronGeometry(0.12, 0); sg.scale(1, 0.5, 1.25);
     const stones = [];
     for (let i = 0; i < 2600; i++) { const x = R(-200, 200), z = R(-180, 220), s = R(0.5, 2.2); stones.push({ x, z, m: M4().compose(V(x, 0.02, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, R(0, 6), 0)), V(s, s, s)), c: new THREE.Color().setHSL(0.07, 0.18, 0.34 + R(-0.08, 0.1)) }); }
-    scene.add(scatterCells(sg, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1 }), stones, { bands: [[40, 1], [90, 0.35]] }));
+    scene.add(scatterCells(sg, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1 }), stones, { cell: STONE_CELL, bands: [[40, 1], [90, 0.35]] }));
   }
 }
 

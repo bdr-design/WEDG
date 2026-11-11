@@ -63,6 +63,10 @@ The fixes below were applied to the prototype (`design/prototype3d/`).
 
 Counts include the shadow pass. Texture memory went from 217 to 99 MiB.
 
+*Correction (2026-11-11):* these counts came from `renderer.info`, which
+three.js resets after the shadow pass, so they left the shadow pass out.
+The counts below are taken at each draw call instead.
+
 **What made the difference:**
 - Grass, bushes and stones were split into cells, and each cell draws all,
   part or none of its instances by distance.
@@ -114,6 +118,71 @@ view:
 
 Camel state goes to `WorldRenderer` as flat arrays, not as one scene object
 per camel.
+
+## Measured again (prototype, 2026-11-11)
+
+The game now has the landscape screen, first-person play, the player's car
+with its cabin, and the in-game phone. Measured at 844 × 390 (a phone held
+sideways), every draw call of a frame that redraws the shadow map counted:
+
+| View | Before: draws / triangles | After |
+|---|---|---|
+| Map, drone view | 317 / 282k | 161 / 288k |
+| Map, close view | 98 / 232k | 58 / 258k |
+| On foot, at the start | 224 / 334k | 111 / 289k |
+| On foot, by the car | 282 / 402k | 143 / 350k |
+| In the car, from the seat | 276 / 476k | 164 / 434k |
+| In the car, from behind | 280 / 395k | 161 / 353k |
+| In the car, out on the sand | 94 / 236k | 69 / 182k |
+
+WebGL calls per frame fell by 38 to 48% in every view (for example, the drone
+view from 3,162 to 1,693 with the shadow map redrawn). Texture memory, counted
+uncompressed with mipmaps, fell from 132 to 103 MiB.
+
+**What made the difference:**
+- **Shadow-only stand-ins are no longer drawn in the picture.** They write no
+  colour or depth, but three.js still drew them. Their material is now hidden
+  while the frame's draw list is built and shown only for the shadow pass.
+- **The fixed casters' shadows are baked into merged meshes,** one per 64 m
+  square and face side. These are the buildings, shades, fences, tree trunks,
+  troughs and parked vehicles. They are the same geometry, so the shadows are
+  the same. The yard's shadow draws fell from 37 to about 12.
+- **The player's car casts by rigid part:** the body, each hub, each wheel and
+  the driver's door, 26 shadow draws down to 10. While the door is shut, the
+  body's shadow comes from the far model with its wheels cut out (9k
+  triangles, not 54k). Close-up renders against the exact shadow differ in
+  under 1% of pixels, all at shadow edges. With the door open, the exact body
+  casts.
+- **The yard merges by look, not by material.** Plain materials that differ
+  only in colour, roughness and metalness share one mesh. Those values are
+  stored per vertex and read by the shader, so the picture is unchanged.
+- **Ground-cover cells are larger:** 50 m for grass and stones, 160 m for
+  bushes. Each cell's density band is taken from its nearest edge, so nothing
+  thins near the viewer. Ground-cover draws in the drone view fell from 124
+  to 45.
+- **The camel's coat textures are shared.** The three detail levels use one
+  copy, since the middle and far copies were the same atlas made smaller.
+  The normal map is kept at 1024, because the 2048 one held nothing finer (a
+  round trip through 1024 differs by 56 dB PSNR).
+- **The wheel tracks are one single-pass decal.** three.js draws a
+  see-through two-sided material twice and rebuilt its program state 8 times
+  a frame.
+- **No shadow caster also receives a shadow.** Before, the shadow pass
+  switched programs 8 times a frame.
+- **`Math.hypot` is gone from the per-frame loops,** because it left garbage
+  on every call.
+
+**What is still over or open:**
+- **From the driver's seat:** 434k triangles, 8% over 400k. The cabin built
+  from the owner's photos is 85k of these. Lightening it is a trade of
+  realism for weight, so it is the owner's decision.
+- **Skinned meshes:** up to 30 camels are skinned in the prototype. Their
+  measured CPU cost is about 0.25 ms per frame on the test machine. The
+  three-tier herd above is the Flutter build's plan.
+- **Garbage per frame:** about 50 to 75 KB, mostly three.js's animation
+  mixer. This is a minor collection every few seconds, not a stutter.
+- **Not yet measured on a real phone.** All figures come from headless
+  Chromium with a software GPU, so frame times there are not a phone's.
 
 ## Spike (must pass before this is accepted)
 

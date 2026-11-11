@@ -54,11 +54,11 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       }
     }
     for (const c of posts) {
-      const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), rr = r + c.r;
+      const dx = p.x - c.x, dz = p.z - c.z, d = Math.sqrt(dx * dx + dz * dz), rr = r + c.r;      // (sqrt, not Math.hypot: no garbage in the frame's loops)
       if (d < rr && d > 1e-6) { p.x += dx / d * (rr - d); p.z += dz / d * (rr - d); hit = true; }
     }
     for (const k of camels) {
-      const q = k.root.position, dx = p.x - q.x, dz = p.z - q.z, d = Math.hypot(dx, dz), rr = r + 0.8;
+      const q = k.root.position, dx = p.x - q.x, dz = p.z - q.z, d = Math.sqrt(dx * dx + dz * dz), rr = r + 0.8;
       if (d < rr && d > 1e-6) { p.x += dx / d * (rr - d); p.z += dz / d * (rr - d); hit = true; }
     }
     return hit;
@@ -159,7 +159,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   // body seen from inside: front faces only, so the shell is see-through from the driver's seat but the hood still shows
   const carMats = [];
-  car.traverse((n) => { if (n.isMesh) { n.material = n.material.clone(); carMats.push(n.material); if (n.material.name === 'taillight') tailMats.push(n.material); } });
+  // (not the shadow stand-ins: their material is shown only in the shadow pass, and a copy of it never would be)
+  car.traverse((n) => { if (n.isMesh && !n.userData.shadowOnly) { n.material = n.material.clone(); carMats.push(n.material); if (n.material.name === 'taillight') tailMats.push(n.material); } });
   tailMats.splice(0, tailMats.length, ...carMats.filter((m) => m.name === 'taillight' || m.name === 'tail_light' || m.name === 'Light_Red_Back'));
   const headMats = carMats.filter((m) => m.name === 'head_light' || m.name === 'Front_Light');
   for (const m of headMats) m.emissiveIntensity = 1.0;                  // daytime running lamps
@@ -453,7 +454,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     carFwd(carState.yaw, fwd);
     for (const k of [-1.6, 0, 1.6]) {
       tmp2.copy(carState.pos).addScaledVector(fwd, k);
-      const dx = p.x - tmp2.x, dz = p.z - tmp2.z, d = Math.hypot(dx, dz), rr = r + 1.05;
+      const dx = p.x - tmp2.x, dz = p.z - tmp2.z, d = Math.sqrt(dx * dx + dz * dz), rr = r + 1.05;
       if (d < rr && d > 1e-6) { p.x += dx / d * (rr - d); p.z += dz / d * (rr - d); }
     }
   }

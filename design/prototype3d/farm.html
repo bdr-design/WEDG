@@ -295,9 +295,94 @@ scene.add(sun, sun.target);
 // ------------------------------------------------------------ the world (ground, roads, farm, trees, grass)
 const sand = new THREE.TextureLoader().load('sand.jpg');
 sand.colorSpace = THREE.SRGBColorSpace; sand.wrapS = sand.wrapT = THREE.RepeatWrapping;
+// shadow-only stand-ins: they write no colour or depth, and their materials are hidden while three.js builds the frame's
+// list of draws and shown only for the shadow pass, so each costs a draw in the shadow map and none in the picture
+// (left visible, every stand-in was also drawn in the picture, for nothing: 4 to 7 draws a frame). One material per face
+// side, copied from the source, so the shadow pass draws the same faces it drew for the source.
+const SHADOW_MATS = new Map();
+function shadowOnly(side = THREE.FrontSide, shadowSide = null) {
+  const key = side + '|' + shadowSide;
+  if (!SHADOW_MATS.has(key)) { const m = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, side }); m.shadowSide = shadowSide; m.visible = false; SHADOW_MATS.set(key, m); }
+  return SHADOW_MATS.get(key);
+}
+const SHADOW_ONLY = shadowOnly();
+{
+  const pass = renderer.shadowMap.render;
+  renderer.shadowMap.render = function (...args) {
+    for (const m of SHADOW_MATS.values()) m.visible = true;
+    try { return pass.apply(this, args); } finally { for (const m of SHADOW_MATS.values()) m.visible = false; }
+  };
+}
+// the depth pass of a mesh depends on its material only through alpha testing, displacement and a custom depth material;
+// without those, its shadow is its geometry alone, and a merged copy of the geometry casts the same shadow
+function plainCaster(o) {
+  return o.isMesh && !o.isSkinnedMesh && o.castShadow && !Array.isArray(o.material) && o.material.visible && !o.material.alphaTest && !o.material.alphaHash
+    && !(o.material.displacementMap && o.material.displacementScale) && !o.customDepthMaterial && !o.geometry.morphAttributes.position && o.geometry.drawRange.count === Infinity;
+}
+// one shadow-only mesh from many casters: positions only, each placed by `toParent(o, i)` (for an instanced mesh, per instance)
+function mergeCasters(list, toParent) {
+  const geos = [];
+  for (const o of list) {
+    const g = o.geometry, src = g.attributes.position, n = src.count, base = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { base[i * 3] = src.getX(i); base[i * 3 + 1] = src.getY(i); base[i * 3 + 2] = src.getZ(i); }
+    const index = g.index ? Uint32Array.from(g.index.array) : Uint32Array.from({ length: n }, (_, i) => i);
+    for (let k = 0, kn = o.isInstancedMesh ? o.count : 1; k < kn; k++) {
+      const out = new THREE.BufferGeometry();
+      out.setAttribute('position', new THREE.BufferAttribute(base.slice(), 3)); out.setIndex(new THREE.BufferAttribute(index, 1));
+      out.applyMatrix4(toParent(o, k)); geos.push(out);
+    }
+  }
+  const merged = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
+  if (geos.length > 1) geos.forEach((g) => g.dispose());
+  merged.computeBoundingSphere();
+  return merged;
+}
+// The fixed casters (the yard's buildings, shades, fences, trees' trunks, troughs, the parked vehicles) go into the shadow
+// map as a few merged meshes, one per 64 m square and face side, instead of one draw each: the same geometry, so the
+// same shadows, for a handful of draws instead of about 40. Anything that moves keeps its own shadow: the camels
+// (skinned), the player's car, the footprints and dust; alpha-tested leaves and bushes keep theirs (their shadow depends
+// on their texture). The yard's casters are taken before the yard is merged (so it can merge by look alone), the parked
+// vehicles' once they are in; the shadow meshes are built then.
+const pendingCasters = [];
+function takeCasters(roots) {
+  scene.updateMatrixWorld(true);
+  const inst = new THREE.Matrix4();
+  for (const r of roots) r.traverseVisible((o) => {
+    if (!plainCaster(o)) return;
+    for (let k = 0, kn = o.isInstancedMesh ? o.count : 1; k < kn; k++) {
+      const world = new THREE.Matrix4();
+      if (o.isInstancedMesh) { o.getMatrixAt(k, inst); world.multiplyMatrices(o.matrixWorld, inst); } else world.copy(o.matrixWorld);
+      pendingCasters.push({ geometry: o.geometry, world, side: o.material.side, shadowSide: o.material.shadowSide });
+    }
+    o.castShadow = false;
+  });
+}
+function bakeStaticShadows() {
+  for (const root of scene.children) {
+    if (root === playCar || root === printMesh || root.userData.shadowOnly) continue;
+    let moving = false; root.traverse((o) => { if (o.isSkinnedMesh) moving = true; });
+    if (!moving) takeCasters([root]);
+  }
+  const CHUNK = 64, buckets = new Map(), sph = new THREE.Sphere();
+  for (const p of pendingCasters) {
+    if (!p.geometry.boundingSphere) p.geometry.computeBoundingSphere();
+    sph.copy(p.geometry.boundingSphere).applyMatrix4(p.world);
+    const key = Math.floor(sph.center.x / CHUNK) + ',' + Math.floor(sph.center.z / CHUNK) + '|' + p.side + '|' + p.shadowSide;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(p);
+  }
+  for (const parts of buckets.values()) {
+    const mesh = new THREE.Mesh(mergeCasters(parts, (p) => p.world), shadowOnly(parts[0].side, parts[0].shadowSide));
+    mesh.castShadow = true; mesh.receiveShadow = false; mesh.matrixAutoUpdate = false; mesh.name = 'static shadows'; mesh.userData.shadowOnly = true;
+    scene.add(mesh);
+  }
+  pendingCasters.length = 0;
+}
+
 const before = scene.children.length;
 buildWorld(scene, renderer, sand);
 dedupeMaterials(scene.children.slice(before));
+takeCasters(scene.children.slice(before));
 mergeStatic(scene.children.slice(before));
 function dedupeMaterials(roots) {
   const seen = new Map(), sph = new THREE.Sphere();
@@ -313,27 +398,65 @@ function dedupeMaterials(roots) {
     if (!seen.has(key)) seen.set(key, m); else o.material = seen.get(key);
   });
 }
+// The yard's fixed objects merged into one mesh per look. Untextured opaque standard materials that differ only in colour,
+// roughness and metalness share one merged mesh: each object's colour, roughness and metalness go into its vertices and the
+// shader reads them there (vertex colour times a white material is exactly the old colour, and a value that is the same at
+// every vertex of an object is the same at every pixel), so the picture is unchanged and a shed's dozen plain parts are one
+// draw. Textured, see-through and custom materials merge only with copies of their own material.
+function foldedMaterial(src) {
+  const m = src.clone();
+  m.color.set(0xffffff); m.vertexColors = true; m.name = 'folded';
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 rm;\nvarying vec2 vRm;').replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvRm = rm;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vRm;')
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vRm.x;').replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vRm.y;');
+  };
+  m.customProgramCacheKey = () => 'marah-folded';
+  return m;
+}
+function plainLook(m) {      // (a declaration, not a const: mergeStatic runs above this line)
+  return m.isMeshStandardMaterial && !m.isMeshPhysicalMaterial && !m.transparent && !m.vertexColors && !m.alphaTest && m.visible
+    && !['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap', 'bumpMap', 'lightMap', 'displacementMap', 'envMap', 'clippingPlanes'].some((k) => m[k])
+    && m.onBeforeCompile.toString() === THREE.Material.prototype.onBeforeCompile.toString();
+}
 function mergeStatic(roots) {
   const groups = new Map(), drop = [];
   scene.updateMatrixWorld(true);
   for (const r of roots) r.traverse((o) => {
     if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || Array.isArray(o.material) || o.material.transparent || o.userData.keep) return;
-    const g = o.geometry, attrs = Object.keys(g.attributes).sort().join(',');
+    const g = o.geometry, m = o.material, fold = plainLook(m);
     if (g.morphAttributes && Object.keys(g.morphAttributes).length) return;
-    const key = [o.material.uuid, o.castShadow, o.receiveShadow, attrs, !!g.index].join('|');
+    const attrs = Object.keys(g.attributes).filter((k) => !(fold && /^uv/.test(k))).sort().join(',');
+    const look = fold ? ['fold', m.emissive.getHex(), m.emissiveIntensity, m.side, m.shadowSide, m.flatShading, m.envMapIntensity, m.opacity, m.depthWrite, m.depthTest, m.polygonOffset, m.wireframe, m.fog].join(',') : m.uuid;
+    const key = [look, o.castShadow, o.receiveShadow, attrs, !!g.index, o.renderOrder].join('|');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(o);
   });
   for (const list of groups.values()) {
     if (list.length < 2) continue;
-    const geos = list.map((o) => { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); return g; });
+    const mats = new Set(list.map((o) => o.material)), fold = mats.size > 1;      // (one material: merged as it is)
+    const geos = list.map((o) => {
+      const g = o.geometry.clone();
+      if (fold) {
+        for (const k of Object.keys(g.attributes)) if (/^uv/.test(k)) g.deleteAttribute(k);
+        const c = o.material.color, n = g.attributes.position.count, col = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+        g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+        const rm = new Float32Array(n * 2);
+        for (let i = 0; i < n; i++) { rm[i * 2] = o.material.roughness; rm[i * 2 + 1] = o.material.metalness; }
+        g.setAttribute('rm', new THREE.BufferAttribute(rm, 2));
+      }
+      g.applyMatrix4(o.matrixWorld); return g;
+    });
     const merged = mergeGeometries(geos, false);
+    geos.forEach((g) => g.dispose());
     if (!merged) continue;
-    const m = new THREE.Mesh(merged, list[0].material);
-    m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow;
+    let mat = list[0].material;
+    if (fold) mat = foldedMaterial(mat);
+    const m = new THREE.Mesh(merged, mat);
+    m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; m.renderOrder = list[0].renderOrder;
     scene.add(m);
     for (const o of list) drop.push(o);
-    geos.forEach((g) => g.dispose());
   }
   for (const o of drop) o.removeFromParent();
 }
@@ -384,13 +507,38 @@ async function loadLod(file) {
   return new GLTFLoader().parseAsync(bin.buffer, '');
 }
 const coatMats = new Map();
-const SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 function coatMaterial(src, lod, coat) {
   const key = lod + coat;
   if (!coatMats.has(key)) { const m = src.clone(); m.color.set(COATS[coat].tint); if (coat === 'majaheem') m.roughness = 0.78; coatMats.set(key, m); }
   return coatMats.get(key);
 }
 
+// One copy of the coat's pictures for all three detail levels. The middle and far levels' own copies are the same
+// atlas made smaller (against the near copy scaled down: 51 dB PSNR for the normal map, 36 dB for the colour, measured
+// 2026-11-11), and the GPU's mipmaps give a far camel the same smaller picture from the near copy. The normal map is kept
+// at 1024: the 2048 one holds nothing finer (2048 to 1024 and back differs from it by 56 dB PSNR, below one level in 255).
+// Together: 29 MiB less texture memory, of 132.
+function shareCoatMaps(T) {
+  const coatOf = (t) => { let m = null; t.scene.traverse((n) => { if (n.isMesh && !m) m = n.material; }); return m; };
+  const m0 = coatOf(T[0]);
+  if (!m0 || !m0.map) return;
+  let normal = m0.normalMap;
+  if (normal && normal.image && normal.image.width > 1024) {
+    const c = document.createElement('canvas'); c.width = c.height = 1024;
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(normal.image, 0, 0, 1024, 1024);
+    const t = normal.clone(); t.image = c; t.needsUpdate = true;
+    if (normal.image.close) normal.image.close();
+    normal.dispose(); normal = t;
+  }
+  for (const tpl of T) tpl.scene.traverse((n) => {
+    if (!n.isMesh) return;
+    const m = n.material;
+    if (m.map && m.map !== m0.map) m.map.dispose();
+    if (m.normalMap && m.normalMap !== m0.normalMap && m.normalMap !== normal) m.normalMap.dispose();
+    m.map = m0.map; if (m0.normalMap) m.normalMap = normal;
+    m.needsUpdate = true;
+  });
+}
 class Camel {
   constructor(t, spec) {
     Object.assign(this, spec);
@@ -861,6 +1009,7 @@ function tapWorld(x, y) {
 
 // ------------------------------------------------------------ load and run
 Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
+  shareCoatMaps(T);
   // the grazing herd, drifting back toward the pens late in the afternoon
   for (let i = 0; i < 20; i++) {
     camels.push(new Camel(T, {
@@ -902,7 +1051,59 @@ async function loadVehicles() {
     const casts = (m) => /_paint$|_light$|tyre|rim_photo|barrel|^trim$|^CarPaint$|^BlackPlastic|^Chrome$|^Wheel$|^MetalBlack$/.test(m.name);
     full.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = casts(n.material); if (!paint && /_paint$/.test(n.material.name)) paint = n.material; } });
     far.traverse((n) => { if (n.isMesh) { if (paint && /_paint$/.test(n.material.name)) n.material = paint; n.castShadow = true; n.receiveShadow = true; } });
-    full.userData.nearParts = [...full.children]; full.userData.far = far; far.visible = false; full.add(far);
+    // the shadow by rigid part: each part's casting meshes merged into one shadow-only mesh that moves with it (the same
+    // geometry, so the same shadow): the body, each corner's hub (it steers), each wheel (it spins), the driver's door
+    // (it swings). 26 shadow draws become 10. Every caster in the shadow pass is then a stand-in that receives no shadow:
+    // a caster that also receives one makes three.js switch the shadow pass's program back and forth (8 times a frame
+    // with the hubs left casting). The far model: its opaque outside as one mesh (it used to cast from its glass and
+    // lamps too, unlike the near model).
+    const rel = new THREE.Matrix4();
+    const standIn = (parent, list) => {
+      list = list.filter(plainCaster); if (!list.length) return;
+      full.updateMatrixWorld(true); const inv = parent.matrixWorld.clone().invert();
+      const m = new THREE.Mesh(mergeCasters(list, (o) => rel.multiplyMatrices(inv, o.matrixWorld)), shadowOnly(list[0].material.side, list[0].material.shadowSide));
+      m.castShadow = true; m.receiveShadow = false; m.name = 'shadow'; m.userData.shadowOnly = true; parent.add(m);
+      for (const o of list) o.castShadow = false;
+      return m;
+    };
+    const sameSide = (list) => list.every((o) => o.material.side === list[0].material.side && o.material.shadowSide === list[0].material.shadowSide);
+    const meshesOf = (o, deep) => (deep ? (() => { const a = []; o.traverse((n) => { if (n.isMesh) a.push(n); }); return a; })() : o.children.filter((n) => n.isMesh));
+    const shadowOf = {};
+    const corners = ['FL', 'FR', 'RL', 'RR'].map((k) => full.getObjectByName('corner_' + k));
+    for (const part of [full, ...corners, ...['FL', 'FR', 'RL', 'RR'].map((k) => full.getObjectByName('wheel_' + k)), full.getObjectByName('door_FL')]) {
+      if (!part) continue;
+      const list = meshesOf(part, part !== full && !corners.includes(part)).filter((n) => n.castShadow);
+      if (sameSide(list)) shadowOf[part === full ? 'body' : part.name] = standIn(part, list);
+    }
+    far.traverse((n) => { if (n.isMesh) n.castShadow = casts(n.material); });
+    { const list = meshesOf(far, true).filter((n) => n.castShadow); if (sameSide(list)) standIn(far, list); }
+    // While the driver's door is shut, the body's shadow comes from the far model's outside: 9k triangles, not 54k, and
+    // the same outline at the shadow map's 9 cm texels. Its wheels are left out (the near wheels cast their own: they
+    // steer, spin and ride their springs). With the door open, the exact body and the door cast instead (the doorway lets
+    // the sun through, and the far body's door is shut).
+    const lite = (() => {
+      if (!shadowOf.body) return null;
+      full.updateMatrixWorld(true); far.updateMatrixWorld(true);
+      const wheels = ['FL', 'FR', 'RL', 'RR'].map((k) => full.getObjectByName('wheel_' + k)).filter(Boolean).map((w) => new THREE.Box3().setFromObject(w));
+      if (wheels.length < 4) return null;
+      const inWheel = (p) => wheels.some((w) => { const r = (w.max.y - w.min.y) / 2 + 0.03, cx = (w.min.x + w.max.x) / 2, cy = (w.min.y + w.max.y) / 2, cz = (w.min.z + w.max.z) / 2;
+        return (p.x - cx) ** 2 + (p.y - cy) ** 2 < r * r && Math.abs(p.z - cz) < (w.max.z - w.min.z) / 2 + 0.03; });
+      const keep = [], v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], mid = new THREE.Vector3();
+      far.traverse((n) => {
+        if (!n.isMesh || n.userData.shadowOnly || !casts(n.material) || n.material.name === 'Wheel' || n.material.side !== THREE.FrontSide) return;
+        const pos = n.geometry.attributes.position, idx = n.geometry.index, tris = (idx ? idx.count : pos.count) / 3;
+        for (let t = 0; t < tris; t++) {
+          for (let j = 0; j < 3; j++) v[j].fromBufferAttribute(pos, idx ? idx.getX(t * 3 + j) : t * 3 + j).applyMatrix4(n.matrixWorld);
+          if (inWheel(mid.copy(v[0]).add(v[1]).add(v[2]).divideScalar(3))) continue;
+          for (const p of v) keep.push(p.x, p.y, p.z);
+        }
+      });
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(keep), 3)); g.computeBoundingSphere();
+      const m = new THREE.Mesh(g, shadowOnly()); m.castShadow = true; m.receiveShadow = false; m.name = 'shadow'; m.userData.shadowOnly = true; full.add(m);
+      return m;
+    })();
+    if (lite) full.userData.shadowBody = { lite, exact: shadowOf.body, door: shadowOf.door_FL || null };
+    full.userData.nearParts = full.children.filter((c) => c !== lite && c !== shadowOf.body); full.userData.far = far; far.visible = false; full.add(far);
     return full;
   };
   for (const v of VEHICLES) {
@@ -910,7 +1111,7 @@ async function loadVehicles() {
     const o = hero ? heroCar() : make(v.model === 'suv' ? 'suvfar' : v.model, v.tint);
     o.position.set(v.x, 0, v.z); o.rotation.y = v.rot; scene.add(o);
     if (hero) playCar = o;
-    if (v.hay) for (let i = 0; i < 3; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 1.0), hay); b.position.set(-0.9 - i * 0.6, 1.4, 0); b.castShadow = true; o.add(b); }
+    if (v.hay) { const b = new THREE.Mesh(mergeGeometries([0, 1, 2].map((i) => new THREE.BoxGeometry(0.5, 0.42, 1.0).translate(-0.9 - i * 0.6, 1.4, 0))), hay); b.castShadow = b.receiveShadow = true; o.add(b); }      // (three bales, one draw)
   }
   // at the grazing camp: the caravan on its flatbed, coupled to the tractor unit
   const C = LAYOUT.camp, rig = new THREE.Group();
@@ -919,7 +1120,11 @@ async function loadVehicles() {
   const head = make('tractor'); head.position.set(6.85, 0, 0); rig.add(head);
 }
 let playCar = null, play = null;
-loadVehicles().then(async () => {
+const vehiclesReady = loadVehicles();
+// the fixed shadows are built once the vehicles and terrain are in, or have failed (the yard's casters gave up their own
+// shadows when they were taken, so the build must run either way)
+Promise.allSettled([vehiclesReady, terrainReady]).then(() => bakeStaticShadows());
+vehiclesReady.then(async () => {
   const t = await terrainReady;
   play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root, phone,
     onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); ease.k = 1; controls.update(); measureHud(); } });      // (the HUD measured again: hidden in play, a turn of the phone there left its boxes stale)
@@ -994,6 +1199,8 @@ function tick(now) {
     if (playCar.userData.darkGlass === undefined) playCar.userData.darkGlass = !!playCar.getObjectByName('corner_FL');      // the private car's glass is dark: its interior shows only from the driver's seat or through the open door
     const darkGlass = playCar.userData.darkGlass, doorOpen = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
     if (cabin) cabin.visible = near && ((playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive') || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6));
+    const sb = playCar.userData.shadowBody;      // the body's shadow: the light one with the door shut, the exact one and the door's with it open
+    if (sb) { sb.lite.visible = near && !doorOpen; sb.exact.visible = near && doorOpen; if (sb.door) sb.door.visible = doorOpen; }
   }
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk
