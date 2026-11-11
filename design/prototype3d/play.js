@@ -422,7 +422,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (phys.s.slide) { right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, phys.s.slide * dt); }      // sliding down a side slope too steep to hold
     // ground too steep across the car (past about 40 degrees it would tip): it does not go there, as against a wall
     { right.crossVectors(fwd, UP); const e = geo.half, hl = ground(carState.pos.x - right.x * e, carState.pos.z - right.z * e), hr = ground(carState.pos.x + right.x * e, carState.pos.z + right.z * e);
-      if (Math.abs(hl - hr) > 2 * e * TIP) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.v = 0; phys.s.v = 0; } }
+      if (Math.abs(hl - hr) > 2 * e * TIP) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; carState.v = 0; phys.s.v = 0; phys.s.stuck = 0; } }      // (the turn undone too, and not counted as stuck: it is a slope, not sand)
     POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw;
     if (!settled) { phys.settle(POSE, env); settled = true; }
     phys.s.v = carState.v;

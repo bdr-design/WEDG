@@ -65,7 +65,9 @@ def flat():
         for n in [n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and n.image.depth <= 24]:      # (an image with no alpha read as alpha, here through a maths node: the exporter then kept a PNG copy beside the JPEG; Blender holds every image as 4 channels, so its file's depth tells)
             for l in list(n.outputs['Alpha'].links): m.node_tree.links.remove(l)
         if b.inputs['Alpha'].links and b.inputs['Alpha'].links[0].from_node.type == 'MATH' and not b.inputs['Alpha'].links[0].from_node.inputs[0].links:
-            m.node_tree.links.remove(b.inputs['Alpha'].links[0])                   # (the maths node, its image cut off, fed nothing)
+            mn = b.inputs['Alpha'].links[0].from_node                               # (the maths node, its image cut off: its factor, the lens's 0.565, becomes the alpha)
+            k = mn.inputs[1].default_value if mn.operation == 'MULTIPLY' else 1.0
+            m.node_tree.links.remove(b.inputs['Alpha'].links[0]); b.inputs['Alpha'].default_value = k
         for nm in ('Specular IOR Level', 'Specular Tint', 'Transmission Weight', 'IOR'):
             for l in list(b.inputs[nm].links): m.node_tree.links.remove(l)
         if not any(w in m.name for w in METALS):                                 # (the source's metallic 0.4-0.7 on leather and rubber, without its specular, read as dark metal)
