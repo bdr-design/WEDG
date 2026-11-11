@@ -1,11 +1,12 @@
 """The interior of an outside model, set in our hull (private use only: see thirdparty/README.md).
 thirdparty_cabin.py <model_in_car_frame.blend> <our suv.blend> <out.blend>
 The model is first put in our car's frame (its axles on ours, scaled by the wheelbase: see the commit). Here: the
-faces of its outside materials (paint, glass, lamps, tyres) are dropped; of the rest, an object is kept when most of
-it stands inside our hull (a point is inside when a ray from it to the cabin's middle crosses neither our body nor
-our glass). What is kept is joined into one object, tp_cabin, but for the driver's door's own trim (the parts under
+badges and name-plates go (thirdparty_car.py's lists); the faces of its outside materials (paint, glass, lamps,
+tyres) are dropped; of the rest, an object is kept when most of it stands inside the model's own outside
+(model_hull()). What is kept is joined into one object, tp_cabin, but for the driver's door's own trim (the parts under
 the model's FrontLeft_Door), joined apart as tp_doorcard: it swings open with the door."""
 import bpy, bmesh, sys, os, numpy as np
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 
@@ -16,15 +17,42 @@ EMBLEM_PARTS = ('polySurface469',)        # the steering wheel's emblem (chrome,
 CABIN_X, CABIN_Z = (-2.45, 1.10), 0.50          # an object's middle must be between the tailgate and the firewall, and over the floor
 
 
-def main(src, car, out):
-    bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); bpy.context.view_layer.update()
-    with bpy.data.libraries.load(os.path.abspath(car)) as (s, d): d.objects = [n for n in s.objects if n in ('body', 'glass', 'roof_glass')]
-    for o in d.objects: bpy.context.collection.objects.link(o)
-    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get()
-    hull = [BVHTree.FromObject(o, dg) for o in d.objects]; mids = [Vector((x, 0.0, 1.20)) for x in (0.4, -0.4, -1.3, -2.0)]
+def model_hull():
+    """inside(p): no face of the model's own outside (its paint, glass and lamps: OUTSIDE) between p and the cabin's
+    middle line. (Our code-built hull was used first: its shape is not this model's, and the tail lamps' housings, in
+    the body's pockets, read as inside it and were lost from both files.)"""
+    V, F = [], []
+    for o in [o for o in bpy.data.objects if o.type == 'MESH']:
+        mats = [i for i, s in enumerate(o.material_slots) if s.material and s.material.name.split('.')[0] in OUTSIDE]
+        if not mats: continue
+        mw = o.matrix_world; n0 = len(V); V += [mw @ v.co for v in o.data.vertices]
+        F += [[n0 + i for i in p.vertices] for p in o.data.polygons if p.material_index in mats]
+    tree = BVHTree.FromPolygons(V, F); mids = [Vector((x, 0.0, 1.20)) for x in (0.4, -0.4, -1.3, -2.0)]
     def inside(p):
         m = min(mids, key=lambda q: abs(q.x - p.x)); dv = m - p; L = dv.length
-        return L < 1e-6 or not any(t.ray_cast(p, dv / L, L)[0] is not None for t in hull)
+        return L < 1e-6 or tree.ray_cast(p, dv / L, L - 1e-4)[0] is None
+    return inside
+
+
+def inner_small(o, inside):
+    """A small part (under 30 cm) standing inside the model's own outside belongs to the interior whatever its
+    material: the inside mirror's glass (Mirror), the overhead console's lamps and lens (outside materials, which
+    otherwise sent them to the outside file, where the dark windscreen hid them, so they were in neither)."""
+    mw = o.matrix_world; P = [mw @ v.co for v in o.data.vertices]
+    if not P: return False
+    lo = Vector((min(p.x for p in P), min(p.y for p in P), min(p.z for p in P))); hi = Vector((max(p.x for p in P), max(p.y for p in P), max(p.z for p in P)))
+    c = (lo + hi) / 2
+    if max(hi - lo) > 0.3 or not (CABIN_X[0] < c.x < CABIN_X[1] and c.z > CABIN_Z): return False
+    sample = P[::max(1, len(P) // 20)]
+    return sum(inside(p) for p in sample) / len(sample) >= KEEP_SHARE
+
+
+def main(src, car, out):
+    bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); bpy.context.view_layer.update()
+    import thirdparty_car as TCAR
+    for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name.split('_')[0] in TCAR.BADGES + list(TCAR.PLATES.values())]: bpy.data.objects.remove(o)      # (the badges and the name-plates: none in this file either)
+   
+    inside = model_hull()
     def under(o, name):
         p = o.parent
         while p:
@@ -33,8 +61,9 @@ def main(src, car, out):
         return False
     kept = []
     for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name.split('_')[0] in EMBLEM_PARTS]: bpy.data.objects.remove(o)
-    for o in [o for o in bpy.data.objects if o.type == 'MESH' and o not in d.objects]:
+    for o in [o for o in bpy.data.objects if o.type == 'MESH']:
         me = o.data; bad = [i for i, s in enumerate(o.material_slots) if s.material and s.material.name.split('.')[0] in OUTSIDE]
+        if bad and inner_small(o, inside): bad = []                         # (an interior part of an outside material: the inside mirror's glass, the overhead lamps)
         if bad:
             bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index in bad], context='FACES')
             bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS'); bm.to_mesh(me); bm.free()

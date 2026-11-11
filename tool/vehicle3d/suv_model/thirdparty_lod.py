@@ -31,6 +31,64 @@ INSIDE = ('Fabric', 'White_Leather_Body', 'White_Leather_Seats', 'Plastic_Beige'
 CLEAR = ('Light_glass', 'GlassRed', 'Light_Red_Back')    # the lamps' see-through lenses (their materials' alpha 0.25-0.74): seen, but hiding nothing (the lamps' insides show through them)
 
 
+MERGE = {'Light_Red_Back_Lower': 'Light_Red_Back', 'RearMirror_Light': 'Light_White_Back'}      # two lamps of a few triangles each: drawn with their neighbours (two draws fewer)
+PANEL = 0.05                   # m^2: a loose part this big has its edges held in the thinning
+HOLD = [((-2.75, -2.25), (-0.18, 0.18), (0.95, 1.35))]          # boxes (x, y, z) whose paint is not thinned: the tailgate's emblem recess (thinned, its rim broke into a badge-like shard)
+
+
+def visible(obs, E, clear_names):
+    """lod_ext.visible's test, with the probes spread over a big face (one per 3 cm square, up to 36): a face seen only
+    through the grille's slots or the intakes' bars was missed by a test at its middle and corners, and the sky showed
+    through the grille."""
+    from mathutils.bvhtree import BVHTree
+    V, P, owner = [], [], []
+    for k, o in enumerate(obs):
+        mw = o.matrix_world; n0 = len(V); V += [mw @ v.co for v in o.data.vertices]; flip = mw.determinant() < 0
+        for p in o.data.polygons: P.append([n0 + i for i in (p.vertices[::-1] if flip else p.vertices)]); owner.append((k, p.index))
+    clear = {k for k, o in enumerate(obs) if any(w in o.name for w in clear_names)}
+    keep = [i for i, (k, _) in enumerate(owner) if k not in clear]
+    tree = BVHTree.FromPolygons(V, [P[i] for i in keep], epsilon=0.0); remap = {j: i for j, i in enumerate(keep)}; seen = [set() for _ in obs]
+    rng = np.random.default_rng(1)
+    for fi, (verts, (k, pi)) in enumerate(zip(P, owner)):
+        pts = [Vector(V[i]) for i in verts]; c = sum(pts, Vector()) / len(pts); n = (pts[1] - pts[0]).cross(pts[2] - pts[0])
+        if n.length < 1e-14: continue
+        area = n.length / 2; n.normalize()
+        probes = [c] + [q + (c - q) * 0.1 for q in pts]
+        m = int(min(36, area / 0.0009))
+        if m > 0:
+            for a, b in rng.random((m, 2)):
+                if a + b > 1: a, b = 1 - a, 1 - b
+                probes.append(pts[0] + (pts[1] - pts[0]) * a + (pts[2] - pts[0]) * b)
+        ok = False
+        for e in E:
+            for q in probes:
+                d = q - e; L = d.length
+                if n.dot(-d) <= 0: continue
+                h = tree.ray_cast(e, d / L, L + 1e-4)
+                if h[0] is None or remap.get(h[2]) == fi or (h[0] - q).length < 2e-4: ok = True; break
+            if ok: break
+        if ok: seen[k].add(pi)
+    return seen
+
+
+def held(o):
+    """A vertex group of what decimation must keep: the big parts' own edges (thinned, the edges between panels
+    opened into gaps: the arches' tops, the step bars, the bonnet's shut line) and the HOLD boxes' paint."""
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+    me = o.data; E = np.array([e.vertices[:] for e in me.edges]); nv = len(me.vertices)
+    k, lab = connected_components(coo_matrix((np.ones(len(E)), (E[:, 0], E[:, 1])), shape=(nv, nv)), directed=False) if len(E) else (1, np.zeros(nv, int))
+    bm = bmesh.new(); bm.from_mesh(me); mw = o.matrix_world; keep = set(); bm.faces.ensure_lookup_table()
+    area = np.zeros(k); np.add.at(area, [lab[f.verts[0].index] for f in bm.faces], [f.calc_area() for f in bm.faces])
+    for e in bm.edges:
+        if e.is_boundary and area[lab[e.verts[0].index]] > PANEL: keep.update(v.index for v in e.verts)      # (big panels only: every part's edges held left nothing to thin, 155k)
+    if o.name.split('.')[-1] == 'CarPaint':
+        for v in bm.verts:
+            p = mw @ v.co
+            if any(x[0] < p.x < x[1] and y[0] < p.y < y[1] and z[0] < p.z < z[1] for x, y, z in HOLD): keep.add(v.index)
+    bm.free(); g = o.vertex_groups.new(name='held'); g.add(sorted(keep), 1.0, 'REPLACE'); return len(keep)
+
+
 def hubs():
     """Each tyre's middle (the four objects of the tyres' material), by corner."""
     H = {}
@@ -75,6 +133,12 @@ def by_material(split):
         for o in members: o.data = o.data.copy() if o.data.users > 1 else o.data; o.select_set(True)
         bpy.context.view_layer.objects.active = members[0]; bpy.ops.object.transform_apply(location=True, rotation=True, scale=True); bpy.ops.object.join()
         ob = bpy.context.view_layer.objects.active; before = set(bpy.data.objects)
+        names = [sl.material.name if sl.material else '' for sl in ob.material_slots]
+        for i, nm in enumerate(names):
+            if nm in MERGE:
+                if MERGE[nm] in names:                                           # its faces to the neighbour's slot (one object after the split)
+                    j = names.index(MERGE[nm]); idx = np.array([p.material_index for p in ob.data.polygons]); idx[idx == i] = j; ob.data.polygons.foreach_set('material_index', idx)
+                else: ob.material_slots[i].material = bpy.data.materials[MERGE[nm]]
         bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.mesh.separate(type='MATERIAL'); bpy.ops.object.mode_set(mode='OBJECT')
         for o in [ob] + [o for o in bpy.data.objects if o not in before]:
             used = {p.material_index for p in o.data.polygons}
@@ -121,7 +185,7 @@ def main(src, out, target, far=False):
     before = sum(tri(o) for o in obs)
     for o in obs:
         bpy.context.view_layer.objects.active = o; m = o.modifiers.new('tri', 'TRIANGULATE'); m.keep_custom_normals = True; bpy.ops.object.modifier_apply(modifier='tri')
-    seen = LE.visible(obs, LE.eyes()[:-4], CLEAR + ('door_FL.',))          # (lod_ext's last four eyes are the seats')
+    seen = visible(obs, LE.eyes()[:-4], CLEAR + ('door_FL.',))          # (lod_ext's last four eyes are the seats')
     for o, s in zip(obs, seen):
         if o['group'] != 'body': continue
         bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table(); bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in s], context='FACES')
@@ -141,7 +205,8 @@ def main(src, out, target, far=False):
     for o in obs:
         k = floor[o.name] or r
         if k < 1:
-            bpy.context.view_layer.objects.active = o; m = o.modifiers.new('lod', 'DECIMATE'); m.ratio = k; m.use_collapse_triangulate = True; bpy.ops.object.modifier_apply(modifier='lod')
+            nh = held(o); bpy.context.view_layer.objects.active = o; m = o.modifiers.new('lod', 'DECIMATE'); m.ratio = k; m.use_collapse_triangulate = True
+            m.vertex_group = 'held'; m.invert_vertex_group = True; bpy.ops.object.modifier_apply(modifier='lod'); o.vertex_groups.clear()
     glass_out(obs)
     if not far: rig(obs, H)
     print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f)' % (before, total, sum(tri(o) for o in obs), len(obs), r))

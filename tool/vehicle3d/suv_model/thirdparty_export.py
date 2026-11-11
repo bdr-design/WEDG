@@ -1,7 +1,8 @@
 """A layer of the private car to the game's GLB. thirdparty_export.py <in.blend> <out.glb> <sharp side> [largest side: 1024; the far layer 256]
 - back faces culled (the model's parts are one-sided);
-- a texture whose faces all read one point of it (every UV the same: the lamps' reflector photos, a sticker) is
-  replaced by that point's colour (the photos carried a maker's mark; one texel needs no texture in memory);
+- a texture whose faces all read one point of it (every UV of the map it reads the same), or that hardly varies (the
+  leather's roughness maps), is replaced by that colour: a plain value needs no texture in memory; the UV maps no
+  texture reads are dropped; metallic only on the metals (METALS); a clear coat only on the paint;
 - byte-identical images merged into one;
 - no refraction pass and no physical extras but the paint's clear coat: transmission off (the red lenses keep their
   alpha), specular and IOR at glTF's defaults (three.js then uses its standard material, not the heavier physical one);
@@ -13,26 +14,48 @@ import bpy, sys, os
 SHARP = ('Buttons_baseColor',)
 
 
+METALS = ('Chrome', 'Metal', 'Mirror')        # the materials that are metal; the rest (leather, fabric, plastic, rubber, the trims' sheet) are not
+FLAT_SPREAD = 6 / 255                           # a texture varying less than this (its 1st to 99th percentile, every channel) is a plain value
+
+
+def tex_uv(me, n):
+    """The UV map an image node reads: its UV Map node's, else the mesh's render map."""
+    v = n.inputs['Vector']
+    if v.links and v.links[0].from_node.type == 'UVMAP' and v.links[0].from_node.uv_map: return me.uv_layers.get(v.links[0].from_node.uv_map)
+    return next((l for l in me.uv_layers if l.active_render), me.uv_layers.active)
+
+
 def flat():
-    """Textures read at one point only become that colour (see the docstring); the extensions trimmed."""
+    """Textures read at one point only, or nearly constant, become that colour (see the docstring); metal only where it
+    is metal; the extensions trimmed; the UV maps no texture reads dropped."""
     import numpy as np
+    def set_flat(m, n, c, why):
+        for l in list(n.outputs['Color'].links):
+            if l.to_socket.type == 'RGBA': l.to_socket.default_value = (*c[:3], 1.0)
+            m.node_tree.links.remove(l)
+        for l in list(n.outputs['Alpha'].links): m.node_tree.links.remove(l)
+        print('  flat colour for %s on %s (%.3f %.3f %.3f): %s' % (n.image.name, m.name, *c[:3], why))
+    pixels = {}
+    def px(im):
+        if im.name not in pixels: w, h = im.size; pixels[im.name] = np.array(im.pixels[:]).reshape(h, w, -1)
+        return pixels[im.name]
     for o in [o for o in bpy.data.objects if o.type == 'MESH']:
-        me = o.data; uv = me.uv_layers.active
-        if uv is None: continue
+        me = o.data; read = set()
         for i, sl in enumerate(o.material_slots):
             m = sl.material
             if not m or not m.node_tree: continue
-            U = np.array([uv.data[li].uv[:] for p in me.polygons if p.material_index == i for li in p.loop_indices])
-            if not len(U) or np.ptp(U, 0).max() > 1e-4: continue
-            for n in [n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image]:
-                im = n.image; w, h = im.size; px = np.array(im.pixels[:]).reshape(h, w, -1)
-                u, v = U[0] % 1.0, U[0][1] % 1.0; c = px[min(h - 1, int(U[0][1] % 1.0 * h)), min(w - 1, int(U[0][0] % 1.0 * w))]
-                for l in list(n.outputs['Color'].links):
-                    sock = l.to_socket
-                    if sock.type == 'RGBA': sock.default_value = (*c[:3], 1.0)
-                    m.node_tree.links.remove(l)
-                for l in list(n.outputs['Alpha'].links): m.node_tree.links.remove(l)
-                print('  flat colour for %s on %s (%.3f %.3f %.3f)' % (im.name, m.name, *c[:3]))
+            for n in [n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and n.outputs['Color'].links]:
+                uv = tex_uv(me, n)
+                if uv is None: continue
+                read.add(uv.name); a = px(n.image)
+                U = np.array([uv.data[li].uv[:] for p in me.polygons if p.material_index == i for li in p.loop_indices])
+                if len(U) and np.ptp(U, 0).max() < 1e-4:
+                    h, w = a.shape[:2]; set_flat(m, n, a[min(h - 1, int(U[0][1] % 1.0 * h)), min(w - 1, int(U[0][0] % 1.0 * w))], 'its faces read one point')
+                else:
+                    lo, hi = np.percentile(a[..., :3].reshape(-1, 3), [1, 99], axis=0)
+                    if (hi - lo).max() < FLAT_SPREAD: set_flat(m, n, a[..., :3].reshape(-1, 3).mean(0), 'nearly constant')
+        for l in [l for l in me.uv_layers if l.name not in read]:
+            if len(me.uv_layers) > 1 or not read: me.uv_layers.remove(l)
     for m in bpy.data.materials:
         b = next((n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None) if m.node_tree else None
         if not b: continue
@@ -40,6 +63,12 @@ def flat():
         b.inputs['Specular IOR Level'].default_value = 0.5; b.inputs['Specular Tint'].default_value = (1, 1, 1, 1); b.inputs['IOR'].default_value = 1.5
         for nm in ('Specular IOR Level', 'Specular Tint', 'Transmission Weight', 'IOR'):
             for l in list(b.inputs[nm].links): m.node_tree.links.remove(l)
+        if not any(w in m.name for w in METALS):                                 # (the source's metallic 0.4-0.7 on leather and rubber, without its specular, read as dark metal)
+            for l in list(b.inputs['Metallic'].links): m.node_tree.links.remove(l)
+            b.inputs['Metallic'].default_value = 0.0
+        if m.name != 'CarPaint':                                                  # (the paint's clear coat only: the one physical material)
+            for l in list(b.inputs['Coat Weight'].links): m.node_tree.links.remove(l)
+            b.inputs['Coat Weight'].default_value = 0.0
 
 
 def dedupe(used):

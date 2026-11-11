@@ -48,7 +48,8 @@ def main(src, car, out, tex):
     lens = bpy.data.materials.get('Light_glass'); lensed = 0
     for o in [o for o in bpy.data.objects if o.type == 'MESH' and any(sl.material == m for sl in o.material_slots)]:
         P = np.array([o.matrix_world @ v.co for v in o.data.vertices]); c = (P.min(0) + P.max(0)) / 2
-        if c[2] < 0.9 or c[0] > 1.5 or c[0] < -2.55:
+        s = P.max(0) - P.min(0)
+        if c[2] < 0.9 or c[0] > 1.5 or s.max() < 0.25 or (s[2] < 0.03 and s.max() < 0.4):      # low or ahead, small (a lamp's lens, a mirror's indicator), or a thin strip (the high stop lamp)
             for sl in o.material_slots:
                 if sl.material == m: sl.material = lens
             lensed += 1
@@ -64,23 +65,16 @@ def main(src, car, out, tex):
         bpy.data.objects.remove(o)
         f = 1 if n[0] > 0 else -1; centre = Vector((float((front @ n - (c @ n)) * n[0] + c[0]) + f * 0.001, 0.0, float(c[2])))
         PL._box('plate_' + side, centre, f, lean, pm)
-    # the interior's parts out
-    with bpy.data.libraries.load(os.path.abspath(car)) as (s, d): d.objects = [x for x in s.objects if x in ('body', 'glass', 'roof_glass')]
-    for x in d.objects: bpy.context.collection.objects.link(x)
-    bpy.context.view_layer.update(); dg = bpy.context.evaluated_depsgraph_get(); hull = [BVHTree.FromObject(x, dg) for x in d.objects]
-    mids = [Vector((x, 0.0, 1.20)) for x in (0.4, -0.4, -1.3, -2.0)]
-    def inside(p):
-        mm = min(mids, key=lambda q: abs(q.x - p.x)); dv = mm - p; L = dv.length
-        return L < 1e-6 or not any(tr.ray_cast(p, dv / L, L)[0] is not None for tr in hull)
+    # the interior's parts out (thirdparty_cabin.py's own rule, inside the model's own outside: the same parts go there)
+    bpy.context.view_layer.update(); inside = TC.model_hull();
     inner = 0
-    for o in [o for o in bpy.data.objects if o.type == 'MESH' and o not in d.objects and not o.name.startswith('plate_')]:
-        if any(s.material and s.material.name.split('.')[0] in TC.OUTSIDE for s in o.material_slots): continue
+    for o in [o for o in bpy.data.objects if o.type == 'MESH' and not o.name.startswith('plate_')]:
+        if any(s.material and s.material.name.split('.')[0] in TC.OUTSIDE for s in o.material_slots) and not TC.inner_small(o, inside): continue
         mw = o.matrix_world; pts = [mw @ v.co for v in o.data.vertices]
         if not pts: continue
         c = sum(pts, Vector()) / len(pts); sample = pts[::max(1, len(pts) // 40)]
         if TC.CABIN_X[0] < c.x < TC.CABIN_X[1] and c.z > TC.CABIN_Z and sum(inside(p) for p in sample) / len(sample) >= TC.KEEP_SHARE:
             bpy.data.objects.remove(o); inner += 1
-    for x in d.objects: bpy.data.objects.remove(x)
     tris = 0
     for o in bpy.data.objects:
         if o.type == 'MESH': o.data.calc_loop_triangles(); tris += len(o.data.loop_triangles)

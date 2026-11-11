@@ -5,7 +5,7 @@ thirdparty_tex.py <model's textures dir> <out dir>: writes cleaned copies; the m
   grain. The two discs that carry no lettering (rings only) are kept as they are.
 - Textures_A_baseColor and its roughness map: the car's name in letters (unused by any face, 11 Nov, but not left in
   the files) is painted over with each texture's own background.
-- Buttons_baseColor: the sound system maker's logo (on its button) painted out with the black background; the three
+- Buttons_baseColor: the sound system maker's logo (on its button) and the "HDMI" label painted out with the black background; the three
   screen pictures below the buttons (a phone's app icons, each an app's logo) made the plain dark display the
   screens have (thirdparty_clean.py).
 - Screens_emissive is the same sheet as Buttons (identical pixels), the screens' light: relink() points it at the
@@ -20,6 +20,7 @@ DISCS = (((1240, 1070), 220), ((910, 1376), 220))          # the plain discs: (c
 GRAIN = (slice(1750, 2040), slice(10, 300))                # a plain corner: the rubber's grain
 NAME_BOX, NAME_BG = (slice(2536, 2644), slice(838, 1698)), 19      # the name's box on Textures_A (of 4096) and its background
 LOGO_BOX = (slice(192, 240), slice(874, 942))                     # on Buttons (of 2048): the logo (lit pixels: rows 198-233, cols 880-936)
+HDMI_BOX = (slice(612, 638), slice(552, 618))                     # the "HDMI" label (a trademark; lit pixels: rows 618-632, cols 559-611)
 SCREENS_ROW, DISPLAY = 1610, (13, 17, 26)                         # the screens' pictures fill the rows below; the display's colour (sRGB of thirdparty_clean's)
 
 
@@ -46,7 +47,7 @@ def textures_a_mr(src, dst):
 
 
 def buttons(src, dst):
-    im = Image.open(src); a = np.array(im); a[LOGO_BOX][..., :3] = 0; a[SCREENS_ROW:][..., :3] = DISPLAY; Image.fromarray(a).save(dst)
+    im = Image.open(src); a = np.array(im); a[LOGO_BOX][..., :3] = 0; a[HDMI_BOX][..., :3] = 0; a[SCREENS_ROW:][..., :3] = DISPLAY; Image.fromarray(a).save(dst)
 
 
 def relink(out_dir):

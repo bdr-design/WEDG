@@ -1,5 +1,5 @@
 """The cabin's game layer (the owner's decision of 10 Nov: layered detail; the interior is loaded only while the player
-is inside, about 40k triangles). lod_cabin.py <cabin.blend> <out.blend> [target] [driver]
+is inside; the code-built car's about 40k triangles). lod_cabin.py <cabin.blend> <out.blend> [target] [driver]
 1. Faces no occupant can see are dropped: a face stays if one of its points (its middle or a corner pulled 5 % in)
    is in plain view, facing it, from one of the eyes in EYES (a box of positions round each seat's eye, so that a
    head turning and leaning is allowed for). The glass is opaque from outside, so nothing inside is seen from there.
@@ -17,8 +17,10 @@ def eyes(driver=False):
     import cabin as C
     out = []
     if driver:
-        cx, cy, cz = C.SEATED_EYE
-        for dx in (-0.20, -0.06, 0.08):
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        import thirdparty_rig as TR                                            # (the private car's own eye: its seat is not the code-built car's)
+        cx, cy, cz = TR.EYE
+        for dx in (-0.12, -0.04, 0.06):
             for dy in (-0.20, 0.0, 0.15):
                 for dz in (-0.10, 0.0, 0.08): out.append(Vector((cx + dx, cy + dy, cz + dz)))
         # and from outside the driver's door while it stands open (the player getting in or out, in the view from
@@ -40,8 +42,12 @@ DOOR_X = -0.65            # what the open driver's doorway shows: the cabin ahea
 def in_wheel(c):
     """Within the steering wheel's sweep (thirdparty_rig.py's measure: the column's axis through the pad, the rim's
     radius): as it turns it uncovers what it hid and shows its own sides, so there it hides nothing and keeps all."""
-    PAD, AX = Vector((0.417, 0.425, 1.259)), Vector((-0.872, 0.099, 0.479))          # (thirdparty_rig.py's PAD and its measured axis; DISC there)
-    d = (c - PAD).dot(AX); return -0.14 < d < 0.07 and ((c - PAD) - AX * d).length < 0.22
+    if not hasattr(in_wheel, 'k'):                                            # (once: thirdparty_rig.py's pad, axis and depth, DISC)
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        import thirdparty_rig as TR
+        in_wheel.k = (TR.PAD, Vector(TR.AXIS0).normalized(), TR.DISC)
+    PAD, AX, DISC = in_wheel.k
+    d = (c - PAD).dot(AX); return DISC[0] - 0.02 < d < DISC[1] and ((c - PAD) - AX * d).length < 0.23
 
 
 def visible_faces(obs, E, wheel=False):
