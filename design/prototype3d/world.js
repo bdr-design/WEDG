@@ -78,8 +78,9 @@ const tamariskTexture = () => canvasTex(256, 256, (g, w, h) => {
 // meshes laid on the ground that must follow the real terrain beyond the flat yard
 // cell sizes (game choice, measured 2026-11-11): one draw per cell, so larger cells mean fewer draws, but a cell near
 // the viewer is drawn whole (below), so larger cells also mean more grass drawn. 35 m grass and stone cells and 160 m
-// bush cells: the ground cover's draws in the drone view fall from 124 to 58, and the grass drawn stays as it was
-// (8.7k triangles there, against 8.8k with 25 m cells; 50 m cells drew 15k).
+// bush cells: the ground cover's draws in the drone view fall from 124 to 58, and the grass drawn grows by 20-46%
+// (the drone view 7.0k triangles to 8.7k, from the seat 5.0k to 7.3k; 50 m cells drew 17.4k): about 2k triangles of the
+// 400k budget, the price of nothing thinning near the viewer (the review measured it).
 const GRASS_CELL = 35, BUSH_CELL = 160, STONE_CELL = 35;
 export const DRAPE = [];
 // ground cover is cut into cells; each cell draws all, part or none of its instances by distance

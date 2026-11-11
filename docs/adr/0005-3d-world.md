@@ -163,7 +163,11 @@ higher than it was, since the near colour map is now sent with the first camel.
   bushes.
   - A cell whose nearest edge is within the first band is drawn whole, so
     nothing thins near the viewer. Further out, a cell is drawn by its
-    middle, as before, so the grass drawn stays as it was.
+    middle, as before. The grass drawn grows by 20 to 46% (the drone view
+    from 7.0k to 8.7k triangles, from the seat 5.0k to 7.3k), about 2k
+    triangles of the budget: the price of nothing thinning near the viewer
+    (an independent review measured it; this note first said it stayed as
+    it was).
   - Ground-cover draws in the drone view fell from 124 to 58.
   - Bush cells cast while any of them can lie in the sun's shadow square,
     tested along its real axes. On the ground that square stretches along the

@@ -66,7 +66,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$KCPW" "$KC" > /dev/null
           security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
           rm "$RUNNER_TEMP/cert.p12"
-          IDENTITY="$(security find-identity -v -p codesigning "$KC" | awk 'NR==1 {print $2}')"
+          IDENTITY="$(security find-identity -v -p codesigning "$KC" | awk '/^ *[0-9]+\)/ {print $2; exit}')"      # (the first numbered identity; with none the tool prints only "0 valid identities found"
           [ -n "$IDENTITY" ] || { echo "::error::No signing identity in the .p12 (is the password right, and does it hold the private key?)"; exit 1; }
 
           echo "$PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/profile.mobileprovision"
@@ -89,9 +89,8 @@ jobs:
           } >> "$GITHUB_ENV"
           {
             echo "### Signing"
-            echo "- Profile: $NAME ($METHOD), expires $EXPIRY"
-            echo "- Bundle ID: $BUNDLE, team $TEAM"
-            echo "- Devices in the profile: $DEVICES"
+            echo "- Signed for $METHOD install, the profile expires $EXPIRY"
+            echo "(The repository is public: the profile's name, team and devices are left out of this summary.)"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set the app's signing (Runner target only)

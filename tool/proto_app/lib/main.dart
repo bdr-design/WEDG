@@ -15,9 +15,15 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  runApp(const ProtoApp());
+}
+
+/// The server for the bundled files on the loopback address (an error on its
+/// socket is dropped: the app checks the server when it comes back to the front).
+Future<HttpServer> bindServer() async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-  server.listen(serveBundled);
-  runApp(ProtoApp(port: server.port));
+  server.listen(serveBundled, onError: (Object _) {});
+  return server;
 }
 
 /// The MIME type of a bundled file; module scripts need a JavaScript type.
@@ -44,7 +50,15 @@ String? assetFor(String requestPath) {
 
 Future<void> serveBundled(HttpRequest req) async {
   final res = req.response;
-  final asset = assetFor(Uri.decodeComponent(req.uri.path));
+  String? asset;
+  try {
+    asset = assetFor(Uri.decodeComponent(req.uri.path));
+  } catch (_) {
+    // a malformed escape such as /%FF: answered, and the connection closed
+    res.statusCode = HttpStatus.badRequest;
+    await res.close();
+    return;
+  }
   try {
     if (asset == null) throw const FormatException('outside the bundle');
     final data = await rootBundle.load(asset);
@@ -58,20 +72,74 @@ Future<void> serveBundled(HttpRequest req) async {
 }
 
 class ProtoApp extends StatefulWidget {
-  const ProtoApp({super.key, required this.port});
-
-  final int port;
+  const ProtoApp({super.key});
 
   @override
   State<ProtoApp> createState() => _ProtoAppState();
 }
 
-class _ProtoAppState extends State<ProtoApp> {
-  late final WebViewController _web = WebViewController()
+class _ProtoAppState extends State<ProtoApp> with WidgetsBindingObserver {
+  final WebViewController _web = WebViewController()
     ..setJavaScriptMode(JavaScriptMode.unrestricted)
-    ..setBackgroundColor(Colors.black)
-    // #fps shows the frame meter: frames a second, the slowest 1%, stutters.
-    ..loadRequest(Uri.parse('http://127.0.0.1:${widget.port}/index.html#fps'));
+    ..setBackgroundColor(Colors.black);
+  HttpServer? _server;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _start();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _server?.close(force: true);
+    super.dispose();
+  }
+
+  Future<void> _start() async {
+    await _server?.close(force: true);
+    final server = await bindServer();
+    _server = server;
+    // #fps shows the frame meter: frames a second, the slowest 1%, stutters,
+    // and the render-scale test.
+    await _web.loadRequest(Uri.parse('http://127.0.0.1:${server.port}/index.html#fps'));
+  }
+
+  // Back in front: if iOS took the server's socket or ended the page's process
+  // while the app was away, start again (the screen stayed black until the app
+  // was closed and opened again).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _check();
+  }
+
+  Future<void> _check() async {
+    final server = _server;
+    var alive = server != null;
+    if (server != null) {
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
+      try {
+        final req = await client.get('127.0.0.1', server.port, '/index.html');
+        final res = await req.close().timeout(const Duration(seconds: 2));
+        await res.drain<void>();
+        alive = res.statusCode == HttpStatus.ok;
+      } catch (_) {
+        alive = false;
+      } finally {
+        client.close(force: true);
+      }
+    }
+    if (alive) {
+      try {
+        await _web.runJavaScriptReturningResult('document.readyState').timeout(const Duration(seconds: 2));
+      } catch (_) {
+        alive = false;
+      }
+    }
+    if (!alive && mounted) await _start();
+  }
 
   @override
   Widget build(BuildContext context) => MaterialApp(

@@ -502,7 +502,7 @@ const printGeo = new THREE.PlaneGeometry(0.2, 0.3).rotateX(-Math.PI / 2);
 const printMat = new THREE.MeshBasicMaterial({ map: printTex, transparent: true, depthWrite: false });
 printMat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', '#if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )\n diffuseColor.a *= vColor.r;\n#endif'); };
 const PRINTS = 260, printMesh = new THREE.InstancedMesh(printGeo, printMat, PRINTS);
-printMesh.renderOrder = 1; printMesh.frustumCulled = false; scene.add(printMesh);
+printMesh.renderOrder = 2; printMesh.frustumCulled = false; scene.add(printMesh);      // (after the wheel tracks' decal, renderOrder 1: at the same order they sorted by depth and swapped as the camera moved)
 const prints = Array.from({ length: PRINTS }, () => ({ age: 999, x: 0, z: 0, h: 0 }));
 const printM = new THREE.Matrix4(), printQ = new THREE.Quaternion(), printP = new THREE.Vector3(), printS = new THREE.Vector3(1, 1, 1), fade = new THREE.Color();
 for (let i = 0; i < PRINTS; i++) { printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); printMesh.setColorAt(i, fade.setScalar(0)); }
@@ -1065,7 +1065,7 @@ let selectedRing = null, selected = null;
 function pick(c) {
   if (!selectedRing) {
     selectedRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.7, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#34bcaa', transparent: true, opacity: 0.95, depthWrite: false }));
-    selectedRing.renderOrder = 2; scene.add(selectedRing);
+    selectedRing.renderOrder = 3; scene.add(selectedRing);
   }
   selectedRing.visible = true; selected = c;
 }
@@ -1157,7 +1157,7 @@ const vehiclesReady = loadVehicles();
 const baked = Promise.allSettled([vehiclesReady, terrainReady]).then(() => bakeStaticShadows());
 vehiclesReady.then(async () => {
   const t = await terrainReady;
-  await baked;      // (the bake first, always: then nothing play adds can ever be taken for a fixed caster)
+  await baked.catch((e) => console.error(e));      // (the bake first, always: then nothing play adds can ever be taken for a fixed caster; a failed bake must not block play)
   play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root, phone,
     onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); ease.k = 1; controls.update(); measureHud(); } });      // (the HUD measured again: hidden in play, a turn of the phone there left its boxes stale)
   window.__play = play;
