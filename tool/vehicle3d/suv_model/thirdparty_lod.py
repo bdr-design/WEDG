@@ -32,8 +32,10 @@ CLEAR = ('Light_glass', 'GlassRed', 'Light_Red_Back')    # the lamps' see-throug
 
 
 MERGE = {'Light_Red_Back_Lower': 'Light_Red_Back', 'RearMirror_Light': 'Light_White_Back'}      # two lamps of a few triangles each: drawn with their neighbours (two draws fewer)
-PANEL = float(os.environ.get('TP_PANEL', 0.05))        # m^2: a loose part this big has its edges held in the thinning
-HOLD = [((-2.75, -2.25), (-0.18, 0.18), (0.95, 1.35))]          # boxes (x, y, z) whose paint is not thinned: the tailgate's emblem recess (thinned, its rim broke into a badge-like shard)
+PANEL = float(os.environ.get('TP_PANEL', 0.01))        # m^2: a loose part this big has its edges held in the thinning (0.05: 51k with gaps on the bonnet and the tailgate; 0.01: 66k; 0.002: 94k)
+FEW = int(os.environ.get('TP_FEW', 0))                   # a loose part of fewer triangles is kept whole (40 took the near layer to 110k: off)
+HOLD = [((-2.75, -2.25), (-0.18, 0.18), (0.95, 1.35))]
+HOLD_ALL = [((-2.2, -1.4), (-0.12, 0.12), (1.86, 2.1))]          # held whatever the material: the roof's antenna (thinned, it vanished)          # boxes (x, y, z) whose paint is not thinned: the tailgate's emblem recess (thinned, its rim broke into a badge-like shard)
 
 
 def visible(obs, E, clear_names):
@@ -80,12 +82,14 @@ def held(o):
     k, lab = connected_components(coo_matrix((np.ones(len(E)), (E[:, 0], E[:, 1])), shape=(nv, nv)), directed=False) if len(E) else (1, np.zeros(nv, int))
     bm = bmesh.new(); bm.from_mesh(me); mw = o.matrix_world; keep = set(); bm.faces.ensure_lookup_table()
     area = np.zeros(k); np.add.at(area, [lab[f.verts[0].index] for f in bm.faces], [f.calc_area() for f in bm.faces])
+    nf = np.zeros(k, int); np.add.at(nf, [lab[f.verts[0].index] for f in bm.faces], 1)
     for e in bm.edges:
-        if e.is_boundary and area[lab[e.verts[0].index]] > PANEL: keep.update(v.index for v in e.verts)      # (big panels only: every part's edges held left nothing to thin, 155k)
-    if o.name.split('.')[-1] == 'CarPaint':
-        for v in bm.verts:
-            p = mw @ v.co
-            if any(x[0] < p.x < x[1] and y[0] < p.y < y[1] and z[0] < p.z < z[1] for x, y, z in HOLD): keep.add(v.index)
+        if e.is_boundary and area[lab[e.verts[0].index]] > PANEL: keep.update(v.index for v in e.verts)
+    keep.update(int(i) for i in np.nonzero(nf[lab] < FEW)[0])            # small parts whole (the roof's antenna, the lamps' small pieces: thinned, they vanished or broke)      # (big panels only: every part's edges held left nothing to thin, 155k)
+    boxes = HOLD_ALL + (HOLD if o.name.split('.')[-1] == 'CarPaint' else [])
+    for v in bm.verts:
+        p = mw @ v.co
+        if any(x[0] < p.x < x[1] and y[0] < p.y < y[1] and z[0] < p.z < z[1] for x, y, z in boxes): keep.add(v.index)
     bm.free(); g = o.vertex_groups.new(name='held'); g.add(sorted(keep), 1.0, 'REPLACE'); return len(keep)
 
 
@@ -140,6 +144,25 @@ def group_of(o, H):
     return 'body'
 
 
+def one_uv(obs):
+    """Every part with one UV map, named UVMap: the one its textures read (a UV Map node's, else its render map).
+    Joined with parts whose maps were named otherwise, or that had none, a part's texture came to read a map of
+    zeros (the far tyres and the lamps' reflectors went flat)."""
+    for o in obs:
+        me = o.data; want = None
+        for sl in o.material_slots:
+            for n in (sl.material.node_tree.nodes if sl.material and sl.material.node_tree else ()):
+                if n.type == 'TEX_IMAGE' and n.inputs['Vector'].links and n.inputs['Vector'].links[0].from_node.type == 'UVMAP':
+                    want = me.uv_layers.get(n.inputs['Vector'].links[0].from_node.uv_map) or want
+        want = want or next((l for l in me.uv_layers if l.active_render), None) or (me.uv_layers[0] if len(me.uv_layers) else None)
+        for l in [l for l in me.uv_layers if l != want]: me.uv_layers.remove(l)
+        if want is None: me.uv_layers.new(name='UVMap')
+        else: me.uv_layers[0].name = 'UVMap'; me.uv_layers[0].active_render = True
+    for m in bpy.data.materials:
+        for n in (m.node_tree.nodes if m.node_tree else ()):
+            if n.type == 'UVMAP': n.uv_map = 'UVMap'
+
+
 def by_material(split):
     obs = [o for o in bpy.data.objects if o.type == 'MESH' and len(o.data.polygons)]
     bpy.context.view_layer.update()
@@ -154,6 +177,7 @@ def by_material(split):
     for o in [o for o in bpy.data.objects if o.type != 'MESH' or not len(o.data.polygons)]: bpy.data.objects.remove(o)
     H = hubs(); groups = {}
     for o in obs: groups.setdefault(('door_FL' if o.name in door else group_of(o, H)) if split else 'body', []).append(o)
+    one_uv(obs)
     out = []
     for g, members in groups.items():
         bpy.ops.object.select_all(action='DESELECT')
@@ -234,12 +258,14 @@ def main(src, out, target, far=False):
         k = floor[o.name] or r
         if k < 1:
             from mathutils.bvhtree import BVHTree
-            nh = held(o); orig = BVHTree.FromPolygons([v.co.copy() for v in o.data.vertices], [list(p.vertices) for p in o.data.polygons])
+            nh = held(o) if not far else 0; orig = BVHTree.FromPolygons([v.co.copy() for v in o.data.vertices], [list(p.vertices) for p in o.data.polygons])
             bpy.context.view_layer.objects.active = o; m = o.modifiers.new('lod', 'DECIMATE'); m.ratio = k; m.use_collapse_triangulate = True
-            m.vertex_group = 'held'; m.invert_vertex_group = True; bpy.ops.object.modifier_apply(modifier='lod'); o.vertex_groups.clear()
+            if not far: m.vertex_group = 'held'; m.invert_vertex_group = True
+            bpy.ops.object.modifier_apply(modifier='lod'); o.vertex_groups.clear()
             flipped += unflip(o, orig)
     glass_out(obs)
     if not far: rig(obs, H)
+    # (the far layer, seen beyond 20 m, holds no edges: they kept it at 52k)
     print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f); %d faces turned back after thinning' % (before, total, sum(tri(o) for o in obs), len(obs), r, flipped))
     for o in sorted(obs, key=lambda o: -culled[o.name])[:12]: print('  %-26s seen %6d -> %6d' % (o.name, culled[o.name], tri(o)))
     for k in CORNERS: print('  wheel_%s %d triangles, corner_%s %d' % (k, sum(tri(o) for o in obs if o['group'] == 'wheel_' + k), k, sum(tri(o) for o in obs if o['group'] == 'corner_' + k)))

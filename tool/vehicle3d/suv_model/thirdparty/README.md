@@ -37,9 +37,10 @@ What was changed (so the changed version is under the same licence):
     plus the door's trim (about 6k). Its 6600 small parts (buttons, rings) are kept whole, and so are the edges of
     its big panels: thinned with the rest, they broke into holes and slits. It loads in the background and is drawn
     only from the driver's seat or while the door stands open;
-  - the outside: a near layer of about 48k and a far layer of about 12k. That is one draw per material, plus the
-    wheels, the calipers and the driver's door, which are apart because they move. The big panels' edges and the
-    tailgate's emblem recess are held in the thinning;
+  - the outside: a near layer of about 66k and a far layer of about 12k. That is one draw per material, plus the
+    wheels, the calipers and the driver's door, which are apart because they move. The edges of parts over 0.01 m²,
+    the tailgate's emblem recess and the roof's antenna are held in the thinning. Faces the thinning turned over are
+    turned back. A dark panel stands behind the grille and the intakes, where the radiator is;
   - textures: at most 1K inside, 512 on the near outside and 256 on the far; roughness maps at 512. Textures that a
     face reads at one point only, or that hardly vary, become plain values. Identical images are merged. UV maps no
     texture reads are dropped;
@@ -66,8 +67,9 @@ artist's, measured on the near layer):
 | Tyre | 0.83 m across | 0.80 m (265/55R20; +3.5 %) |
 
 **Weight against the owner's budget:** on 10 Nov the owner chose about 40k triangles inside and about 40k outside
-near. This model needs more without holes: about 88k inside (drawn only from the driver's seat) and about 48k
-outside near. That is the owner's to confirm.
+near. This model needs more to have no holes: about 88k inside (drawn only from the driver's seat or through the
+open door) and about 66k outside near. At 48-51k the near layer showed the sky through the bonnet and the tailgate.
+That trade-off is the owner's to confirm.
 
 How it is made (from `../`): `BLENDPY=<python with bpy> sh thirdparty_build.sh <scene.gltf> suv.blend <work dir> <out dir>`
 (the out dir outside the repository: the built files are not committed; `thirdparty/*.glb` is ignored)

@@ -88,6 +88,9 @@ def dedupe(used):
 
 def main(src, out, sharp, most='1024'):
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); used = set()
+    tex = os.path.join(os.path.dirname(os.path.abspath(src)), 'tex')
+    if os.path.isdir(tex):                                                      # the cleaned textures (thirdparty_tex.py), applied again here: the last word on brand marks
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import thirdparty_tex as TX; TX.relink(tex)
     for m in {s.material for o in bpy.data.objects if o.type == 'MESH' for s in o.material_slots if s.material}:      # (what the meshes use: the GLB carries no other)
         m.use_backface_culling = True
         for n in (m.node_tree.nodes if m.node_tree else ()):
