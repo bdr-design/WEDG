@@ -79,8 +79,10 @@ in the code, and the numbers are in
   - `veh_suvcabin.json` (about 87k, 35 draws), the interior. It loads in the background a few seconds after the page, and is
     drawn only from the driver's seat or while the door stands open (the glass is dark from outside). It has a
     turning steering wheel and the door's trim (`doorcard_FL`), which swings with the door.
-  - `car_physics.js` does the ride and the sand (suspension, grip, sinking and digging, tyre pressure, low range,
-    traction control, gears, hill-start assist). Its numbers are in `docs/GDD.md` section 9.1.
+  - `car_physics.js` does the ride, the sand and the turning (suspension, grip, sinking and digging, tyre pressure,
+    low range, traction and stability control, gears, hill-start assist; the turning is a single-track model with
+    slip angles, so the car understeers, slides on sand and can be drifted with the stability control off). Its
+    numbers are in `docs/GDD.md` section 9.1.
 - **Shadows:**
   - Each camel's shadow comes from a lighter mesh.
   - Objects smaller than 30 cm cast none.

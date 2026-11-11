@@ -8,6 +8,8 @@ import { createCar, makeSoftness, LC300 } from './car_physics.js';
 const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;      // below this the tyres count as aired down
 const GEAR_TOP = [0, 18, 34, 52, 72, 96, 130];      // the rpm needle's simple gears: each one's top speed, km/h (allocated once)
 const TIP = Math.tan(40 / 57.3);  // the steepest side slope it goes onto (its static stability: track 1.63 m over twice a cg of 0.8 m, about 45 degrees, with a margin)
+const REVERSE_HOLD = 0.35;       // s: a pedal held this long with the car stopped takes the other gear (game choice)
+const STEER_RATE = 8;            // 1/s: how fast the front wheels follow the pad (a hand's quick turn of the wheel: 90% in about a quarter of a second; game choice)
 const STEER_RATIO = 15;          // the steering wheel's turn per road-wheel turn (the LC300's about 15-16: about 1.4 turns to lock here)
 // the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
 // changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the loading screen (farm.html)
@@ -94,7 +96,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const inYard = (x, z) => x > C.x0 - 12 && x < C.x1 + 12 && z > C.z0 - 12 && z < C.z1 + 25;
   const soft = makeSoftness(ground, inYard);
   const env = { height: ground, soft };
-  let settled = false, parked = true;                 // a car one gets into stands in park, as one left it
+  let settled = false, parked = true, shiftHold = 0;                 // a car one gets into stands in park, as one left it
   const BODY_CIRCLES = [[-1.55, 0, 1.02], [0, 0, 1.02], [1.55, 0, 1.02], [2.25, 0.72, 0.28], [2.25, -0.72, 0.28], [-2.2, 0.72, 0.28], [-2.2, -0.72, 0.28]];
   const PEDALS = { gas: 0, brake: 0 }, POSE = { x: 0, z: 0, yaw: 0 };      // (reused every frame)
   const needles = { speed: part('needle_speed'), rpm: part('needle_rpm') };
@@ -434,7 +436,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (keys.size) {
       gas = keys.has('KeyW') || keys.has('ArrowUp') ? 1 : gas; brake = keys.has('KeyS') || keys.has('ArrowDown') ? 1 : brake;
       steer = (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) - (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) || steer;
-      if (gas === 1 && pedal.gas < 1) analog = false;                          // (a key is on or off: the engine eases it in)
+      if ((gas === 1 && pedal.gas < 1) || (brake === 1 && pedal.brake < 1)) analog = false;                          // (a key is on or off: the engine eases it in)
     }
     if (job) {
       job.t += dt;
@@ -448,27 +450,33 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       }
     }
     driveCard();
-    // the pedals: gas drives the way the gear points (and brakes a car rolling the other way); the brake slows the car
-    // and holds it standing, on a slope too (the gear, D or R, is changed by its button while the car stands)
-    const way = phys.s.gear === 'R' ? -1 : 1, rolling = carState.v * way;
+    // The pedals go forward and back without the gear button (the owner's word: forward and back while driving). The
+    // right pedal goes forward and the left one back: in D the right is the gas and the left the brake; held with the
+    // car stopped, the left pedal takes reverse after REVERSE_HOLD and becomes the gas, the right one the brake, until
+    // the right is held at a stop and takes D again. The gear's button still changes it by hand. A pedal against the
+    // way the car rolls always brakes first. (A real automatic wants the lever moved: this is a game choice.)
+    const reversing = phys.s.gear === 'R';
+    const go = reversing ? brake : gas, stop = reversing ? gas : brake, way = reversing ? -1 : 1, rolling = carState.v * way;
     const ctl = PEDALS; ctl.gas = 0; ctl.brake = 0; ctl.analog = analog;
     if (gas || brake) parked = false;
-    if (job || parked) ctl.brake = 1;                                          // parked (got in, or the driver working outside) until a pedal is pressed
+    if (job || parked) { ctl.brake = 1; shiftHold = 0; }                       // parked (got in, or the driver working outside) until a pedal is pressed
     else {
-      if (gas) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = gas; }
-      if (brake) ctl.brake = Math.max(ctl.brake, brake);                                               // (both feet: the engine pulls against the brakes, each by how far it is pressed)
+      if (go) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = go; }
+      if (stop) ctl.brake = Math.max(ctl.brake, stop);                        // (both feet: the engine pulls against the brakes, each by how far it is pressed)
+      shiftHold = stop > 0.1 && go < 0.05 && Math.abs(carState.v) < 0.4 ? shiftHold + dt : 0;
+      if (shiftHold > REVERSE_HOLD) { phys.s.gear = reversing ? 'D' : 'R'; shiftHold = 0; driveCard(); }
     }
-    // steering: quick at walking pace, gentle at speed; it returns to centre on its own
-    const maxSteer = 0.6 / (1 + Math.abs(carState.v) / 9);
-    carState.steer += (steer * maxSteer - carState.steer) * Math.min(1, dt * 5);
+    // steering: the pad's travel is the whole lock at a crawl and, quicker, what takes the car to the tyres' grip there
+    // (car_physics.js's steerAsk); the hand follows it in about a quarter of a second, and it returns to centre on its own
+    carState.steer += (phys.steerAsk(steer, Math.abs(carState.v)) - carState.steer) * Math.min(1, dt * STEER_RATE);
     // move first (by the turn the tyres' grip allowed), then let the springs and the sand answer the ground there
     carState.yaw += phys.s.yawRate * dt;
     carFwd(carState.yaw, fwd);
     carState.pos.addScaledVector(fwd, carState.v * dt);
-    if (phys.s.slide) { right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, phys.s.slide * dt); }      // sliding down a side slope too steep to hold
+    { const side = phys.s.slide + phys.s.vlat; if (side) { right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, side * dt); } }      // sideways: sliding down a side slope too steep to hold, and the tyres' own slide in a turn
     // ground too steep across the car (past about 40 degrees it would tip): it does not go there, as against a wall
     { right.crossVectors(fwd, UP); const e = geo.half, hl = ground(carState.pos.x - right.x * e, carState.pos.z - right.z * e), hr = ground(carState.pos.x + right.x * e, carState.pos.z + right.z * e);
-      if (Math.abs(hl - hr) > 2 * e * TIP) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; carState.v = 0; phys.s.v = 0; phys.s.stuck = 0; } }      // (the turn undone too, and not counted as stuck: it is a slope, not sand)
+      if (Math.abs(hl - hr) > 2 * e * TIP) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; carState.v = 0; phys.s.v = 0; phys.s.vyL = phys.s.r = 0; phys.s.stuck = 0; } }      // (the turn undone too, and not counted as stuck: it is a slope, not sand)
     POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw;
     if (!settled) { phys.settle(POSE, env); settled = true; }
     phys.s.v = carState.v;
@@ -483,7 +491,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
     // the yard's walls and posts: a car meeting one stops (a hard knock rebounds a little and pitches the body);
     // pressing on into it, it stays put
-    if (hit) { const v0 = carState.v; carState.v = Math.abs(v0) > 3 ? -0.1 * v0 : 0; phys.s.v = carState.v; phys.s.vp -= v0 * 0.04; }
+    if (hit) { const v0 = carState.v; carState.v = Math.abs(v0) > 3 ? -0.1 * v0 : 0; phys.s.v = carState.v; phys.s.vp -= v0 * 0.04; phys.s.vyL *= 0.2; phys.s.r *= 0.2; }      // (the knock takes the slide and most of the spin too)
     // the body on its springs: height, pitch and roll from car_physics.js; each corner rides its own spring
     right.crossVectors(fwd, UP);
     carState.pitch = phys.s.pitch; carState.roll = phys.s.roll; carState.pos.y = phys.originY();
@@ -504,11 +512,11 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (needles.rpm) {
       const kmh = Math.abs(carState.v) * 3.6; let gear = 1; while (gear < 7 && kmh >= GEAR_TOP[gear]) gear++;
       const lo = GEAR_TOP[gear - 1], hi = gear < 7 ? GEAR_TOP[gear] : 220;
-      const rpm = 750 + (kmh - lo) / Math.max(1, hi - lo) * 2600 + gas * 400;
+      const rpm = 750 + (kmh - lo) / Math.max(1, hi - lo) * 2600 + PEDALS.gas * 400;
       needles.rpm.quaternion.copy(needleBase.rpm).multiply(qTmp.setFromAxisAngle(XAXIS, -Math.min(1, rpm / 8000) * 4.712));
     }
     // dust from the rear wheels when moving on sand
-    const spinning = phys.s.slip * phys.s.thr;
+    const spinning = phys.s.slip * phys.s.thr + Math.max(0, Math.abs(phys.s.beta) - 0.12) * 2;      // wheels spinning, or the tail sliding
     puffT += dt * Math.min(1, Math.abs(carState.v) / 6 + spinning * 2);
     let softNow = 0; for (const w of phys.wheels) softNow += w.soft / 4;
     if (softNow > 0.3 && (Math.abs(carState.v) > 2 || spinning > 0.05) && puffT > 0.08) {      // dust only off the beaten ground, where there is loose sand to raise
