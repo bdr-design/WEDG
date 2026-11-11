@@ -206,6 +206,55 @@ higher than it was, since the near colour map is now sent with the first camel.
 - **Not yet measured on a real phone.** All figures come from headless
   Chromium with a software GPU, so frame times there are not a phone's.
 
+## Measured again (prototype, 2026-11-12)
+
+The player's car is now ours (the owner's choice of 11 Nov), with a driver's
+door that swings and a steering wheel that turns, and each camera draws only
+what it can see of it. Measured the same way, at 844 × 390:
+
+| View | 11 Nov (our car, first build) | Now |
+|---|---|---|
+| Map, drone view | 183 / 273k | 183 / 273k |
+| On foot, by the car | 154 / 403k | 167 / 394k |
+| In the car, from the seat | 139 / 449k | 145 / 361k |
+| In the car, from behind | 166 / 411k | 189 / 404k |
+| In the car, out on the sand | 63 / 233k | 84 / 226k |
+
+**What made the difference:**
+- **Each view draws what it can see** (tool/vehicle3d/suv_model/ours_game.py,
+  view_split). Every material's faces are sorted by whether the seated
+  driver's eyes see them, past the cabin and through the glass, and whether
+  the chase camera's places see them (a fan of 50 degrees either side behind,
+  1.6 to 2.6 m up). The seat view leaves 89k triangles of the near layer
+  undrawn. The view from behind leaves 10k. The pictures match the old ones
+  within 0.2% of pixels; the difference is the herd moving and the number
+  plates, which now show their image.
+- **The cabin is rebuilt from the full cabin** with the wheel and the door's
+  trim apart: 53k triangles in three draws. It is culled from the seats' eyes
+  and from the open doorway, since the door now opens.
+- **The door** costs 7 draws (its materials) and 9k triangles, moved out of
+  the body.
+
+**Still over:**
+- **From behind: 404k triangles, 1% over.** The car is 143k of it, the yard
+  116k, the shadow pass 82k (59k of it the fixed casters), the camels 30k.
+  Lighter than this from behind would mean a coarser car up close, which the
+  owner turned down when he chose this car, so it is his call. Two smaller
+  options: the grass's near band back to its old size (about 1.5k here), or a
+  cached map for the fixed casters' shadows (59k from every frame that redraws
+  the shadow map; real engine work).
+
+**The frame meter and the GPU question (FSR1).** The meter (#fps, on in the
+iPhone app) sorted every frame time of the session once a second. On a
+phone, after some minutes, that took a few ms and made one slow frame a
+second: near 2% of frames, so the "slowest 1%" the owner read (23-24 ms) was
+partly the meter's own. It now keeps a histogram. After its warm-up it also
+runs a 24 s test on the owner's phone, alternating the full render scale and
+70% every 4 s, and shows the typical and slowest-1% frame times for each. If
+70% is much quicker, the GPU is the limit and a lower render scale with an
+upscaler such as FSR1 would help. If not, it would not. FSR1 waits on that
+number from his phone.
+
 ## Spike (must pass before this is accepted)
 
 The spike is a throwaway app, outside the repo. It must show:
