@@ -3,8 +3,8 @@ thirdparty_tex.py <model's textures dir> <out dir>: writes cleaned copies; the m
 - Wheel_baseColor: the tyre's sidewall carries the tyre maker's name, the tyre's line and the car maker's logo. Below
   the tread band (rows past TREAD of 2048) all of it is replaced by plain rubber: the plain corner's own colour and
   grain. The two discs that carry no lettering (rings only) are kept as they are.
-- Textures_A_baseColor: the car's name in letters (unused by any face, 11 Nov, but not left in the file) is painted
-  over with the texture's own background.
+- Textures_A_baseColor and its roughness map: the car's name in letters (unused by any face, 11 Nov, but not left in
+  the files) is painted over with each texture's own background.
 - Buttons_baseColor: the sound system maker's logo (on its button) painted out with the black background; the three
   screen pictures below the buttons (a phone's app icons, each an app's logo) made the plain dark display the
   screens have (thirdparty_clean.py).
@@ -39,6 +39,12 @@ def textures_a(src, dst):
     im = Image.open(src); a = np.array(im); a[NAME_BOX][..., :3] = NAME_BG; Image.fromarray(a).save(dst)
 
 
+def textures_a_mr(src, dst):
+    """The same name is in the roughness map (also the occlusion), at the same place: painted over with the colour
+    round it."""
+    a = np.array(Image.open(src).convert('RGB')); r, c = NAME_BOX; a[NAME_BOX] = a[r.start - 6, c.start - 6]; Image.fromarray(a).save(dst)
+
+
 def buttons(src, dst):
     im = Image.open(src); a = np.array(im); a[LOGO_BOX][..., :3] = 0; a[SCREENS_ROW:][..., :3] = DISPLAY; Image.fromarray(a).save(dst)
 
@@ -47,6 +53,7 @@ def relink(out_dir):
     """In the open .blend: the image nodes reading a texture cleaned here read the clean copy (packed into the file)."""
     import bpy
     for fn, olds in (('Wheel_baseColor.png', ('Wheel_baseColor',)), ('Textures_A_baseColor.png', ('Textures_A_baseColor',)),
+                     ('Textures_A_metallicRoughness.png', ('Textures_A_metallicRoughness',)),
                      ('Buttons_baseColor.png', ('Buttons_baseColor', 'Screens_emissive'))):
         new = bpy.data.images.load(os.path.join(os.path.abspath(out_dir), fn)); new.pack()
         for m in bpy.data.materials:
@@ -60,6 +67,7 @@ def main(src_dir, out_dir):
     wheel(os.path.join(src_dir, 'Wheel_baseColor.png'), os.path.join(out_dir, 'Wheel_baseColor.png'))
     textures_a(os.path.join(src_dir, 'Textures_A_baseColor.png'), os.path.join(out_dir, 'Textures_A_baseColor.png'))
     buttons(os.path.join(src_dir, 'Buttons_baseColor.png'), os.path.join(out_dir, 'Buttons_baseColor.png'))
+    textures_a_mr(os.path.join(src_dir, 'Textures_A_metallicRoughness.png'), os.path.join(out_dir, 'Textures_A_metallicRoughness.png'))
 
 
 if __name__ == '__main__':

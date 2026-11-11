@@ -27,16 +27,23 @@ Credit line, wherever the game shows its credits:
 What was changed (so the changed version is under the same licence):
 - Set in our car's frame: its axles on ours, scaled by the spec's wheelbase.
 - No brand marks: the badges (grille, tailgate, the tailgate's name in letters and its two small badges, the left
-  front door's badge, the wheel caps) and the steering wheel's emblem dropped (its opening in the pad filled flat); the plates (each reading the car's
-  name) replaced by our Saudi plates; the tyres' sidewall lettering and logo, the sound system's logo, the car's name
+  front door's badge, the wheel caps) and the steering wheel's emblem dropped (the pad's plain
+  recess it sat in shows); the plates (each reading the car's name) replaced by our Saudi plates; the tyres' sidewall lettering and logo, the sound system's logo, the car's name
   and the screens' pictures (app icons) taken off the textures; the screens made plain dark displays.
 - Paint black gloss; all glass opaque black gloss.
 - Split in two: the interior (the cabin's parts; loaded only while the player is inside) and the outside (the rest).
-- Faces nobody can see dropped (the interior: from the seats; the outside: from round the car, above it and the
-  seats), then thinned for the phone: the interior to about 114k triangles (its 8230 small parts, buttons and rings,
-  kept whole: thinned with the rest they broke into holes), the outside to a near layer of about 40k and a far layer
-  of about 12k (one draw per material). Textures at most 1K (the switches' sheet 2K inside), the roughness maps 512.
+- Faces nobody can see dropped, then thinned for the phone:
+  - the interior: what the driver sees from the seat, and what the open driver's door shows, about 98k triangles
+    (its 6800 small parts, buttons and rings, kept whole: thinned with the rest they broke into holes); loaded when
+    the player comes to the car and drawn only from the driver's seat or while the door stands open;
+  - the outside: a near layer of about 48k and a far layer of about 12k (one draw per material);
+  - textures at most 1K inside, 512 on the near outside, 256 on the far; roughness maps 512; a texture read at one
+    point only made a flat colour; identical images merged.
+- Moving parts for the game: the four wheels on their own corners (for the springs and the steering), the steering
+  wheel on its column's measured axis, and the driver's door with its trim on the model's own hinge.
+- The glass's faces turned into the cabin dropped (from inside the game sees out through the glass).
 
-How it is made (from `../`): `sh thirdparty_build.sh <scene.gltf> suv.blend <work dir> thirdparty`
+How it is made (from `../`): `BLENDPY=<python with bpy> sh thirdparty_build.sh <scene.gltf> suv.blend <work dir> <out dir>`
+(the out dir outside the repository: the built files are not committed; `thirdparty/*.glb` is ignored)
 (thirdparty_frame.py, thirdparty_tex.py, thirdparty_cabin.py, interior/lod_cabin.py, thirdparty_clean.py,
-thirdparty_car.py, thirdparty_lod.py, thirdparty_export.py). It writes `lc300_interior.glb`, `lc300_near.glb` and `lc300_far.glb`.
+thirdparty_car.py, thirdparty_lod.py, thirdparty_rig.py, thirdparty_export.py). It writes `lc300_interior.glb`, `lc300_near.glb` and `lc300_far.glb`.

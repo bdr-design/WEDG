@@ -21,6 +21,10 @@ def eyes(driver=False):
         for dx in (-0.20, -0.06, 0.08):
             for dy in (-0.20, 0.0, 0.15):
                 for dz in (-0.10, 0.0, 0.08): out.append(Vector((cx + dx, cy + dy, cz + dz)))
+        # and from outside the driver's door while it stands open (the player getting in or out, in the view from
+        # behind): these see only the front of the cabin (DOOR_X), the open doorway's view
+        for x in (-0.4, 0.2, 0.8):
+            for z in (1.0, 1.5, 1.9): out.append((Vector((x, 2.2, z)), DOOR_X))
         return out
     for cx, cy, cz in (C.SEATED_EYE, (C.SEATED_EYE[0], -C.SEATED_EYE[1], C.SEATED_EYE[2]), (-0.20, 0.0, 1.52), (-1.0, 0.44, 1.52), (-1.0, 0.0, 1.50), (-1.0, -0.44, 1.52)):      # (and between the front seats: a head leaning in)
         for dx in (-0.12, 0.0, 0.12):
@@ -30,25 +34,44 @@ def eyes(driver=False):
     return out
 
 
-def visible_faces(obs, E):
-    """For each object, the set of its polygon indices seen from some eye."""
+DOOR_X = -0.65            # what the open driver's doorway shows: the cabin ahead of this
+
+
+def in_wheel(c):
+    """Within the steering wheel's sweep (thirdparty_rig.py's measure: the column's axis through the pad, the rim's
+    radius): as it turns it uncovers what it hid and shows its own sides, so there it hides nothing and keeps all."""
+    PAD, AX = Vector((0.417, 0.425, 1.259)), Vector((-0.872, 0.099, 0.479))          # (thirdparty_rig.py's PAD and its measured axis; DISC there)
+    d = (c - PAD).dot(AX); return -0.14 < d < 0.07 and ((c - PAD) - AX * d).length < 0.22
+
+
+def visible_faces(obs, E, wheel=False):
+    """For each object, the set of its polygon indices seen from some eye (an eye may be (point, least x): it sees only
+    faces ahead of that). wheel: the steering wheel turns (in_wheel), and the door's trim (tp_doorcard) swings: both
+    hide nothing and keep every face."""
     V, P, owner = [], [], []
     for k, o in enumerate(obs):
         mw = o.matrix_world; n0 = len(V); V += [mw @ v.co for v in o.data.vertices]
         flip = mw.determinant() < 0                      # a mirrored object: its faces wind the other way in the car's frame
         for p in o.data.polygons: P.append([n0 + i for i in (p.vertices[::-1] if flip else p.vertices)]); owner.append((k, p.index))
-    tree = BVHTree.FromPolygons(V, P, epsilon=0.0); seen = [set() for _ in obs]
+    swing = {k for k, o in enumerate(obs) if o.name.startswith('tp_doorcard')}
+    turn = [wheel and (owner[i][0] in swing or in_wheel(sum((Vector(V[j]) for j in f), Vector()) / len(f))) for i, f in enumerate(P)]
+    keep = [i for i, t in enumerate(turn) if not t]; remap = {j: i for j, i in enumerate(keep)}
+    tree = BVHTree.FromPolygons(V, [P[i] for i in keep], epsilon=0.0); seen = [set() for _ in obs]
     for fi, (verts, (k, pi)) in enumerate(zip(P, owner)):
+        if turn[fi]: seen[k].add(pi); continue
         pts = [Vector(V[i]) for i in verts]; c = sum(pts, Vector()) / len(pts); probes = [c] + [q + (c - q) * 0.05 for q in pts[:4]] + [(pts[i] + pts[(i + 1) % len(pts)]) * 0.5 * 0.95 + c * 0.05 for i in range(min(4, len(pts)))]
         n = (pts[1] - pts[0]).cross(pts[2] - pts[0]);
         if n.length < 1e-12: continue
         n.normalize(); hit = False
         for e in E:
+            if isinstance(e, tuple):
+                if c.x < e[1]: continue
+                e = e[0]
             for q in probes:
                 d = q - e; L = d.length
                 if L < 1e-6 or n.dot(-d) <= 0: continue          # seen from behind: does not count (back faces are culled in the game)
                 h = tree.ray_cast(e, d / L, L + 1e-4)
-                if h[2] == fi or (h[0] is not None and (h[0] - q).length < 1e-4): hit = True; break
+                if (h[2] is not None and remap[h[2]] == fi) or h[0] is None or (h[0] is not None and (h[0] - q).length < 1e-4): hit = True; break
             if hit: break
         if hit: seen[k].add(pi)
     return seen
@@ -62,7 +85,7 @@ if __name__ == '__main__':
     for o in obs:          # triangles first: a long curved face (the door's wood) can have every test point outside it
         bpy.context.view_layer.objects.active = o; m = o.modifiers.new('tri', 'TRIANGULATE'); m.keep_custom_normals = True; m.quad_method = 'BEAUTY'; m.ngon_method = 'BEAUTY'
         bpy.ops.object.modifier_apply(modifier='tri')
-    seen = visible_faces(obs, eyes(driver))
+    seen = visible_faces(obs, eyes(driver), wheel=driver)
     for o, s in zip(obs, seen):
         bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table()
         bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in s], context='FACES'); bm.to_mesh(o.data); bm.free()

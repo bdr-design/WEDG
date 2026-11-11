@@ -70,12 +70,17 @@ in the code, and the numbers are in
   instanced.
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)
   and a 2048 px satellite image.
-- **The player's SUV:** the completed photo model (`veh_suvfull.json`, from
-  `assets_src/vehicles/suv_full.glb`, about 97k triangles with its cabin) is
-  shown within 20 m or while driving. Beyond that, the 12k model of the same
-  hull is shown (`veh_suvfar.json`), wearing the same paint. `play.js` reads
-  the axles, track and tyre size from the model's wheels, the first-person eye
-  from its `eye` and `eye_look` empties, and moves the cluster needles.
+- **The player's SUV:** the private car built from a downloaded model (see
+  `tool/vehicle3d/suv_model/thirdparty/README.md`: private use only, its licence and credit there).
+  - `veh_suvfull.json` (about 48k triangles) within 20 m or while driving, with the wheels on their own corners
+    (`corner_XX` rides and steers, `wheel_XX` spins), the driver's door on its hinge (`door_FL`), and the
+    first-person eye (`eye`, `eye_look`).
+  - `veh_suvfar.json` (about 12k) beyond 20 m.
+  - `veh_suvcabin.json` (about 100k), the interior. It loads in the background a few seconds after the page, and is
+    drawn only from the driver's seat or while the door stands open (the glass is dark from outside). It has a
+    turning steering wheel and the door's trim (`doorcard_FL`), which swings with the door.
+  - `car_physics.js` does the ride and the sand (suspension, grip, sinking and digging, tyre pressure, low range,
+    traction control, gears, hill-start assist). Its numbers are in `docs/GDD.md` section 9.1.
 - **Shadows:**
   - Each camel's shadow comes from a lighter mesh.
   - Objects smaller than 30 cm cast none.

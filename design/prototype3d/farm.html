@@ -164,7 +164,9 @@
   .pl-pedals .gas { height: 112px; }
   .play button.on { background: rgba(255,255,255,.85) !important; color: #20160c; }
   .pl-card { position: absolute; translate: -50% -100%; display: flex; gap: 6px; padding: 5px; border-radius: 24px; pointer-events: auto; }
-  .pl-card.docked { position: absolute; top: calc(var(--edge-t, 12px) + 58px); left: 50%; translate: -50% 0; }
+  .pl-card.docked { position: absolute; top: calc(var(--edge-t, 12px) + 58px); left: 50%; translate: -50% 0; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 32px); }
+  .pl-card button small { font-weight: 500; opacity: .75; font-size: 12px; }
+  .pl-busy { align-self: center; padding-inline: 10px; font-weight: 700; font-size: 14px; color: #fff; }
   .pl-card button { height: 40px; border-radius: 20px; padding-inline: 16px; font-weight: 700; font-size: 14px; background: rgba(255,255,255,.16); }
   .pl-card button.pri { background: #fff; color: #1f160d; }
 </style>
@@ -362,7 +364,8 @@ const LOD_D = [16, 48];
 
 async function loadLod(file) {
   const { glb } = await (await fetch(file)).json();
-  const bin = Uint8Array.from(atob(glb), (c) => c.charCodeAt(0));
+  const str = atob(glb), bin = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) bin[i] = str.charCodeAt(i);          // (a plain loop: Uint8Array.from with a callback took about 0.5 s for the 6.5 MB interior)
   return new GLTFLoader().parseAsync(bin.buffer, '');
 }
 const coatMats = new Map();
@@ -879,8 +882,10 @@ async function loadVehicles() {
     const full = models.suvfull.clone(true), far = models.suvfar.clone(true);
     let paint = null;
     // only the outer skin, lamps and wheels cast: the cabin, its linings and the glass are inside or see-through
-    full.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = /_paint$|_light$|tyre|rim_photo|barrel|^trim$/.test(n.material.name); if (!paint && /_paint$/.test(n.material.name)) paint = n.material; } });
-    far.traverse((n) => { if (n.isMesh) { if (paint) n.material = paint; n.castShadow = true; n.receiveShadow = true; } });
+    // (the private car: everything of its outside but the glass, the plates and what lies under the skin)
+    const casts = (m) => /_paint$|_light$|tyre|rim_photo|barrel|^trim$|^CarPaint$|^BlackPlastic|^Chrome$|^Wheel$|^MetalBlack$/.test(m.name);
+    full.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = casts(n.material); if (!paint && /_paint$/.test(n.material.name)) paint = n.material; } });
+    far.traverse((n) => { if (n.isMesh) { if (paint && /_paint$/.test(n.material.name)) n.material = paint; n.castShadow = true; n.receiveShadow = true; } });
     full.userData.nearParts = [...full.children]; full.userData.far = far; far.visible = false; full.add(far);
     return full;
   };
@@ -967,8 +972,10 @@ function tick(now) {
       playCar.userData.far.visible = !near;
     }
     // the cabin (about 20 draws) only when it can be seen: from the driver's seat, or close enough to look in
-    const cabin = playCar.userData.cabin || (playCar.userData.cabin = playCar.getObjectByName('interior'));
-    if (cabin && near) cabin.visible = (playing && play.debug.state.view === 1) || camera.position.distanceTo(playCar.position) < 6;
+    const cabin = playCar.userData.cabin || (playCar.userData.cabin = (play?.model.interior || (playCar.userData.darkGlass ? null : playCar.getObjectByName('interior'))));
+    if (playCar.userData.darkGlass === undefined) playCar.userData.darkGlass = !!playCar.getObjectByName('corner_FL');      // the private car's glass is dark: its interior shows only from the driver's seat or through the open door
+    const darkGlass = playCar.userData.darkGlass, doorOpen = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
+    if (cabin && near) cabin.visible = (playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive') || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6);
   }
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk

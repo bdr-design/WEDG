@@ -3,23 +3,32 @@ thirdparty_lod.py <outside.blend> <out.blend> <target triangles> [far]
 1. The model's hundreds of parts become one object per material (one draw each), their shading kept. In the near
    layer the wheels are apart, for the suspension and the steering: per corner, corner_XX (at the hub; it rises and
    falls with the suspension and the front ones steer) holds the brake caliper and wheel_XX (at the hub too; it spins)
-   holds the tyre, the rim, the disc and the wheel nuts.
+   holds the tyre, the rim, the disc and the wheel nuts. The driver's door (the model's FrontLeft_Door: skin, glass,
+   handle, mirror) is apart too, door_FL.*, for the door to open (thirdparty_rig.py hangs it on its hinge).
 2. Faces nobody sees go: lod_ext.py's test from its ring of eyes round the car and above it (not from the seats: the
    glass is dark, and inside the interior's own file covers what the seats see). The wheels keep every face (they
-   turn: a face hidden at one turn shows at the next).
+   turn: a face hidden at one turn shows at the next), and so does the driver's door, which hides nothing (it opens:
+   the doorway's jambs behind it stay).
 3. What is left is thinned toward the target (collapse decimation), each material with its least share: the lamps
-   and the tyres' texture keep more (they read close up), the plates are kept whole; each wheel to about WHEEL."""
+   and the tyres' texture keep more (they read close up), the plates are kept whole; each wheel to about WHEEL.
+4. The glass's faces turned toward the cabin go (glass_out())."""
 import bpy, bmesh, sys, os, numpy as np
 from mathutils import Vector, Matrix
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lod_ext as LE
 
-NEAR = {'plate': 1.0, 'Wheel': 1.0, 'Textures_A': 1.0, 'Front_Light': 0.6, 'Light_glass': 0.5, 'Light_Red_Back': 0.6, 'GlassRed': 0.6,
-        'Light_White_Back': 0.5, 'BackSpotLight': 0.5, 'SpotLight': 0.5, 'ClearGlass': 0.35, 'Mirror': 0.5, 'RearMirror_Light': 0.5}
+NEAR = {'plate': 1.0, 'Wheel': 1.0, 'Textures_A': 1.0, 'CarPaint': 0.10, 'Chrome': 0.12, 'BlackPlastic_Shiny': 0.07, 'MetalBlack': 0.025, 'Front_Light': 0.5, 'Light_glass': 0.35, 'Light_Red_Back': 0.35, 'GlassRed': 0.35,
+        'Light_White_Back': 0.35, 'BackSpotLight': 0.35, 'SpotLight': 0.35, 'ClearGlass': 0.2, 'Mirror': 0.5, 'RearMirror_Light': 0.5}
+# (the paint holds a tenth: black gloss shows every facet; the grille's chrome bars and black frame hold enough to stay
+# whole (at 0.046 the bars broke up); the chassis's black metal, seen only from low down, gives up most, and so does
+# the glass, which is flat; the rest shares what is left)
 FAR = {'plate': 1.0, 'Wheel': 0.5, 'Textures_A': 0.5}
 SMALL = 300                    # a material with fewer seen triangles is kept whole (near) or halved (far)
-WHEEL = 2200                   # a near wheel's triangles (tyre, rim, disc, nuts); its tyre (672, textured) kept whole
+WHEEL = 2000                   # a near wheel's triangles (tyre, rim, disc, nuts); its tyre (672, textured) kept whole
 CORNERS = ('FL', 'FR', 'RL', 'RR')
+INSIDE = ('Fabric', 'White_Leather_Body', 'White_Leather_Seats', 'Plastic_Beige', 'Black_Leather', 'Leather_Points', 'Leather_Handles', 'Wood', 'Buttons', 'Screens')
+# (the interior's materials: what of them is left in the outside, seen only through its gaps, goes; the glass is dark)
+CLEAR = ('Light_glass', 'GlassRed', 'Light_Red_Back')    # the lamps' see-through lenses (their materials' alpha 0.25-0.74): seen, but hiding nothing (the lamps' insides show through them)
 
 
 def hubs():
@@ -40,7 +49,8 @@ def group_of(o, H):
     for k, (h, y0, y1) in H.items():
         if mat == 'CarPaint' or abs(c[1] - h[1]) > 0.2 or s.max() > 0.9: continue
         r = np.hypot(c[0] - h[0], c[2] - h[2])
-        if lo[1] >= y0 - 0.01 and hi[1] <= y1 + 0.01 and (r < 0.02 or (s.max() < 0.05 and r < 0.1)): return 'wheel_' + k      # round about the axle (or a wheel nut), within the tyre's width
+        if r < 0.02 and max(s[0], s[2]) < 0.9: return 'wheel_' + k                                                                    # round about the axle: tyre, rim, disc, hub, and the axle's stub inboard (it turns too)
+        if lo[1] >= y0 - 0.01 and hi[1] <= y1 + 0.01 and s.max() < 0.05 and r < h[2]: return 'wheel_' + k                              # small, within the tyre: a wheel nut, the valve stem
         if r < 0.3 and s.max() < 0.35 and abs(c[1] - h[1]) < 0.1: return 'corner_' + k                                           # the caliper, behind the disc
     return 'body'
 
@@ -48,10 +58,17 @@ def group_of(o, H):
 def by_material(split):
     obs = [o for o in bpy.data.objects if o.type == 'MESH' and len(o.data.polygons)]
     bpy.context.view_layer.update()
+    def under(o, name):
+        p = o.parent
+        while p:
+            if p.name.split('.')[0] == name: return True
+            p = p.parent
+        return False
+    door = {o.name for o in obs if under(o, 'FrontLeft_Door')}                       # the model's own group for the driver's door
     for o in obs: mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw          # (the glTF's empties carry the parts' placing: kept before they go)
     for o in [o for o in bpy.data.objects if o.type != 'MESH' or not len(o.data.polygons)]: bpy.data.objects.remove(o)
     H = hubs(); groups = {}
-    for o in obs: groups.setdefault(group_of(o, H) if split else 'body', []).append(o)
+    for o in obs: groups.setdefault(('door_FL' if o.name in door else group_of(o, H)) if split else 'body', []).append(o)
     out = []
     for g, members in groups.items():
         bpy.ops.object.select_all(action='DESELECT')
@@ -69,6 +86,23 @@ def by_material(split):
     return out, H
 
 
+def glass_out(obs):
+    """The glass faces that face into the cabin go: the glass is dark from outside and the game sees through it from
+    inside (its back faces are culled), so a face turned inward (the panes' inner skins, triangles the thinning turned
+    over) would show as a dark shard over the driver's view. Inward: toward the cabin's middle line (x held within the
+    cabin, y 0, z 1.1)."""
+    gone = 0
+    for o in obs:
+        if o.name.split('.')[-1] != 'ClearGlass': continue
+        bm = bmesh.new(); bm.from_mesh(o.data); mw = o.matrix_world; R = mw.to_3x3()
+        dead = []
+        for f in bm.faces:
+            c = mw @ f.calc_center_median(); mid = Vector((min(0.8, max(-2.0, c.x)), 0.0, 1.1))
+            if (R @ f.normal).dot(c - mid) < 0: dead.append(f)
+        bmesh.ops.delete(bm, geom=dead, context='FACES'); bm.to_mesh(o.data); bm.free(); gone += len(dead)
+    print('glass: %d faces facing the cabin dropped' % gone)
+
+
 def rig(obs, H):
     """corner_XX and wheel_XX empties at the hubs; the wheel's and the corner's meshes under them, about the hub."""
     for k in CORNERS:
@@ -82,11 +116,12 @@ def rig(obs, H):
 
 def main(src, out, target, far=False):
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); obs, H = by_material(not far)
+    for o in [o for o in obs if o.name.split('.')[-1] in INSIDE]: obs.remove(o); bpy.data.objects.remove(o)
     tri = lambda o: (o.data.calc_loop_triangles(), len(o.data.loop_triangles))[1]
     before = sum(tri(o) for o in obs)
     for o in obs:
         bpy.context.view_layer.objects.active = o; m = o.modifiers.new('tri', 'TRIANGULATE'); m.keep_custom_normals = True; bpy.ops.object.modifier_apply(modifier='tri')
-    seen = LE.visible(obs, LE.eyes()[:-4])                 # (lod_ext's last four eyes are the seats')
+    seen = LE.visible(obs, LE.eyes()[:-4], CLEAR + ('door_FL.',))          # (lod_ext's last four eyes are the seats')
     for o, s in zip(obs, seen):
         if o['group'] != 'body': continue
         bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table(); bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in s], context='FACES')
@@ -107,6 +142,7 @@ def main(src, out, target, far=False):
         k = floor[o.name] or r
         if k < 1:
             bpy.context.view_layer.objects.active = o; m = o.modifiers.new('lod', 'DECIMATE'); m.ratio = k; m.use_collapse_triangulate = True; bpy.ops.object.modifier_apply(modifier='lod')
+    glass_out(obs)
     if not far: rig(obs, H)
     print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f)' % (before, total, sum(tri(o) for o in obs), len(obs), r))
     for o in sorted(obs, key=lambda o: -culled[o.name])[:12]: print('  %-26s seen %6d -> %6d' % (o.name, culled[o.name], tri(o)))

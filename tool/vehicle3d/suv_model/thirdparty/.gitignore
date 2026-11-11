@@ -1,0 +1,3 @@
+# the built car (a CC BY-NC-SA derivative): made by thirdparty_build.sh, not committed
+*.glb
+*.blend

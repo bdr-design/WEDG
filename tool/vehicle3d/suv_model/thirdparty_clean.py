@@ -2,14 +2,16 @@
 thirdparty_clean.py <in.blend> <out.blend> [ratio]
 - then thinned to ratio of its faces (Blender's collapse decimation, keeping material and UV borders), its small loose
   parts kept whole (thin(): about 114k triangles at 0.16);
-- the emblem on the steering wheel's pad: its chrome faces dropped and the pad's opening it stood in filled flat
-  (emblem(); measured on the culled interior: 65 by 43 mm);
+- the emblem on the steering wheel's pad (dropped by name in thirdparty_cabin.py; emblem() takes any chrome left in
+  its box, 65 by 43 mm). The pad's recess it
+  stood in then shows; where the cull has dropped the recess (it is kept when the steering wheel turns: lod_cabin's
+  in_wheel), the opening is filled flat;
 - the textures thirdparty_tex.py cleans (in tex/ beside out.blend) read in place of the model's: the centre screen a
   dark display (its picture was a phone's app icons), the gauges and the switches' symbols as they were."""
 import bpy, bmesh, sys, os, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import thirdparty_tex as TX
-EMBLEM = (0.431, 1.278, 0.036, 0.024); FEW = 60      # the emblem's middle (y, z) and half its box with 3 mm to spare (its chrome: y 0.400-0.464, z 1.257-1.299)
+EMBLEM = (0.425, 1.259, 0.036, 0.024); FEW = 60      # the emblem's middle (y, z) and half its box with 3 mm to spare (its chrome: y 0.400-0.464, z 1.257-1.299)
 
 
 def thin(o, ratio):
@@ -50,7 +52,10 @@ def emblem(me):
 def main(src, out, ratio='1.0'):
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); o = bpy.data.objects['tp_cabin']; me = o.data
     emblem(me)
-    if float(ratio) < 1: o = thin(o, float(ratio)); me = o.data
+    if float(ratio) < 1:
+        o = thin(o, float(ratio)); me = o.data
+        dc = bpy.data.objects.get('tp_doorcard')                 # the driver's door's trim (thirdparty_cabin.py), thinned alike
+        if dc: thin(dc, float(ratio))
     TX.relink(os.path.join(os.path.dirname(os.path.abspath(out)), 'tex'))
     me.calc_loop_triangles(); print('%d triangles' % len(me.loop_triangles))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out))

@@ -43,6 +43,16 @@ def main(src, car, out, tex):
         if l.to_node == b: m.node_tree.links.remove(l)
     b.inputs['Base Color'].default_value = (*GLASS[0], 1); b.inputs['Roughness'].default_value = GLASS[1]; b.inputs['Alpha'].default_value = 1.0
     b.inputs['Transmission Weight'].default_value = 0.0; m.blend_method = 'OPAQUE' if hasattr(m, 'blend_method') else None
+    # the model's glass material also covers small lamp lenses (the front corners' and the bumpers'): those keep a lamp's
+    # smoked lens (Light_glass), not the windows' dark glass; a window lies in the greenhouse (above the belt, in the cabin's length)
+    lens = bpy.data.materials.get('Light_glass'); lensed = 0
+    for o in [o for o in bpy.data.objects if o.type == 'MESH' and any(sl.material == m for sl in o.material_slots)]:
+        P = np.array([o.matrix_world @ v.co for v in o.data.vertices]); c = (P.min(0) + P.max(0)) / 2
+        if c[2] < 0.9 or c[0] > 1.5 or c[0] < -2.55:
+            for sl in o.material_slots:
+                if sl.material == m: sl.material = lens
+            lensed += 1
+    print('lamp lenses kept clear: %d' % lensed)
     TX.main(tex, os.path.join(os.path.dirname(os.path.abspath(out)), 'tex')); TX.relink(os.path.join(os.path.dirname(os.path.abspath(out)), 'tex'))      # the tyres' maker's name and logo off
     # our plates on the model's plates' planes
     ptex = os.path.join(os.path.dirname(os.path.abspath(out)), 'plate_ksa.png'); PL.texture(ptex)

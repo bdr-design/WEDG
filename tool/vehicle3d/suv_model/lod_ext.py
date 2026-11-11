@@ -26,12 +26,12 @@ def eyes():
     return E
 
 
-def visible(obs, E):
+def visible(obs, E, clear_names=('cover', 'lens')):
     V, P, owner = [], [], []
     for k, o in enumerate(obs):
         mw = o.matrix_world; n0 = len(V); V += [mw @ v.co for v in o.data.vertices]; flip = mw.determinant() < 0
         for p in o.data.polygons: P.append([n0 + i for i in (p.vertices[::-1] if flip else p.vertices)]); owner.append((k, p.index))
-    clear = [k for k, o in enumerate(obs) if any(w in o.name for w in ('cover', 'lens'))]      # clear parts: seen, but they hide nothing (the lamps' insides show through them)
+    clear = [k for k, o in enumerate(obs) if any(w in o.name for w in clear_names)]      # clear parts: seen, but they hide nothing (the lamps' insides show through them)
     keep_poly = [i for i, (k, _) in enumerate(owner) if k not in clear]
     tree = BVHTree.FromPolygons(V, [P[i] for i in keep_poly], epsilon=0.0); seen = [set() for _ in obs]; remap = {j: i for j, i in enumerate(keep_poly)}
     for fi, (verts, (k, pi)) in enumerate(zip(P, owner)):

@@ -55,6 +55,13 @@ Steps:
   of the LC300 (Ddiaz Design, licence CC BY-NC-SA 4.0: no commercial use, the author credited, changes shared alike).
   It goes in its own folder, `thirdparty/`, with its licence and credit beside it, and is never mixed into the
   code-built files. If the game ever earns anything, that folder is dropped and the code-built version used.
+- 11 Nov, the owner: the private car is to be the downloaded model whole, outside and inside, with suspension and
+  sinking in sand ("تغريز"), lightness first. Built by `thirdparty_build.sh` (see `thirdparty/README.md`):
+  - the outside as a near layer (about 40k triangles, wheels on their own corners for the springs, the driver's door
+    on its hinge) and a far layer (about 12k);
+  - the interior (loaded when the player comes to the car; seen only from the driver's seat and the open door),
+    with a turning steering wheel and the door's trim swinging with the door;
+  - the ride and the sand in `design/prototype3d/car_physics.js`, its numbers in `docs/GDD.md` section 9.1.
 
 ## Progress
 - Step 1 (body shell), the wheels, the arches, the mirrors and the roof rails are done. Build b3 scores IoU 0.982
