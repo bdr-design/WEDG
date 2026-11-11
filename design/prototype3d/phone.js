@@ -18,6 +18,7 @@ const CSS = `
   .dev { position: absolute; width: ${W}px; height: ${H}px; border-radius: 50px; padding: 9px; background: linear-gradient(145deg, #4a4036, #1d1813 40%, #2b241d);
     box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .12), 0 30px 60px rgba(0, 0, 0, .55); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
   .phone[data-state="closed"] .dev { display: none; }
+  .dev:focus { outline: none; }
   .phone[data-state="small"] .dev { right: var(--r); bottom: var(--b); transform-origin: 100% 100%; transform: scale(var(--s)); pointer-events: none; }
   .phone[data-state="big"] .dim { display: block; }
   .phone[data-state="big"] .dev { left: 50%; top: 0; margin-left: ${-W / 2}px; transform: translateY(var(--y)); pointer-events: auto; will-change: transform; }
@@ -203,7 +204,7 @@ const sbar = `<div class="sbar"><span>3:20</span><span class="r"><svg width="16"
 const nav = (end = '') => `<div class="nav"><button class="back">${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
 const ok = (t) => `<span class="badge">${svg('check')}${t}</span>`;
 const APP_GO = { gavel: 'auction', bank: 'bank', tag: 'haraj', chat: 'chat', cloud: 'weather' };      // the apps that open a screen (the rest are not built yet)
-const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;
+const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app: in the dock the name is hidden, and the badge was all that was read)
 
 const S = {
     home: () => `<div class="body">
@@ -245,7 +246,7 @@ const S = {
       </div></div>`,
     haraj: () => `<div class="body">${nav()}<div class="title">الحراج</div>
       <div class="seg"><span class="on">بسعر</span><span>على السوم</span><span>إعلاناتي</span></div>
-      <div class="liveban"><span class="dot"></span><span><b>مزاد بريدة · مباشر</b><small>12 ناقة · المعروضة الحين: لقية وضحاء</small></span><span class="go">ادخل</span></div>
+      <div class="liveban" role="button" tabindex="0"><span class="dot"></span><span><b>مزاد بريدة · مباشر</b><small>12 ناقة · المعروضة الحين: لقية وضحاء</small></span><span class="go">ادخل</span></div>
       <div class="lst">
         <div class="it"><span class="ph"><img src="phone/thumb_shaqh.png" alt=""></span><b>جذعة شقحاء مقانية</b><small>حائل · 225 كم · بو مشعل</small><span class="pr"><span class="price num">33,500</span></span><span class="bgs">${ok('محصنة')}${ok('شهادة صحية')}</span></div>
         <div class="it"><span class="ph"><img src="phone/thumb_shaal.png" alt=""></span><b>ثنية شعلاء فردية</b><small>الخرج · 480 كم · بو ناصر</small><span class="pr"><span class="price num">85,000</span></span><span class="bgs">${ok('محصنة')}${ok('شهادة صحية')}</span></div>
@@ -296,12 +297,12 @@ const S = {
 
 export function createPhone({ host }) {
   const el = document.createElement('div'), root = el.attachShadow({ mode: 'open' });
-  root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar" role="dialog" aria-label="الجوال"><div class="dim"></div><div class="dev"><div class="scr"></div></div></div>`;
+  root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar" role="dialog" aria-label="الجوال" aria-hidden="true"><div class="dim"></div><div class="dev" tabindex="-1"><div class="scr" inert></div></div></div>`;
   host.appendChild(el);
   const box = root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim');
   const st = { state: 'closed', play: false, screen: 'home', y: EDGE, s: SMALL };
   const listeners = new Set();
-  let press = null, lastDown = 0, bigAt = 0;
+  let press = null, lastDown = 0, bigAt = 0, focusBack = null;
   const endPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
   function show(v) {
     st.screen = v; scr.classList.toggle('home', v === 'home');
@@ -323,8 +324,14 @@ export function createPhone({ host }) {
     if (state === st.state) return;
     endPress();
     if (st.state === 'closed') show('home');
+    const was = st.state;
     st.state = state; box.dataset.state = state;
     if (state === 'big') st.y = EDGE;
+    // to assistive technology and the keyboard: closed, the phone is not there; small, it is a picture (a tap does
+    // nothing); big, it is a modal dialog with the focus in it, given back to where it was when it shrinks
+    box.setAttribute('aria-hidden', String(state === 'closed'));
+    if (state === 'big') { box.setAttribute('aria-modal', 'true'); scr.inert = false; focusBack = document.activeElement; dev.focus({ preventScroll: true }); }
+    else { box.removeAttribute('aria-modal'); scr.inert = true; if (was === 'big' && focusBack && focusBack.isConnected) focusBack.focus({ preventScroll: true }); }
     layout();
     for (const f of listeners) f(state);
   }
@@ -354,7 +361,12 @@ export function createPhone({ host }) {
   const endDrag = (e) => { if (drag && e.pointerId === drag.id) drag = null; };
   dev.addEventListener('pointerup', endDrag); dev.addEventListener('pointercancel', endDrag); dev.addEventListener('pointerleave', endDrag);
   dim.addEventListener('click', () => { if (lastDown > bigAt) set('small'); });      // (not the lift of the very finger whose long press enlarged it: its click lands on the dim, now on top)
-  scr.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-go]')) { e.preventDefault(); show(e.target.closest('[data-go]').dataset.go); } });
+  scr.addEventListener('keydown', (e) => {
+    const t = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-go], .liveban');
+    if (!t) return;
+    e.preventDefault(); show(t.dataset.go || 'auction');
+    (scr.querySelector('.back, [data-go], button') || dev).focus({ preventScroll: true });      // (the screen is rebuilt: the focus stays in the phone, not dropped to the page)
+  });
   scr.addEventListener('click', (e) => {
     if (slid) { slid = false; return; }                 // (the finger slid the phone: not a tap)
     const t = e.target.closest('[data-go], .back, .liveban');
@@ -362,6 +374,13 @@ export function createPhone({ host }) {
     show(t.dataset.go || (t.classList.contains('liveban') ? 'auction' : 'home'));
   });
   addEventListener('resize', () => { if (st.state !== 'closed') layout(); });
+  // big, Tab goes round the phone's own buttons only (the game behind the dim is not reachable)
+  addEventListener('keydown', (e) => {
+    if (st.state !== 'big' || e.key !== 'Tab') return;
+    const all = [...scr.querySelectorAll('[tabindex="0"], button')], at = all.indexOf(root.activeElement);
+    if (!all.length) return;
+    e.preventDefault(); all[(at + (e.shiftKey ? -1 : 1) + all.length + (at < 0 && e.shiftKey ? 1 : 0)) % all.length].focus({ preventScroll: true });
+  }, true);
   return {
     toggle: () => set(st.state === 'closed' ? 'small' : 'closed'), close: () => set('closed'), hit,
     enlarge: () => { if (st.state !== 'closed') { bigAt = performance.now(); set('big'); } }, shrink: () => { if (st.state === 'big') set('small'); },

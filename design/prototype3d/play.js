@@ -202,8 +202,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const input = { mx: 0, mz: 0, run: false, gas: 0, brake: 0, steer: 0, yaw: Math.PI, pitch: 0.18 };
   const keys = new Set();
   const onKey = (e) => {
-    if (e.type === 'keyup') { keys.delete(e.code); return; }
-    if (busy()) return;             // (let go even out of play: dropped there, the key stayed held and the man walked alone on the next start)
+    if (e.type === 'keyup') { keys.delete(e.code); return; }      // (let go even out of play: dropped there, the key stayed held and the man walked alone on the next start)
+    if (busy()) return;             // (the enlarged phone has the keys)
     if (!state.on) return;
     keys.add(e.code);
     if (e.type === 'keydown' && e.code === 'KeyE') primary();
@@ -265,15 +265,17 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   // the pedals: pressed by how far up the thumb is (from PEDAL_MIN at the bottom edge to 1 at the top and past it)
   const PEDAL_MIN = { gas: 0.15, brake: 0.3 };
   const pedal = { gas: 0, brake: 0 };
+  const pedalReset = [];
   ui.querySelectorAll('[data-p]').forEach((el) => {
     const k = el.dataset.p, lvl = el.querySelector('.lvl'); let id = null;
     const set = (v) => { pedal[k] = v; lvl.style.height = (v * 100).toFixed(0) + '%'; };
     let b = null;                                // (its box, measured when the thumb lands: not on every move)
     const read = (e) => set(Math.min(1, Math.max(PEDAL_MIN[k], PEDAL_MIN[k] + (1 - PEDAL_MIN[k]) * (b.y + b.h - e.clientY) / (b.h * 0.9))));
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); id = e.pointerId; b = boxOf(el); try { el.setPointerCapture(id); } catch {} read(e); });
-    el.addEventListener('pointermove', (e) => { if (e.pointerId === id) read(e); });
+    el.addEventListener('pointermove', (e) => { if (e.pointerId === id && !busy()) read(e); });
     const off = (e) => { if (e.pointerId === id) { id = null; set(0); } };
     el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
+    pedalReset.push(() => { id = null; set(0); });
   });
   // the steering pad: the thumb's place along it is the wheel's turn (its middle straight ahead, either end full
   // lock); let go, it returns to the middle
@@ -283,7 +285,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const set = (v) => { pad.steer = v; steerKnob.style.transform = `translateX(${(-v * half).toFixed(1)}px) rotate(${(-v * 90).toFixed(0)}deg)`; };
     const read = (e) => set(Math.max(-1, Math.min(1, -(e.clientX - mid) / half)));      // (+ to the left, as the car's steer)
     steerPad.addEventListener('pointerdown', (e) => { e.preventDefault(); id = e.pointerId; const b = boxOf(steerPad); mid = b.x + b.w / 2; half = Math.max(1, (b.w - steerKnob.offsetWidth) / 2); try { steerPad.setPointerCapture(id); } catch {} read(e); });
-    steerPad.addEventListener('pointermove', (e) => { if (e.pointerId === id) read(e); });
+    steerPad.addEventListener('pointermove', (e) => { if (e.pointerId === id && !busy()) read(e); });
     const off = (e) => { if (e.pointerId === id) { id = null; set(0); } };
     steerPad.addEventListener('pointerup', off); steerPad.addEventListener('pointercancel', off); steerPad.addEventListener('lostpointercapture', off);
     pad.reset = () => { id = null; set(0); };
@@ -291,12 +293,15 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   // A button acts when the finger that pressed it lifts, not on click: a browser makes no click of a tap while
   // another finger is down, so with a thumb on the stick or a pedal the buttons were dead. (A click with no pointer,
   // from the keyboard, still acts.)
+  // It acts only if it is still shown when the finger lifts, and not under the enlarged phone: held while it was hidden
+  // (the get-in button as the walker moved off, the phone button as the car drove away), it acted anyway.
   const tap = (b, fn) => {
     let id = null, x = 0, y = 0;
+    const live = () => b.isConnected && b.getClientRects().length > 0 && !busy();
     b.addEventListener('pointerdown', (e) => { e.preventDefault(); id = e.pointerId; x = e.clientX; y = e.clientY; try { b.setPointerCapture(id); } catch {} });
-    b.addEventListener('pointerup', (e) => { if (e.pointerId === id) { id = null; if (Math.hypot(e.clientX - x, e.clientY - y) < 40) fn(); } });      // (slid well off it: let go without acting)
+    b.addEventListener('pointerup', (e) => { if (e.pointerId === id) { id = null; if (Math.hypot(e.clientX - x, e.clientY - y) < 40 && live()) fn(); } });      // (slid well off it: let go without acting)
     b.addEventListener('pointercancel', () => { id = null; });
-    b.addEventListener('click', (e) => { if (e.detail === 0) fn(); });
+    b.addEventListener('click', (e) => { if (e.detail === 0 && live()) fn(); });
   };
   tap(ui.querySelector('[data-a="exit"]'), () => stop());
   tap(ui.querySelector('[data-a="view"]'), () => toggleView());
@@ -306,7 +311,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     tap(phoneBtn, () => phone.toggle());
     phone.onChange((state) => {
       phoneBtn.classList.toggle('on', state !== 'closed'); phoneBtn.setAttribute('aria-pressed', String(state !== 'closed'));
-      if (state === 'big') { stickId = lookId = null; stick.hidden = true; input.mx = input.mz = 0; input.run = false; keys.clear(); }      // (enlarged, the phone has the screen: what the fingers and keys held is let go)
+      if (state === 'big') { stickId = lookId = null; stick.hidden = true; input.mx = input.mz = 0; input.run = false; keys.clear(); for (const f of pedalReset) f(); pad.reset(); }      // (enlarged, the phone has the screen: what the fingers and keys held is let go, the pedals and the pad too)
     });
   } else phoneBtn.hidden = true;
   const busy = () => !!phone && phone.big;         // the enlarged phone has the screen and the keys
@@ -371,6 +376,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const full = standing || stuckNow || !!job;
     const open = carOpen || !!job;
     const key = (standing ? 512 : 0) | (full ? 1 : 0) | (aired ? 2 : 0) | (p.low ? 4 : 0) | (p.trc ? 8 : 0) | (p.gear === 'R' ? 16 : 0) | (stuckNow ? 32 : 0) | (job ? (job.kind === 'air' ? 64 : 128) : 0) | (open ? 256 : 0);
+    if (phone && !standing && phone.state !== 'closed') phone.close();      // (on every frame the car moves, not only when the row changes: opened by a held button's lift, it stayed open)
     if (key === rowKey) return; rowKey = key;
     carRow.classList.toggle('moving', !full); carRow.classList.toggle('open', open);
     if (phone) { phoneBtn.hidden = !standing; if (!standing) phone.close(); }
@@ -391,7 +397,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   function act(c) {
     carOpenT = 0;
     if (c === 'more') { carOpen = !carOpen; driveCard(); return; }
-    if (c === 'in') enter();
+    if (c === 'in') { if (state.mode === 'walk' && nearDoor && !carState.locked) enter(); }      // (by the unlocked door only)
     else if (c === 'out') exit();
     else if ((c === 'air' || c === 'dig') && !job && Math.abs(carState.v) < 1) job = { kind: c, t: 0 };
     else if (c === 'low' && Math.abs(carState.v) < 1) { phys.s.low = !phys.s.low; driveCard(); }
@@ -408,7 +414,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   function enter() {
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.35);
-    state.mode = 'drive'; carState.v = 0; viewBtn.hidden = false; state.snap = true;
+    state.mode = 'drive'; carState.v = 0; viewBtn.hidden = false; state.snap = true; state.view = 1; viewBtn.classList.remove('on');      // (from the seat each time)
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = false; stick.hidden = true; stickId = null; input.mx = input.mz = 0;
     nearDoor = false; doorButtons(); rowKey = -1; carOpen = false; driveCard();
     loadCabin();
@@ -418,7 +424,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (Math.abs(carState.v) > 1.5) return;                   // not while moving
     state.mode = 'walk'; carState.v = 0; job = null; parked = true;
     if (rigged) { POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
-    driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading; man.way = undefined;
+    driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading; input.pitch = 0.18; man.way = undefined;      // (the look level again: a drag in the car moved it, and the walker stepped out looking at his feet)
     viewBtn.hidden = true; state.snap = true; if (phone) phoneBtn.hidden = false;
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; pedal.gas = pedal.brake = 0; pad.reset();
   }
