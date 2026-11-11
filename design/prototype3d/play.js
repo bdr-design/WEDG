@@ -9,6 +9,7 @@ const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;      // below this the ty
 const GEAR_TOP = [0, 18, 34, 52, 72, 96, 130];      // the rpm needle's simple gears: each one's top speed, km/h (allocated once)
 const TIP = Math.tan(40 / 57.3);  // the steepest side slope it goes onto (its static stability: track 1.63 m over twice a cg of 0.8 m, about 45 degrees, with a margin)
 const PEDAL_UP = 0.05;           // a pedal under this is up
+const SHIFT_V = 0.8;             // m/s: under this a fresh press of the other pedal takes the other gear (under the 5 km/h an automatic creeps at, so a dab of the brake at a creep is only a brake; over 0.4, so the press still counts when the car has rolled on a little down a slope; game choice)
 const STEER_RATE = 8;            // 1/s: how fast the front wheels follow the pad (a hand's quick turn of the wheel: 90% in about a quarter of a second; game choice)
 const STEER_RATIO = 15;          // the steering wheel's turn per road-wheel turn (the LC300's about 15-16: about 1.4 turns to lock here)
 // the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
@@ -448,6 +449,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       if (d < rr && d > 1e-6) { p.x += dx / d * (rr - d); p.z += dz / d * (rr - d); }
     }
   }
+  // how much higher one side's wheels stand than the other's, where the car is (m over the track)
+  function sideTilt() { carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); const e = geo.half; return Math.abs(ground(carState.pos.x - right.x * e, carState.pos.z - right.z * e) - ground(carState.pos.x + right.x * e, carState.pos.z + right.z * e)); }
   function updateDrive(dt) {
     let gas = pedal.gas, brake = pedal.brake, steer = pad.steer, analog = true;      // (the touch pedals: 0 to 1 by how far they are pressed)
     if (keys.size) {
@@ -482,7 +485,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (job || parked) ctl.brake = 1;                                          // parked (got in, or the driver working outside) until a pedal is pressed
     else {
       // (a press is fresh when the pedal was up on the frame before)
-      if (stop > PEDAL_UP && stopWas <= PEDAL_UP && go <= PEDAL_UP && Math.abs(carState.v) < 0.4) { phys.s.gear = reversing ? 'D' : 'R'; driveCard(); stopWas = 0; return updateDrive(0); }
+      if (stop > PEDAL_UP && stopWas <= PEDAL_UP && go <= PEDAL_UP && Math.abs(carState.v) < SHIFT_V) { phys.s.gear = reversing ? 'D' : 'R'; driveCard(); stopWas = 0; return updateDrive(0); }
       if (go) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = go; }
       if (stop) ctl.brake = Math.max(ctl.brake, stop);                        // (both feet: the engine pulls against the brakes, each by how far it is pressed)
     }
@@ -491,13 +494,16 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     // (car_physics.js's steerAsk); the hand follows it in about a quarter of a second, and it returns to centre on its own
     carState.steer += (phys.steerAsk(steer, Math.abs(carState.v)) - carState.steer) * Math.min(1, dt * STEER_RATE);
     // move first (by the turn the tyres' grip allowed), then let the springs and the sand answer the ground there
+    const tiltWas = sideTilt();
     carState.yaw += phys.s.yawRate * dt;
     carFwd(carState.yaw, fwd);
     carState.pos.addScaledVector(fwd, carState.v * dt);
     { const side = phys.s.slide + phys.s.vlat; if (side) { right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, side * dt); } }      // sideways: sliding down a side slope too steep to hold, and the tyres' own slide in a turn
-    // ground too steep across the car (past about 40 degrees it would tip): it does not go there, as against a wall
-    { right.crossVectors(fwd, UP); const e = geo.half, hl = ground(carState.pos.x - right.x * e, carState.pos.z - right.z * e), hr = ground(carState.pos.x + right.x * e, carState.pos.z + right.z * e);
-      if (Math.abs(hl - hr) > 2 * e * TIP) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; carState.pos.addScaledVector(right, -(phys.s.slide + phys.s.vlat) * dt); carState.v = 0; phys.s.v = 0; phys.s.vyL = phys.s.r = 0; phys.s.stuck = 0; } }      // (the turn undone too, and not counted as stuck: it is a slope, not sand)
+    // ground too steep across the car (past about 40 degrees it would tip): it does not go further onto it, as against
+    // a wall. Only a move that makes the lean worse is undone: one that eases it (backing out, sliding down) goes
+    // through, or a car that had slid onto such a slope was held there for good.
+    { const tilt = sideTilt();
+      if (tilt > 2 * geo.half * TIP && tilt > tiltWas + 1e-4) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.yaw -= phys.s.yawRate * dt; right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, -(phys.s.slide + phys.s.vlat) * dt); carState.v = 0; phys.s.v = 0; phys.s.vyL = phys.s.r = 0; phys.s.stuck = 0; } }      // (the turn and the sideways move undone too, and not counted as stuck: it is a slope, not sand)
     POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw;
     if (!settled) { phys.settle(POSE, env); settled = true; }
     phys.s.v = carState.v;
