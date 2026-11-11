@@ -22,7 +22,7 @@ NEAR = {'plate': 1.0, 'Wheel': 1.0, 'Textures_A': 1.0, 'CarPaint': 0.10, 'Chrome
 # (the paint holds a tenth: black gloss shows every facet; the grille's chrome bars and black frame hold enough to stay
 # whole (at 0.046 the bars broke up); the chassis's black metal, seen only from low down, gives up most, and so does
 # the glass, which is flat; the rest shares what is left)
-FAR = {'plate': 1.0, 'Wheel': 0.5, 'Textures_A': 0.5}
+FAR = {'plate': 1.0, 'Wheel': 0.5, 'Textures_A': 0.5, 'ClearGlass': 0.4, 'Light_glass': 0.3, 'GlassRed': 0.3, 'Light_Red_Back': 0.3}      # (the glass held: thinned with the rest, the far car had no windows)
 SMALL = 300                    # a material with fewer seen triangles is kept whole (near) or halved (far)
 WHEEL = 2000                   # a near wheel's triangles (tyre, rim, disc, nuts); its tyre (672, textured) kept whole
 CORNERS = ('FL', 'FR', 'RL', 'RR')
@@ -108,6 +108,44 @@ def radiator(obs):
     f = bm.faces.new(vs); f.material_index = 0; f.normal_update()
     if (o.matrix_world.to_3x3() @ f.normal).x < 0: f.normal_flip()          # facing forward (its normal computed first: a new face's is zero)
     bm.to_mesh(o.data); bm.free()
+
+
+SHELLS = [((1.0, 2.2), (-0.80, 0.80), (0.45, 1.10))] + [((hx - 0.48, hx + 0.48), (s * 0.40, s * 0.90) if s > 0 else (s * 0.90, s * 0.40), (0.05, 0.85)) for hx in (1.556, -1.294) for s in (1, -1)] + [((-2.55, -2.05), (-0.85, 0.85), (0.25, 0.75))]
+# boxes inside the body whose faces look inward: the engine bay, the four wheel wells, the rear bumper. From outside a
+# box's own faces are back faces (unseen); through a gap the far inside of it shows, dark, where the cull had left the sky
+
+
+def shells(obs):
+    o = next((o for o in obs if o.name == 'BlackPlastic_Rough'), None)
+    if o is None: return
+    mwi = o.matrix_world.inverted(); bm = bmesh.new(); bm.from_mesh(o.data)
+    for (x0, x1), (y0, y1), (z0, z1) in SHELLS:
+        c = Vector(((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2))
+        v = [bm.verts.new(mwi @ Vector((x, y, z))) for x in (x0, x1) for y in (y0, y1) for z in (z0, z1)]
+        for q in ((0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)):
+            f = bm.faces.new([v[i] for i in q]); f.normal_update()
+            if (o.matrix_world.to_3x3() @ f.normal).dot(o.matrix_world @ f.calc_center_median() - c) > 0: f.normal_flip()      # facing in
+    bm.to_mesh(o.data); bm.free()
+
+
+def glass_orient(obs):
+    """Before the cull: a pane modelled as one sheet facing into the cabin is turned to face out (seen from outside
+    it was a back face, culled, and the sunroof's front showed the sky); an inner skin of a two-layer pane goes."""
+    from mathutils.bvhtree import BVHTree
+    turned = gone = 0
+    for o in obs:
+        if o.name.split('.')[-1] != 'ClearGlass': continue
+        bm = bmesh.new(); bm.from_mesh(o.data); mw = o.matrix_world; R = mw.to_3x3(); bm.faces.ensure_lookup_table()
+        tree = BVHTree.FromBMesh(bm); dead = []
+        for f in bm.faces:
+            c = mw @ f.calc_center_median(); mid = Vector((min(0.8, max(-2.0, c.x)), 0.0, 1.1)); n = R @ f.normal
+            if n.dot(c - mid) >= 0: continue
+            out = -f.normal                                                     # (toward the outside, in the object's frame)
+            h = tree.ray_cast(f.calc_center_median() + out * 1e-4, out, 0.03)
+            if h[0] is not None: dead.append(f)
+            else: f.normal_flip(); turned += 1
+        bmesh.ops.delete(bm, geom=dead, context='FACES'); bm.to_mesh(o.data); bm.free(); gone += len(dead)
+    print('glass: %d one-sheet faces turned out, %d inner skins dropped' % (turned, gone))
 
 
 def unflip(o, before):
@@ -218,6 +256,22 @@ def glass_out(obs):
     print('glass: %d faces facing the cabin dropped' % gone)
 
 
+def inward_out(obs):
+    """The outside's faces in the greenhouse turned toward the cabin go (not the driver's door's: it opens): from the
+    driver's seat one hung as a black spike in the windscreen; inside, the interior's own trims are there."""
+    gone = 0
+    for o in obs:
+        if o['group'] != 'body' or o.name.split('.')[-1] in ('ClearGlass', 'Mirror'): continue
+        bm = bmesh.new(); bm.from_mesh(o.data); mw = o.matrix_world; R = mw.to_3x3(); dead = []
+        for f in bm.faces:
+            c = mw @ f.calc_center_median()
+            if not (c.z > 1.25 and -2.3 < c.x < 0.95 and abs(c.y) < 0.92): continue
+            mid = Vector((c.x, 0.0, 1.1))
+            if (R @ f.normal).dot(c - mid) < -0.3 * (c - mid).length: dead.append(f)
+        bmesh.ops.delete(bm, geom=dead, context='FACES'); bm.to_mesh(o.data); bm.free(); gone += len(dead)
+    print('greenhouse: %d outside faces facing the cabin dropped' % gone)
+
+
 def rig(obs, H):
     """corner_XX and wheel_XX empties at the hubs; the wheel's and the corner's meshes under them, about the hub."""
     for k in CORNERS:
@@ -232,7 +286,7 @@ def rig(obs, H):
 def main(src, out, target, far=False):
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); obs, H = by_material(not far)
     for o in [o for o in obs if o.name.split('.')[-1] in INSIDE]: obs.remove(o); bpy.data.objects.remove(o)
-    radiator(obs)
+    glass_orient(obs)
     tri = lambda o: (o.data.calc_loop_triangles(), len(o.data.loop_triangles))[1]
     before = sum(tri(o) for o in obs)
     for o in obs:
@@ -263,7 +317,7 @@ def main(src, out, target, far=False):
             if not far: m.vertex_group = 'held'; m.invert_vertex_group = True
             bpy.ops.object.modifier_apply(modifier='lod'); o.vertex_groups.clear()
             flipped += unflip(o, orig)
-    glass_out(obs)
+    glass_out(obs); inward_out(obs); radiator(obs); shells(obs)      # (the radiator and the shells after the cull: one big face seen only through slots would be culled)
     if not far: rig(obs, H)
     # (the far layer, seen beyond 20 m, holds no edges: they kept it at 52k)
     print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f); %d faces turned back after thinning' % (before, total, sum(tri(o) for o in obs), len(obs), r, flipped))

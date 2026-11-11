@@ -42,7 +42,7 @@ export const LC300 = {
 // the pedal the engine holds a descent to a crawl (up to LOW_HOLD of the weight; high range ENGINE_BRAKE). An
 // automatic creeps at idle (CREEP of the weight). These shares are game choices.
 const SAND = { SINK0: 0.07, N: 1.1, PLANE: 25, DIG: 0.05, DIG_SLIP: 0.15, CLIMB: 0.25, F0: 0.015, SAND_F: 0.08, SAND_V: 0.006, DIG_V: 4, RUT: 1.6, MU_HARD: 0.85, MU_SAND: 0.53, MU_AIRED: 0.05,
-  BELLY: 0.45, MAXSINK: 0.36, TRC_LOSS: 0.12, ENGINE_BRAKE: 0.03, LOW_HOLD: 0.6, CREEP: 0.07, BACK_OUT: 0.35, MAX_TILT: 0.7 };
+  BELLY: 0.45, MAXSINK: 0.36, TRC_LOSS: 0.12, ENGINE_BRAKE: 0.03, LOW_HOLD: 0.6, CREEP: 0.07, BACK_OUT: 0.2, MAX_TILT: 0.3 };
 
 export function createCar(geo, spec = LC300) {
   // geo: { front, rear, half, tyre } from the model's wheels (hub x of the axles, half the track, tyre radius)
@@ -56,7 +56,7 @@ export function createCar(geo, spec = LC300) {
   });
   const Ip = m * spec.gyrPitch ** 2, Ir = m * spec.gyrRoll ** 2, gs = [0, 0, 0, 0];
   const s = {
-    v: 0, thr: 0, gear: 'D', hillHold: 0, low: false, trc: true, kPa: spec.roadKPa, yc: 0, vy: 0, pitch: 0, vp: 0, roll: 0, vr: 0, aLong: 0, aLat: 0, yawRate: 0,
+    v: 0, thr: 0, gear: 'D', hillHold: 0, slide: 0, low: false, trc: true, kPa: spec.roadKPa, yc: 0, vy: 0, pitch: 0, vp: 0, roll: 0, vr: 0, aLong: 0, aLat: 0, yawRate: 0,
     slip: 0, stuck: 0, spinAngle: 0, wheels, xcg, wb,
   };
 
@@ -118,7 +118,7 @@ export function createCar(geo, spec = LC300) {
     // an automatic in gear creeps at idle (CREEP of the weight, falling off by 2 m/s: about 5 km/h on the flat);
     // hill-start assist (standard on the LC300; on a slope only) holds the brakes after they are let off at a stop,
     // until the engine pulls harder than the slope, or 2 s
-    if (ctl.brake && Math.abs(s.v) < 0.3 && Math.abs(slope) > 0.03) s.hillHold = 2; else if (s.hillHold > 0) s.hillHold -= dt;
+    if (ctl.brake && Math.abs(s.v) < 0.3 && slope * dir > 0.03) s.hillHold = 2; else if (s.hillHold > 0) s.hillHold -= dt;      // (facing uphill in the gear's way only: it stops a roll back)
     const creep = s.thr < 0.05 ? m * g * SAND.CREEP * Math.max(0, 1 - Math.abs(s.v) / 2.0) : 0;
     const softAvg = (wheels[0].soft + wheels[1].soft + wheels[2].soft + wheels[3].soft) / 4;
     const vCap = dir < 0 ? 20 / 3.6 : vTop;                                   // reverse: the gearbox's one reverse gear, governed here
@@ -154,6 +154,13 @@ export function createCar(geo, spec = LC300) {
     const turnLimit = side / m * 0.95, want2 = s.v * s.v * Math.tan(steer) / wb;
     s.aLat = Math.max(-turnLimit, Math.min(turnLimit, want2));
     s.yawRate = Math.abs(s.v) > 0.3 ? s.aLat / s.v : s.v * Math.tan(steer) / wb;
+    // across a slope steeper than the tyres hold, the car slides down it (s.slide, m/s toward the car's right; the
+    // caller moves it): it cannot drive along a 40 degree side slope on two wheels
+    const cross = Math.atan2((gs[0] + gs[2]) - (gs[1] + gs[3]), 4 * geo.half);  // + : the left side higher, the slope falls to the right
+    const muAvg = sumF > 0 ? grip / sumF : 0;
+    const push = g * (Math.abs(Math.sin(cross)) - muAvg * Math.cos(cross) * 0.9);
+    s.slide = push > 0 && touching > 0 ? s.slide + Math.sign(cross) * push * dt : s.slide * Math.max(0, 1 - dt * 6);      // (only while the tyres touch: off the ground it is a fall, not a slide)
+    s.slide = Math.max(-6, Math.min(6, s.slide));                             // (sliding sideways, the tyres plough: about 20 km/h at most)
     // digging and climbing out, per wheel
     const dist = Math.abs(s.v) * dt;
     for (const w of wheels) {
@@ -184,8 +191,11 @@ export function createCar(geo, spec = LC300) {
       }
       s.vy += Fy / m * h; s.vp += Mp / Ip * h; s.vr += Mr / Ir * h;
       s.yc += s.vy * h; s.pitch += s.vp * h; s.roll += s.vr * h;
-      if (Math.abs(s.pitch) > SAND.MAX_TILT) { s.pitch = Math.sign(s.pitch) * SAND.MAX_TILT; s.vp = 0; }        // (a guard: no slope in play tips it this far)
-      if (Math.abs(s.roll) > SAND.MAX_TILT) { s.roll = Math.sign(s.roll) * SAND.MAX_TILT; s.vr = 0; }
+      // (a guard on the body's lean against the ground under it, not against level: held to level, a steep side slope
+      // drove the uphill wheels into their stops and threw the car)
+      const gp = Math.atan2(rise, wb), gr = Math.atan2((gs[0] + gs[2]) - (gs[1] + gs[3]), 4 * geo.half);
+      if (Math.abs(s.pitch - gp) > SAND.MAX_TILT) { s.pitch = gp + Math.sign(s.pitch - gp) * SAND.MAX_TILT; s.vp = 0; }
+      if (Math.abs(s.roll - gr) > SAND.MAX_TILT) { s.roll = gr + Math.sign(s.roll - gr) * SAND.MAX_TILT; s.vr = 0; }
     }
     // the wheels' turning: rolling with the car, faster when they spin in the sand
     s.spinAngle += (s.v + dir * slipV) * dt / geo.tyre;

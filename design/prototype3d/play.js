@@ -5,9 +5,11 @@
 import * as THREE from 'three';
 import { createCar, makeSoftness, LC300 } from './car_physics.js';
 const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;      // below this the tyres count as aired down
+const GEAR_TOP = [0, 18, 34, 52, 72, 96, 130];      // the rpm needle's simple gears: each one's top speed, km/h (allocated once)
+const STEER_RATIO = 15;          // the steering wheel's turn per road-wheel turn (the LC300's about 15-16: about 1.4 turns to lock here)
 // the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
 // changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the card shown beside the car
-const CREDIT = '<small class="pl-credit" dir="ltr">Model: Ddiaz Design · CC BY-NC-SA 4.0 · modified</small>';      // below this the tyres count as aired down
+const CREDIT = '<small class="pl-credit" dir="ltr">Model: Ddiaz Design · CC BY-NC-SA 4.0 · modified</small>';
 
 const WALK = 1.25, RUN = 3.5;                 // the speeds the walk and run clips were made for (m/s, measured on the planted foot)
 let WHEELBASE = 2.85, TRACK = 1.64;           // Land Cruiser 300; replaced by the model's own wheel positions when it has them
@@ -99,6 +101,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const soft = makeSoftness(ground, inYard);
   const env = { height: ground, soft };
   let settled = false, parked = true;                 // a car one gets into stands in park, as one left it
+  const BODY_CIRCLES = [[-1.55, 0, 1.02], [0, 0, 1.02], [1.55, 0, 1.02], [2.25, 0.72, 0.28], [2.25, -0.72, 0.28], [-2.2, 0.72, 0.28], [-2.2, -0.72, 0.28]];
   const PEDALS = { gas: 0, brake: 0 }, POSE = { x: 0, z: 0, yaw: 0 };      // (reused every frame)
   const needles = { speed: part('needle_speed'), rpm: part('needle_rpm') };
   const needleBase = { speed: needles.speed?.quaternion.clone(), rpm: needles.rpm?.quaternion.clone() };
@@ -166,7 +169,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
 
   // ---------------------------------------------------------------- dust behind the wheels (a small pool)
   const dustTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(200,170,130,0.9)'); gr.addColorStop(1, 'rgba(200,170,130,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
-  const puffs = Array.from({ length: 36 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dustTex, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; scene.add(s); return { s, age: 0, life: 1.6 }; });
+  const puffs = Array.from({ length: 18 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dustTex, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; scene.add(s); return { s, age: 0, life: 1.6 }; });
   let puffI = 0, puffT = 0;
 
   // ---------------------------------------------------------------- the tyres' tracks in soft sand (one draw: a ring of marks)
@@ -178,6 +181,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   let trackI = 0; const trackLast = { RL: { x: 1e9, z: 0 }, RR: { x: 1e9, z: 0 } }, trackN = new THREE.Vector3(), trackQ2 = new THREE.Quaternion();
   // the rear tyres' marks (they run in the front ones' ruts), laid on the ground's own slope, where the sand takes a print
   function tracks() {
+    trackMesh.instanceMatrix.clearUpdateRanges(); if (trackMesh.instanceColor) trackMesh.instanceColor.clearUpdateRanges();      // (once a frame: per mark, the second wheel's cleared the first's)
     for (const w of phys.wheels) {
       if (w.front || w.soft < 0.3 || w.wx === undefined) continue;
       const last = trackLast[w.k];
@@ -190,8 +194,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       trackS.set(1, 1, Math.max(1, Math.hypot(w.wx - last.px, w.wz - last.pz) / 0.42)); last.px = w.wx; last.pz = w.wz;     // (quick, a mark stretches over the gap since the last)
       trackM.compose(trackP, trackQ, trackS); trackMesh.setMatrixAt(trackI, trackM);
       trackMesh.setColorAt(trackI, trackC.copy(trackLight).lerp(trackDark, Math.min(1, w.sink / 0.12)));
-      trackMesh.instanceMatrix.clearUpdateRanges(); trackMesh.instanceMatrix.addUpdateRange(trackI * 16, 16); trackMesh.instanceMatrix.needsUpdate = true;
-      if (trackMesh.instanceColor) { trackMesh.instanceColor.clearUpdateRanges(); trackMesh.instanceColor.addUpdateRange(trackI * 3, 3); trackMesh.instanceColor.needsUpdate = true; }
+      trackMesh.instanceMatrix.addUpdateRange(trackI * 16, 16); trackMesh.instanceMatrix.needsUpdate = true;
+      if (trackMesh.instanceColor) { trackMesh.instanceColor.addUpdateRange(trackI * 3, 3); trackMesh.instanceColor.needsUpdate = true; }
       trackI = (trackI + 1) % TRACKS; trackMesh.count = Math.min(TRACKS, trackMesh.count + 1);      // (only the new mark is sent to the GPU)
     }
   }
@@ -367,7 +371,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const near = driverDoor(doorPoint).distanceTo(man.pos) < 1.8;
     if (near) loadCabin();
     if (driverDoor(doorPoint).distanceTo(man.pos) < 8) warmCabin();
-    if (near) setCard('near' + carState.locked, (carState.locked ? '<button data-c="lock">افتح القفل</button>' : '<button data-c="in" class="pri">اركب</button><button data-c="lock">قفّل</button>') + (rigged ? CREDIT : ''));
+    if (near && cardKey !== 'near' + carState.locked) setCard('near' + carState.locked, (carState.locked ? '<button data-c="lock">افتح القفل</button>' : '<button data-c="in" class="pri">اركب</button><button data-c="lock">قفّل</button>') + (rigged ? CREDIT : ''));
     else setCard('', '');
     if (near) placeCard(tmp2.copy(carState.pos).setY(carState.pos.y + 2.4));
   }
@@ -414,6 +418,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     carState.yaw += phys.s.yawRate * dt;
     carFwd(carState.yaw, fwd);
     carState.pos.addScaledVector(fwd, carState.v * dt);
+    if (phys.s.slide) { right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, phys.s.slide * dt); }      // sliding down a side slope too steep to hold
     POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw;
     if (!settled) { phys.settle(POSE, env); settled = true; }
     phys.s.v = carState.v;
@@ -421,9 +426,10 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     carState.v = phys.s.v;
     // bumps against the yard: the car stops and rebounds a little
     let hit = false;
-    for (const k of [-1.55, 0, 1.55]) {
-      tmp.copy(carState.pos).addScaledVector(fwd, k); const bx = tmp.x, bz = tmp.z;
-      if (pushCircle(tmp, 1.02)) { carState.pos.x += tmp.x - bx; carState.pos.z += tmp.z - bz; hit = true; }
+    right.crossVectors(fwd, UP);
+    for (const [k, sd, r] of BODY_CIRCLES) {                                   // three along the body and the four bumper corners
+      tmp.copy(carState.pos).addScaledVector(fwd, k).addScaledVector(right, sd); const bx = tmp.x, bz = tmp.z;
+      if (pushCircle(tmp, r)) { carState.pos.x += tmp.x - bx; carState.pos.z += tmp.z - bz; hit = true; }
     }
     // the yard's walls and posts: a car meeting one stops (a hard knock rebounds a little and pitches the body);
     // pressing on into it, it stays put
@@ -440,14 +446,14 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
     const a = phys.s.aLong;
     tracks(dt);
-    if (model.steer) model.steer.quaternion.copy(steerBase).multiply(qTmp.setFromAxisAngle(XAXIS, carState.steer * 4.0));
+    if (model.steer) model.steer.quaternion.copy(steerBase).multiply(qTmp.setFromAxisAngle(XAXIS, carState.steer * STEER_RATIO));
     const braking = PEDALS.brake && Math.abs(carState.v) > 0.3;
     for (const m of tailMats) m.emissiveIntensity = braking ? 4.0 : 0.6;
     // the cluster: speed 0-220 km/h and engine speed (a simple gear model) over a 270 degree sweep
     if (needles.speed) needles.speed.quaternion.copy(needleBase.speed).multiply(qTmp.setFromAxisAngle(XAXIS, -Math.min(1, Math.abs(carState.v) * 3.6 / 220) * 4.712));
     if (needles.rpm) {
-      const kmh = Math.abs(carState.v) * 3.6, gear = [0, 18, 34, 52, 72, 96, 130, 999].findIndex((g) => kmh < g) || 1;
-      const lo = [0, 0, 18, 34, 52, 72, 96, 130][gear], hi = [0, 18, 34, 52, 72, 96, 130, 220][gear];
+      const kmh = Math.abs(carState.v) * 3.6; let gear = 1; while (gear < 7 && kmh >= GEAR_TOP[gear]) gear++;
+      const lo = GEAR_TOP[gear - 1], hi = gear < 7 ? GEAR_TOP[gear] : 220;
       const rpm = 750 + (kmh - lo) / Math.max(1, hi - lo) * 2600 + (gas > 0 ? 400 : 0);
       needles.rpm.quaternion.copy(needleBase.rpm).multiply(qTmp.setFromAxisAngle(XAXIS, -Math.min(1, rpm / 8000) * 4.712));
     }
@@ -455,7 +461,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     // dust from the rear wheels when moving on sand
     const spinning = phys.s.slip * phys.s.thr;
     puffT += dt * Math.min(1, Math.abs(carState.v) / 6 + spinning * 2);
-    if ((Math.abs(carState.v) > 2 || spinning > 0.05) && puffT > 0.06) {
+    let softNow = 0; for (const w of phys.wheels) softNow += w.soft / 4;
+    if (softNow > 0.3 && (Math.abs(carState.v) > 2 || spinning > 0.05) && puffT > 0.08) {      // dust only off the beaten ground, where there is loose sand to raise
       puffT = 0; const p = puffs[puffI++ % puffs.length];
       p.s.position.copy(carState.pos).addScaledVector(fwd, -2.3).addScaledVector(right, (puffI % 2 ? -1 : 1) * 0.8).setY(carState.pos.y + 0.35);
       p.age = 0; p.s.visible = true;
@@ -506,7 +513,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       }
     }
     state.snap = false;
-    for (const p of puffs) if (p.s.visible) { p.age += dt; const t = p.age / p.life; p.s.scale.setScalar(0.8 + t * 3.5); p.s.position.y += dt * 0.35; p.s.material.opacity = 0.38 * (1 - t); if (t >= 1) p.s.visible = false; }
+    for (const p of puffs) if (p.s.visible) { p.age += dt; const t = p.age / p.life; p.s.scale.setScalar(0.7 + t * 2.0); p.s.position.y += dt * 0.35; p.s.material.opacity = 0.38 * (1 - t); if (t >= 1) p.s.visible = false; }
   }
 
   function start() {

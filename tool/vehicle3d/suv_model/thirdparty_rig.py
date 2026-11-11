@@ -31,13 +31,14 @@ def cabin(src, out):
     # the rim alone: from a first axis, the points within a ring about it (RIM radii, TUBE of its plane), their plane's
     # normal and their middle; again, five times (a plane through a shell round the pad took spokes and switches with
     # the rim, tilting the axis by 11 degrees and moving with every rebuild)
-    n, c0 = np.array(AXIS0), P.copy()
-    for _ in range(5):
-        d = (V - c0) @ n; rad = np.linalg.norm((V - c0) - np.outer(d, n), axis=1)
+    n = np.array(AXIS0)
+    for _ in range(5):                                                      # (the axis only: the middle stays on the pad's line; let drift, it left the rim's top behind)
+        d = (V - P) @ n; rad = np.linalg.norm((V - P) - np.outer(d, n), axis=1)
         rim = V[cand & (np.abs(d) < TUBE) & (rad > RIM[0]) & (rad < RIM[1])]
         c0 = rim.mean(0); n = np.linalg.svd(rim - c0)[2][2]
         if n[0] > 0: n = -n                                                 # toward the driver
-    P = c0
+        P = P + n * float((c0 - P) @ n)                                     # the pad's point moved along the axis to the rim's plane
+    c0 = P
     d = (V - P) @ n; rad = np.linalg.norm((V - P) - np.outer(d, n), axis=1)
     inside = (rad < RIM[1] + 0.01) & (d > DISC[0]) & (d < DISC[1])
     ok = np.ones(k, bool); np.logical_and.at(ok, lab, inside); ok &= np.bincount(lab, minlength=k) > 0

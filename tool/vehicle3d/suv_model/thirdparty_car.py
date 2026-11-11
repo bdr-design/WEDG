@@ -73,7 +73,7 @@ def main(src, car, out, tex):
         mw = o.matrix_world; pts = [mw @ v.co for v in o.data.vertices]
         if not pts: continue
         c = sum(pts, Vector()) / len(pts); sample = pts[::max(1, len(pts) // 40)]
-        if TC.CABIN_X[0] < c.x < TC.CABIN_X[1] and c.z > TC.CABIN_Z and sum(inside(p) for p in sample) / len(sample) >= TC.KEEP_SHARE:
+        if TC.CABIN_X[0] < c.x < TC.CABIN_X[1] and c.z > TC.CABIN_Z and not TC.in_lamps(c) and sum(inside(p) for p in sample) / len(sample) >= TC.KEEP_SHARE:
             bpy.data.objects.remove(o); inner += 1
     tris = 0
     for o in bpy.data.objects:

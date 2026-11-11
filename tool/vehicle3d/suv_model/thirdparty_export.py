@@ -14,6 +14,7 @@ import bpy, sys, os
 SHARP = ('Buttons_baseColor',)
 
 
+TILED = ('Fabric_baseColor', 'Black_Leather_baseColor', 'Leather_Points_normal')      # grain textures repeated 10-20 times over a surface: 512 looks the same from the seat
 METALS = ('Chrome', 'Metal', 'Mirror')        # the materials that are metal; the rest (leather, fabric, plastic, rubber, the trims' sheet) are not
 FLAT_SPREAD = 6 / 255                           # a texture varying less than this (its 1st to 99th percentile, every channel) is a plain value
 
@@ -61,6 +62,8 @@ def flat():
         if not b: continue
         b.inputs['Transmission Weight'].default_value = 0.0
         b.inputs['Specular IOR Level'].default_value = 0.5; b.inputs['Specular Tint'].default_value = (1, 1, 1, 1); b.inputs['IOR'].default_value = 1.5
+        for n in [n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and n.image.channels < 4]:      # (an image with no alpha read as alpha: the exporter then kept a PNG copy beside the JPEG)
+            for l in list(n.outputs['Alpha'].links): m.node_tree.links.remove(l)
         for nm in ('Specular IOR Level', 'Specular Tint', 'Transmission Weight', 'IOR'):
             for l in list(b.inputs[nm].links): m.node_tree.links.remove(l)
         if not any(w in m.name for w in METALS):                                 # (the source's metallic 0.4-0.7 on leather and rubber, without its specular, read as dark metal)
@@ -98,7 +101,7 @@ def main(src, out, sharp, most='1024'):
     flat(); used = dedupe(used)
     mem = 0
     for im in used:
-        nm = im.name.split('.')[0]; side = int(sharp) if nm in SHARP else min(int(most), 512 if nm.endswith('metallicRoughness') else 1024); w, h = im.size
+        nm = im.name.split('.')[0]; side = int(sharp) if nm in SHARP else min(int(most), 512 if nm.endswith('metallicRoughness') or nm in TILED else 1024); w, h = im.size
         if max(w, h) > side:
             if im.packed_file is None and not os.path.exists(bpy.path.abspath(im.filepath)): raise SystemExit('missing image ' + im.name)
             k = side / max(w, h); im.scale(max(1, round(w * k)), max(1, round(h * k)))

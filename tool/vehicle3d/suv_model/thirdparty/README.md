@@ -68,7 +68,8 @@ artist's, measured on the near layer):
 
 **Weight against the owner's budget:** on 10 Nov the owner chose about 40k triangles inside and about 40k outside
 near. This model needs more to have no holes: about 88k inside (drawn only from the driver's seat or through the
-open door) and about 66k outside near. At 48-51k the near layer showed the sky through the bonnet and the tailgate.
+open door) and about 66k outside near. At 48-51k the near layer showed the sky through the bonnet and the tailgate;
+at 66k a few slivers remain, closed from behind by dark inward-facing shells (engine bay, wheel wells, bumper).
 That trade-off is the owner's to confirm.
 
 How it is made (from `../`): `BLENDPY=<python with bpy> sh thirdparty_build.sh <scene.gltf> suv.blend <work dir> <out dir>`

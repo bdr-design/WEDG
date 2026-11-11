@@ -13,6 +13,7 @@ from mathutils.bvhtree import BVHTree
 OUTSIDE = {'CarPaint', 'ClearGlass', 'Light_Red_Back_Lower', 'Light_White_Back', 'Light_Red_Back', 'Light_glass', 'Front_Light',
            'GlassRed', 'BackSpotLight', 'SpotLight', 'Wheel', 'Mirror'}
 KEEP_SHARE = 0.6
+LAMPS = (((-2.45, -1.95), (0.42, 0.92), (1.0, 1.35)), ((-2.45, -1.95), (-0.92, -0.42), (1.0, 1.35)))     # the tail lamps' pockets (housings, reflectors, the red bars): outside, whatever the hull test says
 EMBLEM_PARTS = ('polySurface469',)        # the steering wheel's emblem (chrome, 64 x 42 mm, on the pad): dropped by the model's own name, not by place
 CABIN_X, CABIN_Z = (-2.45, 1.10), 0.50          # an object's middle must be between the tailgate and the firewall, and over the floor
 
@@ -34,6 +35,10 @@ def model_hull():
     return inside
 
 
+def in_lamps(c):
+    return any(x[0] < c.x < x[1] and y[0] < c.y < y[1] and z[0] < c.z < z[1] for x, y, z in LAMPS)
+
+
 def inner_small(o, inside):
     """A small part (under 30 cm) standing inside the model's own outside belongs to the interior whatever its
     material: the inside mirror's glass (Mirror), the overhead console's lamps and lens (outside materials, which
@@ -42,7 +47,7 @@ def inner_small(o, inside):
     if not P: return False
     lo = Vector((min(p.x for p in P), min(p.y for p in P), min(p.z for p in P))); hi = Vector((max(p.x for p in P), max(p.y for p in P), max(p.z for p in P)))
     c = (lo + hi) / 2
-    if max(hi - lo) > 0.3 or not (CABIN_X[0] < c.x < CABIN_X[1] and c.z > CABIN_Z): return False
+    if max(hi - lo) > 0.3 or not (-1.5 < c.x < 1.0 and c.z > 1.4 and abs(c.y) < 0.5): return False      # (by the roof's middle only: the lamps' reflectors at the corners read as inside too)
     sample = P[::max(1, len(P) // 20)]
     return sum(inside(p) for p in sample) / len(sample) >= KEEP_SHARE
 
@@ -70,7 +75,7 @@ def main(src, car, out):
         if not len(me.polygons): continue
         mw = o.matrix_world; pts = [mw @ v.co for v in me.vertices]; sample = pts[::max(1, len(pts) // 40)]
         c = sum(pts, Vector()) / len(pts)
-        if not (CABIN_X[0] < c.x < CABIN_X[1] and c.z > CABIN_Z): continue          # the cabin only: not the engine's bay, the chassis or the wheels
+        if not (CABIN_X[0] < c.x < CABIN_X[1] and c.z > CABIN_Z) or in_lamps(c): continue          # the cabin only: not the engine's bay, the chassis, the wheels or the tail lamps
         if sum(inside(p) for p in sample) / len(sample) >= KEEP_SHARE: kept.append(o)
     for o in [o for o in bpy.data.objects if o.type == 'MESH' and o not in kept]: bpy.data.objects.remove(o)
     door = [o for o in kept if under(o, 'FrontLeft_Door')]
