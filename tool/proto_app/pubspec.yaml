@@ -1,0 +1,36 @@
+name: marah_proto
+description: "مراح: النموذج ثلاثي الأبعاد داخل تطبيق، للتجربة على الجوال"
+publish_to: 'none'
+version: 0.1.0+1
+
+# Standalone on purpose: this app is NOT a member of the repo's pub workspace
+# (no `resolution: workspace`), so its dependencies never touch the game's.
+# It is a test harness for design/prototype3d, not the game (see README.md).
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Pinned to an exact version: the app only shows the prototype in a WKWebView.
+  webview_flutter: 4.14.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  # The prototype, bundled by assemble.sh into assets/web/ (not committed). Flutter
+  # lists asset folders one level at a time, so each folder is named.
+  assets:
+    - assets/web/
+    - assets/web/phone/
+    - assets/web/three/build/
+    - assets/web/three/examples/jsm/controls/
+    - assets/web/three/examples/jsm/geometries/
+    - assets/web/three/examples/jsm/loaders/
+    - assets/web/three/examples/jsm/objects/
+    - assets/web/three/examples/jsm/utils/

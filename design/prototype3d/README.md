@@ -9,6 +9,9 @@ They are not the game. They run as private claude.ai artifacts.
 | `world.js` | The world for `farm.html`. Details below. |
 | `terrain.js` | Builds the real terrain around the yard from `terrain/` (made by `tool/terrain3d/make_terrain.py`). |
 | `camel.html` | One camel, its clips and two camera presets. |
+| `models/` | The camel's three detail levels, the vehicles and the sand photo, as the page loads them (glTF in JSON). Serve them, and `terrain/`, next to `farm.html`. |
+
+`tool/proto_app` shows this prototype inside an iPhone app (see its README).
 
 ## Where the yard is
 
