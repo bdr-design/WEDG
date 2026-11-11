@@ -31,7 +31,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   rects.push({ x0: -18, x1: -6, z0: 4.2, z1: 9.8 });          // the goat-hair tent
   rects.push({ x0: 34, x1: 40, z0: 4.4, z1: 7.6 });           // the shepherds' cabin
   rects.push({ x0: 13.4, x1: 15.4, z0: 4.2, z1: 9.4 });       // the white shas under the shade
-  rects.push({ x0: 28.4, x1: 30.8, z0: -16.9, z1: -11.5 });   // the shas by the feed shed
+  rects.push({ x0: 25.2, x1: 27.6, z0: -16.9, z1: -11.5 });   // the shas by the feed shed
   const posts = [];
   for (const dx of [-1.4, 1.4]) for (const dz of [-1.4, 1.4]) posts.push({ x: 30 + dx, z: -40 + dz, r: 0.18 });
   for (const dx of [-3.2, 3.2]) for (const dz of [-6.2, 0, 6.2]) posts.push({ x: 32 + dx, z: -21 + dz, r: 0.15 });

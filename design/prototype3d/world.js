@@ -121,7 +121,7 @@ export function drapeOnTerrain(heightAt) {
 export const VEHICLES = [
   { model: 'shas', x: 14.4, z: 6.8, rot: Math.PI / 2 },
   { model: 'suv', x: 18.6, z: 6.8, rot: Math.PI / 2 },
-  { model: 'shas', x: 29.6, z: -14.2, rot: -Math.PI / 2 + 0.12, tint: '#e2d3b4', hay: true },
+  { model: 'shas', x: 26.4, z: -14.2, rot: -Math.PI / 2 + 0.12, tint: '#e2d3b4', hay: true },      // beside the feed shed, clear of its posts (at x 29.6 the shed's post at 28.8 stood through it)
 ];
 export const LAYOUT = {
   compound: { x0: -40, x1: 44, z0: -52, z1: 14 }, gate: { x0: 20, x1: 28 },

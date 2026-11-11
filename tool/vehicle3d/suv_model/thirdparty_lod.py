@@ -26,6 +26,7 @@ FAR = {'plate': 1.0, 'Wheel': 0.5, 'Textures_A': 0.5, 'ClearGlass': 0.4, 'Light_
 SMALL = 300                    # a material with fewer seen triangles is kept whole (near) or halved (far)
 WHEEL = 2000                   # a near wheel's triangles (tyre, rim, disc, nuts); its tyre (672, textured) kept whole
 CORNERS = ('FL', 'FR', 'RL', 'RR')
+AREA_FLOOR = {'lamp': 0.4, 'bumper': 0.3, 'handle': 0.5, 'door_FL.h': 0.5}      # the near layer's least share for the tail lamps' parts, the rear bumper's slats and the door handles and strips (thinned with the rest at 0.115, the sky showed through them)
 INSIDE = ('Fabric', 'White_Leather_Body', 'White_Leather_Seats', 'Plastic_Beige', 'Black_Leather', 'Leather_Points', 'Leather_Handles', 'Wood', 'Buttons', 'Screens')
 # (the interior's materials: what of them is left in the outside, seen only through its gaps, goes; the glass is dark)
 CLEAR = ('Light_glass', 'GlassRed', 'Light_Red_Back')    # the lamps' see-through lenses (their materials' alpha 0.25-0.74): seen, but hiding nothing (the lamps' insides show through them)
@@ -34,7 +35,8 @@ CLEAR = ('Light_glass', 'GlassRed', 'Light_Red_Back')    # the lamps' see-throug
 MERGE = {'Light_Red_Back_Lower': 'Light_Red_Back', 'RearMirror_Light': 'Light_White_Back'}      # two lamps of a few triangles each: drawn with their neighbours (two draws fewer)
 PANEL = float(os.environ.get('TP_PANEL', 0.01))        # m^2: a loose part this big has its edges held in the thinning (0.05: 51k with gaps on the bonnet and the tailgate; 0.01: 66k; 0.002: 94k)
 FEW = int(os.environ.get('TP_FEW', 0))                   # a loose part of fewer triangles is kept whole (40 took the near layer to 110k: off)
-HOLD = [((-2.75, -2.25), (-0.18, 0.18), (0.95, 1.35))]
+HOLD = [((-2.75, -2.25), (-0.18, 0.18), (0.95, 1.35))] + [((x - 0.16, x + 0.16), y, (1.06, 1.23)) for x in (0.03, -0.92) for y in ((0.85, 1.02), (-1.02, -0.85))]
+# (and the paint round the four door handles' pockets: thinned, the pockets' rims opened and the sky showed under the handles)
 HOLD_ALL = [((-2.2, -1.4), (-0.12, 0.12), (1.86, 2.1))]          # held whatever the material: the roof's antenna (thinned, it vanished)          # boxes (x, y, z) whose paint is not thinned: the tailgate's emblem recess (thinned, its rim broke into a badge-like shard)
 
 
@@ -118,10 +120,38 @@ SHELLS = [((1.15, 2.2), (-0.80, 0.80), (0.50, 1.10))] + [((hx - 0.48, hx + 0.48)
 # box's own faces are back faces (unseen); through a gap the far inside of it shows, dark, where the cull had left the sky
 
 
+SKIRT_Y = 0.84
+SKIRT = ((-1.80, -1.40, 0.93, 1.24), (-1.40, -0.78, 0.93, 1.04), (-0.78, 1.15, 0.40, 1.04))
+# (x from, x to, z from, z to) of each side's skirt: over the rear arch (its top 0.93), up behind the rear quarter to
+# 1.24 (the belt line rises there to 1.30: the fuel lid's and the door's rear seams), and below the doors' sills
+# elsewhere (their belt line at 1.13: a ray down through the glass from the chase camera, 0.6 steep, would meet a skirt
+# reaching 1.10); none behind 1.80, where the body narrows to the tail (there it stood out of the quarters)
+def skirt():
+    """Quads (four corners, outward direction) of a dark skirt just inside the body's sides: thinned, the doors' seams,
+    the low strip's line and the arches' tops opened and the sky showed through. Its faces look out, so from the cabin
+    (and through the windows, from outside: it has no lid) they are back faces, unseen."""
+    y = SKIRT_Y
+    return [([(u0, s * y, w0), (u1, s * y, w0), (u1, s * y, w1), (u0, s * y, w1)], Vector((0, s, 0))) for s in (1, -1) for u0, u1, w0, w1 in SKIRT]
+
+
+def merge_back(obs):
+    """The parts kept apart only for their floor in the thinning (AREA_FLOOR's groups) joined back into the body's
+    object of their material (the driver's handle into its door's): apart, they were 16 draws more (43 to 59)."""
+    for o in [o for o in obs if o['group'] in AREA_FLOOR]:
+        mat = o.name.split('.')[-1]; g = 'door_FL' if o['group'].startswith('door_FL') else 'body'
+        into = next((t for t in obs if t is not o and t['group'] == g and t.name.split('.')[-1] == mat), None)
+        if into is None: o['group'] = g; o.name = mat if g == 'body' else g + '.' + mat; o.data.name = o.name; continue
+        bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); into.select_set(True); bpy.context.view_layer.objects.active = into
+        bpy.ops.object.join(); obs.remove(o)
+
+
 def shells(obs):
     o = next((o for o in obs if o.name == 'BlackPlastic_Rough'), None)
     if o is None: return
-    mwi = o.matrix_world.inverted(); bm = bmesh.new(); bm.from_mesh(o.data)
+    mwi = o.matrix_world.inverted(); bm = bmesh.new(); bm.from_mesh(o.data); R = o.matrix_world.to_3x3()
+    for pts, out in skirt():
+        f = bm.faces.new([bm.verts.new(mwi @ Vector(p)) for p in pts]); f.normal_update()
+        if (R @ f.normal).dot(out) < 0: f.normal_flip()
     for (x0, x1), (y0, y1), (z0, z1) in SHELLS:
         c = Vector(((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2))
         v = [bm.verts.new(mwi @ Vector((x, y, z))) for x in (x0, x1) for y in (y0, y1) for z in (z0, z1)]
@@ -173,7 +203,7 @@ def hubs():
 
 
 def group_of(o, H):
-    """'wheel_XX' (spins), 'corner_XX' (rides with the wheel, does not spin) or 'body'."""
+    """'wheel_XX' (spins), 'corner_XX' (rides with the wheel, does not spin), 'lamp', 'bumper' or 'handle' (held at a floor, AREA_FLOOR), or 'body'."""
     P = np.array([o.matrix_world @ v.co for v in o.data.vertices]); lo, hi = P.min(0), P.max(0); c, s = (lo + hi) / 2, hi - lo
     mat = o.material_slots[0].material.name if o.material_slots and o.material_slots[0].material else ''
     for k, (h, y0, y1) in H.items():
@@ -182,6 +212,11 @@ def group_of(o, H):
         if r < 0.02 and max(s[0], s[2]) < 0.9: return 'wheel_' + k                                                                    # round about the axle: tyre, rim, disc, hub, and the axle's stub inboard (it turns too)
         if lo[1] >= y0 - 0.01 and hi[1] <= y1 + 0.01 and s.max() < 0.05 and r < h[2]: return 'wheel_' + k                              # small, within the tyre: a wheel nut, the valve stem
         if r < 0.3 and s.max() < 0.35 and abs(c[1] - h[1]) < 0.1: return 'corner_' + k                                           # the caliper, behind the disc
+    import thirdparty_cabin as TC
+    if TC.in_lamps(Vector(c)): return 'lamp'                                  # the tail lamps' pockets: seen through clear lenses, from the chase camera all the time
+    if c[0] < -2.2 and 0.45 < c[2] < 0.85: return 'bumper'                   # the rear bumper's slats
+    if abs(c[1]) > 0.88 and 1.05 < c[2] < 1.25 and s.max() < 0.3: return 'handle'      # the door handles, their pockets and the fuel lid (thinned, the sky showed behind the handles)
+    if mat == 'Chrome' and abs(c[1]) > 0.9 and 0.5 < c[2] < 0.7 and s[2] < 0.1: return 'handle'   # the doors' low chrome strips
     return 'body'
 
 
@@ -217,7 +252,10 @@ def by_material(split):
     for o in obs: mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw          # (the glTF's empties carry the parts' placing: kept before they go)
     for o in [o for o in bpy.data.objects if o.type != 'MESH' or not len(o.data.polygons)]: bpy.data.objects.remove(o)
     H = hubs(); groups = {}
-    for o in obs: groups.setdefault(('door_FL' if o.name in door else group_of(o, H)) if split else 'body', []).append(o)
+    def grp(o):
+        g = group_of(o, H)
+        return ('door_FL.h' if g == 'handle' else 'door_FL') if o.name in door else g      # (the driver's handle swings with its door: door_FL.h.* is under the hinge too)
+    for o in obs: groups.setdefault(grp(o) if split else 'body', []).append(o)
     one_uv(obs)
     out = []
     for g, members in groups.items():
@@ -296,7 +334,7 @@ def main(src, out, target, far=False):
         bpy.context.view_layer.objects.active = o; m = o.modifiers.new('tri', 'TRIANGULATE'); m.keep_custom_normals = True; bpy.ops.object.modifier_apply(modifier='tri')
     seen = visible(obs, LE.eyes()[:-4], CLEAR + ('door_FL.',))          # (lod_ext's last four eyes are the seats')
     for o, s in zip(obs, seen):
-        if o['group'] != 'body': continue
+        if o['group'] not in ('body', 'lamp', 'bumper', 'handle'): continue
         bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table(); bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in s], context='FACES')
         bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS'); bm.to_mesh(o.data); bm.free()
     for o in [o for o in obs if not len(o.data.polygons)]: obs.remove(o); bpy.data.objects.remove(o)
@@ -306,6 +344,7 @@ def main(src, out, target, far=False):
         ws = [o for o in obs if o['group'] == 'wheel_' + k]; tyre = sum(culled[o.name] for o in ws if o.name.endswith('.Wheel')); rest = sum(culled[o.name] for o in ws) - tyre
         for o in ws: floor[o.name] = 1.0 if o.name.endswith('.Wheel') else min(1.0, max(0.05, (WHEEL - tyre) / max(1, rest)))
     for o in obs:
+        if o['group'] in AREA_FLOOR and o.name not in floor: floor[o.name] = max(AREA_FLOOR[o['group']], floors.get(o.name.split('.')[-1], 0.0)) if not far else 0.0
         if o.name not in floor:
             c = culled[o.name]; mat = o.name.split('.')[-1]
             floor[o.name] = floors.get(mat, 1.0 if (c < SMALL and not far) else 0.5 if c < SMALL else 0.0)
@@ -320,11 +359,12 @@ def main(src, out, target, far=False):
             if not far: m.vertex_group = 'held'; m.invert_vertex_group = True
             bpy.ops.object.modifier_apply(modifier='lod'); o.vertex_groups.clear()
             flipped += unflip(o, orig)
+    merge_back(obs)
     glass_out(obs); inward_out(obs); radiator(obs); shells(obs)      # (the radiator and the shells after the cull: one big face seen only through slots would be culled)
     if not far: rig(obs, H)
     # (the far layer, seen beyond 20 m, holds no edges: they kept it at 52k)
     print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f); %d faces turned back after thinning' % (before, total, sum(tri(o) for o in obs), len(obs), r, flipped))
-    for o in sorted(obs, key=lambda o: -culled[o.name])[:12]: print('  %-26s seen %6d -> %6d' % (o.name, culled[o.name], tri(o)))
+    for o in sorted(obs, key=lambda o: -culled.get(o.name, 0))[:12]: print('  %-26s seen %6d -> %6d' % (o.name, culled.get(o.name, 0), tri(o)))      # (seen: before the merge, merge_back)
     for k in CORNERS: print('  wheel_%s %d triangles, corner_%s %d' % (k, sum(tri(o) for o in obs if o['group'] == 'wheel_' + k), k, sum(tri(o) for o in obs if o['group'] == 'corner_' + k)))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out))
 
