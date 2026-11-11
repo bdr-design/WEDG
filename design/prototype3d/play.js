@@ -4,7 +4,7 @@
 // boxes and circles from the yard layout.
 import * as THREE from 'three';
 import { createCar, makeSoftness, LC300 } from './car_physics.js';
-const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;
+const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;      // below this the tyres count as aired down
 // the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
 // changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the card shown beside the car
 const CREDIT = '<small class="pl-credit" dir="ltr">Model: Ddiaz Design · CC BY-NC-SA 4.0 · modified</small>';      // below this the tyres count as aired down
@@ -109,18 +109,25 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const tween = [];
   // the private car's interior: fetched a few seconds after the page is ready, in the background (it is drawn only
   // from the driver's seat and while the door stands open); coming to the door fetches it at once if it is not here yet
-  let cabinLoading = false;
+  let cabinLoading = false, cabinFailed = -1e9, cabinWarm = false;
   function loadCabin() {
-    if (!rigged || model.interior || cabinLoading) return;
+    if (!rigged || model.interior || cabinLoading || performance.now() - cabinFailed < 30000) return;      // (after a failure, try again in 30 s, not every frame)
     cabinLoading = true;
     loadLod('veh_suvcabin.json').then((g) => {
       const it = g.scene.getObjectByName('interior') || g.scene; it.name = 'interior';
       it.traverse((n) => { if (n.isMesh) { n.castShadow = false; n.receiveShadow = true; } });
       car.add(it); model.interior = it; model.doorcard = it.getObjectByName('doorcard_FL');
       model.steer = it.getObjectByName('steering'); steerBase = model.steer ? model.steer.quaternion.clone() : null;
-      // its shaders and textures made ready now, off the moment of getting in (it is then hidden till it is needed)
-      it.visible = true; try { renderer.compile(scene, camera); } catch (e) { /* the first draw compiles them instead */ } it.visible = false;
-    }).catch(() => { cabinLoading = false; });
+      it.visible = false;
+    }).catch(() => { cabinLoading = false; cabinFailed = performance.now(); });
+  }
+  // its shaders compiled and its textures sent to the GPU as the player walks up to the car (not on every page load:
+  // the 33 MB of textures stay off the GPU until then), so the door opening does not stall
+  function warmCabin() {
+    if (cabinWarm || !model.interior) return;
+    cabinWarm = true; const it = model.interior; it.visible = true;
+    it.traverse((n) => { if (n.isMesh) for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap']) if (n.material[k]) renderer.initTexture(n.material[k]); });
+    (renderer.compileAsync ? renderer.compileAsync(it, camera, scene) : Promise.resolve(renderer.compile(it, camera, scene))).catch(() => {}).finally(() => { if (model.interior === it && !(state.mode === 'drive' && state.view === 1)) it.visible = false; });
   }                                   // simple part animations: { obj, key, from, to, t, dur }
   // one animation per part at a time; `then` runs after an optional hold, in game time (not wall-clock)
   function animate(obj, to, dur = 0.45, then = null, hold = 0) {
@@ -175,14 +182,17 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       if (w.front || w.soft < 0.3 || w.wx === undefined) continue;
       const last = trackLast[w.k];
       if (Math.hypot(w.wx - last.x, w.wz - last.z) < 0.4) continue;
+      if (last.x > 1e8) { last.px = w.wx; last.pz = w.wz; }
       last.x = w.wx; last.z = w.wz;
       const e = 0.3, gx = ground(w.wx + e, w.wz) - ground(w.wx - e, w.wz), gz = ground(w.wx, w.wz + e) - ground(w.wx, w.wz - e);
       trackN.set(-gx, 2 * e, -gz).normalize();
       trackP.set(w.wx, ground(w.wx, w.wz) + 0.02, w.wz); trackQ.setFromUnitVectors(UP, trackN).multiply(trackQ2.setFromAxisAngle(UP, carState.yaw + Math.PI / 2));
-      trackS.set(1, 1, 1); trackM.compose(trackP, trackQ, trackS); trackMesh.setMatrixAt(trackI, trackM);
+      trackS.set(1, 1, Math.max(1, Math.hypot(w.wx - last.px, w.wz - last.pz) / 0.42)); last.px = w.wx; last.pz = w.wz;     // (quick, a mark stretches over the gap since the last)
+      trackM.compose(trackP, trackQ, trackS); trackMesh.setMatrixAt(trackI, trackM);
       trackMesh.setColorAt(trackI, trackC.copy(trackLight).lerp(trackDark, Math.min(1, w.sink / 0.12)));
-      trackI = (trackI + 1) % TRACKS; trackMesh.count = Math.min(TRACKS, trackMesh.count + 1);
-      trackMesh.instanceMatrix.needsUpdate = true; if (trackMesh.instanceColor) trackMesh.instanceColor.needsUpdate = true;
+      trackMesh.instanceMatrix.clearUpdateRanges(); trackMesh.instanceMatrix.addUpdateRange(trackI * 16, 16); trackMesh.instanceMatrix.needsUpdate = true;
+      if (trackMesh.instanceColor) { trackMesh.instanceColor.clearUpdateRanges(); trackMesh.instanceColor.addUpdateRange(trackI * 3, 3); trackMesh.instanceColor.needsUpdate = true; }
+      trackI = (trackI + 1) % TRACKS; trackMesh.count = Math.min(TRACKS, trackMesh.count + 1);      // (only the new mark is sent to the GPU)
     }
   }
 
@@ -270,13 +280,14 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   // the drive card: out, the tyres' pressure, the low range, traction control; dig when stuck. The slow jobs take
   // game time and need the car standing (airing four tyres down is a few minutes' work: shortened, a game choice).
-  let job = null;
+  let job = null, standing = true;
   const JOBS = { air: 8, dig: 10 };
   function driveCard() {
     // shown only while the car stands (or is stuck): moving, the scene is left clear
     const p = phys.s, aired = p.kPa < LC300KPA;
     let dug = 0; for (const w of phys.wheels) dug = Math.max(dug, w.dug);
-    const stuckNow = p.stuck > 1.5 || dug > 0.08, standing = Math.abs(carState.v) < 1;
+    const stuckNow = p.stuck > 1.5 || dug > 0.08, speed = Math.abs(carState.v);
+    standing = speed < 0.3 || (standing && speed < 1.0);                   // (shown below 0.3 m/s, hidden above 1: no flicker between)
     if (!standing && !stuckNow && !job) { setCard('', ''); return; }
     const key = 'drive' + aired + p.low + p.trc + p.gear + stuckNow + (job ? job.kind : '');
     if (key === cardKey) return;
@@ -288,13 +299,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   function act(c) {
     if (c === 'in') enter();
     else if (c === 'out') exit();
-    else if ((c === 'air' || c === 'dig') && !job && Math.abs(carState.v) < 0.3) job = { kind: c, t: 0 };
-    else if (c === 'low' && Math.abs(carState.v) < 0.3) { phys.s.low = !phys.s.low; driveCard(); }
+    else if ((c === 'air' || c === 'dig') && !job && Math.abs(carState.v) < 1) job = { kind: c, t: 0 };
+    else if (c === 'low' && Math.abs(carState.v) < 1) { phys.s.low = !phys.s.low; driveCard(); }
     else if (c === 'trc') { phys.s.trc = !phys.s.trc; driveCard(); }
-    else if (c === 'gear' && Math.abs(carState.v) < 0.3) { phys.s.gear = phys.s.gear === 'R' ? 'D' : 'R'; driveCard(); }
+    else if (c === 'gear' && Math.abs(carState.v) < 1) { phys.s.gear = phys.s.gear === 'R' ? 'D' : 'R'; driveCard(); }
     else if (c === 'lock') { carState.locked = !carState.locked; cardKey = ''; flash(); }
   }
-  function primary() { if (state.mode === 'drive') exit(); else if (cardKey === 'near' && !carState.locked) enter(); }
+  function primary() { if (state.mode === 'drive') exit(); else if (cardKey.startsWith('near') && !carState.locked) enter(); }
   function flash() {   // the indicators blink twice when it locks or unlocks
     const lamps = headMats.length || tailMats.length ? [...headMats, ...tailMats] : carMats;
     const rest = new Map(lamps.map((m) => [m, m.emissiveIntensity]));
@@ -355,6 +366,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     // near the driver's door: the car's options
     const near = driverDoor(doorPoint).distanceTo(man.pos) < 1.8;
     if (near) loadCabin();
+    if (driverDoor(doorPoint).distanceTo(man.pos) < 8) warmCabin();
     if (near) setCard('near' + carState.locked, (carState.locked ? '<button data-c="lock">افتح القفل</button>' : '<button data-c="in" class="pri">اركب</button><button data-c="lock">قفّل</button>') + (rigged ? CREDIT : ''));
     else setCard('', '');
     if (near) placeCard(tmp2.copy(carState.pos).setY(carState.pos.y + 2.4));
@@ -376,7 +388,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (job) {
       job.t += dt;
       if (job.kind === 'dig') for (const w of phys.wheels) w.dug *= Math.exp(-dt * 0.35);
-      if (job.t >= JOBS[job.kind]) { if (job.kind === 'air') phys.s.kPa = phys.s.kPa < LC300KPA ? LC300.roadKPa : LC300.airedKPa; job = null; }
+      if (job.t >= JOBS[job.kind]) {
+        if (job.kind === 'air') {
+          const down = phys.s.kPa >= LC300KPA; phys.s.kPa = down ? LC300.airedKPa : LC300.roadKPa;
+          if (down) for (const w of phys.wheels) w.dug *= 0.6;                 // the softened tyres spread and ride up out of their holes (game choice)
+        }
+        job = null;
+      }
     }
     driveCard();
     // the pedals: gas drives the way the gear points (and brakes a car rolling the other way); the brake slows the car
@@ -384,8 +402,10 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const way = phys.s.gear === 'R' ? -1 : 1, rolling = carState.v * way;
     const ctl = PEDALS; ctl.gas = 0; ctl.brake = 0;
     if (job) ctl.brake = 1;                                                    // parked while the driver works outside
-    else if (gas) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = 1; }
-    else if (brake) ctl.brake = 1;
+    else {
+      if (gas) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = 1; }
+      if (brake) ctl.brake = 1;                                               // (both feet: the brake holds against the engine)
+    }
     // steering: quick at walking pace, gentle at speed; it returns to centre on its own
     const maxSteer = 0.6 / (1 + Math.abs(carState.v) / 9);
     carState.steer += (steer * maxSteer - carState.steer) * Math.min(1, dt * 5);
@@ -404,7 +424,9 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       tmp.copy(carState.pos).addScaledVector(fwd, k); const bx = tmp.x, bz = tmp.z;
       if (pushCircle(tmp, 1.02)) { carState.pos.x += tmp.x - bx; carState.pos.z += tmp.z - bz; hit = true; }
     }
-    if (hit && Math.abs(carState.v) > 0.5) { carState.v *= -0.25; phys.s.v = carState.v; }
+    // the yard's walls and posts: a car meeting one stops (a hard knock rebounds a little and pitches the body);
+    // pressing on into it, it stays put
+    if (hit) { const v0 = carState.v; carState.v = Math.abs(v0) > 3 ? -0.1 * v0 : 0; phys.s.v = carState.v; phys.s.vp -= v0 * 0.04; }
     // the body on its springs: height, pitch and roll from car_physics.js; each corner rides its own spring
     right.crossVectors(fwd, UP);
     carState.pitch = phys.s.pitch; carState.roll = phys.s.roll; carState.pos.y = phys.originY();
@@ -418,7 +440,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const a = phys.s.aLong;
     tracks(dt);
     if (model.steer) model.steer.quaternion.copy(steerBase).multiply(qTmp.setFromAxisAngle(XAXIS, carState.steer * 4.0));
-    const braking = brake && carState.v > 0.3;
+    const braking = PEDALS.brake && Math.abs(carState.v) > 0.3;
     for (const m of tailMats) m.emissiveIntensity = braking ? 4.0 : 0.6;
     // the cluster: speed 0-220 km/h and engine speed (a simple gear model) over a 270 degree sweep
     if (needles.speed) needles.speed.quaternion.copy(needleBase.speed).multiply(qTmp.setFromAxisAngle(XAXIS, -Math.min(1, Math.abs(carState.v) * 3.6 / 220) * 4.712));

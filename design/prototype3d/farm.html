@@ -972,11 +972,12 @@ function tick(now) {
       for (const c of playCar.userData.nearParts) c.visible = near;
       playCar.userData.far.visible = !near;
     }
-    // the cabin (about 20 draws) only when it can be seen: from the driver's seat, or close enough to look in
+    // the cabin (the private car's: about 100k triangles, 33 draws) only when it can be seen: from the driver's seat or
+    // through the open door (the older photo car: close enough to look in); never with the far layer
     const cabin = playCar.userData.cabin || (playCar.userData.cabin = (play?.model.interior || (playCar.userData.darkGlass ? null : playCar.getObjectByName('interior'))));
     if (playCar.userData.darkGlass === undefined) playCar.userData.darkGlass = !!playCar.getObjectByName('corner_FL');      // the private car's glass is dark: its interior shows only from the driver's seat or through the open door
     const darkGlass = playCar.userData.darkGlass, doorOpen = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
-    if (cabin && near) cabin.visible = (playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive') || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6);
+    if (cabin) cabin.visible = near && ((playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive') || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6));
   }
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk
