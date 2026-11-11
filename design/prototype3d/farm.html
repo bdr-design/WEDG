@@ -6,7 +6,7 @@
   /* Layout: landscape only, and nothing written floats over the game. The 3D yard is the whole screen and the map is
      the menu: a column of three icon buttons in the top left corner (walk, camera, phone), icon pins over the places
      (a tap on a pin or on its 3D object docks the place's card on the side and glides the camera so the place stays in
-     view), and a context card at the bottom only while a camel or the followed herd is picked. Far places (the market,
+     view; a camel's details open in the same card, and following it or the herd runs from there). Far places (the market,
      the festival) are pins on the horizon in their real direction, or on the screen edge with an arrow when out of
      view. A phone held upright shows the game turned a quarter (body.rot: #root is turned, and the script reads every
      pointer and measured box in the turned frame). Sizes in play are in --u, a hundredth of the game's width.
@@ -53,43 +53,84 @@
   .side button { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; color: var(--ink); transition: background 0.2s, color 0.2s; }
   .side button[aria-pressed="true"] { background: var(--najdi); color: var(--on-najdi); border-color: transparent; }
 
-  /* ---------- context card: the camel you picked, or the herd you follow */
-  .card { position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; padding: 12px; border-radius: var(--r-island); display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; box-sizing: border-box; }
-  .card[hidden] { display: none; }
-  .avatar { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); grid-row: span 2; }
-  .avatar i { width: 26px; height: 26px; border-radius: 13px; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35); }
-  .card .t1 { font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1.2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card .acts { grid-row: span 2; display: flex; gap: 6px; align-items: center; }
-  .card .sub { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; font-size: 12px; color: var(--ink-2); }
-  .chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(255, 255, 255, 0.09); color: var(--ink); font-size: 11px; font-weight: 500; white-space: nowrap; }
-  .chip .d { width: 7px; height: 7px; border-radius: 4px; background: var(--good); }
-  .chip.walk .d { background: var(--najdi); }
-  .chip.idle .d { background: var(--ink-3); }
-  .note { flex-basis: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .primary { height: 44px; padding: 0 16px; border-radius: 20px; background: var(--najdi); color: var(--on-najdi); font-size: 13px; font-weight: 700; white-space: nowrap; }
-  .primary.on { background: var(--ink); color: #12151c; }
-  .icon-btn { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); color: var(--ink-2); }
-
-  /* ---------- the place card, docked: at the bottom between the gutters (on the start side in landscape) */
-  .pop { position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; max-height: min(34%, 290px); border-radius: 20px; background: var(--kohl-deep); display: flex; flex-direction: column; overflow: hidden; z-index: 5; }
-  .pop header { display: flex; align-items: center; gap: 10px; padding: 12px 10px 8px 12px; }
-  .pop .ttl { flex: 1; min-width: 0; display: grid; gap: 1px; }
-  .pop h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1.25; }
-  .pop .ttl small { font-size: 12px; color: var(--ink-2); }
-  .pop .body { overflow-y: auto; padding: 4px 6px 4px; overscroll-behavior: contain; }
-  .pop .acts { display: flex; gap: 8px; padding: 8px 12px 12px; }
-  .ghost { height: 44px; padding: 0 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.1); font-size: 13px; font-weight: 600; white-space: nowrap; }
-  .band { height: 5px; flex: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='6'%3E%3Cpath d='M0 6 6 0 12 6z' fill='%2334bcaa'/%3E%3Cpath d='M3 6 6 3 9 6z' fill='%23f5f2ec'/%3E%3C/svg%3E") repeat-x; opacity: 0.55; }
-  .hint { margin: 4px 8px 8px; font-size: 11px; color: var(--ink-3); }
-  .row { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 12px; align-items: center; padding: 9px 8px; border-radius: 14px; text-align: start; box-sizing: border-box; }
-  button.row:hover { background: rgba(255, 255, 255, 0.06); }
-  .row .lead { grid-column: 1; grid-row: span 2; width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
-  .row .lead i { width: 20px; height: 20px; border-radius: 10px; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.3); }
-  .row b { font-weight: 600; font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .row > span { grid-column: 2; font-size: 12px; color: var(--ink-2); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .row .end { grid-row: 1 / span 2; grid-column: 3; font-size: 12px; font-weight: 600; text-align: end; }
-  .row .end.warn { color: var(--warn); } .row .end.bad { color: var(--bad); } .row .end.good { color: var(--good); }
-  .group { margin: 10px 8px 4px; font-size: 11px; font-weight: 600; color: var(--ink-3); letter-spacing: 0.02em; }
+  /* ---------- the card: one for every place and every camel (the owner's approved Sadu design). Docked on the side in
+     landscape, at the bottom on a big screen. Goat-hair black, natural wool and madder red, as the Sadu in the game's tent:
+     a woven band on top (red, grains, a chain of stepped diamonds; drawn once from --sadu-band, see the script), a selvedge
+     below, squares for swatches and markers, hairlines and grain rows between the parts. Text in set sizes, Western digits,
+     tabular. Nearly opaque and never blurred (see the top); nothing in it changes per frame. */
+  .pop { --wool: #efe6d6; --wool-2: rgba(239, 230, 214, 0.7); --wool-3: rgba(239, 230, 214, 0.5); --hair: rgba(239, 230, 214, 0.12); --hair-2: rgba(239, 230, 214, 0.26);
+    --qirmiz: #a3302a; --zafaran: #d9952f; --zafaran-ink: #f0c27a; --khudra: #9fcf86;
+    position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; max-height: min(60%, 440px);
+    display: flex; flex-direction: column; overflow: hidden; z-index: 5; border-radius: 4px; background: rgba(23, 19, 15, 0.96); color: var(--wool);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42), inset 0 0 0 1px var(--hair); font-variant-numeric: tabular-nums; }
+  .pop:focus { outline: none; }
+  .pop { container-type: inline-size; }
+  .pop button:focus-visible { outline: 2px solid var(--wool); outline-offset: -2px; }
+  .pop .sadu { flex: none; height: 30px; background: var(--sadu-band) center top / 16px 30px repeat-x; }
+  .pop .selvedge { flex: none; height: 6px; background: var(--sadu-edge) center top / 16px 6px repeat-x; }
+  .pop svg.i { width: 20px; height: 20px; stroke-linecap: square; stroke-linejoin: miter; }
+  .pop .hd { flex: none; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 12px; align-items: center; padding: 14px 16px 12px; }
+  .pop .tile { width: 44px; height: 44px; display: grid; place-items: center; background: var(--qirmiz); color: var(--wool); }
+  .pop .tile.warn { background: var(--zafaran); color: #1c1408; }
+  .pop .tile svg.i { width: 22px; height: 22px; }
+  .pop .ttl { min-width: 0; }
+  .pop h2 { margin: 0; font: 700 20px/26px var(--display); }
+  .pop .ttl p { margin: 2px 0 0; font: 400 12.5px/18px var(--ui); color: var(--wool-2); }
+  .pop .x { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--hair-2); border-radius: 2px; color: var(--wool-2); }
+  .pop .x svg.i { width: 16px; height: 16px; }
+  .pop .body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 2px; }
+  .pop .stats { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; margin: 0 16px 14px; border: 1px solid var(--hair-2); }
+  .pop .stat { padding: 9px 10px 10px; display: grid; gap: 3px; }
+  .pop .stat + .stat { border-inline-start: 1px solid var(--hair-2); }
+  .pop .stat small { display: flex; align-items: center; gap: 6px; font: 500 11.5px/16px var(--ui); color: var(--wool-3); white-space: nowrap; }
+  .pop .stat small::before { content: ""; width: 4px; height: 4px; flex: none; background: var(--qirmiz); }
+  .pop .stat b { font: 600 19px/24px var(--display); white-space: nowrap; }      /* (not clipped: a clipped grid item lets its column shrink under its text, and 28,000 ريال was cut) */
+  .pop .stat b em { font: 400 12px/1 var(--ui); font-style: normal; color: var(--wool-2); margin-inline-start: 4px; }
+  .pop .stat b.word { font: 600 16px/24px var(--ui); }
+  .pop .stat b.warn { color: var(--zafaran); } .pop .stat b.good { color: var(--khudra); }
+  .pop .sec { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 0 16px 4px; font: 600 12px/16px var(--ui); color: var(--wool-3); }
+  .pop .sec em { font-style: normal; font-weight: 500; }
+  .pop .sec i, .pop .acts::before { height: 2px; background: repeating-linear-gradient(to left, rgba(163, 48, 42, 0.95) 0 2px, transparent 2px 4px, rgba(239, 230, 214, 0.4) 4px 6px, transparent 6px 8px); }
+  .pop .list { display: grid; padding: 0 16px; }
+  .pop .row { width: 100%; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto 16px; gap: 12px; align-items: center; height: 54px; text-align: start; }
+  .pop .row + .row { border-top: 1px solid var(--hair); }
+  .pop .row.tight { height: 48px; grid-template-columns: 26px minmax(0, 1fr) auto; }
+  .pop .sw { width: 30px; height: 30px; box-shadow: inset 0 0 0 1px rgba(239, 230, 214, 0.38); }
+  .pop .row.tight .sw, .pop .sq { width: 26px; height: 26px; }
+  .pop .sq { display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--hair-2); color: var(--wool-2); }
+  .pop .sq svg.i { width: 16px; height: 16px; }
+  .pop .nm { min-width: 0; }
+  .pop .nm b { display: block; font: 600 15.5px/22px var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pop .row.tight .nm b { font-size: 14.5px; line-height: 20px; }
+  .pop .nm .m { display: block; font: 400 12.5px/18px var(--ui); color: var(--wool-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pop .tag { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/16px var(--ui); color: var(--wool-2); white-space: nowrap; }
+  .pop .tag::before { content: ""; width: 6px; height: 6px; background: currentColor; }
+  .pop .tag.warn { color: var(--zafaran); } .pop .tag.good { color: var(--khudra); }
+  .pop .chev { display: grid; color: var(--wool-3); } .pop .chev svg.i { width: 16px; height: 16px; }
+  .pop .price { min-width: 64px; text-align: start; font: 600 15px/20px var(--display); white-space: nowrap; }
+  .pop .hint { margin: 8px 16px 4px; font: 400 11.5px/16px var(--ui); color: var(--wool-3); }
+  .pop .acts { flex: none; position: relative; display: flex; gap: 10px; padding: 14px 16px; }
+  .pop .acts::before { content: ""; position: absolute; top: 0; left: 16px; right: 16px; }
+  .pop .b { height: 44px; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 2px; border: 1px solid var(--hair-2); color: var(--wool); font: 600 15px/1 var(--ui); white-space: nowrap; }
+  .pop .b.pri { flex: 1.5; background: var(--wool); border-color: var(--wool); color: #15110e; }
+  .pop .b svg.i { width: 18px; height: 18px; }
+  .pop .backrow { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 0; }
+  .pop .back { display: flex; align-items: center; gap: 6px; height: 44px; padding-inline-end: 8px; font: 600 13px/18px var(--ui); color: var(--wool-2); }
+  .pop .back svg.i { width: 16px; height: 16px; }
+  .pop .who { flex: none; display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 16px 12px; }
+  .pop .who .sw { width: 48px; height: 48px; }
+  .pop .who h2 { font-size: 24px; line-height: 30px; }
+  .pop .note { display: flex; align-items: center; gap: 8px; margin: 0 16px 14px; padding: 10px 12px; border-inline-start: 3px solid var(--hair-2); background: rgba(239, 230, 214, 0.06); color: var(--wool-2); font: 500 13.5px/20px var(--ui); }
+  .pop .note.warn { border-color: var(--zafaran); background: rgba(217, 149, 47, 0.12); color: var(--zafaran-ink); }
+  .pop .note svg.i { width: 18px; height: 18px; }
+  .pop .gauge { display: grid; gap: 10px; margin: 0 16px 14px; }
+  .pop .gauge .big { display: flex; align-items: baseline; gap: 8px; }
+  .pop .gauge .big b { font: 700 38px/44px var(--display); }
+  .pop .gauge .big span { font: 400 13px/18px var(--ui); color: var(--wool-2); }
+  .pop .seg { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; height: 12px; }
+  .pop .seg i { background: var(--hair-2); }
+  .pop .seg i.on { background: var(--wool); }
+  @container (max-width: 330px) { .pop .stat { padding-inline: 7px; } .pop .stat b { font-size: 17px; line-height: 21px; } .pop .stat b em { display: block; margin: 1px 0 0; line-height: 14px; } .pop .stat small { font-size: 11px; } }      /* a small phone's narrow card: the three numbers still fit (after the rules it overrides) */
 
   /* ---------- pins over the world: an icon in a drop, no words (the place's name is its card's title) */
   #labels { position: fixed; inset: 0; pointer-events: none; }
@@ -120,11 +161,9 @@
   /* ---------- a phone lying on its side (body.land, set by the script: wide and at most 600 px high): the place card docks on the right */
   body.land { --edge-t: calc(8px + env(safe-area-inset-top, 0px)); --edge-b: calc(10px + env(safe-area-inset-bottom, 0px)); }
   body.land.rot { --edge-t: calc(8px + env(safe-area-inset-right, 0px)); --edge-b: calc(10px + env(safe-area-inset-left, 0px)); }
-  body.land .card { right: var(--edge-r); left: calc(var(--edge-l) + 60px); max-width: 440px; }
-  body.land.phone-open .card { right: calc(var(--edge-r) + 200px); }      /* clear of the small phone */
-  body.land .pop { top: var(--edge-t); bottom: auto; left: auto; width: min(340px, 42%); margin: 0; max-height: calc(100% - var(--edge-t) - var(--edge-b)); }
+  body.land .pop { top: var(--edge-t); bottom: auto; left: auto; width: min(352px, max(300px, 42%)); margin: 0; max-height: calc(100% - var(--edge-t) - var(--edge-b)); }
   @media (prefers-reduced-motion: reduce) { .side button { transition: none; } }
-  body.playing .side, body.playing #labels, body.playing #card, body.playing #pop { display: none !important; }
+  body.playing .side, body.playing #labels, body.playing #pop { display: none !important; }
 
   /* ---------- play: icons at the edges only, in from them by the system's gesture margins. Top left: the view (in
      the car), back to the map, and the phone. Walking: a stick under the left thumb where it lands; by the driver's door, get in and lock
@@ -179,24 +218,12 @@
   <button class="glass" id="phone-btn" type="button" aria-pressed="false" aria-label="الجوال"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></button>
 </div>
 
-<section class="card glass" id="card" dir="rtl" aria-live="polite" hidden>
-  <span class="avatar" id="c-avatar" aria-hidden="true"></span>
-  <div class="t1" id="s1">الحلال يسرح</div>
-  <div class="acts">
-    <button id="s-act" class="primary" type="button">تابع القطيع</button>
-    <button id="s-clear" class="icon-btn" type="button" aria-label="إغلاق" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-  </div>
-  <div class="sub" id="s2"></div>
-</section>
-
 <section class="pop" id="pop" dir="rtl" hidden role="dialog" aria-labelledby="pop-title" tabindex="-1">
-  <header>
-    <div class="ttl"><h2 id="pop-title"></h2><small id="pop-sub"></small></div>
-    <button class="icon-btn" id="pop-close" type="button" aria-label="إغلاق"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-  </header>
-  <div class="band" aria-hidden="true"></div>
+  <div class="sadu" aria-hidden="true"></div>
+  <div id="pop-top"></div>
   <div class="body" id="pop-body"></div>
   <div class="acts" id="pop-acts"></div>
+  <div class="selvedge" aria-hidden="true"></div>
 </section>
 
 <div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p></div>
@@ -492,8 +519,8 @@ function footfall(pos, heading, near) {
 
 // ------------------------------------------------------------ camels
 const COATS = {
-  wodh: { name: 'وضحاء', tint: '#ffffff' }, shaqh: { name: 'شقحاء', tint: '#f3e3c8' },
-  homr: { name: 'حمراء', tint: '#a8694a' }, majaheem: { name: 'مجهمية', tint: '#2c2622' },
+  wodh: { name: 'وضحاء', group: 'وضح', tint: '#ffffff' }, shaqh: { name: 'شقحاء', group: 'شقح', tint: '#f3e3c8' },
+  homr: { name: 'حمراء', group: 'حمر', tint: '#a8694a' }, majaheem: { name: 'مجهمية', group: 'مجاهيم', tint: '#2c2622' },
 };
 const GRAZE = LAYOUT.graze;
 const camels = [];
@@ -649,9 +676,7 @@ const coatsOut = ['wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh'
 // ------------------------------------------------------------ labels over the world
 const labelLayer = $('labels');
 const P = LAYOUT.pens, mid = (p, y) => new THREE.Vector3((p.x0 + p.x1) / 2, y, (p.z0 + p.z1) / 2);
-let pop = null;          // the open place card
-const row = ({ lead = '', title, sub = '', end = '', cls = '', btn = false, data = '' }) =>
-  `<${btn ? 'button type="button"' : 'div'} class="row" ${data}><span class="lead">${lead}</span><b>${title}</b><span>${sub}</span><em class="end ${cls}" style="font-style:normal">${end}</em></${btn ? 'button' : 'div'}>`;
+let pop = null;          // the open card: { place, camel } (camel: its details, opened from its place or tapped in the world)
 const GRAZE_MID = new THREE.Vector3((LAYOUT.graze.x0 + LAYOUT.graze.x1) / 2, 3.2, (LAYOUT.graze.z0 + LAYOUT.graze.z1) / 2);
 // far places in their real direction from the yard (25.81 N, 42.90 E), placed on the horizon:
 // Buraydah's camel market is about 57 km north and 107 km east (122 km, east-north-east); the big
@@ -659,51 +684,76 @@ const GRAZE_MID = new THREE.Vector3((LAYOUT.graze.x0 + LAYOUT.graze.x1) / 2, 3.2
 const toward = (east, south) => new THREE.Vector3(east, 0, south).normalize().multiplyScalar(6000).setY(420);
 const water = { pct: 62, days: 8, ordered: false };
 const inPenOf = (pen) => camels.filter((c) => c.pen === pen);
-const camelRows = (list) => list.map((c) => row({ btn: true, data: `data-camel="${camels.indexOf(c)}"`, lead: `<i style="background:${COAT_HEX[c.coat]}"></i>`, title: esc(c.name), sub: `${COATS[c.coat].name} · ${esc(c.age)}`, end: stateWord(c) })).join('');
+// Arabic counting: 1 and 2 have words of their own, 3-10 take the plural, 11 and up the singular ([value, unit])
+const count = (n, one, two, few, many) => (n === 1 ? [one, ''] : n === 2 ? [two, ''] : [String(n), n <= 10 ? few : many]);
+const days = (n) => count(n, 'يوم', 'يومين', 'أيام', 'يوم');
+const years = (n) => count(n, 'سنة', 'سنتين', 'سنين', 'سنة');
+const svgI = (body, fill) => `<svg class="i${fill ? ' fill' : ''}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
+const X_BTN = `<button type="button" class="x" data-close aria-label="إغلاق">${svgI('<path d="M6 6l12 12M18 6 6 18"/>')}</button>`;
+const CHEV = svgI('<path d="M15 6l-6 6 6 6"/>');
+const EYE = '<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>';
+const TRUCK = '<path d="M2.5 6.5h11v9.5h-11z"/><path d="M13.5 9.5h4.2l3.3 3.6V16h-7.5"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>';
+// three numbers in a woven grid: [label, value, unit, class]; a value that is a word is set smaller
+const statsHtml = (st) => `<div class="stats">${st.map(([label, value, unit, cls = '']) =>
+  `<div class="stat"><small>${label}</small><b class="${/^[\d<]/.test(value) ? '' : 'word '}${cls}">${value}${unit ? `<em>${unit}</em>` : ''}</b></div>`).join('')}</div>`;
+const coatName = (c) => (c.male ? COATS[c.coat].group : COATS[c.coat].name);       // a male by his colour's group: وضح، حمر، شقح، مجاهيم
+const camelRow = (c) => `<button type="button" class="row" data-camel="${camels.indexOf(c)}"><span class="sw" style="background:${COAT_HEX[c.coat]}"></span>` +
+  `<span class="nm"><b>${esc(c.name)}</b><span class="m">${coatName(c)} · ${esc(c.age)}</span></span><span class="tag${c.warn ? ' warn' : ''}">${esc(c.tag || stateWord(c))}</span><span class="chev">${CHEV}</span></button>`;
+// the ones that need attention first (the number above them counts exactly these), the rest in their order
+const camelList = (title, list) => `<div class="sec">${title}<i></i></div><div class="list">${[...list.filter((c) => c.warn), ...list.filter((c) => !c.warn)].map(camelRow).join('')}</div>`;
+const attention = (list) => list.filter((c) => c.warn).length;
+const herdStats = (list, last) => { const k = attention(list); return [['العدد', String(list.length), 'راس'], ['تبي انتباه', String(k), '', k ? 'warn' : ''], last]; };
 const closer = (pl) => ({ label: 'قرّب', run: () => glideTo(pl, 36) });
-const pen = (key, name, rect, sub, cls) => ({ key, rect, cls, icon: 'pen', p: mid(rect, 2.6), max: 280,
+const pen = (key, name, rect, sub, cls) => ({ key, name, rect, cls, icon: 'pen', p: mid(rect, 2.6), max: 280,
   text: () => `${name} · ${inPenOf(rect).length}`,
-  open() { const list = inPenOf(rect); return { title: name, sub: `${list.length} راس · ${sub}`, html: camelRows(list), actions: [closer(this)] }; } });
+  open() { const list = inPenOf(rect); return { sub, stats: herdStats(list, ['الحوض', water.pct > 0 ? 'ممتلي' : 'فاضي']), html: camelList('في الشبك', list), actions: [closer(this)] }; } });
 const PLACES = [
   pen('main', 'شبك النوق', P.main, 'المظلات والحوض'),
   pen('young', 'المفاريد', P.young, 'مفاريد هالسنة'),
   pen('calves', 'الحيران', P.calves, 'ينتظرون أمهاتهم من المرعى'),
   pen('bull', 'شبك الفحل', P.bull, 'موسم الضراب'),
   pen('sick', 'العزل', P.sick, 'جرب يعدي · باقي 12 يوم علاج', 'warn'),
-  { key: 'graze', icon: 'herd', p: GRAZE_MID, max: 900, text: () => `المسراح · ${camels.filter((c) => c.home === 'graze').length}`,
+  { key: 'graze', name: 'الحلال يسرح', icon: 'herd', p: GRAZE_MID, max: 900, text: () => `المسراح · ${camels.filter((c) => c.home === 'graze').length}`,
     open() { const list = camels.filter((c) => c.home === 'graze');
-      return { title: 'الحلال يسرح', sub: `${list.length} راس · 330 م عن العزبة · رمث وعرفج`, html: camelRows(list),
-        actions: [{ label: 'تابع القطيع', primary: true, run: () => { closePop(); followTheHerd(); view('near'); } }] }; } },
+      return { sub: 'المسراح · رمث وعرفج', stats: herdStats(list, ['عن العزبة', '330', 'م']), html: camelList('في المسراح', list),
+        actions: [{ label: followHerd ? 'وقف المتابعة' : 'تابع القطيع', icon: EYE, primary: !followHerd,
+          run: () => { followHerd = !followHerd; follow = null; if (followHerd) view('near'); openPlace(this, true); } }] }; } },
   // water and feed reach 220 m: the default drone view is 140 m from the tank, and its warning must show there
-  { key: 'water', icon: 'water', p: new THREE.Vector3(30, 7.6, -40), max: 280, cls: () => (water.ordered ? '' : 'warn'),
+  { key: 'water', name: 'خزان الماء', icon: 'water', p: new THREE.Vector3(30, 7.6, -40), max: 280, cls: () => (water.ordered ? '' : 'warn'),
     text: () => (water.ordered ? `الماء ${water.pct}٪ · الوايت جاي` : `الماء ${water.pct}٪ · ${water.days} أيام`),
-    open() { return { title: 'خزان الماء', sub: water.ordered ? `${water.pct}٪ · طلبت وايت، في الطريق` : `${water.pct}٪ · يكفي ${water.days} أيام`,
-      actions: water.ordered ? [closer(this)] : [{ label: 'اطلب وايت', primary: true, run: () => { water.ordered = true; refreshLabels(); openPlace(this, true); } }, closer(this)] }; } },
-  { key: 'feed', icon: 'feed', p: new THREE.Vector3(32, 4.6, -21), max: 280, text: () => 'العلف 13 يوم',
-    open() { return { title: 'مخزن العلف', sub: 'يكفي 13 يوم · شعير وبرسيم', actions: [closer(this)] }; } },
-  { key: 'room', icon: 'room', p: new THREE.Vector3(6, 4.6, 6.5), max: 280, text: () => 'غرفة العزبة',
-    open() { return { title: 'غرفة العزبة', sub: 'واجهة زجاج على الشبوك · جلسة ومكيفات', actions: [{ label: 'ادخل', primary: true, run: () => { closePop(); view('room'); } }] }; } },
-  { key: 'tent', icon: 'tent', p: new THREE.Vector3(-12, 3.0, 7), max: 280, text: () => 'بيت الشعر',
-    open() { return { title: 'بيت الشعر', sub: 'دلال وتمر · الضو شابّ', actions: [closer(this)] }; } },
-  { key: 'gate', icon: 'gate', p: new THREE.Vector3(24, 2.6, 15), max: 280, text: () => 'البوابة',
-    open() { return { title: 'البوابة', sub: 'الطريق للمسراح 330 م', actions: [closer(this)] }; } },
-  { key: 'camp', icon: 'camp', p: new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22), max: 600, text: () => 'كرفان الراعي',
-    open() { return { title: 'كرفان الراعي', sub: 'على تريلة · في المسراح', actions: [{ label: 'روح له', primary: true, run: () => { closePop(); view('camp'); } }] }; } },
-  { key: 'asmar', icon: 'mountain', p: new THREE.Vector3(6413, 520, -885), min: 900, cls: 'far', text: () => 'أبان الأسمر · 1225 م',
-    open() { return { title: 'أبان الأسمر', sub: '1225 م · 6.4 كم شرق العزبة', actions: [{ label: 'منظر الجبل', primary: true, run: () => { closePop(); view('hill'); } }] }; } },
-  { key: 'ahmar', icon: 'mountain', p: new THREE.Vector3(-11344, 610, 35151), min: 900, cls: 'far', text: () => 'أبان الأحمر · 1309 م',
-    open() { return { title: 'أبان الأحمر', sub: '1309 م · 37 كم جنوب غرب العزبة' }; } },
-  // example prices from the bands in GDD §6: slaughter and hiqq 3-6k, maqani 10-40k, select fardiyat 60-100k
-  { key: 'market', icon: 'market', p: toward(107, -57), edge: true, cls: 'place', text: () => 'حراج الإبل · بريدة 122 كم',
-    open() { const L = [['حقة وضحاء', 'القصيم · بريدة', '5,000'], ['جذعة شقحاء مقانية', 'حائل', '33,500'], ['لقية حمراء مقانية', 'الرس', '18,000'], ['ثنية مجاهيم فردية مميزة', 'الخرج', '85,000']];
-      return { title: 'حراج الإبل · بريدة', sub: '122 كم خط مستقيم شرق شمال شرق', html: '<p class="hint">أمثلة لشكل العرض. الأسعار الحقيقية يحسبها محرك اللعبة.</p>' +
-        L.map(([t, w, pr]) => row({ lead: HERD_ICON, title: t, sub: w, end: `<span class="num">${pr}</span> ريال` })).join('') }; } },
+    open() { return { sub: 'يعبّي أحواض الشبوك', gauge: water.pct,
+      stats: [['يكفي', ...days(water.days), water.ordered ? '' : 'warn'], ['يشرب منه', String(camels.length), 'راس'], ['الوايت', water.ordered ? 'في الطريق' : 'ما انطلب']],
+      actions: water.ordered ? [closer(this)] : [closer(this), { label: 'اطلب وايت', icon: TRUCK, primary: true, run: () => { water.ordered = true; refreshLabels(); openPlace(this, true); } }] }; } },
+  { key: 'feed', name: 'مخزن العلف', icon: 'feed', p: new THREE.Vector3(32, 4.6, -21), max: 280, text: () => 'العلف 13 يوم',
+    open() { return { sub: 'شعير وبرسيم', stats: [['يكفي', ...days(13)]], actions: [closer(this)] }; } },
+  { key: 'room', name: 'غرفة العزبة', icon: 'room', p: new THREE.Vector3(6, 4.6, 6.5), max: 280, text: () => 'غرفة العزبة',
+    open() { return { sub: 'جلسة ومكيفات · تطل على الشبوك', actions: [{ label: 'ادخل', primary: true, run: () => { closePop(); view('room'); } }] }; } },
+  { key: 'tent', name: 'بيت الشعر', icon: 'tent', p: new THREE.Vector3(-12, 3.0, 7), max: 280, text: () => 'بيت الشعر',
+    open() { return { sub: 'دلال وتمر · الضو شابّ', actions: [closer(this)] }; } },
+  { key: 'gate', name: 'البوابة', icon: 'gate', p: new THREE.Vector3(24, 2.6, 15), max: 280, text: () => 'البوابة',
+    open() { return { sub: 'الطريق للمسراح 330 م', actions: [closer(this)] }; } },
+  { key: 'camp', name: 'كرفان الراعي', icon: 'camp', p: new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22), max: 600, text: () => 'كرفان الراعي',
+    open() { return { sub: 'على تريلة · في المسراح', actions: [{ label: 'روح له', primary: true, run: () => { closePop(); view('camp'); } }] }; } },
+  { key: 'asmar', name: 'أبان الأسمر', icon: 'mountain', p: new THREE.Vector3(6413, 520, -885), min: 900, cls: 'far', text: () => 'أبان الأسمر · 1225 م',
+    open() { return { sub: 'جبل · شرق العزبة', stats: [['الارتفاع عن البحر', '1225', 'م'], ['المسافة', '6.4', 'كم']],
+      actions: [{ label: 'منظر الجبل', primary: true, run: () => { closePop(); view('hill'); } }] }; } },
+  { key: 'ahmar', name: 'أبان الأحمر', icon: 'mountain', p: new THREE.Vector3(-11344, 610, 35151), min: 900, cls: 'far', text: () => 'أبان الأحمر · 1309 م',
+    open() { return { sub: 'جبل · جنوب غرب العزبة', stats: [['الارتفاع عن البحر', '1309', 'م'], ['المسافة', '37', 'كم']] }; } },
+  // example prices inside the bands in GDD §6: slaughter and hiqq 3-6k, maqani 10-40k, select fardiyat 60-100k (the three numbers)
+  { key: 'market', name: 'حراج الإبل · بريدة', icon: 'market', p: toward(107, -57), edge: true, cls: 'place', text: () => 'حراج الإبل · بريدة 122 كم',
+    open() { const L = [['حقة وضحاء', 'بريدة', 5000, 'wodh'], ['لقية حمراء مقانية', 'الرس', 18000, 'homr'], ['جذعة شقحاء مقانية', 'حائل', 33500, 'shaqh'], ['ثنية مجهمية فردية مميزة', 'الخرج', 85000, 'majaheem']];
+      const range = (a, b) => `<bdi dir="ltr">${a}–${b}</bdi>`;
+      return { sub: '122 كم طيران · شرق شمال شرق', stats: [['ذبائح وحقايق', range(3, 6), 'آلاف'], ['مقاني', range(10, 40), 'ألف'], ['فرديات مميزة', range(60, 100), 'ألف']],
+        html: '<div class="sec">أمثلة من المعروض<i></i><em>بالريال</em></div><div class="list">' +
+          L.map(([t, w, pr, coat]) => `<div class="row tight"><span class="sw" style="background:${COAT_HEX[coat]}"></span><span class="nm"><b>${t}</b><span class="m">${w}</span></span><span class="price">${pr.toLocaleString('en-US')}</span></div>`).join('') +
+          '</div><p class="hint">أمثلة لشكل العرض. الأسعار الحقيقية يحسبها محرك اللعبة.</p>' }; } },
   // generic names only, no official festival names (GDD §7); rounds in the Saudi system
-  { key: 'mazayen', icon: 'festival', p: toward(460, 30), edge: true, cls: 'place', text: () => 'المزاين · الصياهد 465 كم',
+  { key: 'mazayen', name: 'مزاين الصياهد', icon: 'festival', p: toward(460, 30), edge: true, cls: 'place', text: () => 'المزاين · الصياهد 465 كم',
     open() { const L = [['فردي دق · وضح', 'التسجيل يقفل بعد 3 أيام', 'مفتوح'], ['مفاريد البكار · مجاهيم', 'بعد 9 أيام', ''], ['جمل 30 متن · شقح', 'بعد 14 يوم', '']];
-      const cup = `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS.festival}</svg>`;
-      return { title: 'مزاين الصياهد', sub: 'حوالي 465 كم شرق العزبة · من ديسمبر لأوائل يناير', html: '<p class="hint">أمثلة لشكل العرض. المواعيد الحقيقية من تقويم اللعبة.</p>' +
-        L.map(([t, w, e]) => row({ lead: cup, title: t, sub: w, end: e, cls: 'good' })).join('') }; } },
+      return { sub: 'من ديسمبر لأوائل يناير', stats: [['المسافة تقريبًا', '465', 'كم'], ['الاتجاه', 'شرق']],
+        html: '<div class="sec">الأشواط الجاية<i></i></div><div class="list">' +
+          L.map(([t, w, e]) => `<div class="row tight"><span class="sq">${svgI(ICONS.festival)}</span><span class="nm"><b>${t}</b><span class="m">${w}</span></span>${e ? `<span class="tag good">${e}</span>` : '<span></span>'}</div>`).join('') +
+          '</div><p class="hint">أمثلة لشكل العرض. المواعيد الحقيقية من تقويم اللعبة.</p>' }; } },
 ];
 // category icons for the pins (24 px grid, drawn with the stroke of svg.i; the herd is a filled camel)
 const ICONS = {
@@ -754,14 +804,18 @@ function refreshLabels() {
     const cls = typeof l.cls === 'function' ? l.cls() : l.cls;
     l.warn = cls === 'warn';
     l.el.className = 'lbl' + (cls ? ' ' + cls : '') + (l.isEdge ? ' edge' : '') + (pop && pop.place === l ? ' on' : '');
-    l.el.innerHTML = `${tagIcon(l.icon)}${l.edge ? ARROW : ''}`;                 // a pin: the icon alone (its words are read out, not shown)
+    const html = `${tagIcon(l.icon)}${l.edge ? ARROW : ''}`;                     // a pin: the icon alone (its words are read out, not shown)
+    if (l.html !== html) { l.el.innerHTML = l.html = html; if (l.edge) { l.arrow = l.el.querySelector('.arr'); l.ang = null; } }      // (rebuilt only when it changes: every card's opening rebuilt all sixteen; a new arrow starts unrotated)
     l.el.setAttribute('aria-label', l.text());
-    if (l.edge) { l.arrow = l.el.querySelector('.arr'); l.ang = null; }    // the new arrow starts unrotated
     if (!l.vis) l.el.style.display = '';
   }
-  // half sizes, measured here when a pin's icon or state changes and never per frame; an edge pin also carries
-  // its arrow (14 px and a 6 px gap), so its half width counts that even while it sits on the horizon
-  for (const l of labels) { l.hw = (l.el.offsetWidth + (l.edge && !l.isEdge ? 20 : 0)) / 2 + 2; l.hh = l.el.offsetHeight / 2 + 2; }
+  // half sizes, measured here when a pin's icon or kind changes and never per frame (the open pin's colour changes its
+  // size in nothing, so opening a card measures none and forces no layout here); an edge pin also carries its arrow
+  // (14 px and a 6 px gap), so its half width counts that even while it sits on the horizon
+  for (const l of labels) {
+    const key = l.html + l.el.className.replace(' on', '');
+    if (l.sizeKey !== key) { l.sizeKey = key; l.hw = (l.el.offsetWidth + (l.edge && !l.isEdge ? 20 : 0)) / 2 + 2; l.hh = l.el.offsetHeight / 2 + 2; }
+  }
   for (const l of labels) if (!l.vis) l.el.style.display = 'none';
   // when pins overlap, the earlier one wins: the open place, warnings and far places, pens, the rest
   for (const l of labels) l.rank = pop && pop.place === l ? 0 : l.warn || l.edge || l.min ? 1 : l.rect ? 2 : 3;
@@ -772,12 +826,11 @@ document.fonts.ready.then(refreshLabels);
 const hud = { w: 1, h: 1, x0: 0, x1: 1, y0: 0, y1: 1 };
 const SIDE = () => document.body.classList.contains('land');      // the place card docks on the side
 function measureHud() {
-  const card = $('card'), popEl = $('pop');
+  const popEl = $('pop');
   hud.w = stage.clientWidth; hud.h = stage.clientHeight;
-  // the free map: right of the three buttons, left of a card docked on the side, above one docked at the bottom
+  // the free map: right of the three buttons, left of the card docked on the side, above it docked at the bottom
   hud.x0 = rectOf(document.querySelector('.side')).right + 6; hud.x1 = hud.w - 10; hud.y0 = 8;
   let bottom = hud.h - 10;
-  if (!card.hidden) bottom = Math.min(bottom, rectOf(card).top);
   if (!popEl.hidden) { const r = rectOf(popEl); if (SIDE()) hud.x1 = r.left - 6; else bottom = Math.min(bottom, r.top); }
   hud.y1 = bottom - 6;
 }
@@ -841,34 +894,100 @@ function placeLabels() {
   }
 }
 
-// ------------------------------------------------------------ the place card, docked; the camera glides to keep the place in view
-function openPlace(pl, keep) {
-  phone.close();
-  if (pop && pop.place === pl && !keep) return closePop();
-  const c = pl.open();
-  $('pop-title').textContent = c.title; $('pop-sub').textContent = c.sub || '';
-  $('pop-body').innerHTML = c.html || ''; $('pop-body').hidden = !c.html;
-  const acts = $('pop-acts'); acts.innerHTML = '';
-  for (const a of c.actions || []) { const b = document.createElement('button'); b.type = 'button'; b.className = a.primary ? 'primary' : 'ghost'; b.textContent = a.label; b.addEventListener('click', a.run); acts.appendChild(b); }
-  acts.hidden = !acts.children.length;
-  showHerd();                    // one card at a time: the place card replaces a picked camel or a follow
-  pop = { place: pl };
+// ------------------------------------------------------------ the card, docked; the camera glides to keep the place (or the camel) in view
+// The woven band, drawn once as a picture. Sadu is warp-faced, so a diagonal is a staircase of whole cells. One repeat is
+// 8 cells wide: red / grains / red / ground / a chain of stepped diamonds with a red ring and a wool eye / ground / red / grains / red.
+const SADU = ['RRRRRRRR', 'WKWKWKWK', 'RRRRRRRR', 'KKKKKKKK', 'KKKKWKKK', 'KKKWRWKK', 'KKWRKRWK', 'WWRKWKRW', 'KKWRKRWK', 'KKKWRWKK', 'KKKKWKKK', 'KKKKKKKK', 'RRRRRRRR', 'KWKWKWKW', 'RRRRRRRR'];
+function saduUrl(rows, cell) {
+  const pal = { R: '#a3302a', W: '#efe6d6', K: '#15110e' };
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${rows[0].length * cell}" height="${rows.length * cell}" shape-rendering="crispEdges">`;
+  rows.forEach((r, y) => { for (let x = 0; x < r.length;) { let n = 1; while (r[x + n] === r[x]) n++; svg += `<rect x="${x * cell}" y="${y * cell}" width="${n * cell}" height="${cell}" fill="${pal[r[x]]}"/>`; x += n; } });
+  return `url("data:image/svg+xml,${encodeURIComponent(svg + '</svg>')}")`;
+}
+document.documentElement.style.setProperty('--sadu-band', saduUrl(SADU, 2));
+document.documentElement.style.setProperty('--sadu-edge', saduUrl(SADU.slice(-3), 2));      // the selvedge: the band's last three rows
+// a camel's numbers: its age from its stage (GDD §5, the stage's first year), and a value inside the GDD §6 band of its kind
+// (young: 3-6k, breeding stock: 10-40k; game choice, steady per name) unless it has its own
+const AGE_YEARS = { 'مفرودة': 1, 'حقة': 2, 'لقية': 3, 'جذعة': 4, 'ثنية': 5, 'رباعية': 6, 'سديسة': 7, 'فحل سديس': 7, 'فاطر': 8 };
+const ageStat = (c) => (c.age in AGE_YEARS ? ['العمر', ...years(AGE_YEARS[c.age])] : ['العمر', '<bdi dir="ltr">0–6</bdi>', 'أشهر']);     // a حوار: up to 6 months
+const valueOf = (c) => {
+  if (c.value) return c.value;
+  let h = 7; for (const ch of c.name) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  const [lo, hi] = c.age === 'حوار' || c.age === 'مفرودة' ? [3000, 6000] : [10000, 40000];
+  return lo + Math.round((h % 1000) / 999 * (hi - lo) / 500) * 500;
+};
+const metaOf = (c) => `${coatName(c)} · ${c.age} · ${stateWord(c)}`;
+const homeOf = (c) => PLACES.find((p) => p.rect && p.rect === c.pen) || PLACES.find((p) => p.key === 'graze');
+const CLOCK = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', ALERT = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16v.5"/>';
+// the tank: a big number over twenty woven squares, 5% each, filled from the start (the right)
+const gaugeHtml = (p) => {
+  let seg = '';
+  for (let i = 0; i < 20; i++) { const f = Math.min(1, Math.max(0, p / 5 - i)); seg += f >= 1 ? '<i class="on"></i>' : f > 0 ? `<i style="background:linear-gradient(to left,var(--wool) ${Math.round(f * 100)}%,var(--hair-2) 0)"></i>` : '<i></i>'; }
+  return `<div class="gauge"><div class="big"><b>${p}٪</b><span>من سعة الخزان</span></div><div class="seg" role="img" aria-label="${p}٪">${seg}</div></div>`;
+};
+let popActs = [], popMode = '';
+const spot = { p: new THREE.Vector3() };
+const spotOf = (c) => { spot.p.copy(c.root.position).setY(1.4); return spot; };
+// the card's whole content, built when it opens or its content changes (never per frame)
+function renderCard() {
+  const { place, camel } = pop;
+  let top, body, acts;
+  if (camel) {
+    top = `<div class="backrow"><button type="button" class="back" data-back>${svgI('<path d="M9 6l6 6-6 6"/>')}${place.name}</button>${X_BTN}</div>` +
+      `<div class="who"><span class="sw" style="background:${COAT_HEX[camel.coat]}"></span><div class="ttl"><h2 id="pop-title">${esc(camel.name)}</h2><p id="c-meta">${esc(metaOf(camel))}</p></div></div>`;
+    body = `<div class="note${camel.warn ? ' warn' : ''}">${camel.due ? svgI(CLOCK) : camel.warn ? svgI(ALERT) : ''}${esc(camel.note)}</div>` +
+      statsHtml([ageStat(camel), camel.due ? ['تولد بعد', ...days(camel.due), 'warn'] : camel.sick ? ['الصحة', 'جرب', '', 'warn'] : ['الصحة', 'زينة', '', 'good'],
+        ['القيمة التقريبية', valueOf(camel).toLocaleString('en-US'), 'ريال']]);
+    acts = [{ label: 'قرّب', run: () => glideTo(spotOf(camel), 14) },
+      { label: follow === camel ? 'وقف المتابعة' : 'تابعها', icon: EYE, primary: follow !== camel,
+        run: () => { follow = follow === camel ? null : camel; followHerd = false; if (follow) view('near'); renderCard(); } }];
+    popMode = camel.mode;
+  } else {
+    const c = place.open(), warn = (typeof place.cls === 'function' ? place.cls() : place.cls) === 'warn';
+    top = `<header class="hd"><span class="tile${warn ? ' warn' : ''}">${svgI(ICONS[place.icon], place.icon === 'herd')}</span>` +
+      `<div class="ttl"><h2 id="pop-title">${place.name}</h2>${c.sub ? `<p>${c.sub}</p>` : ''}</div>${X_BTN}</header>`;
+    body = (c.gauge === undefined ? '' : gaugeHtml(c.gauge)) + (c.stats ? statsHtml(c.stats) : '') + (c.html || '');
+    acts = c.actions || [];
+  }
+  $('pop-top').innerHTML = top;
+  $('pop-body').innerHTML = body; $('pop-body').hidden = !body;
+  popActs = acts;
+  $('pop-acts').innerHTML = acts.map((a, i) => `<button type="button" class="b${a.primary ? ' pri' : ''}" data-act="${i}">${a.icon ? svgI(a.icon) : ''}${a.label}</button>`).join('');
+  $('pop-acts').hidden = !acts.length;
   $('pop').hidden = false;
   refreshLabels(); measureHud();
   $('pop').focus({ preventScroll: true });
+}
+// a pick or a follow lasts while its card is open
+function stopFollow() { follow = null; followHerd = false; selected = null; if (selectedRing) selectedRing.visible = false; }
+function openPlace(pl, keep) {
+  phone.close();
+  if (pop && pop.place === pl && !pop.camel && !keep) return closePop();
+  if (!keep) stopFollow();
+  pop = { place: pl, camel: null };
+  renderCard();
   if (!keep) glideTo(pl);
+}
+function openCamel(c) {
+  phone.close();
+  if (!pop || pop.camel !== c) stopFollow();
+  pop = { place: homeOf(c), camel: c };
+  pick(c);
+  renderCard();
+  if (follow !== c) glideTo(spotOf(c));
 }
 function closePop() {
   if (!pop) return;
-  const back = pop.place.el; pop = null; $('pop').hidden = true; refreshLabels(); measureHud();
+  const back = pop.place.el; pop = null; stopFollow(); $('pop').hidden = true; refreshLabels(); measureHud();
   if ($('pop').contains(document.activeElement) || document.activeElement === document.body) back.focus({ preventScroll: true });
 }
-addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (phone.big) phone.shrink(); else if (phone.state === 'small') phone.close(); else if (pop) closePop(); else if (!$('card').hidden) showHerd(); });
-$('pop-close').addEventListener('click', closePop);
-$('pop-body').addEventListener('click', (e) => {
-  const r = e.target.closest('[data-camel]'); if (!r) return;
-  const c = camels[+r.dataset.camel];
-  closePop(); follow = c; showCamel(c); view('near');
+addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (phone.big) phone.shrink(); else if (phone.state === 'small') phone.close(); else if (pop) closePop(); });
+$('pop').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || !pop) return;
+  if (b.hasAttribute('data-close')) closePop();
+  else if (b.hasAttribute('data-back')) { stopFollow(); pop.camel = null; renderCard(); }
+  else if (b.dataset.camel) openCamel(camels[+b.dataset.camel]);
+  else if (b.dataset.act) popActs[+b.dataset.act].run();
 });
 // the glide: the target slides and the camera keeps its angle (or turns toward a far place); no allocation per frame
 const ease = { k: 1, t0: new THREE.Vector3(), t1: new THREE.Vector3(), o0: new THREE.Vector3(), o1: new THREE.Vector3(), yaw: 0 };
@@ -920,15 +1039,15 @@ function view(kind) {
     controls.target.set(12, 1.4, 5);
     camera.position.set(25, 6, -17);
   } else {
-    const tgt = follow ? follow.root.position : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
+    const tgt = follow ? follow.root.position : pop && pop.camel ? pop.camel.root.position : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
     const off = kind === 'near' ? tmpTo.set(7, 3.2, 9) : scr.w > scr.h ? tmpTo.set(-104, 40, 66) : tmpTo.set(-150, 78, 112);
     controls.target.copy(tgt).setY(1);
     camera.position.copy(controls.target).add(off);
   }
   viewKind = kind; $('cam-view').setAttribute('aria-pressed', String(kind === 'near'));
   ease.k = 1;                                    // a camera button wins over a glide in progress
-  closePop();
-  if (!follow && !followHerd) { if (selected) showCamel(selected); else hideCard(); }
+  // the card stays while it follows or shows a camel; a view away from the yard, or a plain camera change, closes it
+  if (kind === 'hill' || kind === 'camp' || kind === 'room' || !(follow || followHerd || (pop && pop.camel))) closePop();
 }
 $('cam-view').addEventListener('click', () => view(viewKind === 'near' ? 'drone' : 'near'));
 // the phone (phone.js): the map's third button opens it small and closes it; a place's card and the phone do not
@@ -939,50 +1058,17 @@ phone.onChange((state) => { $('phone-btn').setAttribute('aria-pressed', String(s
 
 const STATE = { graze: 'ترعى', walk: 'تمشي', idle: 'واقفة' };
 const COAT_HEX = { wodh: '#f4f1ea', shaqh: '#ead7b5', homr: '#a8694a', majaheem: '#2c2622' };
-const HERD_ICON = '<svg class="i fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.6 12.6c0-1.9 1.3-3 3-3.1.9-2.6 2.5-4 4.3-4 1.9 0 3.2 1.6 3.8 3.7.8.2 1.6-.1 2.1-.9l1.9-3.4c.4-.8 1.3-1.2 2.2-1l1.6.4c.5.1.5.8 0 1l-1.3.4-2.2 5.2c-.4 1-1.1 1.8-2 2.3v5.6h-1.5l-.3-4.9c-1.9.5-4.4.5-6.2 0l-.4 4.9H6.1l-.2-5.5c-1.9-.4-3.3-1.4-3.3-2.7z"/></svg>';
 const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const STATE_M = { graze: 'يرعى', walk: 'يمشي', idle: 'واقف' };
 const stateWord = (c, mode = c.mode) => (c.male ? STATE_M : STATE)[mode];
-const stateChip = (c) => `<span class="chip ${c.mode}" id="c-state"><span class="d"></span>${stateWord(c)}</span>`;
-let selectedRing = null;
-function hideCard() { $('card').hidden = true; measureHud(); }
-// clears the pick and the follow; the card goes away (the map is the menu)
-function showHerd() {
-  follow = null; followHerd = false; selected = null;
-  if (selectedRing) selectedRing.visible = false;
-  hideCard();
-}
-// the herd card, while the camera follows the grazing herd
-function followTheHerd() {
-  follow = null; selected = null; followHerd = true;
-  if (selectedRing) selectedRing.visible = false;
-  const n = camels.filter((c) => c.home === 'graze').length;
-  $('c-avatar').innerHTML = HERD_ICON;
-  $('s1').textContent = 'الحلال يسرح';
-  $('s2').innerHTML = `<span class="chip num">${n} راس</span><span class="chip">المسراح · 330 م</span><span>رمث وعرفج</span>`;
-  $('s-act').textContent = 'وقف المتابعة'; $('s-act').classList.add('on'); $('s-clear').hidden = true;
-  $('card').hidden = false; measureHud();
-}
-function showCamel(c) {
-  $('c-avatar').innerHTML = `<i style="background:${COAT_HEX[c.coat]}"></i>`;
-  $('s1').textContent = c.name;
-  $('s2').innerHTML = `<span class="chip">${COATS[c.coat].name}</span><span class="chip">${esc(c.age)}</span>${stateChip(c)}<span class="note">${esc(c.note)}</span>`;
-  lastS2 = c.mode;
-  const on = follow === c;
-  $('s-act').textContent = on ? 'وقف المتابعة' : 'تابعها'; $('s-act').classList.toggle('on', on); $('s-clear').hidden = false;
+let selectedRing = null, selected = null;
+function pick(c) {
   if (!selectedRing) {
     selectedRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.7, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#34bcaa', transparent: true, opacity: 0.95, depthWrite: false }));
     selectedRing.renderOrder = 2; scene.add(selectedRing);
   }
   selectedRing.visible = true; selected = c;
-  $('card').hidden = false; measureHud();
 }
-let selected = null;
-$('s-act').addEventListener('click', () => {
-  if (selected) { follow = follow === selected ? null : selected; showCamel(selected); if (follow) view('near'); }
-  else if (followHerd) showHerd();
-});
-$('s-clear').addEventListener('click', () => showHerd());
 
 
 
@@ -1001,7 +1087,7 @@ function tapWorld(x, y) {
   ray.setFromCamera(ndc, camera);
   camelHits.length = 0; for (const c of camels) camelHits.push(c.hit);
   const hit = ray.intersectObjects(camelHits, false)[0];
-  if (hit) { closePop(); follow = null; followHerd = false; showCamel(hit.object.userData.camel); return true; }
+  if (hit) { openCamel(hit.object.userData.camel); return true; }
   const at = ray.intersectObjects(placeHits, false)[0];
   if (at) { openPlace(at.object.userData.place); return true; }
   return false;
@@ -1015,20 +1101,19 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
     camels.push(new Camel(T, {
       name: NAMES[i], coat: coatsOut[i], age: AGES[i % AGES.length], home: 'graze',
       x: R(GRAZE.x0 + 4, GRAZE.x1 - 4), z: R(GRAZE.z0 + 4, GRAZE.z1 - 6), heading: R(0, 6.28),
-      scale: i % 7 === 3 ? 0.86 : R(0.97, 1.03), note: i === 0 ? 'مرضع، حوارها بالشبك' : i % 5 === 1 ? 'عشار' : 'بصحة زينة',
+      scale: i % 7 === 3 ? 0.86 : R(0.97, 1.03), note: i === 0 ? 'مرضع، حوارها بالشبك' : i % 5 === 1 ? 'عشار' : 'بصحة زينة', tag: i === 0 ? 'مرضع' : i % 5 === 1 ? 'عشار' : '',
     }));
   }
   const inPen = (spec) => camels.push(new Camel(T, { home: 'pen', ...spec }));
   const big = LAYOUT.pens.main, c = (p) => [(p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2];
-  inPen({ name: 'الهيفاء', coat: 'wodh', age: 'سديسة', x: -20, z: -34, heading: 1.2, pen: big, note: 'قريبة ولادة، بقت بالشبك' });
-  inPen({ name: 'ظبية', coat: 'homr', age: 'فاطر', x: -10, z: -38, heading: -2, pen: big, note: 'كبيرة، ترتاح بالظل' });
-  inPen({ name: 'مزعل', male: true, coat: 'wodh', age: 'فحل سديس', x: c(LAYOUT.pens.bull)[0], z: c(LAYOUT.pens.bull)[1], heading: 0.6, scale: 1.08, pen: LAYOUT.pens.bull, note: 'فحل العزبة · موسم الضراب' });
-  inPen({ name: 'مزنة', coat: 'majaheem', age: 'ثنية', x: c(LAYOUT.pens.sick)[0], z: c(LAYOUT.pens.sick)[1], heading: 2.4, pen: LAYOUT.pens.sick, note: 'جرب · تحت العلاج باقي 12 يوم' });
-  for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, male: true, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى' });
+  inPen({ name: 'الهيفاء', coat: 'wodh', age: 'سديسة', x: -20, z: -34, heading: 1.2, pen: big, note: 'قريبة ولادة، بقت بالشبك', tag: 'قريبة ولادة', warn: true, due: 10, value: 28000 });
+  inPen({ name: 'ظبية', coat: 'homr', age: 'فاطر', x: -10, z: -38, heading: -2, pen: big, note: 'كبيرة، ترتاح بالظل', tag: 'ترتاح بالظل', value: 14000 });
+  inPen({ name: 'مزعل', male: true, coat: 'wodh', age: 'فحل سديس', x: c(LAYOUT.pens.bull)[0], z: c(LAYOUT.pens.bull)[1], heading: 0.6, scale: 1.08, pen: LAYOUT.pens.bull, note: 'فحل العزبة · موسم الضراب', tag: 'موسم الضراب', value: 40000 });
+  inPen({ name: 'مزنة', coat: 'majaheem', age: 'ثنية', x: c(LAYOUT.pens.sick)[0], z: c(LAYOUT.pens.sick)[1], heading: 2.4, pen: LAYOUT.pens.sick, note: 'جرب · تحت العلاج باقي 12 يوم', tag: 'جرب', warn: true, sick: true, value: 16000 });
+  for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, male: true, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى', tag: 'ينتظر أمه' });
   for (let i = 0; i < 4; i++) inPen({ name: ['ريم', 'غزيل', 'نوف', 'جود'][i], coat: i === 2 ? 'shaqh' : 'wodh', age: 'مفرودة', x: R(1, 15), z: R(-42, -28), heading: R(0, 6.28), scale: 0.82, pen: LAYOUT.pens.young, note: 'مفاريد هالسنة' });
   $('status').hidden = true;
   refreshLabels();
-  showHerd();
 }).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
 
 // ------------------------------------------------------------ vehicles built from the owner's photos
@@ -1081,14 +1166,22 @@ $('cam-play').addEventListener('click', () => { if (play) { closePop(); play.sta
 
 view('drone');
 const clock = new THREE.Clock();
-let lastS2 = '';
 renderer.shadowMap.autoUpdate = false;
 sun.target.position.set(1e9, 0, 0);          // forces the first placement of the shadow area
 const sunFocus = new THREE.Vector3();
 let shadowFrame = 0;
-// the frame meter: real frame-to-frame time (not the capped dt), over the whole session and the last 2 s
-const meter = location.hash === '#fps' ? { el: $('meter'), times: new Float32Array(36000), n: 0, last: 0, shown: 0, start: 0 } : null;
+// the frame meter: real frame-to-frame time (not the capped dt), over the whole session and the last 2 s. Kept in a
+// histogram of 0.25 ms steps (the slowest 1% read off it, nothing sorted or made): it used to sort every frame time of
+// the session once a second, which on a phone took a few ms after some minutes and itself made one slow frame a second,
+// near 2% of the frames, so the slowest 1% it showed was partly its own
+const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0 } : null;
 if (meter) meter.el.hidden = false;
+// the render-scale test on the owner's phone (ADR 0005, whether an upscaler such as FSR1 would help): for 24 s after the
+// warm-up the picture alternates every 4 s between its own scale and 70% of it, the frames of each counted apart (the
+// first half second after a change left out); if the slow frames are much quicker at 70% the GPU is the limit
+const BASE_PR = Math.min(devicePixelRatio, 1.5);
+const bench = meter ? { t0: 0, cur: 1, at: 0, h: [new Uint32Array(400), new Uint32Array(400)], n: [0, 0], done: false } : null;
+const pct = (h, n, q) => { let c = 0; const want = n * q; for (let i = 0; i < h.length; i++) { c += h[i]; if (c >= want) return i * 0.25; } return 100; };
 function meterFrame(now) {
   // counts only after the yard has loaded and 3 s of warm-up (shaders compile on first use);
   // a gap over a second means the app was in the background, not a stutter
@@ -1097,17 +1190,28 @@ function meterFrame(now) {
   if (now < meter.ready) { meter.last = now; meter.start = now; return; }
   const ft = now - meter.last; meter.last = now;
   if (ft > 1000) return;
-  if (meter.n < meter.times.length) meter.times[meter.n++] = ft;
+  const bin = Math.min(399, Math.round(ft * 4));
+  meter.hist[bin]++; meter.n++; if (ft > 50) meter.jank++;
+  meter.recent[meter.ri] = ft; meter.ri = (meter.ri + 1) % meter.recent.length;
+  if (!bench.done) {
+    if (!bench.t0) bench.t0 = now;
+    const k = Math.floor((now - bench.t0) / 4000);
+    if (k >= 6) { bench.done = true; renderer.setPixelRatio(BASE_PR); }
+    else {
+      const scale = k % 2 ? 0.7 : 1;
+      if (bench.cur !== scale) { bench.cur = scale; bench.at = now; renderer.setPixelRatio(BASE_PR * scale); }
+      else if (now - bench.at > 500) { bench.h[k % 2][bin]++; bench.n[k % 2]++; }
+    }
+  }
   if (now - meter.shown < 1000) return;
   meter.shown = now;
   // fps over the last 2 s, the slowest 1% of frames, and frames slower than 50 ms (a visible stutter) since start
-  let k = meter.n - 1, sum = 0, cnt = 0;
-  while (k >= 0 && sum < 2000) { sum += meter.times[k--]; cnt++; }
-  const all = Array.from(meter.times.subarray(0, meter.n)).sort((a, b) => a - b);
-  const p99 = all[Math.min(all.length - 1, Math.floor(all.length * 0.99))] || 0;
-  let jank = 0; for (let i = 0; i < meter.n; i++) if (meter.times[i] > 50) jank++;
+  let k = meter.ri, sum = 0, cnt = 0;
+  for (let i = 0; i < meter.recent.length && sum < 2000; i++) { k = (k + meter.recent.length - 1) % meter.recent.length; if (!meter.recent[k]) break; sum += meter.recent[k]; cnt++; }
+  const p99 = pct(meter.hist, meter.n, 0.99);
   const secs = Math.round((now - meter.start) / 1000);
-  meter.el.innerHTML = `<b>${Math.round(cnt / (sum / 1000))}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><span class="${jank ? 'bad' : ''}">تقطيع: ${jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}`;
+  const line3 = bench.done ? `الدقة كاملة: ${pct(bench.h[0], bench.n[0], 0.5).toFixed(1)}/${pct(bench.h[0], bench.n[0], 0.99).toFixed(1)} · 70٪: ${pct(bench.h[1], bench.n[1], 0.5).toFixed(1)}/${pct(bench.h[1], bench.n[1], 0.99).toFixed(1)} م.ث` : `قياس الدقة ${Math.min(6, Math.floor((now - bench.t0) / 4000) + 1)}/6`;
+  meter.el.innerHTML = `<b>${Math.round(cnt / (sum / 1000))}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}`;
 }
 function tick(now) {
   if (meter) meterFrame(now);
@@ -1118,7 +1222,8 @@ function tick(now) {
   // follow without stealing the viewer's control of the angle
   const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
   if (tgt && !playing) { const delta = tmpTo.copy(tgt).setY(1.1).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }
-  if (selected && selectedRing) { selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z); if (selected.mode !== lastS2) { const ch = $('c-state'); if (ch) ch.outerHTML = stateChip(selected); lastS2 = selected.mode; } }
+  if (selected && selectedRing) selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z);
+  if (pop && pop.camel && pop.camel.mode !== popMode) { popMode = pop.camel.mode; const m = $('c-meta'); if (m) m.textContent = metaOf(pop.camel); }      // (only when its state word changes)
   if (printsLive > 0) {
     let live = 0;
     for (let i = 0; i < PRINTS; i++) { const p = prints[i]; if (p.age > 70) continue; p.age += dt; live++; printMesh.setColorAt(i, fade.setScalar(0.55 * Math.max(0, 1 - p.age / 70))); if (p.age > 70) printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); }
@@ -1145,7 +1250,13 @@ function tick(now) {
     const cabin = playCar.userData.cabin || (playCar.userData.cabin = (play?.model.interior || (playCar.userData.darkGlass ? null : playCar.getObjectByName('interior'))));
     if (playCar.userData.darkGlass === undefined) playCar.userData.darkGlass = !!playCar.getObjectByName('corner_FL');      // the private car's glass is dark: its interior shows only from the driver's seat or through the open door
     const darkGlass = playCar.userData.darkGlass, doorOpen = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
-    if (cabin) cabin.visible = near && ((playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive') || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6));
+    const seat = playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive';
+    if (cabin) cabin.visible = near && (seat || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6));
+    // what the driver cannot see from the seat (ours_game.py's seat_split: about 109k of the near layer's 150k triangles,
+    // behind the cabin's trim or out of the eye's sight) is not drawn there; the door standing open shows it again
+    if (playCar.userData.outside === undefined) { playCar.userData.outside = playCar.getObjectByName('outside') || null; playCar.userData.seatWheels = playCar.getObjectByName('seat_hides_wheels') ? ['FL', 'FR', 'RL', 'RR'].map((k) => playCar.getObjectByName('wheel_' + k)).filter(Boolean) : []; }
+    const outside = playCar.userData.outside, showOut = near && (!seat || doorOpen);
+    if (outside && outside.visible !== showOut) { outside.visible = showOut; for (const w of playCar.userData.seatWheels) w.visible = showOut; }
   }
   // the shadow area follows the view in 4 m steps, and the shadow map is redrawn every other frame
   // (at once when the area moves); a camel's shadow trails by one frame, a few centimetres at a walk
