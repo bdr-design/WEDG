@@ -50,7 +50,7 @@ Steps:
 - **Our own, built by code** (this folder: the hull from the owner's photos at the official dimensions, the
   interior from the six photos and published measures, with the photos' detail as textures). Everything in it is
   ours, so it may be used if the game is ever sold. Its last state before any outside model was added is commit
-  `<HASH>` on this branch. Keep it that way: nothing from an outside model goes into these files.
+  `0197fe3` on this branch. Keep it that way: nothing from an outside model goes into these files.
 - **A private one with a downloaded model** (the owner's game is private and earns nothing): a free Sketchfab model
   of the LC300 (Ddiaz Design, licence CC BY-NC-SA 4.0: no commercial use, the author credited, changes shared alike).
   It goes in its own folder, `thirdparty/`, with its licence and credit beside it, and is never mixed into the
