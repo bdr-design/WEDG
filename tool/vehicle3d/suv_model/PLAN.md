@@ -158,7 +158,14 @@ owner chose our code-built car (this folder) for the game again. `ours_game.py` 
 The game files are `design/prototype3d/models/veh_suvfull.json`, `veh_suvfar.json` and `veh_suvcabin.json`. The
 player's car casts no shadow (the owner's word).
 
-Not yet done:
-- The driver's door is part of the body, so it does not swing.
-- The steering wheel is part of the cabin's one mesh, so it does not turn.
+Moving parts and the seat view (12 Nov, ours_game.py):
+- The driver's door is cut from the body along its shut lines (door_split) with its window, chrome, handle and mirror,
+  under 'door_FL' at the hinge (9k triangles, 7 draws); the cabin's door trim swings with it ('doorcard_FL').
+- The steering wheel is apart from the cabin (from the full cabin.glb by its loose pieces in the wheel's sweep) under
+  'steering' on the column's axis; play.js turns it 15 times the road wheels' angle.
+- The cabin layer is rebuilt from the full cabin.glb: culled from the seats' eyes and from the open doorway, the wheel
+  and the trim kept whole as they move (53k triangles, three draws).
+- seat_split: what no eye round the seated eye sees, past the cabin and through the glass, is under 'outside', which
+  the game hides in the seat view (the seat view was 449k triangles against the 400k budget). Faces seen from behind
+  count, since the paint and trim go out two-sided.
 

@@ -66,16 +66,16 @@
   .pop:focus { outline: none; }
   .pop { container-type: inline-size; }
   .pop button:focus-visible { outline: 2px solid var(--wool); outline-offset: -2px; }
-  .pop .sadu { flex: none; height: 30px; background: var(--sadu-band) center top / 16px 30px repeat-x; }
-  .pop .selvedge { flex: none; height: 6px; background: var(--sadu-edge) center top / 16px 6px repeat-x; }
+  .pop .sadu { flex: none; height: 30px; background: var(--sadu-band) right top / 16px 30px repeat-x; }      /* (from the right edge, a whole pixel: centred on a fractional width, its 2 px cells blurred) */
+  .pop .selvedge { flex: none; height: 6px; background: var(--sadu-edge) right top / 16px 6px repeat-x; }
   .pop svg.i { width: 20px; height: 20px; stroke-linecap: square; stroke-linejoin: miter; }
   .pop .hd { flex: none; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 12px; align-items: center; padding: 14px 16px 12px; }
   .pop .tile { width: 44px; height: 44px; display: grid; place-items: center; background: var(--qirmiz); color: var(--wool); }
   .pop .tile.warn { background: var(--zafaran); color: #1c1408; }
   .pop .tile svg.i { width: 22px; height: 22px; }
   .pop .ttl { min-width: 0; }
-  .pop h2 { margin: 0; font: 700 20px/26px var(--display); }
-  .pop .ttl p { margin: 2px 0 0; font: 400 12.5px/18px var(--ui); color: var(--wool-2); }
+  .pop h2 { margin: 0; font: 700 20px/26px var(--display); text-wrap: balance; }
+  .pop .ttl p { margin: 2px 0 0; font: 400 12.5px/18px var(--ui); color: var(--wool-2); text-wrap: balance; }
   .pop .x { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--hair-2); border-radius: 2px; color: var(--wool-2); }
   .pop .x svg.i { width: 16px; height: 16px; }
   .pop .body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 2px; }
@@ -161,7 +161,7 @@
   /* ---------- a phone lying on its side (body.land, set by the script: wide and at most 600 px high): the place card docks on the right */
   body.land { --edge-t: calc(8px + env(safe-area-inset-top, 0px)); --edge-b: calc(10px + env(safe-area-inset-bottom, 0px)); }
   body.land.rot { --edge-t: calc(8px + env(safe-area-inset-right, 0px)); --edge-b: calc(10px + env(safe-area-inset-left, 0px)); }
-  body.land .pop { top: var(--edge-t); bottom: auto; left: auto; width: min(352px, max(300px, 42%)); margin: 0; max-height: calc(100% - var(--edge-t) - var(--edge-b)); }
+  body.land .pop { top: var(--edge-t); bottom: auto; left: auto; width: min(352px, max(300px, 42%)); width: round(down, min(352px, max(300px, 42%)), 2px); margin: 0; max-height: calc(100% - var(--edge-t) - var(--edge-b)); }
   @media (prefers-reduced-motion: reduce) { .side button { transition: none; } }
   body.playing .side, body.playing #labels, body.playing #pop { display: none !important; }
 
@@ -688,6 +688,7 @@ const inPenOf = (pen) => camels.filter((c) => c.pen === pen);
 const count = (n, one, two, few, many) => (n === 1 ? [one, ''] : n === 2 ? [two, ''] : [String(n), n <= 10 ? few : many]);
 const days = (n) => count(n, 'يوم', 'يومين', 'أيام', 'يوم');
 const years = (n) => count(n, 'سنة', 'سنتين', 'سنين', 'سنة');
+const heads = (n) => count(n, 'راس واحد', 'راسين', 'روس', 'راس');
 const svgI = (body, fill) => `<svg class="i${fill ? ' fill' : ''}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 const X_BTN = `<button type="button" class="x" data-close aria-label="إغلاق">${svgI('<path d="M6 6l12 12M18 6 6 18"/>')}</button>`;
 const CHEV = svgI('<path d="M15 6l-6 6 6 6"/>');
@@ -698,11 +699,11 @@ const statsHtml = (st) => `<div class="stats">${st.map(([label, value, unit, cls
   `<div class="stat"><small>${label}</small><b class="${/^[\d<]/.test(value) ? '' : 'word '}${cls}">${value}${unit ? `<em>${unit}</em>` : ''}</b></div>`).join('')}</div>`;
 const coatName = (c) => (c.male ? COATS[c.coat].group : COATS[c.coat].name);       // a male by his colour's group: وضح، حمر، شقح، مجاهيم
 const camelRow = (c) => `<button type="button" class="row" data-camel="${camels.indexOf(c)}"><span class="sw" style="background:${COAT_HEX[c.coat]}"></span>` +
-  `<span class="nm"><b>${esc(c.name)}</b><span class="m">${coatName(c)} · ${esc(c.age)}</span></span><span class="tag${c.warn ? ' warn' : ''}">${esc(c.tag || stateWord(c))}</span><span class="chev">${CHEV}</span></button>`;
+  `<span class="nm"><b>${esc(c.name)}</b><span class="m">${coatName(c)} · ${esc(c.age)}</span></span>${c.tag ? `<span class="tag${c.warn ? ' warn' : ''}">${esc(c.tag)}</span>` : '<span></span>'}<span class="chev">${CHEV}</span></button>`;      // (only a reason the game models: a live state word, built when the card opened, went stale while it stood open)
 // the ones that need attention first (the number above them counts exactly these), the rest in their order
 const camelList = (title, list) => `<div class="sec">${title}<i></i></div><div class="list">${[...list.filter((c) => c.warn), ...list.filter((c) => !c.warn)].map(camelRow).join('')}</div>`;
 const attention = (list) => list.filter((c) => c.warn).length;
-const herdStats = (list, last) => { const k = attention(list); return [['العدد', String(list.length), 'راس'], ['تبي انتباه', String(k), '', k ? 'warn' : ''], last]; };
+const herdStats = (list, last) => { const k = attention(list); return [['العدد', ...heads(list.length)], ['تبي انتباه', String(k), '', k ? 'warn' : ''], last]; };
 const closer = (pl) => ({ label: 'قرّب', run: () => glideTo(pl, 36) });
 const pen = (key, name, rect, sub, cls) => ({ key, name, rect, cls, icon: 'pen', p: mid(rect, 2.6), max: 280,
   text: () => `${name} · ${inPenOf(rect).length}`,
@@ -722,7 +723,7 @@ const PLACES = [
   { key: 'water', name: 'خزان الماء', icon: 'water', p: new THREE.Vector3(30, 7.6, -40), max: 280, cls: () => (water.ordered ? '' : 'warn'),
     text: () => (water.ordered ? `الماء ${water.pct}٪ · الوايت جاي` : `الماء ${water.pct}٪ · ${water.days} أيام`),
     open() { return { sub: 'يعبّي أحواض الشبوك', gauge: water.pct,
-      stats: [['يكفي', ...days(water.days), water.ordered ? '' : 'warn'], ['يشرب منه', String(camels.length), 'راس'], ['الوايت', water.ordered ? 'في الطريق' : 'ما انطلب']],
+      stats: [['يكفي', ...days(water.days), water.ordered ? '' : 'warn'], ['يشرب منه', ...heads(camels.length)], ['الوايت', water.ordered ? 'في الطريق' : 'ما انطلب']],
       actions: water.ordered ? [closer(this)] : [closer(this), { label: 'اطلب وايت', icon: TRUCK, primary: true, run: () => { water.ordered = true; refreshLabels(); openPlace(this, true); } }] }; } },
   { key: 'feed', name: 'مخزن العلف', icon: 'feed', p: new THREE.Vector3(32, 4.6, -21), max: 280, text: () => 'العلف 13 يوم',
     open() { return { sub: 'شعير وبرسيم', stats: [['يكفي', ...days(13)]], actions: [closer(this)] }; } },
@@ -743,7 +744,7 @@ const PLACES = [
   { key: 'market', name: 'حراج الإبل · بريدة', icon: 'market', p: toward(107, -57), edge: true, cls: 'place', text: () => 'حراج الإبل · بريدة 122 كم',
     open() { const L = [['حقة وضحاء', 'بريدة', 5000, 'wodh'], ['لقية حمراء مقانية', 'الرس', 18000, 'homr'], ['جذعة شقحاء مقانية', 'حائل', 33500, 'shaqh'], ['ثنية مجهمية فردية مميزة', 'الخرج', 85000, 'majaheem']];
       const range = (a, b) => `<bdi dir="ltr">${a}–${b}</bdi>`;
-      return { sub: '122 كم طيران · شرق شمال شرق', stats: [['ذبائح وحقايق', range(3, 6), 'آلاف'], ['مقاني', range(10, 40), 'ألف'], ['فرديات مميزة', range(60, 100), 'ألف']],
+      return { sub: '122 كم طيران · شرق\u00a0شمال\u00a0شرق', stats: [['ذبائح وحقايق', range(3, 6), 'آلاف'], ['مقاني', range(10, 40), 'ألف'], ['فرديات مميزة', range(60, 100), 'ألف']],
         html: '<div class="sec">أمثلة من المعروض<i></i><em>بالريال</em></div><div class="list">' +
           L.map(([t, w, pr, coat]) => `<div class="row tight"><span class="sw" style="background:${COAT_HEX[coat]}"></span><span class="nm"><b>${t}</b><span class="m">${w}</span></span><span class="price">${pr.toLocaleString('en-US')}</span></div>`).join('') +
           '</div><p class="hint">أمثلة لشكل العرض. الأسعار الحقيقية يحسبها محرك اللعبة.</p>' }; } },
@@ -907,13 +908,14 @@ function saduUrl(rows, cell) {
 document.documentElement.style.setProperty('--sadu-band', saduUrl(SADU, 2));
 document.documentElement.style.setProperty('--sadu-edge', saduUrl(SADU.slice(-3), 2));      // the selvedge: the band's last three rows
 // a camel's numbers: its age from its stage (GDD §5, the stage's first year), and a value inside the GDD §6 band of its kind
-// (young: 3-6k, breeding stock: 10-40k; game choice, steady per name) unless it has its own
+// (the young, to a حقة: 3-6k; breeding stock: 10-40k; game choice, steady per name) unless it has its own
 const AGE_YEARS = { 'مفرودة': 1, 'حقة': 2, 'لقية': 3, 'جذعة': 4, 'ثنية': 5, 'رباعية': 6, 'سديسة': 7, 'فحل سديس': 7, 'فاطر': 8 };
 const ageStat = (c) => (c.age in AGE_YEARS ? ['العمر', ...years(AGE_YEARS[c.age])] : ['العمر', '<bdi dir="ltr">0–6</bdi>', 'أشهر']);     // a حوار: up to 6 months
 const valueOf = (c) => {
   if (c.value) return c.value;
   let h = 7; for (const ch of c.name) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-  const [lo, hi] = c.age === 'حوار' || c.age === 'مفرودة' ? [3000, 6000] : [10000, 40000];
+  h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0; h ^= h >>> 12;      // (mixed: names differing in their last letter, حوار 1 to حوار 6, all came out alike)
+  const [lo, hi] = c.age === 'حوار' || c.age === 'مفرودة' || c.age === 'حقة' ? [3000, 6000] : [10000, 40000];
   return lo + Math.round((h % 1000) / 999 * (hi - lo) / 500) * 500;
 };
 const metaOf = (c) => `${coatName(c)} · ${c.age} · ${stateWord(c)}`;
@@ -933,7 +935,7 @@ function renderCard() {
   const { place, camel } = pop;
   let top, body, acts;
   if (camel) {
-    top = `<div class="backrow"><button type="button" class="back" data-back>${svgI('<path d="M9 6l6 6-6 6"/>')}${place.name}</button>${X_BTN}</div>` +
+    top = `<div class="backrow"><button type="button" class="back" data-back aria-label="رجوع إلى ${place.name}">${svgI('<path d="M9 6l6 6-6 6"/>')}${place.name}</button>${X_BTN}</div>` +
       `<div class="who"><span class="sw" style="background:${COAT_HEX[camel.coat]}"></span><div class="ttl"><h2 id="pop-title">${esc(camel.name)}</h2><p id="c-meta">${esc(metaOf(camel))}</p></div></div>`;
     body = `<div class="note${camel.warn ? ' warn' : ''}">${camel.due ? svgI(CLOCK) : camel.warn ? svgI(ALERT) : ''}${esc(camel.note)}</div>` +
       statsHtml([ageStat(camel), camel.due ? ['تولد بعد', ...days(camel.due), 'warn'] : camel.sick ? ['الصحة', 'جرب', '', 'warn'] : ['الصحة', 'زينة', '', 'good'],
@@ -956,7 +958,6 @@ function renderCard() {
   $('pop-acts').hidden = !acts.length;
   $('pop').hidden = false;
   refreshLabels(); measureHud();
-  $('pop').focus({ preventScroll: true });
 }
 // a pick or a follow lasts while its card is open
 function stopFollow() { follow = null; followHerd = false; selected = null; if (selectedRing) selectedRing.visible = false; }
@@ -966,20 +967,22 @@ function openPlace(pl, keep) {
   if (!keep) stopFollow();
   pop = { place: pl, camel: null };
   renderCard();
-  if (!keep) glideTo(pl);
+  if (!keep) { glideTo(pl); $('pop').focus({ preventScroll: true }); }      // (focus moves to the card on a new open, not when its content changes under the player's finger)
 }
 function openCamel(c) {
   phone.close();
   if (!pop || pop.camel !== c) stopFollow();
+  const fresh = !pop || pop.camel !== c;
   pop = { place: homeOf(c), camel: c };
   pick(c);
   renderCard();
-  if (follow !== c) glideTo(spotOf(c));
+  if (fresh) $('pop').focus({ preventScroll: true });
+  if (follow !== c) glideTo(spotOf(c), 30);      // (within 30 m: kept at the camera's distance, a camel opened from far was a few pixels tall)
 }
 function closePop() {
   if (!pop) return;
   const back = pop.place.el; pop = null; stopFollow(); $('pop').hidden = true; refreshLabels(); measureHud();
-  if ($('pop').contains(document.activeElement) || document.activeElement === document.body) back.focus({ preventScroll: true });
+  if ($('pop').contains(document.activeElement) || document.activeElement === document.body) (back.offsetParent ? back : document.querySelector('.side button')).focus({ preventScroll: true });      // (to the place's pin, or the map's first button if the pin is off the screen)
 }
 addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (phone.big) phone.shrink(); else if (phone.state === 'small') phone.close(); else if (pop) closePop(); });
 $('pop').addEventListener('click', (e) => {
@@ -1107,7 +1110,7 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   const inPen = (spec) => camels.push(new Camel(T, { home: 'pen', ...spec }));
   const big = LAYOUT.pens.main, c = (p) => [(p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2];
   inPen({ name: 'الهيفاء', coat: 'wodh', age: 'سديسة', x: -20, z: -34, heading: 1.2, pen: big, note: 'قريبة ولادة، بقت بالشبك', tag: 'قريبة ولادة', warn: true, due: 10, value: 28000 });
-  inPen({ name: 'ظبية', coat: 'homr', age: 'فاطر', x: -10, z: -38, heading: -2, pen: big, note: 'كبيرة، ترتاح بالظل', tag: 'ترتاح بالظل', value: 14000 });
+  inPen({ name: 'ظبية', coat: 'homr', age: 'فاطر', x: -10, z: -38, heading: -2, pen: big, note: 'كبيرة بالسن', value: 14000 });
   inPen({ name: 'مزعل', male: true, coat: 'wodh', age: 'فحل سديس', x: c(LAYOUT.pens.bull)[0], z: c(LAYOUT.pens.bull)[1], heading: 0.6, scale: 1.08, pen: LAYOUT.pens.bull, note: 'فحل العزبة · موسم الضراب', tag: 'موسم الضراب', value: 40000 });
   inPen({ name: 'مزنة', coat: 'majaheem', age: 'ثنية', x: c(LAYOUT.pens.sick)[0], z: c(LAYOUT.pens.sick)[1], heading: 2.4, pen: LAYOUT.pens.sick, note: 'جرب · تحت العلاج باقي 12 يوم', tag: 'جرب', warn: true, sick: true, value: 16000 });
   for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, male: true, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى', tag: 'ينتظر أمه' });
