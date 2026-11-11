@@ -204,7 +204,8 @@ const sbar = `<div class="sbar"><span>3:20</span><span class="r"><svg width="16"
 const nav = (end = '') => `<div class="nav"><button class="back">${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
 const ok = (t) => `<span class="badge">${svg('check')}${t}</span>`;
 const APP_GO = { gavel: 'auction', bank: 'bank', tag: 'haraj', chat: 'chat', cloud: 'weather' };      // the apps that open a screen (the rest are not built yet)
-const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app: in the dock the name is hidden, and the badge was all that was read)
+const badgeSaid = (extra) => { const m = extra.match(/class="bd">(\d+)</); return /class="live"/.test(extra) ? '، مباشر' : m ? `، ${m[1]} جديدة` : ''; };
+const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge: in the dock the name is hidden, and the badge alone was read)
 
 const S = {
     home: () => `<div class="body">
@@ -264,7 +265,7 @@ const S = {
       </div>
       <div class="bids"><button class="btn step num"><span class="ltr">+500</span></button><button class="btn step num"><span class="ltr">+1,000</span></button><button class="btn pri">زايد 22,000</button></div></div>`,
     chat: () => `<div class="body">
-      <div class="nav"><button class="back">${svg('back')}</button><div class="chathd"><span class="av">ف</span><span><b>بو فهد</b><small>حائل · من الحراج</small></span></div></div>
+      <div class="nav"><button class="back" aria-label="رجوع">${svg('back')}</button><div class="chathd"><span class="av">ف</span><span><b>بو فهد</b><small>حائل · من الحراج</small></span></div></div>
       <div class="strip"><span class="ph"><img src="phone/thumb_majaheem.png" alt=""></span><span><b>الهيفاء</b><small>ثنية · مجاهيم · مقانية</small></span><span class="lim">حدّك<span>40,000</span></span></div>
       <div class="chat">
         <div class="msg them">السلام عليكم، الهيفاء للبيع؟</div>
@@ -360,6 +361,7 @@ export function createPhone({ host }) {
   });
   const endDrag = (e) => { if (drag && e.pointerId === drag.id) drag = null; };
   dev.addEventListener('pointerup', endDrag); dev.addEventListener('pointercancel', endDrag); dev.addEventListener('pointerleave', endDrag);
+  dim.addEventListener('mousedown', (e) => e.preventDefault());      // (the mouse events after a long press by touch land on the dim and took the focus out of the phone)
   dim.addEventListener('click', () => { if (lastDown > bigAt) set('small'); });      // (not the lift of the very finger whose long press enlarged it: its click lands on the dim, now on top)
   scr.addEventListener('keydown', (e) => {
     const t = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-go], .liveban');
@@ -372,6 +374,7 @@ export function createPhone({ host }) {
     const t = e.target.closest('[data-go], .back, .liveban');
     if (!t) return;
     show(t.dataset.go || (t.classList.contains('liveban') ? 'auction' : 'home'));
+    if (e.detail === 0) (scr.querySelector('.back, [data-go], button') || dev).focus({ preventScroll: true });      // (from the keyboard, Enter on the back button: the focus stays in the rebuilt screen)
   });
   addEventListener('resize', () => { if (st.state !== 'closed') layout(); });
   // big, Tab goes round the phone's own buttons only (the game behind the dim is not reachable)

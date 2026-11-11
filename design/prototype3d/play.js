@@ -309,9 +309,11 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const phoneBtn = ui.querySelector('[data-a="phone"]');
   if (phone) {
     tap(phoneBtn, () => phone.toggle());
-    phone.onChange((state) => {
-      phoneBtn.classList.toggle('on', state !== 'closed'); phoneBtn.setAttribute('aria-pressed', String(state !== 'closed'));
-      if (state === 'big') { stickId = lookId = null; stick.hidden = true; input.mx = input.mz = 0; input.run = false; keys.clear(); for (const f of pedalReset) f(); pad.reset(); }      // (enlarged, the phone has the screen: what the fingers and keys held is let go, the pedals and the pad too)
+    phone.onChange((ps) => {
+      phoneBtn.classList.toggle('on', ps !== 'closed'); phoneBtn.setAttribute('aria-pressed', String(ps !== 'closed'));
+      // (enlarged, the phone has the screen: what the fingers and keys held is let go, the pedals and the pad too; and a
+      // standing car is put in park until a pedal is pressed again, or with the brake let go it crept off unseen)
+      if (ps === 'big') { stickId = lookId = null; stick.hidden = true; input.mx = input.mz = 0; input.run = false; keys.clear(); for (const f of pedalReset) f(); pad.reset(); if (state.mode === 'drive' && standing) parked = true; }
     });
   } else phoneBtn.hidden = true;
   const busy = () => !!phone && phone.big;         // the enlarged phone has the screen and the keys
