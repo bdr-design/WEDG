@@ -10,8 +10,11 @@ thirdparty_lod.py <outside.blend> <out.blend> <target triangles> [far]
    turn: a face hidden at one turn shows at the next), and so does the driver's door, which hides nothing (it opens:
    the doorway's jambs behind it stay).
 3. What is left is thinned toward the target (collapse decimation), each material with its least share: the lamps
-   and the tyres' texture keep more (they read close up), the plates are kept whole; each wheel to about WHEEL.
-4. The glass's faces turned toward the cabin go (glass_out())."""
+   and the tyres' texture keep more (they read close up), the plates are kept whole; each wheel to about WHEEL. In the
+   near layer the tail lamps' pockets, the rear bumper's slats and the door handles are kept apart for this step only,
+   each with a floor (AREA_FLOOR; the paint round the handles' pockets held, HOLD), then joined back (merge_back()).
+4. The glass's faces turned toward the cabin go (glass_out()); a dark radiator panel, inward shells (the engine bay,
+   the wheel wells) and an outward skirt inside the body's sides (skirt(): seen only through the seams) are added."""
 import bpy, bmesh, sys, os, numpy as np
 from mathutils import Vector, Matrix
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,7 +29,7 @@ FAR = {'plate': 1.0, 'Wheel': 0.5, 'Textures_A': 0.5, 'ClearGlass': 0.4, 'Light_
 SMALL = 300                    # a material with fewer seen triangles is kept whole (near) or halved (far)
 WHEEL = 2000                   # a near wheel's triangles (tyre, rim, disc, nuts); its tyre (672, textured) kept whole
 CORNERS = ('FL', 'FR', 'RL', 'RR')
-AREA_FLOOR = {'lamp': 0.4, 'bumper': 0.3, 'handle': 0.5, 'door_FL.h': 0.5}      # the near layer's least share for the tail lamps' parts, the rear bumper's slats and the door handles and strips (thinned with the rest at 0.115, the sky showed through them)
+AREA_FLOOR = {'lamp': 0.4, 'bumper': 0.3, 'handle': 0.5, 'door_FL.h': 0.5}      # the near layer's least share for the tail lamps' parts, the rear bumper's slats and the door handles and strips (thinned with the rest, the sky showed through them; with these floors the near layer's target is 66500, keeping the rest at 0.115)
 INSIDE = ('Fabric', 'White_Leather_Body', 'White_Leather_Seats', 'Plastic_Beige', 'Black_Leather', 'Leather_Points', 'Leather_Handles', 'Wood', 'Buttons', 'Screens')
 # (the interior's materials: what of them is left in the outside, seen only through its gaps, goes; the glass is dark)
 CLEAR = ('Light_glass', 'GlassRed', 'Light_Red_Back')    # the lamps' see-through lenses (their materials' alpha 0.25-0.74): seen, but hiding nothing (the lamps' insides show through them)
@@ -126,12 +129,19 @@ SKIRT = ((-1.80, -1.40, 0.93, 1.24), (-1.40, -0.78, 0.93, 1.04), (-0.78, 1.15, 0
 # 1.24 (the belt line rises there to 1.30: the fuel lid's and the door's rear seams), and below the doors' sills
 # elsewhere (their belt line at 1.13: a ray down through the glass from the chase camera, 0.6 steep, would meet a skirt
 # reaching 1.10); none behind 1.80, where the body narrows to the tail (there it stood out of the quarters)
+DOOR_FL_X = (-0.20, 0.90)     # the driver's door's span: its skirt is the door's own (door_FL.BlackPlastic_Rough), inside the door, swinging with it (fixed, it stood as a black wall in the open doorway)
 def skirt():
     """Quads (four corners, outward direction) of a dark skirt just inside the body's sides: thinned, the doors' seams,
     the low strip's line and the arches' tops opened and the sky showed through. Its faces look out, so from the cabin
     (and through the windows, from outside: it has no lid) they are back faces, unseen."""
-    y = SKIRT_Y
-    return [([(u0, s * y, w0), (u1, s * y, w0), (u1, s * y, w1), (u0, s * y, w1)], Vector((0, s, 0))) for s in (1, -1) for u0, u1, w0, w1 in SKIRT]
+    y = SKIRT_Y; q = []
+    for s in (1, -1):
+        for u0, u1, w0, w1 in SKIRT:
+            cuts = [u0] + [c for c in DOOR_FL_X if s > 0 and u0 < c < u1] + [u1]
+            for v0, v1 in zip(cuts, cuts[1:]):
+                door = s > 0 and DOOR_FL_X[0] <= v0 and v1 <= DOOR_FL_X[1]
+                q.append(([(v0, s * y, w0), (v1, s * y, w0), (v1, s * y, w1), (v0, s * y, w1)], Vector((0, s, 0)), door))
+    return q
 
 
 def merge_back(obs):
@@ -148,10 +158,15 @@ def merge_back(obs):
 def shells(obs):
     o = next((o for o in obs if o.name == 'BlackPlastic_Rough'), None)
     if o is None: return
-    mwi = o.matrix_world.inverted(); bm = bmesh.new(); bm.from_mesh(o.data); R = o.matrix_world.to_3x3()
-    for pts, out in skirt():
-        f = bm.faces.new([bm.verts.new(mwi @ Vector(p)) for p in pts]); f.normal_update()
-        if (R @ f.normal).dot(out) < 0: f.normal_flip()
+    dr = next((d for d in obs if d.name == 'door_FL.BlackPlastic_Rough'), None)
+    for door in (False, True):
+        t = (dr or o) if door else o; mwi = t.matrix_world.inverted(); R = t.matrix_world.to_3x3(); tb = bmesh.new(); tb.from_mesh(t.data)
+        for pts, out, d in skirt():
+            if d != door: continue
+            f = tb.faces.new([tb.verts.new(mwi @ Vector(p)) for p in pts]); f.normal_update()
+            if (R @ f.normal).dot(out) < 0: f.normal_flip()
+        tb.to_mesh(t.data); tb.free()
+    bm = bmesh.new(); bm.from_mesh(o.data); mwi = o.matrix_world.inverted()
     for (x0, x1), (y0, y1), (z0, z1) in SHELLS:
         c = Vector(((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2))
         v = [bm.verts.new(mwi @ Vector((x, y, z))) for x in (x0, x1) for y in (y0, y1) for z in (z0, z1)]
@@ -363,7 +378,7 @@ def main(src, out, target, far=False):
     glass_out(obs); inward_out(obs); radiator(obs); shells(obs)      # (the radiator and the shells after the cull: one big face seen only through slots would be culled)
     if not far: rig(obs, H)
     # (the far layer, seen beyond 20 m, holds no edges: they kept it at 52k)
-    print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f); %d faces turned back after thinning' % (before, total, sum(tri(o) for o in obs), len(obs), r, flipped))
+    print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f: floors %d, free %d); %d faces turned back after thinning' % (before, total, sum(tri(o) for o in obs), len(obs), r, fixed, free, flipped))
     for o in sorted(obs, key=lambda o: -culled.get(o.name, 0))[:12]: print('  %-26s seen %6d -> %6d' % (o.name, culled.get(o.name, 0), tri(o)))      # (seen: before the merge, merge_back)
     for k in CORNERS: print('  wheel_%s %d triangles, corner_%s %d' % (k, sum(tri(o) for o in obs if o['group'] == 'wheel_' + k), k, sum(tri(o) for o in obs if o['group'] == 'corner_' + k)))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out))

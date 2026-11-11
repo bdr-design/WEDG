@@ -13,7 +13,7 @@ $PY thirdparty_cabin.py $W/tp_car.blend "$2" $W/tp_cabin.blend
 (cd interior && $PY lod_cabin.py $W/tp_cabin.blend $W/tp_cabin_seen.blend driver)       # the faces the driver cannot see, dropped
 $PY thirdparty_clean.py $W/tp_cabin_seen.blend $W/tp_cabin_game.blend 0.12
 $PY thirdparty_car.py $W/tp_car.blend "$2" $W/tp_exterior.blend "$T"           # badges, paint, glass, plates; the interior's parts out
-$PY thirdparty_lod.py $W/tp_exterior.blend $W/tp_ext_near.blend 48000
+$PY thirdparty_lod.py $W/tp_exterior.blend $W/tp_ext_near.blend 66500       # (the floors take 62.8k of it: the rest, 32k seen, thinned at 0.115)
 $PY thirdparty_lod.py $W/tp_exterior.blend $W/tp_ext_far.blend 12000 far
 $PY thirdparty_rig.py cabin $W/tp_cabin_game.blend $W/tp_cabin_rig.blend
 $PY thirdparty_export.py $W/tp_cabin_rig.blend $O/lc300_interior.glb 1024
