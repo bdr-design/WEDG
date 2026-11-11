@@ -181,6 +181,13 @@ uncompressed with mipmaps, fell from 132 to 103 MiB.
   three-tier herd above is the Flutter build's plan.
 - **Garbage per frame:** about 50 to 75 KB, mostly three.js's animation
   mixer. This is a minor collection every few seconds, not a stutter.
+- **Long session:** 10 rounds of walking, getting in, driving, getting out
+  and using the phone, with the JS heap collected between checks. After the
+  first round has loaded the cabin and the near detail levels, nothing
+  grows: at rounds 4 and 8 there were 175 geometries, 78 textures, 36
+  programs, the same scene and DOM, and a heap of 48.5 and 48.6 MiB. The
+  cabin's shaders compile in the background as the player walks up to the
+  door, so getting in does not stall.
 - **Not yet measured on a real phone.** All figures come from headless
   Chromium with a software GPU, so frame times there are not a phone's.
 
