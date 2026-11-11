@@ -126,6 +126,13 @@ def door_split(body):
     return parts
 
 
+def see_through(o):
+    """A part drawn see-through (the lamps' clear covers): it hides nothing behind it."""
+    for m in o.data.materials:
+        if m and (getattr(m, 'blend_method', '') == 'BLEND' or getattr(m, 'surface_render_method', '') == 'BLENDED' or m.name == 'lamp_cover'): return True      # (not any blend mode but 'OPAQUE': Blender 4.2 gives every material 'HASHED')
+    return False
+
+
 def seen_both_sides(test, occluders, E):
     """For each object of test, the set of its polygon indices seen from one of the eyes E: lod_cabin.py's visible_faces,
     except that a face seen from behind counts too. The car's paint and trim go out two-sided (only the glass culls its
@@ -137,7 +144,11 @@ def seen_both_sides(test, occluders, E):
     for k, o in enumerate(obs):
         mw = o.matrix_world; n0 = len(V); V += [mw @ v.co for v in o.data.vertices]
         for p in o.data.polygons: P.append([n0 + i for i in p.vertices]); owner.append((k, p.index))
-    tree = BVHTree.FromPolygons(V, P, epsilon=0.0); seen = [set() for _ in test]
+    # the occluders: every face but a see-through part's (the lamps' covers hid the tail lights behind them, and the
+    # chase view lost them: the review of the pictures)
+    clear = {k for k, o in enumerate(obs) if see_through(o)}
+    solid = [fi for fi, (k, _) in enumerate(owner) if k not in clear]; at = {fi: i for i, fi in enumerate(solid)}
+    tree = BVHTree.FromPolygons(V, [P[fi] for fi in solid], epsilon=0.0); seen = [set() for _ in test]
     for fi, (verts, (k, pi)) in enumerate(zip(P, owner)):
         if k >= len(test): continue
         pts = [Vector(V[i]) for i in verts]; c = sum(pts, Vector()) / len(pts)
@@ -148,7 +159,7 @@ def seen_both_sides(test, occluders, E):
                 d = q - e; L = d.length
                 if L < 1e-6: continue
                 h = tree.ray_cast(e, d / L, L + 1e-4)
-                if h[0] is None or h[2] == fi or (h[0] - q).length < 1e-4: hit = True; break
+                if h[0] is None or (fi in at and h[2] == at[fi]) or (h[0] - q).length < 1e-3: hit = True; break
             if hit: break
         if hit: seen[k].add(pi)
     return seen
@@ -159,10 +170,11 @@ OUT_MIN = 500             # triangles: a group goes apart only past this (it cos
 
 def chase_eyes():
     """The chase camera's places round the car (play.js: 5.6 m behind the middle, 2.05 m up; its heading lags the car's
-    in a turn, about the yaw rate over 4/s, so a fan of +-60 degrees behind, held through spins under about 4 rad/s; and
-    higher and lower for its easing over bumps)."""
+    in a turn, about the yaw rate over 4/s, so a fan of +-50 degrees behind, held through spins under about 3.5 rad/s
+    (200 degrees a second; a donut with traction control off turns at about 2.5); and higher and lower for its easing
+    over bumps)."""
     out = []
-    for a in range(-60, 61, 15):
+    for a in range(-50, 51, 10):
         for up in (1.6, 2.05, 2.6):
             r = math.radians(a); out.append(Vector((-5.6 * math.cos(r), 5.6 * math.sin(r), up)))
     return out

@@ -130,7 +130,7 @@
   .pop .seg { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; height: 12px; }
   .pop .seg i { background: var(--hair-2); }
   .pop .seg i.on { background: var(--wool); }
-  @container (max-width: 330px) { .pop .stat { padding-inline: 7px; } .pop .stat b { font-size: 17px; line-height: 21px; } .pop .stat b em { display: block; margin: 1px 0 0; line-height: 14px; } .pop .stat small { font-size: 11px; } }      /* a small phone's narrow card: the three numbers still fit (after the rules it overrides) */
+  @container (max-width: 330px) { .pop .row.tight { height: auto; min-height: 48px; padding-block: 4px; } .pop .row.tight .nm b, .pop .row .nm .m { white-space: normal; } .pop .stat { padding-inline: 7px; } .pop .stat b { font-size: 17px; line-height: 21px; } .pop .stat b em { display: block; margin: 1px 0 0; line-height: 14px; } .pop .stat small { font-size: 11px; } }      /* a small phone's narrow card: the three numbers still fit (after the rules it overrides) */
 
   /* ---------- pins over the world: an icon in a drop, no words (the place's name is its card's title) */
   #labels { position: fixed; inset: 0; pointer-events: none; }
@@ -914,7 +914,7 @@ const ageStat = (c) => (c.age in AGE_YEARS ? ['العمر', ...years(AGE_YEARS[c
 const valueOf = (c) => {
   if (c.value) return c.value;
   let h = 7; for (const ch of c.name) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-  h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0; h ^= h >>> 12;      // (mixed: names differing in their last letter, حوار 1 to حوار 6, all came out alike)
+  h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0; h = (h ^ (h >>> 12)) >>> 0;      // (unsigned throughout: a signed h gave negative values)      // (mixed: names differing in their last letter, حوار 1 to حوار 6, all came out alike)
   const [lo, hi] = c.age === 'حوار' || c.age === 'مفرودة' || c.age === 'حقة' ? [3000, 6000] : [10000, 40000];
   return lo + Math.round((h % 1000) / 999 * (hi - lo) / 500) * 500;
 };
@@ -947,16 +947,18 @@ function renderCard() {
   } else {
     const c = place.open(), warn = (typeof place.cls === 'function' ? place.cls() : place.cls) === 'warn';
     top = `<header class="hd"><span class="tile${warn ? ' warn' : ''}">${svgI(ICONS[place.icon], place.icon === 'herd')}</span>` +
-      `<div class="ttl"><h2 id="pop-title">${place.name}</h2>${c.sub ? `<p>${c.sub}</p>` : ''}</div>${X_BTN}</header>`;
+      `<div class="ttl"><h2 id="pop-title">${place.name.replace(/ · /g, '\u00a0· ')}</h2>${c.sub ? `<p>${c.sub.replace(/ · /g, '\u00a0· ')}</p>` : ''}</div>${X_BTN}</header>`;      // (the separator stays with the word before it when a line breaks)
     body = (c.gauge === undefined ? '' : gaugeHtml(c.gauge)) + (c.stats ? statsHtml(c.stats) : '') + (c.html || '');
     acts = c.actions || [];
   }
+  const had = $('pop').contains(document.activeElement) ? (document.activeElement.dataset.act !== undefined ? `[data-act="${document.activeElement.dataset.act}"]` : document.activeElement.hasAttribute('data-back') ? '[data-close]' : null) : null;
   $('pop-top').innerHTML = top;
   $('pop-body').innerHTML = body; $('pop-body').hidden = !body;
   popActs = acts;
   $('pop-acts').innerHTML = acts.map((a, i) => `<button type="button" class="b${a.primary ? ' pri' : ''}" data-act="${i}">${a.icon ? svgI(a.icon) : ''}${a.label}</button>`).join('');
   $('pop-acts').hidden = !acts.length;
   $('pop').hidden = false;
+  if (had) ($('pop').querySelector(had) || $('pop')).focus({ preventScroll: true });      // (a button that rebuilt the card keeps the focus on its new self; it fell to the page)
   refreshLabels(); measureHud();
 }
 // a pick or a follow lasts while its card is open

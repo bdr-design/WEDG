@@ -27,7 +27,7 @@ const CSS = `
      content is magnified back (--k, set once as it enlarges): what the phone shows sits at its true size on the screen,
      the smallest text 11 pt and every target at least 44 x 44 pt (Apple's minimums; the owner's proxy, 12 Nov: the
      buttons were 12 px tall and the text 6.5 px). Only an app's content scrolls; its top bar and the dock stay. */
-  .phone[data-state="big"] .scr { width: calc(100% / var(--k, 1)); height: calc(100% / var(--k, 1)); zoom: var(--k, 1); border-radius: calc(42px / var(--k, 1)); }
+  .phone[data-state="big"] .scr { width: calc(${W - 18}px / var(--k, 1)); height: calc(${H - 18}px / var(--k, 1)); zoom: var(--k, 1); border-radius: calc(42px / var(--k, 1)); }      /* (lengths, not percentages: a zoomed box's percentage size is not magnified, and it shrank into a corner) */
   .phone[data-state="big"] .scr .pill { top: calc(9px / var(--k, 1)); width: calc(92px / var(--k, 1)); height: calc(27px / var(--k, 1)); border-radius: calc(14px / var(--k, 1)); }
   .phone[data-state="big"] .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
   .phone[data-state="big"] .nav { position: sticky; top: 0; z-index: 3; min-height: 44px; background: var(--bg); }
