@@ -98,7 +98,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const inYard = (x, z) => x > C.x0 - 12 && x < C.x1 + 12 && z > C.z0 - 12 && z < C.z1 + 25;
   const soft = makeSoftness(ground, inYard);
   const env = { height: ground, soft };
-  let settled = false;
+  let settled = false, parked = true;                 // a car one gets into stands in park, as one left it
   const PEDALS = { gas: 0, brake: 0 }, POSE = { x: 0, z: 0, yaw: 0 };      // (reused every frame)
   const needles = { speed: part('needle_speed'), rpm: part('needle_rpm') };
   const needleBase = { speed: needles.speed?.quaternion.clone(), rpm: needles.rpm?.quaternion.clone() };
@@ -322,7 +322,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   function exit() {
     if (Math.abs(carState.v) <= 1.5) animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.7);
     if (Math.abs(carState.v) > 1.5) return;                   // not while moving
-    state.mode = 'walk'; carState.v = 0; job = null;
+    state.mode = 'walk'; carState.v = 0; job = null; parked = true;
     if (rigged) { POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
     driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading;
     man.root.visible = state.view === 3;
@@ -401,7 +401,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     // and holds it standing, on a slope too (the gear, D or R, is changed on the card while the car stands)
     const way = phys.s.gear === 'R' ? -1 : 1, rolling = carState.v * way;
     const ctl = PEDALS; ctl.gas = 0; ctl.brake = 0;
-    if (job) ctl.brake = 1;                                                    // parked while the driver works outside
+    if (gas || brake) parked = false;
+    if (job || parked) ctl.brake = 1;                                          // parked (got in, or the driver working outside) until a pedal is pressed
     else {
       if (gas) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = 1; }
       if (brake) ctl.brake = 1;                                               // (both feet: the brake holds against the engine)
