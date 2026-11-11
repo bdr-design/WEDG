@@ -201,7 +201,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const input = { mx: 0, mz: 0, run: false, gas: 0, brake: 0, steer: 0, yaw: Math.PI, pitch: 0.18 };
   const keys = new Set();
   const onKey = (e) => {
-    if (e.type === 'keyup') { keys.delete(e.code); return; }             // (let go even out of play: dropped there, the key stayed held and the man walked alone on the next start)
+    if (e.type === 'keyup') { keys.delete(e.code); return; }
+    if (busy()) return;             // (let go even out of play: dropped there, the key stayed held and the man walked alone on the next start)
     if (!state.on) return;
     keys.add(e.code);
     if (e.type === 'keydown' && e.code === 'KeyE') primary();
@@ -211,7 +212,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   addEventListener('keydown', onKey); addEventListener('keyup', onKey); addEventListener('blur', () => keys.clear());
 
   // The controls: icons only, at the screen's edges (farm.html's .play styles; nothing written floats over the scene).
-  // Top left: the view and back to the map. By the driver's door: get in and lock. Driving: a steering pad (bottom
+  // Top left: the view (in the car), back to the map and the phone. By the driver's door: get in and lock. Driving: a steering pad (bottom
   // left), two pedals pressed as far as the thumb slides up them (bottom right), and the car's own buttons in a row
   // (top right) while it stands; moving, only the gear shows.
   const I = {
@@ -300,7 +301,14 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   tap(ui.querySelector('[data-a="view"]'), () => toggleView());
   // the phone (phone.js): opened small and closed by its button; not while the car moves (the button goes, and an open phone is put away)
   const phoneBtn = ui.querySelector('[data-a="phone"]');
-  if (phone) { tap(phoneBtn, () => phone.toggle()); phone.onChange((state) => phoneBtn.classList.toggle('on', state !== 'closed')); } else phoneBtn.hidden = true;
+  if (phone) {
+    tap(phoneBtn, () => phone.toggle());
+    phone.onChange((state) => {
+      phoneBtn.classList.toggle('on', state !== 'closed'); phoneBtn.setAttribute('aria-pressed', String(state !== 'closed'));
+      if (state === 'big') { stickId = lookId = null; stick.hidden = true; input.mx = input.mz = 0; input.run = false; keys.clear(); }      // (enlarged, the phone has the screen: what the fingers and keys held is let go)
+    });
+  } else phoneBtn.hidden = true;
+  const busy = () => !!phone && phone.big;         // the enlarged phone has the screen and the keys
   ui.querySelectorAll('[data-c]').forEach((b) => tap(b, () => act(b.dataset.c)));
 
   // the screen: the left half moves (a stick that appears under the thumb), the right half looks around
@@ -315,7 +323,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     try { canvas.setPointerCapture(e.pointerId); } catch {}
   });
   canvas.addEventListener('pointermove', (e) => {
-    if (!state.on) return;
+    if (!state.on || busy()) return;
     if (e.pointerId === stickId) {
       let dx = e.clientX - s0.x, dy = e.clientY - s0.y; const d = Math.hypot(dx, dy), m = stickM;
       if (d > m) { dx *= m / d; dy *= m / d; }
@@ -361,7 +369,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     standing = speed < 0.3 || (standing && speed < 1.0);                   // (shown below 0.3 m/s, hidden above 1: no flicker between)
     const full = standing || stuckNow || !!job;
     const open = carOpen || !!job;
-    const key = (full ? 1 : 0) | (aired ? 2 : 0) | (p.low ? 4 : 0) | (p.trc ? 8 : 0) | (p.gear === 'R' ? 16 : 0) | (stuckNow ? 32 : 0) | (job ? (job.kind === 'air' ? 64 : 128) : 0) | (open ? 256 : 0);
+    const key = (standing ? 512 : 0) | (full ? 1 : 0) | (aired ? 2 : 0) | (p.low ? 4 : 0) | (p.trc ? 8 : 0) | (p.gear === 'R' ? 16 : 0) | (stuckNow ? 32 : 0) | (job ? (job.kind === 'air' ? 64 : 128) : 0) | (open ? 256 : 0);
     if (key === rowKey) return; rowKey = key;
     carRow.classList.toggle('moving', !full); carRow.classList.toggle('open', open);
     if (phone) { phoneBtn.hidden = !standing; if (!standing) phone.close(); }
