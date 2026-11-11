@@ -106,7 +106,7 @@
   .lbl .ic { width: 18px; height: 18px; stroke-width: 2; color: var(--najdi); }
   .lbl.warn .ic, .lbl:hover .ic, .lbl.on .ic { color: #10141a; }
 
-  /* ---------- the frame meter (#fps): small, under the strip, out of the way */
+  /* ---------- the frame meter (#fps): small, in the top right corner, out of the way */
   .meter { position: fixed; top: var(--edge-t); right: var(--edge-r); padding: 6px 10px; border-radius: 12px; font-size: 11px; line-height: 1.5; pointer-events: none; z-index: 6; white-space: nowrap; }
   .meter b { font-family: var(--display); font-size: 15px; }
   .meter .bad { color: var(--warn); }
@@ -554,7 +554,7 @@ const PLACES = [
       return { title: 'مزاين الصياهد', sub: 'حوالي 465 كم شرق العزبة · من ديسمبر لأوائل يناير', html: '<p class="hint">أمثلة لشكل العرض. المواعيد الحقيقية من تقويم اللعبة.</p>' +
         L.map(([t, w, e]) => row({ lead: cup, title: t, sub: w, end: e, cls: 'good' })).join('') }; } },
 ];
-// category icons for the tags (24 px grid, drawn with the stroke of svg.i; the herd is a filled camel)
+// category icons for the pins (24 px grid, drawn with the stroke of svg.i; the herd is a filled camel)
 const ICONS = {
   pen: '<path d="M4 5v15M12 5v15M20 5v15M4 9h16M4 15h16"/>',
   water: '<path d="M12 3.5S6 10.1 6 14a6 6 0 0 0 12 0c0-3.9-6-10.5-6-10.5z"/>',
@@ -607,11 +607,11 @@ function refreshLabels() {
     if (l.edge) { l.arrow = l.el.querySelector('.arr'); l.ang = null; }    // the new arrow starts unrotated
     if (!l.vis) l.el.style.display = '';
   }
-  // half sizes, measured here when the text changes and never per frame; an edge pill also carries
+  // half sizes, measured here when a pin's icon or state changes and never per frame; an edge pin also carries
   // its arrow (14 px and a 6 px gap), so its half width counts that even while it sits on the horizon
   for (const l of labels) { l.hw = (l.el.offsetWidth + (l.edge && !l.isEdge ? 20 : 0)) / 2 + 2; l.hh = l.el.offsetHeight / 2 + 2; }
   for (const l of labels) if (!l.vis) l.el.style.display = 'none';
-  // when tags overlap, the earlier one wins: the open place, warnings and far places, pens, the rest
+  // when pins overlap, the earlier one wins: the open place, warnings and far places, pens, the rest
   for (const l of labels) l.rank = pop && pop.place === l ? 0 : l.warn || l.edge || l.min ? 1 : l.rect ? 2 : 3;
 }
 refreshLabels();
@@ -635,7 +635,7 @@ const proj = new THREE.Vector3(), shown = [];
 function placeLabels() {
   const { w, h, x0, x1, y0, y1 } = hud, ox = (x0 + x1) / 2, oy = (y0 + y1) / 2;
   shown.length = 0;
-  // by priority, and nearer first within a priority (insertion sort: 16 tags, no allocation)
+  // by priority, and nearer first within a priority (insertion sort: 16 pins, no allocation)
   for (const l of order) l.d2 = camera.position.distanceToSquared(l.p);
   for (let i = 1; i < order.length; i++) {
     const l = order[i]; let j = i - 1;
@@ -661,10 +661,11 @@ function placeLabels() {
     } else {
       const dist = Math.sqrt(l.d2);
       const open = pop && pop.place === l;
-      // a tag whose point is on the map but whose pill would cross a side slides inward to stay whole
+      // a pin stands on its point: one that would cross a side of the free map is hidden, not slid (slid, its tip
+      // would point beside its place)
       const inside = !behind && x > x0 && x < x1 && y > y0 && y < y1;
       vis = inside && (open || ((!l.min || dist > l.min) && (!l.max || dist < l.max)));
-      if (vis) { const cx = Math.min(Math.max(x, x0 + l.hw), x1 - l.hw); l.tail = x - cx; x = cx; if (y - 2 * l.hh < y0) vis = false; }
+      if (vis && (x - l.hw < x0 || x + l.hw > x1 || y - 2 * l.hh < y0)) vis = false;
     }
     x = Math.round(x); y = Math.round(y);
     if (vis) {
@@ -684,8 +685,6 @@ function placeLabels() {
     if (edge !== l.isEdge) { l.isEdge = edge; l.el.classList.toggle('edge', edge); l.x = null; }
     if (vis && (x !== l.x || y !== l.y)) {
       l.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, ${edge ? '-50%' : '-100%'})`; l.x = x; l.y = y;
-      const t = edge ? 0 : Math.round(Math.max(-l.hw + 14, Math.min(l.hw - 14, l.tail || 0)));
-      if (t !== l.t) { l.el.style.setProperty('--tail', t + 'px'); l.t = t; }
     }
   }
 }
@@ -701,14 +700,14 @@ function openPlace(pl, keep) {
   acts.hidden = !acts.children.length;
   showHerd();                    // one card at a time: the place card replaces a picked camel or a follow
   pop = { place: pl };
-  $('pop').hidden = false; document.body.classList.add('carded');
+  $('pop').hidden = false;
   refreshLabels(); measureHud();
   $('pop').focus({ preventScroll: true });
   if (!keep) glideTo(pl);
 }
 function closePop() {
   if (!pop) return;
-  const back = pop.place.el; pop = null; $('pop').hidden = true; document.body.classList.remove('carded'); refreshLabels(); measureHud();
+  const back = pop.place.el; pop = null; $('pop').hidden = true; refreshLabels(); measureHud();
   if ($('pop').contains(document.activeElement) || document.activeElement === document.body) back.focus({ preventScroll: true });
 }
 addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (pop) closePop(); else if (!$('card').hidden) showHerd(); });
@@ -723,7 +722,7 @@ const ease = { k: 1, t0: new THREE.Vector3(), t1: new THREE.Vector3(), o0: new T
 const EASE_S = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1e-3 : 0.6;
 const aim = new THREE.Vector3();
 function glideTo(pl, dist) {
-  // where the place should sit: 30% down the screen in portrait (the card docks below it),
+  // where the place should sit: 30% down the screen when the card docks at the bottom (a big screen),
   // in the left third in landscape (the card docks on the right)
   const side = SIDE();
   aim.set(side ? -0.5 : 0, side ? 0 : 0.4, 0.5).unproject(camera).sub(camera.position).normalize();
@@ -835,9 +834,9 @@ $('s-clear').addEventListener('click', () => showHerd());
 
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let downAt = null;
-renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; ease.k = 1; });
+renderer.domElement.addEventListener('pointerdown', (e) => { if (play && play.on) { downAt = null; return; } downAt = [e.clientX, e.clientY]; ease.k = 1; });      // (in play a tap on the scene is not a tap on the map: it opened a place's card behind the hidden HUD)
 renderer.domElement.addEventListener('pointerup', (e) => {
-  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+  if (!downAt || (play && play.on) || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   if (!tapWorld(e.clientX, e.clientY)) closePop();
 });
 const camelHits = [];
@@ -917,7 +916,7 @@ let playCar = null, play = null;
 loadVehicles().then(async () => {
   const t = await terrainReady;
   play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root,
-    onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); controls.update(); } });
+    onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); ease.k = 1; controls.update(); measureHud(); } });      // (the HUD measured again: hidden in play, a turn of the phone there left its boxes stale)
   window.__play = play;
 }).catch((e) => console.error(e));
 $('cam-play').addEventListener('click', () => { if (play) { closePop(); play.start(); } });

@@ -38,7 +38,7 @@ export const LC300 = {
 // rides on: with a run-up, traction control off keeps the momentum that it would cut; from a standstill, a foot held
 // down with it off digs in). Backing out along the hole (the other way from the digging) meets BACK_OUT of its drag
 // (the tyre climbs the sand it packed) and climbs out twice as fast. Quicker, the tyres throw more sand: SAND_V of
-// drag per m/s in soft sand (less aired down). Low range: the pedal comes in at half the rate (a finer foot), and off
+// drag per m/s in soft sand (less aired down). Low range: a key's pedal comes in at half the rate (a finer foot; the touch pedal is the thumb's own), and off
 // the pedal the engine holds a descent to a crawl (up to LOW_HOLD of the weight; high range ENGINE_BRAKE). An
 // automatic creeps at idle (CREEP of the weight). These shares are game choices.
 const SAND = { SINK0: 0.07, N: 1.1, PLANE: 25, DIG: 0.05, DIG_SLIP: 0.15, CLIMB: 0.25, F0: 0.015, SAND_F: 0.08, SAND_V: 0.006, DIG_V: 4, RUT: 1.6, MU_HARD: 0.85, MU_SAND: 0.53, MU_AIRED: 0.05,
@@ -136,9 +136,9 @@ export function createCar(geo, spec = LC300) {
     const downhill = -m * g * slope * Math.sign(s.v || dir);
     const holding = ctl.brake || (s.hillHold > 0 && drive < Math.abs(m * g * slope) + 50);
     const engineBrake = s.thr < 0.05 && Math.abs(s.v) > 2.0 ? m * g * (s.low ? Math.min(SAND.LOW_HOLD, 0.05 + 0.25 * (Math.abs(s.v) - 2.0)) : SAND.ENGINE_BRAKE) : 0;
-    const brake = holding ? Math.min(grip, m * g * 0.9 * (bk || 1)) : engineBrake;      // (the brake pedal by how far it is pressed; hill hold, full)
+    const brake = Math.min(grip, (holding ? m * g * 0.9 * (bk || 1) : 0) + engineBrake);      // (the brake pedal by how far it is pressed, on top of the engine's braking: a light foot replaced low range's hold on a descent and the car ran away; hill hold, full)
     let F = (holding && !ctl.gas ? 0 : dir * drive) - m * g * slope;
-    if (ctl.brake && ctl.gas) F = dir * drive - m * g * slope;              // both feet: the brake holds against the engine
+    if (ctl.brake && ctl.gas) F = dir * drive - m * g * slope;              // both feet: the engine pulls against the brakes, each by how far it is pressed
     const oppose = res + air + brake;
     // resistance and brakes oppose the motion, and when the car stands they hold it unless the push beats them
     if (Math.abs(s.v) < 0.05 && Math.abs(F) <= oppose) { s.v = 0; s.aLong = 0; }
@@ -173,7 +173,7 @@ export function createCar(geo, spec = LC300) {
       w.dug = Math.max(0, Math.min(SAND.MAXSINK, w.dug));
     }
     // stuck: pulling hard and going nowhere
-    s.stuck = (s.thr > 0.6 && Math.abs(s.v) < 0.4 && s.slip > 0.05) ? s.stuck + dt : Math.max(0, s.stuck - dt * 2);
+    s.stuck = (s.thr > 0.25 && Math.abs(s.v) < 0.4 && s.slip > 0.05) ? s.stuck + dt : Math.max(0, s.stuck - dt * 2);
     // the springs: four sub-steps of the sprung body over the wheels
     // (touching, above: the tyres carry the turn's and the pull's moments, none off the ground)
     for (let i = 0; i < n; i++) {
