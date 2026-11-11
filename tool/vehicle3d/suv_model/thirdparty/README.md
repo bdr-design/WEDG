@@ -37,7 +37,7 @@ What was changed (so the changed version is under the same licence):
     plus the door's trim (about 6k). Its 6600 small parts (buttons, rings) are kept whole, and so are the edges of
     its big panels: thinned with the rest, they broke into holes and slits. It loads in the background and is drawn
     only from the driver's seat or while the door stands open;
-  - the outside: a near layer of about 66k and a far layer of about 12k. That is one draw per material, plus the
+  - the outside: a near layer of about 65k and a far layer of about 14k (its glass held: thinned, the far car had no windows). That is one draw per material, plus the
     wheels, the calipers and the driver's door, which are apart because they move. The edges of parts over 0.01 m²,
     the tailgate's emblem recess and the roof's antenna are held in the thinning. Faces the thinning turned over are
     turned back. A dark panel stands behind the grille and the intakes, where the radiator is;
@@ -67,9 +67,10 @@ artist's, measured on the near layer):
 | Tyre | 0.83 m across | 0.80 m (265/55R20; +3.5 %) |
 
 **Weight against the owner's budget:** on 10 Nov the owner chose about 40k triangles inside and about 40k outside
-near. This model needs more to have no holes: about 88k inside (drawn only from the driver's seat or through the
-open door) and about 66k outside near. At 48-51k the near layer showed the sky through the bonnet and the tailgate;
-at 66k a few slivers remain, closed from behind by dark inward-facing shells (engine bay, wheel wells, bumper).
+near. This model needs more to have no holes: about 87k inside (drawn only from the driver's seat or through the
+open door) and about 65k outside near. At 48-51k the near layer showed the sky through the bonnet and the tailgate;
+at 65k a few slivers remain (the tail lamps' upper inner corners, the rear bumper's upper slats, the spoiler's edge);
+the engine bay and the wheel wells are closed from behind by dark inward-facing shells.
 That trade-off is the owner's to confirm.
 
 How it is made (from `../`): `BLENDPY=<python with bpy> sh thirdparty_build.sh <scene.gltf> suv.blend <work dir> <out dir>`

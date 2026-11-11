@@ -62,8 +62,10 @@ def flat():
         if not b: continue
         b.inputs['Transmission Weight'].default_value = 0.0
         b.inputs['Specular IOR Level'].default_value = 0.5; b.inputs['Specular Tint'].default_value = (1, 1, 1, 1); b.inputs['IOR'].default_value = 1.5
-        for n in [n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and n.image.channels < 4]:      # (an image with no alpha read as alpha: the exporter then kept a PNG copy beside the JPEG)
+        for n in [n for n in m.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and n.image.depth <= 24]:      # (an image with no alpha read as alpha, here through a maths node: the exporter then kept a PNG copy beside the JPEG; Blender holds every image as 4 channels, so its file's depth tells)
             for l in list(n.outputs['Alpha'].links): m.node_tree.links.remove(l)
+        if b.inputs['Alpha'].links and b.inputs['Alpha'].links[0].from_node.type == 'MATH' and not b.inputs['Alpha'].links[0].from_node.inputs[0].links:
+            m.node_tree.links.remove(b.inputs['Alpha'].links[0])                   # (the maths node, its image cut off, fed nothing)
         for nm in ('Specular IOR Level', 'Specular Tint', 'Transmission Weight', 'IOR'):
             for l in list(b.inputs[nm].links): m.node_tree.links.remove(l)
         if not any(w in m.name for w in METALS):                                 # (the source's metallic 0.4-0.7 on leather and rubber, without its specular, read as dark metal)

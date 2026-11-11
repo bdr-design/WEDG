@@ -972,7 +972,7 @@ function tick(now) {
       for (const c of playCar.userData.nearParts) c.visible = near;
       playCar.userData.far.visible = !near;
     }
-    // the cabin (the private car's: about 88k triangles, 37 draws) only when it can be seen: from the driver's seat or
+    // the cabin (the private car's: about 87k triangles, 35 draws) only when it can be seen: from the driver's seat or
     // through the open door (the older photo car: close enough to look in); never with the far layer
     const cabin = playCar.userData.cabin || (playCar.userData.cabin = (play?.model.interior || (playCar.userData.darkGlass ? null : playCar.getObjectByName('interior'))));
     if (playCar.userData.darkGlass === undefined) playCar.userData.darkGlass = !!playCar.getObjectByName('corner_FL');      // the private car's glass is dark: its interior shows only from the driver's seat or through the open door

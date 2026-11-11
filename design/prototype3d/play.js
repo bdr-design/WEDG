@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { createCar, makeSoftness, LC300 } from './car_physics.js';
 const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;      // below this the tyres count as aired down
 const GEAR_TOP = [0, 18, 34, 52, 72, 96, 130];      // the rpm needle's simple gears: each one's top speed, km/h (allocated once)
+const TIP = Math.tan(40 / 57.3);  // the steepest side slope it goes onto (its static stability: track 1.63 m over twice a cg of 0.8 m, about 45 degrees, with a margin)
 const STEER_RATIO = 15;          // the steering wheel's turn per road-wheel turn (the LC300's about 15-16: about 1.4 turns to lock here)
 // the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
 // changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the card shown beside the car
@@ -371,7 +372,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const near = driverDoor(doorPoint).distanceTo(man.pos) < 1.8;
     if (near) loadCabin();
     if (driverDoor(doorPoint).distanceTo(man.pos) < 8) warmCabin();
-    if (near && cardKey !== 'near' + carState.locked) setCard('near' + carState.locked, (carState.locked ? '<button data-c="lock">افتح القفل</button>' : '<button data-c="in" class="pri">اركب</button><button data-c="lock">قفّل</button>') + (rigged ? CREDIT : ''));
+    if (near) { if (cardKey !== 'near' + carState.locked) setCard('near' + carState.locked, (carState.locked ? '<button data-c="lock">افتح القفل</button>' : '<button data-c="in" class="pri">اركب</button><button data-c="lock">قفّل</button>') + (rigged ? CREDIT : '')); }
     else setCard('', '');
     if (near) placeCard(tmp2.copy(carState.pos).setY(carState.pos.y + 2.4));
   }
@@ -419,6 +420,9 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     carFwd(carState.yaw, fwd);
     carState.pos.addScaledVector(fwd, carState.v * dt);
     if (phys.s.slide) { right.crossVectors(fwd, UP); carState.pos.addScaledVector(right, phys.s.slide * dt); }      // sliding down a side slope too steep to hold
+    // ground too steep across the car (past about 40 degrees it would tip): it does not go there, as against a wall
+    { right.crossVectors(fwd, UP); const e = geo.half, hl = ground(carState.pos.x - right.x * e, carState.pos.z - right.z * e), hr = ground(carState.pos.x + right.x * e, carState.pos.z + right.z * e);
+      if (Math.abs(hl - hr) > 2 * e * TIP) { carState.pos.addScaledVector(fwd, -carState.v * dt); carState.v = 0; phys.s.v = 0; } }
     POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw;
     if (!settled) { phys.settle(POSE, env); settled = true; }
     phys.s.v = carState.v;

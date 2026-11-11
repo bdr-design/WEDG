@@ -72,11 +72,11 @@ in the code, and the numbers are in
   and a 2048 px satellite image.
 - **The player's SUV:** the private car built from a downloaded model (see
   `tool/vehicle3d/suv_model/thirdparty/README.md`: private use only, its licence and credit there).
-  - `veh_suvfull.json` (about 67k triangles) within 20 m or while driving, with the wheels on their own corners
+  - `veh_suvfull.json` (about 65k triangles, 43 draws) within 20 m or while driving, with the wheels on their own corners
     (`corner_XX` rides and steers, `wheel_XX` spins), the driver's door on its hinge (`door_FL`), and the
     first-person eye (`eye`, `eye_look`).
-  - `veh_suvfar.json` (about 12k) beyond 20 m.
-  - `veh_suvcabin.json` (about 88k), the interior. It loads in the background a few seconds after the page, and is
+  - `veh_suvfar.json` (about 14k, 19 draws) beyond 20 m.
+  - `veh_suvcabin.json` (about 87k, 35 draws), the interior. It loads in the background a few seconds after the page, and is
     drawn only from the driver's seat or while the door stands open (the glass is dark from outside). It has a
     turning steering wheel and the door's trim (`doorcard_FL`), which swings with the door.
   - `car_physics.js` does the ride and the sand (suspension, grip, sinking and digging, tyre pressure, low range,
