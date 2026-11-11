@@ -30,7 +30,7 @@ def model_hull():
     tree = BVHTree.FromPolygons(V, F); mids = [Vector((x, 0.0, 1.20)) for x in (0.4, -0.4, -1.3, -2.0)]
     def inside(p):
         m = min(mids, key=lambda q: abs(q.x - p.x)); dv = m - p; L = dv.length
-        return L < 1e-6 or tree.ray_cast(p, dv / L, L - 1e-4)[0] is None
+        return L < 0.003 or tree.ray_cast(p + dv / L * 0.002, dv / L, L - 0.002)[0] is None      # (from 2 mm off: a part of an outside material would meet its own face)
     return inside
 
 

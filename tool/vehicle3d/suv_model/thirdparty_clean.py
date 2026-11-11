@@ -34,9 +34,13 @@ def thin(o, ratio):
     bm.free()
     print("  panels over %.2f m2: %d, edge vertices held %d (biggest panel %.2f m2)" % (PANEL, int((area > PANEL).sum()), int(edge.sum()), area.max()))
     small = (cnt[lab] < FEW) | pad | edge; g = o.vertex_groups.new(name='hold'); g.add([int(i) for i in np.nonzero(small)[0]], 1.0, 'REPLACE')
+    from mathutils.bvhtree import BVHTree
+    orig = BVHTree.FromPolygons([v.co.copy() for v in me.vertices], [list(p.vertices) for p in me.polygons])
     bpy.context.view_layer.objects.active = o; m = o.modifiers.new('lod', 'DECIMATE'); m.ratio = (cnt[cnt < FEW].sum() + ratio * cnt[cnt >= FEW].sum()) / cnt.sum(); m.use_collapse_triangulate = True
     m.delimit = {'MATERIAL', 'SEAM', 'UV', 'SHARP'}; m.vertex_group = 'hold'; m.invert_vertex_group = True; bpy.ops.object.modifier_apply(modifier='lod')
-    o.vertex_groups.clear(); me = o.data; me.calc_loop_triangles()
+    o.vertex_groups.clear(); me = o.data
+    import thirdparty_lod as TL; print('  %d faces turned back after thinning' % TL.unflip(o, orig))
+    me.calc_loop_triangles()
     print('thinned: %d loose parts, %d under %d triangles held (%d triangles); %d -> %d triangles' % (k, int((cnt < FEW).sum()), FEW, int(cnt[cnt < FEW].sum()), int(cnt.sum()), len(me.loop_triangles)))
     return o
 

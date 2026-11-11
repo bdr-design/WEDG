@@ -32,7 +32,7 @@ CLEAR = ('Light_glass', 'GlassRed', 'Light_Red_Back')    # the lamps' see-throug
 
 
 MERGE = {'Light_Red_Back_Lower': 'Light_Red_Back', 'RearMirror_Light': 'Light_White_Back'}      # two lamps of a few triangles each: drawn with their neighbours (two draws fewer)
-PANEL = 0.05                   # m^2: a loose part this big has its edges held in the thinning
+PANEL = float(os.environ.get('TP_PANEL', 0.05))        # m^2: a loose part this big has its edges held in the thinning
 HOLD = [((-2.75, -2.25), (-0.18, 0.18), (0.95, 1.35))]          # boxes (x, y, z) whose paint is not thinned: the tailgate's emblem recess (thinned, its rim broke into a badge-like shard)
 
 
@@ -87,6 +87,33 @@ def held(o):
             p = mw @ v.co
             if any(x[0] < p.x < x[1] and y[0] < p.y < y[1] and z[0] < p.z < z[1] for x, y, z in HOLD): keep.add(v.index)
     bm.free(); g = o.vertex_groups.new(name='held'); g.add(sorted(keep), 1.0, 'REPLACE'); return len(keep)
+
+
+RADIATOR = ((2.05, -0.88, 0.28), (2.05, 0.88, 1.18))     # the dark face behind the grille and the intakes, where the radiator stands
+
+
+def radiator(obs):
+    """A dark panel across the front openings (two triangles in the chassis's rough black). The model's backing
+    behind the grille is seen only through narrow slots, so the cull drops most of it and the sky showed through;
+    a real car shows its radiator there."""
+    o = next((o for o in obs if o.name == 'BlackPlastic_Rough'), None)
+    if o is None: return
+    (x, y0, z0), (_, y1, z1) = RADIATOR; mwi = o.matrix_world.inverted()
+    bm = bmesh.new(); bm.from_mesh(o.data)
+    vs = [bm.verts.new(mwi @ Vector(p)) for p in ((x, y1, z0), (x, y0, z0), (x, y0, z1), (x, y1, z1))]
+    f = bm.faces.new(vs); f.material_index = 0; f.normal_update()
+    if (o.matrix_world.to_3x3() @ f.normal).x < 0: f.normal_flip()          # facing forward (its normal computed first: a new face's is zero)
+    bm.to_mesh(o.data); bm.free()
+
+
+def unflip(o, before):
+    """Faces the decimation turned over, turned back: each face is compared with the nearest face of the mesh as it
+    was (its BVH); a face facing against it is flipped. (With back faces culled, a turned face shows as a hole.)"""
+    me = o.data; bm = bmesh.new(); bm.from_mesh(me); flips = 0
+    for f in bm.faces:
+        c = f.calc_center_median(); hit = before.find_nearest(c)
+        if hit[0] is not None and f.normal.dot(hit[1]) < -0.2: f.normal_flip(); flips += 1
+    bm.to_mesh(me); bm.free(); return flips
 
 
 def hubs():
@@ -181,6 +208,7 @@ def rig(obs, H):
 def main(src, out, target, far=False):
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); obs, H = by_material(not far)
     for o in [o for o in obs if o.name.split('.')[-1] in INSIDE]: obs.remove(o); bpy.data.objects.remove(o)
+    radiator(obs)
     tri = lambda o: (o.data.calc_loop_triangles(), len(o.data.loop_triangles))[1]
     before = sum(tri(o) for o in obs)
     for o in obs:
@@ -201,15 +229,18 @@ def main(src, out, target, far=False):
             c = culled[o.name]; mat = o.name.split('.')[-1]
             floor[o.name] = floors.get(mat, 1.0 if (c < SMALL and not far) else 0.5 if c < SMALL else 0.0)
     fixed = sum(culled[n] * f for n, f in floor.items() if f > 0); free = sum(culled[n] for n, f in floor.items() if f == 0)
-    r = max(0.02, (target - fixed) / max(1, free))
+    r = max(0.02, (target - fixed) / max(1, free)); flipped = 0
     for o in obs:
         k = floor[o.name] or r
         if k < 1:
-            nh = held(o); bpy.context.view_layer.objects.active = o; m = o.modifiers.new('lod', 'DECIMATE'); m.ratio = k; m.use_collapse_triangulate = True
+            from mathutils.bvhtree import BVHTree
+            nh = held(o); orig = BVHTree.FromPolygons([v.co.copy() for v in o.data.vertices], [list(p.vertices) for p in o.data.polygons])
+            bpy.context.view_layer.objects.active = o; m = o.modifiers.new('lod', 'DECIMATE'); m.ratio = k; m.use_collapse_triangulate = True
             m.vertex_group = 'held'; m.invert_vertex_group = True; bpy.ops.object.modifier_apply(modifier='lod'); o.vertex_groups.clear()
+            flipped += unflip(o, orig)
     glass_out(obs)
     if not far: rig(obs, H)
-    print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f)' % (before, total, sum(tri(o) for o in obs), len(obs), r))
+    print('outside: %d -> seen %d -> %d triangles in %d objects (the rest at %.3f); %d faces turned back after thinning' % (before, total, sum(tri(o) for o in obs), len(obs), r, flipped))
     for o in sorted(obs, key=lambda o: -culled[o.name])[:12]: print('  %-26s seen %6d -> %6d' % (o.name, culled[o.name], tri(o)))
     for k in CORNERS: print('  wheel_%s %d triangles, corner_%s %d' % (k, sum(tri(o) for o in obs if o['group'] == 'wheel_' + k), k, sum(tri(o) for o in obs if o['group'] == 'corner_' + k)))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out))
