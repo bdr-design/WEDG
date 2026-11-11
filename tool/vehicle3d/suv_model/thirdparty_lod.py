@@ -129,7 +129,9 @@ SKIRT = ((-1.80, -1.40, 0.93, 1.24), (-1.40, -0.78, 0.93, 1.04), (-0.78, 1.15, 0
 # 1.24 (the belt line rises there to 1.30: the fuel lid's and the door's rear seams), and below the doors' sills
 # elsewhere (their belt line at 1.13: a ray down through the glass from the chase camera, 0.6 steep, would meet a skirt
 # reaching 1.10); none behind 1.80, where the body narrows to the tail (there it stood out of the quarters)
-DOOR_FL_X = (-0.20, 0.90)     # the driver's door's span: its skirt is the door's own (door_FL.BlackPlastic_Rough), inside the door, swinging with it (fixed, it stood as a black wall in the open doorway)
+DOOR_FL_X, DOOR_FL_Z0 = (-0.16, 0.90), 0.48     # the driver's door's span (its skin x -0.161 to 0.938, from z 0.473): its skirt is the door's own
+# (door_FL.BlackPlastic_Rough), inside the door, swinging with it (fixed, it stood as a black wall in the open doorway;
+# reaching past the skin, to x -0.20 and down to 0.40, it showed as a black flange on the open door)
 def skirt():
     """Quads (four corners, outward direction) of a dark skirt just inside the body's sides: thinned, the doors' seams,
     the low strip's line and the arches' tops opened and the sky showed through. Its faces look out, so from the cabin
@@ -140,7 +142,8 @@ def skirt():
             cuts = [u0] + [c for c in DOOR_FL_X if s > 0 and u0 < c < u1] + [u1]
             for v0, v1 in zip(cuts, cuts[1:]):
                 door = s > 0 and DOOR_FL_X[0] <= v0 and v1 <= DOOR_FL_X[1]
-                q.append(([(v0, s * y, w0), (v1, s * y, w0), (v1, s * y, w1), (v0, s * y, w1)], Vector((0, s, 0)), door))
+                b = max(w0, DOOR_FL_Z0) if door else w0
+                q.append(([(v0, s * y, b), (v1, s * y, b), (v1, s * y, w1), (v0, s * y, w1)], Vector((0, s, 0)), door))
     return q
 
 
