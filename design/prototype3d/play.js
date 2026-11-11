@@ -1,5 +1,6 @@
-// Play mode: the owner walks the yard as a man in thobe and shemagh, gets into the black Land Cruiser and drives it.
-// Light by design: one skinned character, the car already in the scene, no physics engine (car_physics.js: a sprung
+// Play mode: the owner walks the yard seen through his own eyes (no character model: the owner's word of 11 Nov 2026,
+// first person only on foot), gets into the black Land Cruiser and drives it, from the seat or from behind the car.
+// Light by design: no character to draw, the car already in the scene, no physics engine (car_physics.js: a sprung
 // body over four wheels and tyres that sink in sand, a few dozen sums a frame), collisions against a short list of
 // boxes and circles from the yard layout.
 import * as THREE from 'three';
@@ -11,7 +12,7 @@ const STEER_RATIO = 15;          // the steering wheel's turn per road-wheel tur
 // the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
 // changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the loading screen (farm.html)
 
-const WALK = 1.25, RUN = 3.5;                 // the speeds the walk and run clips were made for (m/s, measured on the planted foot)
+const WALK = 1.25, RUN = 3.5;                 // walking and running pace, m/s (a walk of 4.5 km/h, a jog of 12.6: game choice)
 let WHEELBASE = 2.85, TRACK = 1.64;           // Land Cruiser 300; replaced by the model's own wheel positions when it has them
 const ACCEL = 3.6, BRAKE = 8.0, VMAX = 140 / 3.6, VREV = 20 / 3.6;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -60,16 +61,9 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     return hit;
   }
 
-  // ---------------------------------------------------------------- the man
-  const man = { root: null, mixer: null, act: {}, pos: new THREE.Vector3(14.2, 0, 1.6), heading: Math.PI, speed: 0 };
-  const ready = loadLod('man.json').then((g) => {
-    man.root = g.scene;
-    // thin double-sided cloth self-shadows into jagged specks: it casts, and takes the sun's shadow only on its outer face
-    man.root.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; n.frustumCulled = false; n.material.shadowSide = THREE.FrontSide; } });
-    man.mixer = new THREE.AnimationMixer(man.root);
-    for (const clip of g.animations) { const a = man.mixer.clipAction(clip); a.play(); a.setEffectiveWeight(0); man.act[clip.name] = a; }
-    man.root.visible = false; scene.add(man.root);
-  });
+  // ---------------------------------------------------------------- the walker: a place, a heading and a speed (no model)
+  const EYE = 1.66;                                // m, the eyes' height on foot (game choice: a man of about 1.76 m)
+  const man = { pos: new THREE.Vector3(14.2, 0, 1.6), heading: Math.PI, speed: 0 };
 
   // ---------------------------------------------------------------- the car
   const carState = { pos: car.position.clone(), yaw: car.rotation.y, v: 0, steer: 0, pitch: 0, roll: 0, locked: false };
@@ -208,7 +202,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (!state.on) return;
     keys.add(e.code);
     if (e.type === 'keydown' && e.code === 'KeyE') primary();
-    if (e.type === 'keydown' && e.code === 'KeyC') toggleView();
+    if (e.type === 'keydown' && e.code === 'KeyC' && state.mode === 'drive') toggleView();
     if (e.type === 'keydown' && e.code === 'KeyR' && state.mode === 'drive') act('gear');
   };
   addEventListener('keydown', onKey); addEventListener('keyup', onKey); addEventListener('blur', () => keys.clear());
@@ -329,11 +323,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   canvas.addEventListener('pointerup', release); canvas.addEventListener('pointercancel', release);
 
   // ---------------------------------------------------------------- modes, the car's buttons and the door's
-  const state = { on: false, mode: 'walk', view: 3 };
+  const state = { on: false, mode: 'walk', view: 1 };
+  // the view: on foot always the walker's own eyes; in the car from the seat (1) or from behind it (3)
+  const viewBtn = ui.querySelector('[data-a="view"]');
   function toggleView() {
-    state.view = state.view === 3 ? 1 : 3;
-    ui.querySelector('[data-a="view"]').classList.toggle('on', state.view === 1);
-    if (state.mode === 'walk' && state.view === 1) input.yaw = man.heading;
+    if (state.mode !== 'drive') return;
+    state.view = state.view === 3 ? 1 : 3; state.snap = true;
+    viewBtn.classList.toggle('on', state.view === 3);
   }
   const doorPoint = new THREE.Vector3();
   function driverDoor(out) { carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); return out.copy(carState.pos).addScaledVector(right, -(geo.half + 0.62)).addScaledVector(fwd, geo.front - 1.2); }
@@ -383,7 +379,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   function enter() {
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.35);
-    state.mode = 'drive'; man.root.visible = false; carState.v = 0;
+    state.mode = 'drive'; carState.v = 0; viewBtn.hidden = false; state.snap = true;
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = false; stick.hidden = true; stickId = null; input.mx = input.mz = 0;
     nearDoor = false; doorButtons(); rowKey = -1; driveCard();
     loadCabin();
@@ -393,15 +389,14 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (Math.abs(carState.v) > 1.5) return;                   // not while moving
     state.mode = 'walk'; carState.v = 0; job = null; parked = true;
     if (rigged) { POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
-    driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading;
-    man.root.visible = state.view === 3;
+    driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading; man.way = undefined;
+    viewBtn.hidden = true; state.snap = true;
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; pedal.gas = pedal.brake = 0; pad.reset();
   }
 
   // ---------------------------------------------------------------- per frame
-  const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), look = new THREE.Vector3();
+  const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
-  const blend = { idle: 1, walk: 0, run: 0 };
   function updateWalk(dt) {
     let mx = input.mx, mz = input.mz, run = input.run;
     if (keys.size) {
@@ -412,33 +407,21 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const amt = Math.min(1, Math.hypot(mx, mz));
     const target = amt < 0.08 ? 0 : run ? RUN : WALK * Math.max(0.55, amt);
     man.speed += (target - man.speed) * Math.min(1, dt * 6);
-    if (amt > 0.08) {
-      // the stick is read relative to where the camera looks
-      const want = Math.atan2(-mx, -mz) + input.yaw;
-      let d = ((want - man.heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      man.heading += d * Math.min(1, dt * 10);
-    }
-    tmp.set(Math.sin(man.heading), 0, Math.cos(man.heading));
+    // the stick is read relative to where the eyes look: up is ahead, the sides step sideways
+    man.heading = input.yaw;
+    if (amt > 0.08) man.way = Math.atan2(-mx, -mz) + input.yaw;
+    tmp.set(Math.sin(man.way ?? man.heading), 0, Math.cos(man.way ?? man.heading));
     man.pos.addScaledVector(tmp, man.speed * dt);
     pushCircle(man.pos, 0.3);
     carCircles(man.pos, 0.3);
     man.pos.y = ground(man.pos.x, man.pos.z);
-    man.root.position.copy(man.pos); man.root.rotation.y = man.heading;
-    // blend the clips by speed and play them at the matching rate, so the feet do not slide
-    const w = man.speed < 0.05 ? 0 : man.speed <= WALK ? 1 : Math.max(0, 1 - (man.speed - WALK) / (RUN - WALK));
-    const r = man.speed <= WALK ? 0 : 1 - w;
-    const goal = { idle: man.speed < 0.05 ? 1 : Math.max(0, 1 - man.speed / 0.4), walk: man.speed < 0.05 ? 0 : w, run: r };
-    for (const k of ['idle', 'walk', 'run']) { blend[k] += (goal[k] - blend[k]) * Math.min(1, dt * 8); man.act[k]?.setEffectiveWeight(blend[k]); }
-    man.act.walk?.setEffectiveTimeScale(Math.max(0.5, man.speed / WALK));
-    man.act.run?.setEffectiveTimeScale(Math.max(0.6, man.speed / RUN));
-    man.mixer.update(dt);
     // near the driver's door: the car's options
     const near = driverDoor(doorPoint).distanceTo(man.pos) < 1.8;
     if (near) loadCabin();
     if (driverDoor(doorPoint).distanceTo(man.pos) < 8) warmCabin();
     if (near !== nearDoor) { nearDoor = near; doorButtons(); }
   }
-  function carCircles(p, r) {          // the car as three circles along its length, for the man on foot
+  function carCircles(p, r) {          // the car as three circles along its length, for the walker
     carFwd(carState.yaw, fwd);
     for (const k of [-1.6, 0, 1.6]) {
       tmp2.copy(carState.pos).addScaledVector(fwd, k);
@@ -533,29 +516,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       p.s.position.copy(carState.pos).addScaledVector(fwd, -2.3).addScaledVector(right, (puffI % 2 ? -1 : 1) * 0.8).setY(carState.pos.y + 0.35);
       p.age = 0; p.s.visible = true;
     }
-    if (man.mixer) man.mixer.update(dt);
   }
-  const walkOff = new THREE.Vector3();           // the walking camera's offset from the man, eased when the view is turned
   function updateCamera(dt) {
-    const k = state.snap ? 1 : Math.min(1, dt * 6);
     if (state.mode === 'walk') {
-      man.root.visible = state.view === 3;
-      if (state.view === 3) {
-        look.copy(man.pos).add(tmp.set(0, 1.5, 0));
-        const d = 4.4;
-        // the camera rides with the man, a fixed arm behind him: only a turn of the view is eased. (Easing its place,
-        // it lagged behind a walking man and swung back when he stopped: the view turned with no hand on it.)
-        tmp.set(-Math.sin(input.yaw) * Math.cos(input.pitch) * d, Math.sin(input.pitch) * d + 0.3, -Math.cos(input.yaw) * Math.cos(input.pitch) * d);
-        if (state.snap || walkOff.lengthSq() === 0) walkOff.copy(tmp); else walkOff.lerp(tmp, k);
-        camPos.copy(look).add(walkOff);
-        camPos.y = Math.max(camPos.y, ground(camPos.x, camPos.z) + 0.4);
-        camera.position.copy(camPos); camera.lookAt(look);
-      } else {
-        man.heading = input.yaw;
-        camera.position.copy(man.pos).add(tmp.set(Math.sin(man.heading) * 0.12, 1.66, Math.cos(man.heading) * 0.12));
-        camLook.copy(camera.position).add(tmp.set(Math.sin(input.yaw) * Math.cos(-input.pitch + 0.18), Math.sin(-input.pitch + 0.18) - 0.05, Math.cos(input.yaw) * Math.cos(-input.pitch + 0.18)));
-        camera.lookAt(camLook);
-      }
+      // on foot: the walker's own eyes (first person only)
+      camera.position.copy(man.pos).add(tmp.set(Math.sin(input.yaw) * 0.12, EYE, Math.cos(input.yaw) * 0.12));
+      camLook.copy(camera.position).add(tmp.set(Math.sin(input.yaw) * Math.cos(-input.pitch + 0.18), Math.sin(-input.pitch + 0.18) - 0.05, Math.cos(input.yaw) * Math.cos(-input.pitch + 0.18)));
+      camera.lookAt(camLook);
     } else {
       carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP);
       const inside = state.view === 1;
@@ -579,14 +546,14 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
 
   function start() {
-    state.on = true; state.mode = 'walk'; ui.hidden = false; document.body.classList.add('playing'); state.snap = true; walkOff.set(0, 0, 0);
+    state.on = true; state.mode = 'walk'; ui.hidden = false; document.body.classList.add('playing'); state.snap = true; viewBtn.hidden = true;
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; nearDoor = false; doorButtons();
-    ready.then(() => { man.pos.y = ground(man.pos.x, man.pos.z); man.root.visible = true; input.yaw = man.heading; });
+    man.pos.y = ground(man.pos.x, man.pos.z); input.yaw = man.heading; man.way = undefined;
     camera.near = 0.08; camera.updateProjectionMatrix();
   }
   function stop() {
     state.on = false; ui.hidden = true; document.body.classList.remove('playing'); stickId = lookId = null; stick.hidden = true; knob.style.transform = ''; input.mx = input.mz = 0; input.run = false; man.speed = 0; keys.clear(); pedal.gas = pedal.brake = 0; pad.reset();
-    if (man.root) man.root.visible = false; cabin.visible = false;
+    cabin.visible = false;
     if (!hasCabin) for (const m of carMats) { m.side = THREE.DoubleSide; m.needsUpdate = true; }
     camera.near = 0.5; camera.updateProjectionMatrix();
     onExit && onExit(state.mode === 'drive' ? carState.pos : man.pos);
@@ -598,7 +565,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       if (a.t >= 1) { if (a.hold > 0) { a.hold -= dt; continue; } tween.splice(i, 1); if (a.then) a.then(); }
     }
     if (model.doorcard && model.doors.FL) model.doorcard.rotation.y = model.doors.FL.rotation.y;      // the door's trim swings with it
-    if (!state.on || !man.root) return false;
+    if (!state.on) return false;
     if (state.mode === 'walk') updateWalk(dt); else updateDrive(dt);
     updateCamera(dt);
     return true;
