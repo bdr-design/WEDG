@@ -9,15 +9,14 @@ const GEAR_TOP = [0, 18, 34, 52, 72, 96, 130];      // the rpm needle's simple g
 const TIP = Math.tan(40 / 57.3);  // the steepest side slope it goes onto (its static stability: track 1.63 m over twice a cg of 0.8 m, about 45 degrees, with a margin)
 const STEER_RATIO = 15;          // the steering wheel's turn per road-wheel turn (the LC300's about 15-16: about 1.4 turns to lock here)
 // the private car's model is "2024 Toyota Land Cruiser LC300 VXR 409 TT" by Ddiaz Design (Sketchfab), CC BY-NC-SA 4.0,
-// changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the card shown beside the car
-const CREDIT = '<small class="pl-credit" dir="ltr">Model: Ddiaz Design · CC BY-NC-SA 4.0 · modified</small>';
+// changed (see tool/vehicle3d/suv_model/thirdparty/README.md): credited on the loading screen (farm.html)
 
 const WALK = 1.25, RUN = 3.5;                 // the speeds the walk and run clips were made for (m/s, measured on the planted foot)
 let WHEELBASE = 2.85, TRACK = 1.64;           // Land Cruiser 300; replaced by the model's own wheel positions when it has them
 const ACCEL = 3.6, BRAKE = 8.0, VMAX = 140 / 3.6, VREV = 20 / 3.6;
 const UP = new THREE.Vector3(0, 1, 0);
 
-export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAYOUT, loadLod, onExit }) {
+export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAYOUT, loadLod, onExit, host = document.body }) {
   const ground = (x, z) => (heightAt ? heightAt(x, z) : 0);
   // ---------------------------------------------------------------- obstacles (yard layout, metres)
   const rects = [];
@@ -213,47 +212,96 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   };
   addEventListener('keydown', onKey); addEventListener('keyup', onKey);
 
-  const ui = document.createElement('div'); ui.className = 'play'; ui.dir = 'rtl'; ui.hidden = true;
+  // The controls: icons only, at the screen's edges (farm.html's .play styles; nothing written floats over the scene).
+  // Top left: the view and back to the map. By the driver's door: get in and lock. Driving: a steering pad (bottom
+  // left), two pedals pressed as far as the thumb slides up them (bottom right), and the car's own buttons in a row
+  // (top right) while it stands; moving, only the gear shows.
+  const I = {
+    eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    back: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+    trc: '<svg viewBox="0 0 24 24"><path d="M6 12l1.5-4h9L18 12v4H6z"/><path d="M4 20c1.5-1 2.5-1 4 0s2.5 1 4 0 2.5-1 4 0 2.5 1 4 0"/></svg>',
+    tyre: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="2.5"/><path d="M12 6V3M10 3h4"/></svg>',
+    dig: '<svg viewBox="0 0 24 24"><path d="M14 4l6 6M17 7L8 16"/><path d="M8 16l-3.5 1-1.5 4 4-1.5 1-3.5z"/></svg>',
+    out: '<svg viewBox="0 0 24 24"><path d="M14 4h5v16h-5"/><path d="M10 8l-4 4 4 4M6 12h9"/></svg>',
+    door: '<svg viewBox="0 0 24 24"><path d="M4 20V6l7-3h7v17z"/><path d="M4 11h14M14 14h1.5"/></svg>',
+    lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+    unlock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>',
+    wheel: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M4 12h6M14 12h6M12 14v6"/></svg>',
+  };
+  const ui = document.createElement('div'); ui.className = 'play'; ui.hidden = true;
   ui.innerHTML = `
-    <div class="pl-top">
-      <button class="pl-btn" data-a="exit" aria-label="رجوع للخريطة"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-      <span class="pl-speed" hidden><b>0</b><small>كم/س</small></span>
-      <button class="pl-btn" data-a="view" aria-label="بدّل المنظور"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>خلف</span></button>
+    <div class="pl-tl">
+      <button class="pl-ib" data-a="view" aria-label="بدّل المنظور: من ورا أو من عيونك">${I.eye}</button>
+      <button class="pl-ib" data-a="exit" aria-label="رجوع للخريطة">${I.back}</button>
+    </div>
+    <div class="pl-car" hidden>
+      <button class="pl-ib on" data-c="gear" aria-label="القير"><span>D</span></button>
+      <button class="pl-ib" data-c="low" aria-label="الدبل الثقيل"><span>4L</span></button>
+      <button class="pl-ib" data-c="trc" aria-label="منع التزحلق">${I.trc}</button>
+      <button class="pl-ib" data-c="air" aria-label="تنفيس الكفرات وتعبئتها">${I.tyre}</button>
+      <button class="pl-ib on" data-c="dig" aria-label="غرّزت: احفر حول الكفرات" hidden>${I.dig}</button>
+      <button class="pl-ib" data-c="out" aria-label="انزل">${I.out}</button>
     </div>
     <div class="pl-stick" hidden><span class="pl-knob"></span></div>
-    <div class="pl-drive" hidden>
-      <div class="pl-steer"><button data-h="steerL" aria-label="يسار"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button data-h="steerR" aria-label="يمين"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div>
-      <div class="pl-pedals"><button class="brake" data-h="brake">فرامل</button><button class="gas" data-h="gas">بنزين</button></div>
+    <div class="pl-door" hidden>
+      <button class="pl-ib big" data-c="in" aria-label="اركب">${I.door}</button>
+      <button class="pl-ib" data-c="lock" aria-label="قفّل السيارة">${I.unlock}</button>
     </div>
-    <div class="pl-card" hidden></div>`;
-  document.body.appendChild(ui);
+    <div class="pl-steer" hidden role="slider" aria-label="الدركسون"><span class="arr"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span><span class="knob">${I.wheel}</span></div>
+    <div class="pl-pedals" hidden>
+      <div class="pl-pedal brake" data-p="brake" role="slider" aria-label="الفرامل"><i class="lvl"></i></div>
+      <div class="pl-pedal gas" data-p="gas" role="slider" aria-label="البنزين"><i class="lvl"></i></div>
+    </div>`;
+  host.appendChild(ui);
   const $ = (s) => ui.querySelector(s);
-  const stick = $('.pl-stick'), knob = $('.pl-knob'), card = $('.pl-card'), speedEl = $('.pl-speed b'); let shownKmh = -1;
-  const held = { steerL: 0, steerR: 0, gas: 0, brake: 0 };
-  ui.querySelectorAll('[data-h]').forEach((b) => {
-    const k = b.dataset.h;
-    const on = (e) => { e.preventDefault(); held[k] = 1; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch {} };
-    const off = () => { held[k] = 0; b.classList.remove('on'); };
-    b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('lostpointercapture', off);
+  const stick = $('.pl-stick'), knob = $('.pl-knob'), carRow = $('.pl-car'), doorRow = $('.pl-door'), steerPad = $('.pl-steer'), steerKnob = $('.pl-steer .knob'), pedalsEl = $('.pl-pedals');
+  // an element's box in the game's own frame (its layout offsets up to the UI layer: the page may be shown turned,
+  // where a measured client box is in the screen's frame, not the pointer's)
+  const boxOf = (el) => { let x = 0, y = 0; for (let n = el; n && n !== ui; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; } return { x, y, w: el.offsetWidth, h: el.offsetHeight }; };
+  // the pedals: pressed by how far up the thumb is (from PEDAL_MIN at the bottom edge to 1 at the top and past it)
+  const PEDAL_MIN = { gas: 0.15, brake: 0.3 };
+  const pedal = { gas: 0, brake: 0 };
+  ui.querySelectorAll('[data-p]').forEach((el) => {
+    const k = el.dataset.p, lvl = el.querySelector('.lvl'); let id = null;
+    const set = (v) => { pedal[k] = v; lvl.style.height = (v * 100).toFixed(0) + '%'; };
+    const read = (e) => { const b = boxOf(el); set(Math.min(1, Math.max(PEDAL_MIN[k], PEDAL_MIN[k] + (1 - PEDAL_MIN[k]) * (b.y + b.h - e.clientY) / (b.h * 0.9)))); };
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); id = e.pointerId; try { el.setPointerCapture(id); } catch {} read(e); });
+    el.addEventListener('pointermove', (e) => { if (e.pointerId === id) read(e); });
+    const off = (e) => { if (e.pointerId === id) { id = null; set(0); } };
+    el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
   });
+  // the steering pad: the thumb's place along it is the wheel's turn (its middle straight ahead, either end full
+  // lock); let go, it returns to the middle
+  const pad = { steer: 0 };
+  {
+    let id = null;
+    const set = (v) => { pad.steer = v; steerKnob.style.transform = `translateX(${(-v * (steerPad.offsetWidth - steerKnob.offsetWidth) / 2).toFixed(1)}px) rotate(${(-v * 90).toFixed(0)}deg)`; };
+    const read = (e) => { const b = boxOf(steerPad), half = (b.w - steerKnob.offsetWidth) / 2; set(Math.max(-1, Math.min(1, -(e.clientX - (b.x + b.w / 2)) / half))); };      // (+ to the left, as the car's steer)
+    steerPad.addEventListener('pointerdown', (e) => { e.preventDefault(); id = e.pointerId; try { steerPad.setPointerCapture(id); } catch {} read(e); });
+    steerPad.addEventListener('pointermove', (e) => { if (e.pointerId === id) read(e); });
+    const off = (e) => { if (e.pointerId === id) { id = null; set(0); } };
+    steerPad.addEventListener('pointerup', off); steerPad.addEventListener('pointercancel', off); steerPad.addEventListener('lostpointercapture', off);
+    pad.reset = () => { id = null; set(0); };
+  }
   ui.querySelector('[data-a="exit"]').addEventListener('click', () => stop());
   ui.querySelector('[data-a="view"]').addEventListener('click', () => toggleView());
+  ui.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => act(b.dataset.c)));
 
   // the screen: the left half moves (a stick that appears under the thumb), the right half looks around
   const canvas = renderer.domElement;
   let stickId = null, lookId = null; const s0 = { x: 0, y: 0 }, l0 = { x: 0, y: 0 };
   canvas.addEventListener('pointerdown', (e) => {
     if (!state.on) return;
-    if (e.clientX < innerWidth * 0.45 && state.mode === 'walk' && stickId === null) {
+    if (e.clientX < canvas.clientWidth * 0.45 && state.mode === 'walk' && stickId === null) {
       stickId = e.pointerId; s0.x = e.clientX; s0.y = e.clientY;
-      stick.hidden = false; stick.style.left = (e.clientX - 60) + 'px'; stick.style.top = (e.clientY - 60) + 'px'; knob.style.transform = '';
+      stick.hidden = false; const half = stick.offsetWidth / 2; stick.style.left = (e.clientX - half) + 'px'; stick.style.top = (e.clientY - half) + 'px'; knob.style.transform = '';
     } else if (lookId === null) { lookId = e.pointerId; l0.x = e.clientX; l0.y = e.clientY; }
     try { canvas.setPointerCapture(e.pointerId); } catch {}
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!state.on) return;
     if (e.pointerId === stickId) {
-      let dx = e.clientX - s0.x, dy = e.clientY - s0.y; const d = Math.hypot(dx, dy), m = 52;
+      let dx = e.clientX - s0.x, dy = e.clientY - s0.y; const d = Math.hypot(dx, dy), m = stick.offsetWidth * 0.43;
       if (d > m) { dx *= m / d; dy *= m / d; }
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
       input.mx = dx / m; input.mz = dy / m; input.run = d > m * 0.92;
@@ -268,38 +316,42 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   };
   canvas.addEventListener('pointerup', release); canvas.addEventListener('pointercancel', release);
 
-  // ---------------------------------------------------------------- modes and the context card
+  // ---------------------------------------------------------------- modes, the car's buttons and the door's
   const state = { on: false, mode: 'walk', view: 3 };
   function toggleView() {
     state.view = state.view === 3 ? 1 : 3;
-    ui.querySelector('[data-a="view"] span').textContent = state.view === 3 ? 'خلف' : 'عيوني';
+    ui.querySelector('[data-a="view"]').classList.toggle('on', state.view === 1);
     if (state.mode === 'walk' && state.view === 1) input.yaw = man.heading;
   }
   const doorPoint = new THREE.Vector3();
   function driverDoor(out) { carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); return out.copy(carState.pos).addScaledVector(right, -(geo.half + 0.62)).addScaledVector(fwd, geo.front - 1.2); }
-  let cardKey = '';
-  function setCard(key, html) {
-    if (key === cardKey) return; cardKey = key;
-    card.hidden = !key; card.innerHTML = html || '';
-    card.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => act(b.dataset.c)));
-  }
-  // the drive card: out, the tyres' pressure, the low range, traction control; dig when stuck. The slow jobs take
-  // game time and need the car standing (airing four tyres down is a few minutes' work: shortened, a game choice).
-  let job = null, standing = true;
+  // the car's buttons (top right), shown only while the car stands or is stuck; moving, the gear alone. The slow jobs
+  // take game time and need the car standing (airing four tyres down is a few minutes' work: shortened, a game
+  // choice); the button of the job under way pulses.
+  let job = null, standing = true, nearDoor = false, rowKey = '';
   const JOBS = { air: 8, dig: 10 };
+  const btn = (c) => carRow.querySelector(`[data-c="${c}"]`);
   function driveCard() {
-    // shown only while the car stands (or is stuck): moving, the scene is left clear
     const p = phys.s, aired = p.kPa < LC300KPA;
     let dug = 0; for (const w of phys.wheels) dug = Math.max(dug, w.dug);
     const stuckNow = p.stuck > 1.5 || dug > 0.08, speed = Math.abs(carState.v);
     standing = speed < 0.3 || (standing && speed < 1.0);                   // (shown below 0.3 m/s, hidden above 1: no flicker between)
-    if (!standing && !stuckNow && !job) { setCard('', ''); return; }
-    const key = 'drive' + aired + p.low + p.trc + p.gear + stuckNow + (job ? job.kind : '');
-    if (key === cardKey) return;
-    const busy = job ? `<span class="pl-busy">${job.kind === 'air' ? (aired ? 'أعبّي الكفرات' : 'أنفّس الكفرات') : 'أحفر حول الكفرات'}…</span>` : '';
-    setCard(key, `${busy}${stuckNow && !job ? '<span class="pl-busy">غرّزت</span><button data-c="dig" class="pri">احفر</button>' : ''}`
-      + `<button data-c="air">${aired ? 'عبّ الكفرات' : 'نفّس الكفرات'} <small>${Math.round(p.kPa / 6.895)} psi</small></button>`
-      + `<button data-c="gear">${p.gear === 'R' ? 'R ريوس' : 'D قدّام'}</button><button data-c="low">${p.low ? 'L4' : 'H4'}</button><button data-c="trc">TRC ${p.trc ? 'شغّال' : 'طافي'}</button><button data-c="out">انزل</button>`);
+    const full = standing || stuckNow || !!job;
+    const key = '' + full + aired + p.low + p.trc + p.gear + stuckNow + (job ? job.kind : '');
+    if (key === rowKey) return; rowKey = key;
+    carRow.classList.toggle('moving', !full);
+    btn('gear').firstElementChild.textContent = p.gear === 'R' ? 'R' : 'D';
+    btn('low').classList.toggle('on', p.low);
+    btn('trc').classList.toggle('cut', !p.trc);
+    btn('air').classList.toggle('on', aired); btn('air').classList.toggle('busy', !!job && job.kind === 'air');
+    btn('dig').hidden = !(stuckNow || (job && job.kind === 'dig')); btn('dig').classList.toggle('busy', !!job && job.kind === 'dig');
+  }
+  function doorButtons() {                    // by the driver's door: get in (unless locked) and the lock
+    doorRow.hidden = !nearDoor;
+    const lock = doorRow.querySelector('[data-c="lock"]');
+    doorRow.querySelector('[data-c="in"]').hidden = carState.locked;
+    lock.classList.toggle('on', carState.locked); lock.innerHTML = carState.locked ? I.lock : I.unlock;
+    lock.setAttribute('aria-label', carState.locked ? 'افتح القفل' : 'قفّل السيارة');
   }
   function act(c) {
     if (c === 'in') enter();
@@ -308,9 +360,9 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     else if (c === 'low' && Math.abs(carState.v) < 1) { phys.s.low = !phys.s.low; driveCard(); }
     else if (c === 'trc') { phys.s.trc = !phys.s.trc; driveCard(); }
     else if (c === 'gear' && Math.abs(carState.v) < 1) { phys.s.gear = phys.s.gear === 'R' ? 'D' : 'R'; driveCard(); }
-    else if (c === 'lock') { carState.locked = !carState.locked; cardKey = ''; flash(); }
+    else if (c === 'lock') { carState.locked = !carState.locked; doorButtons(); flash(); }
   }
-  function primary() { if (state.mode === 'drive') exit(); else if (cardKey.startsWith('near') && !carState.locked) enter(); }
+  function primary() { if (state.mode === 'drive') exit(); else if (nearDoor && !carState.locked) enter(); }
   function flash() {   // the indicators blink twice when it locks or unlocks
     const lamps = headMats.length || tailMats.length ? [...headMats, ...tailMats] : carMats;
     const rest = new Map(lamps.map((m) => [m, m.emissiveIntensity]));
@@ -320,8 +372,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   function enter() {
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.35);
     state.mode = 'drive'; man.root.visible = false; carState.v = 0;
-    $('.pl-drive').hidden = false; $('.pl-speed').hidden = false; stick.hidden = true; stickId = null;
-    driveCard();
+    steerPad.hidden = pedalsEl.hidden = carRow.hidden = false; stick.hidden = true; stickId = null; input.mx = input.mz = 0;
+    nearDoor = false; doorButtons(); rowKey = ''; driveCard();
     loadCabin();
   }
   function exit() {
@@ -331,7 +383,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (rigged) { POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
     driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading;
     man.root.visible = state.view === 3;
-    $('.pl-drive').hidden = true; $('.pl-speed').hidden = true; cardKey = '';
+    steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; pedal.gas = pedal.brake = 0; pad.reset();
   }
 
   // ---------------------------------------------------------------- per frame
@@ -372,9 +424,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     const near = driverDoor(doorPoint).distanceTo(man.pos) < 1.8;
     if (near) loadCabin();
     if (driverDoor(doorPoint).distanceTo(man.pos) < 8) warmCabin();
-    if (near) { if (cardKey !== 'near' + carState.locked) setCard('near' + carState.locked, (carState.locked ? '<button data-c="lock">افتح القفل</button>' : '<button data-c="in" class="pri">اركب</button><button data-c="lock">قفّل</button>') + (rigged ? CREDIT : '')); }
-    else setCard('', '');
-    if (near) placeCard(tmp2.copy(carState.pos).setY(carState.pos.y + 2.4));
+    if (near !== nearDoor) { nearDoor = near; doorButtons(); }
   }
   function carCircles(p, r) {          // the car as three circles along its length, for the man on foot
     carFwd(carState.yaw, fwd);
@@ -385,10 +435,11 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
   }
   function updateDrive(dt) {
-    let gas = held.gas, brake = held.brake, steer = held.steerL - held.steerR;
+    let gas = pedal.gas, brake = pedal.brake, steer = pad.steer, analog = true;      // (the touch pedals: 0 to 1 by how far they are pressed)
     if (keys.size) {
       gas = keys.has('KeyW') || keys.has('ArrowUp') ? 1 : gas; brake = keys.has('KeyS') || keys.has('ArrowDown') ? 1 : brake;
       steer = (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) - (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) || steer;
+      if (gas === 1 && pedal.gas < 1) analog = false;                          // (a key is on or off: the engine eases it in)
     }
     if (job) {
       job.t += dt;
@@ -403,14 +454,14 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
     driveCard();
     // the pedals: gas drives the way the gear points (and brakes a car rolling the other way); the brake slows the car
-    // and holds it standing, on a slope too (the gear, D or R, is changed on the card while the car stands)
+    // and holds it standing, on a slope too (the gear, D or R, is changed by its button while the car stands)
     const way = phys.s.gear === 'R' ? -1 : 1, rolling = carState.v * way;
-    const ctl = PEDALS; ctl.gas = 0; ctl.brake = 0;
+    const ctl = PEDALS; ctl.gas = 0; ctl.brake = 0; ctl.analog = analog;
     if (gas || brake) parked = false;
     if (job || parked) ctl.brake = 1;                                          // parked (got in, or the driver working outside) until a pedal is pressed
     else {
-      if (gas) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = 1; }
-      if (brake) ctl.brake = 1;                                               // (both feet: the brake holds against the engine)
+      if (gas) { if (rolling < -0.3) ctl.brake = 1; else ctl.gas = gas; }
+      if (brake) ctl.brake = Math.max(ctl.brake, brake);                                               // (both feet: the brake holds against the engine)
     }
     // steering: quick at walking pace, gentle at speed; it returns to centre on its own
     const maxSteer = 0.6 / (1 + Math.abs(carState.v) / 9);
@@ -458,10 +509,9 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     if (needles.rpm) {
       const kmh = Math.abs(carState.v) * 3.6; let gear = 1; while (gear < 7 && kmh >= GEAR_TOP[gear]) gear++;
       const lo = GEAR_TOP[gear - 1], hi = gear < 7 ? GEAR_TOP[gear] : 220;
-      const rpm = 750 + (kmh - lo) / Math.max(1, hi - lo) * 2600 + (gas > 0 ? 400 : 0);
+      const rpm = 750 + (kmh - lo) / Math.max(1, hi - lo) * 2600 + gas * 400;
       needles.rpm.quaternion.copy(needleBase.rpm).multiply(qTmp.setFromAxisAngle(XAXIS, -Math.min(1, rpm / 8000) * 4.712));
     }
-    const kmh = Math.round(Math.abs(carState.v) * 3.6); if (kmh !== shownKmh) { shownKmh = kmh; speedEl.textContent = kmh; }
     // dust from the rear wheels when moving on sand
     const spinning = phys.s.slip * phys.s.thr;
     puffT += dt * Math.min(1, Math.abs(carState.v) / 6 + spinning * 2);
@@ -472,16 +522,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       p.age = 0; p.s.visible = true;
     }
     if (man.mixer) man.mixer.update(dt);
-    placeCard(tmp2.copy(carState.pos).setY(carState.pos.y + 2.4));
   }
-  const proj = new THREE.Vector3();
-  function placeCard(p) {
-    proj.copy(p).project(camera);
-    const x = (proj.x + 1) / 2 * innerWidth, y = (1 - proj.y) / 2 * innerHeight;
-    if (state.mode === 'drive') { card.style.left = ''; card.style.top = ''; card.classList.add('docked'); return; }
-    card.classList.remove('docked');
-    card.style.left = Math.min(innerWidth - 20, Math.max(20, x)) + 'px'; card.style.top = Math.max(80, y) + 'px';
-  }
+  const walkOff = new THREE.Vector3();           // the walking camera's offset from the man, eased when the view is turned
   function updateCamera(dt) {
     const k = state.snap ? 1 : Math.min(1, dt * 6);
     if (state.mode === 'walk') {
@@ -489,9 +531,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       if (state.view === 3) {
         look.copy(man.pos).add(tmp.set(0, 1.5, 0));
         const d = 4.4;
-        camPos.set(look.x - Math.sin(input.yaw) * Math.cos(input.pitch) * d, look.y + Math.sin(input.pitch) * d + 0.3, look.z - Math.cos(input.yaw) * Math.cos(input.pitch) * d);
+        // the camera rides with the man, a fixed arm behind him: only a turn of the view is eased. (Easing its place,
+        // it lagged behind a walking man and swung back when he stopped: the view turned with no hand on it.)
+        tmp.set(-Math.sin(input.yaw) * Math.cos(input.pitch) * d, Math.sin(input.pitch) * d + 0.3, -Math.cos(input.yaw) * Math.cos(input.pitch) * d);
+        if (state.snap || walkOff.lengthSq() === 0) walkOff.copy(tmp); else walkOff.lerp(tmp, k);
+        camPos.copy(look).add(walkOff);
         camPos.y = Math.max(camPos.y, ground(camPos.x, camPos.z) + 0.4);
-        camera.position.lerp(camPos, k); camera.lookAt(look);
+        camera.position.copy(camPos); camera.lookAt(look);
       } else {
         man.heading = input.yaw;
         camera.position.copy(man.pos).add(tmp.set(Math.sin(man.heading) * 0.12, 1.66, Math.cos(man.heading) * 0.12));
@@ -521,12 +567,13 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
 
   function start() {
-    state.on = true; state.mode = 'walk'; ui.hidden = false; document.body.classList.add('playing');
+    state.on = true; state.mode = 'walk'; ui.hidden = false; document.body.classList.add('playing'); state.snap = true; walkOff.set(0, 0, 0);
+    steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; nearDoor = false; doorButtons();
     ready.then(() => { man.pos.y = ground(man.pos.x, man.pos.z); man.root.visible = true; input.yaw = man.heading; });
     camera.near = 0.08; camera.updateProjectionMatrix();
   }
   function stop() {
-    state.on = false; ui.hidden = true; setCard('', ''); document.body.classList.remove('playing');
+    state.on = false; ui.hidden = true; document.body.classList.remove('playing'); stickId = lookId = null; input.mx = input.mz = 0; pedal.gas = pedal.brake = 0; pad.reset();
     if (man.root) man.root.visible = false; cabin.visible = false;
     if (!hasCabin) for (const m of carMats) { m.side = THREE.DoubleSide; m.needsUpdate = true; }
     camera.near = 0.5; camera.updateProjectionMatrix();

@@ -80,14 +80,16 @@ export function createCar(geo, spec = LC300) {
     return env.height(X, Z);
   }
 
-  // ctl: { gas 0..1, brake 0..1 } as the pedals are held (s.gear 'D' or 'R' says which way gas drives); steer (rad, + to the left); pose { x, z, yaw }: where the
+  // ctl: { gas 0..1, brake 0..1, analog } as the pedals are pressed (s.gear 'D' or 'R' says which way gas drives); steer (rad, + to the left); pose { x, z, yaw }: where the
   // car stands (moved by the caller along its heading by s.v). env: { height(x, z), soft(x, z) 0..1 }.
   function step(dt, ctl, steer, pose, env) {
     if (!(dt > 0)) return s;                                                  // (a zero frame from a coarse timer would make 0/0)
     const n = 4, h = dt / n;
-    // the pedal: pressed in over about 0.7 s, so that a tap is a gentle pull (a binary button is not a foot)
-    const want = ctl.gas ? 1 : 0;
-    s.thr += (want - s.thr) * Math.min(1, dt * (want > s.thr ? (s.low ? 0.7 : 1.4) : 6));
+    // the pedal: how far it is pressed, 0 to 1. From a key (on or off) it is pressed in over about 0.7 s, so that a
+    // tap is a gentle pull (a key is not a foot); from the touch pedal (ctl.analog) the thumb is the foot, and the
+    // engine answers it in about 0.2 s
+    const want = Math.min(1, Math.max(0, +ctl.gas || 0)), bk = Math.min(1, Math.max(0, +ctl.brake || 0));
+    s.thr += (want - s.thr) * Math.min(1, dt * (want > s.thr ? (ctl.analog ? 5 : s.low ? 0.7 : 1.4) : 6));
     for (let j = 0; j < 4; j++) gs[j] = groundAt(pose, wheels[j], env);       // (one array for the car's life: no garbage each frame)
     // the tyres in the sand: how deep each sits, how much it resists and grips
     const press = Math.pow(s.kPa / spec.roadKPa, 1 / SAND.N);
@@ -134,7 +136,7 @@ export function createCar(geo, spec = LC300) {
     const downhill = -m * g * slope * Math.sign(s.v || dir);
     const holding = ctl.brake || (s.hillHold > 0 && drive < Math.abs(m * g * slope) + 50);
     const engineBrake = s.thr < 0.05 && Math.abs(s.v) > 2.0 ? m * g * (s.low ? Math.min(SAND.LOW_HOLD, 0.05 + 0.25 * (Math.abs(s.v) - 2.0)) : SAND.ENGINE_BRAKE) : 0;
-    const brake = holding ? Math.min(grip, m * g * 0.9) : engineBrake;
+    const brake = holding ? Math.min(grip, m * g * 0.9 * (bk || 1)) : engineBrake;      // (the brake pedal by how far it is pressed; hill hold, full)
     let F = (holding && !ctl.gas ? 0 : dir * drive) - m * g * slope;
     if (ctl.brake && ctl.gas) F = dir * drive - m * g * slope;              // both feet: the brake holds against the engine
     const oppose = res + air + brake;

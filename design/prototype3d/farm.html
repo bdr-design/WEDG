@@ -3,12 +3,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=Alexandria:wght@500;600;700&display=swap">
 <style>
-  /* Layout: the 3D yard is the whole screen and the map is the menu. A status strip on top, two
-     camera buttons in the bottom end corner, and a context card at the bottom only while a camel or
-     the followed herd is picked. Places on the map are tappable tags (or their 3D objects); a tap
-     docks the place's card (at the bottom in portrait, on the start side in landscape) and glides
-     the camera so the place stays in view. Far places (the market, the festival) sit on the
-     horizon in their real direction, or on the screen edge with an arrow when out of view.
+  /* Layout: landscape only, and nothing written floats over the game. The 3D yard is the whole screen and the map is
+     the menu: a column of three icon buttons in the top left corner (walk, camera, wallet), icon pins over the places
+     (a tap on a pin or on its 3D object docks the place's card on the side and glides the camera so the place stays in
+     view), and a context card at the bottom only while a camel or the followed herd is picked. Far places (the market,
+     the festival) are pins on the horizon in their real direction, or on the screen edge with an arrow when out of
+     view. A phone held upright shows the game turned a quarter (body.rot: #root is turned, and the script reads every
+     pointer and measured box in the turned frame). Sizes in play are in --u, a hundredth of the game's width.
      No backdrop-filter anywhere: a blurred panel re-blurs the live 3D canvas every frame. */
   :root {
     --kohl: rgba(18, 21, 28, 0.9);           /* glass: cool ink against the warm sand */
@@ -29,10 +30,13 @@
     --edge-b: calc(12px + env(safe-area-inset-bottom, 0px));
     --edge-r: max(12px, env(safe-area-inset-right, 0px));
     --edge-l: max(12px, env(safe-area-inset-left, 0px));
+    --u: 8px;
     color-scheme: dark;
   }
   html, body { height: 100%; }
   body { margin: 0; background: #b98a5e; color: var(--ink); font-family: var(--ui); overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  #root { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; transform-origin: 0 0; }
+  body.rot { --edge-t: calc(8px + env(safe-area-inset-right, 0px)); --edge-b: calc(10px + env(safe-area-inset-left, 0px)); --edge-r: max(12px, env(safe-area-inset-bottom, 0px)); --edge-l: max(12px, env(safe-area-inset-top, 0px)); }   /* the game's top is the screen's right side */
   #stage { position: fixed; inset: 0; }
   #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   [hidden] { display: none !important; }
@@ -44,25 +48,11 @@
   svg.i.fill { fill: currentColor; stroke: none; }
   svg.i { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* ---------- status strip */
-  .top { position: fixed; top: var(--edge-t); right: var(--edge-r); left: var(--edge-l); display: flex; align-items: center; gap: var(--gap); pointer-events: none; }
-  .top > * { pointer-events: auto; }
-  .farm { display: flex; align-items: center; gap: 10px; height: 48px; padding-inline: 6px 14px; border-radius: 24px; min-width: 0; }
-  .crest { width: 36px; height: 36px; border-radius: 18px; flex: none; display: grid; place-items: center; background: #0d1016; overflow: hidden; }
-  .farm .t { min-width: 0; display: grid; overflow: hidden; }
-  .farm b { font-family: var(--display); font-weight: 600; font-size: 16px; line-height: 1.15; white-space: nowrap; }
-  .farm small { font-size: 11.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .spacer { flex: 1; }
-  .money { display: flex; align-items: center; gap: 6px; height: 48px; padding-inline: 10px; border-radius: 24px; margin-inline-start: auto; flex: none; }
-  .money b { font-family: var(--display); font-weight: 600; font-size: 17px; letter-spacing: 0.01em; }
-  .money small { font-size: 11px; color: var(--ink-2); }
+  /* ---------- the map's three buttons, icons only: walk, camera (drone or close), wallet (the farm, the date, the money) */
+  .side { position: fixed; top: var(--edge-t); left: var(--edge-l); display: flex; flex-direction: column; gap: 8px; }
+  .side button { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; color: var(--ink); transition: background 0.2s, color 0.2s; }
+  .side button[aria-pressed="true"] { background: var(--najdi); color: var(--on-najdi); border-color: transparent; }
   .money svg { color: var(--warn); }
-
-  /* ---------- camera views: two buttons in the bottom end corner; in portrait they ride above a docked card (--dock) */
-  .views { position: fixed; left: var(--edge-l); bottom: calc(var(--edge-b) + var(--dock, 0px)); display: flex; gap: 4px; padding: 4px; border-radius: 28px; }
-  .views button { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; color: var(--ink-2); transition: background 0.2s, color 0.2s; }
-  .views button[aria-pressed="true"] { background: var(--najdi); color: var(--on-najdi); }
-  .views button:hover { color: var(--ink); }
 
   /* ---------- context card: the camel you picked, or the herd you follow */
   .card { position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; padding: 12px; border-radius: var(--r-island); display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; box-sizing: border-box; }
@@ -82,7 +72,7 @@
   .icon-btn { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); color: var(--ink-2); }
 
   /* ---------- the place card, docked: at the bottom between the gutters (on the start side in landscape) */
-  .pop { position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; max-height: min(34vh, 290px); border-radius: 20px; background: var(--kohl-deep); display: flex; flex-direction: column; overflow: hidden; z-index: 5; }
+  .pop { position: fixed; right: var(--edge-r); left: var(--edge-l); bottom: var(--edge-b); max-width: 460px; margin-inline: auto; max-height: min(34%, 290px); border-radius: 20px; background: var(--kohl-deep); display: flex; flex-direction: column; overflow: hidden; z-index: 5; }
   .pop header { display: flex; align-items: center; gap: 10px; padding: 12px 10px 8px 12px; }
   .pop .ttl { flex: 1; min-width: 0; display: grid; gap: 1px; }
   .pop h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1.25; }
@@ -102,23 +92,22 @@
   .row .end.warn { color: var(--warn); } .row .end.bad { color: var(--bad); } .row .end.good { color: var(--good); }
   .group { margin: 10px 8px 4px; font-size: 11px; font-weight: 600; color: var(--ink-3); letter-spacing: 0.02em; }
 
-  /* ---------- labels over the world */
+  /* ---------- pins over the world: an icon in a drop, no words (the place's name is its card's title) */
   #labels { position: fixed; inset: 0; pointer-events: none; }
-  .lbl { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding-inline: 10px 14px; box-sizing: border-box; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; will-change: transform; background: rgba(15, 18, 25, 0.7); border: 1px solid var(--line); color: var(--ink); pointer-events: auto; }
-  .lbl::after { content: ""; position: absolute; left: calc(50% + var(--tail, 0px)); bottom: -5px; width: 8px; height: 8px; margin-left: -4px; background: inherit; transform: rotate(45deg); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .lbl:hover, .lbl.on { background: var(--najdi); color: var(--on-najdi); border-color: transparent; }
-  .lbl::before { content: ""; position: absolute; inset: -3px -2px; }        /* 44 px tap target around a 40 px tag */
-  .lbl.place { border-color: rgba(52, 188, 170, 0.7); }
+  .lbl { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 44px; padding: 0 0 9px; box-sizing: border-box; isolation: isolate; will-change: transform; color: var(--ink); pointer-events: auto; }
+  .lbl::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 0; width: 35px; height: 35px; margin-left: -17.5px; box-sizing: border-box; border-radius: 50% 50% 0 50%; transform: rotate(45deg); background: rgba(15, 18, 25, 0.8); border: 1px solid var(--line); }
+  .lbl:hover::before, .lbl.on::before { background: var(--najdi); border-color: transparent; }
+  .lbl.warn::before { background: var(--warn); border-color: transparent; }
+  .lbl.place::before { border-color: rgba(52, 188, 170, 0.7); }
   .lbl .arr { display: none; width: 14px; height: 14px; flex: none; }
+  .lbl.edge { padding: 0 9px; height: 40px; min-width: 40px; }
+  .lbl.edge::before { inset: 0; width: auto; height: auto; margin: 0; border-radius: 20px; transform: none; }
   .lbl.edge .arr { display: block; }
-  .lbl.edge::after { display: none; }
-  .lbl .ic { width: 16px; height: 16px; stroke-width: 2; color: var(--najdi); }
-  .lbl.warn .ic { color: var(--warn); }
-  .lbl:hover .ic, .lbl.on .ic { color: inherit; }
-  .lbl.far { font-family: var(--display); }
+  .lbl .ic { width: 18px; height: 18px; stroke-width: 2; color: var(--najdi); }
+  .lbl.warn .ic, .lbl:hover .ic, .lbl.on .ic { color: #10141a; }
 
   /* ---------- the frame meter (#fps): small, under the strip, out of the way */
-  .meter { position: fixed; top: calc(var(--edge-t) + 56px); right: var(--edge-r); padding: 6px 10px; border-radius: 12px; font-size: 11px; line-height: 1.5; pointer-events: none; z-index: 6; white-space: nowrap; }
+  .meter { position: fixed; top: var(--edge-t); right: var(--edge-r); padding: 6px 10px; border-radius: 12px; font-size: 11px; line-height: 1.5; pointer-events: none; z-index: 6; white-space: nowrap; }
   .meter b { font-family: var(--display); font-size: 15px; }
   .meter .bad { color: var(--warn); }
 
@@ -126,72 +115,66 @@
   .status { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
   .status[hidden] { display: none; }
   .status p { margin: 0; padding: 12px 18px; border-radius: 16px; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  .status { align-content: center; justify-items: center; gap: 10px; }
+  .status small { font-size: 10px; color: rgba(255, 255, 255, 0.75); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
 
-  /* ---------- landscape phones: the context card clears the camera buttons, the place card docks on the start side under the strip */
-  @media (orientation: landscape) and (max-height: 600px) {
-    :root { --edge-t: calc(8px + env(safe-area-inset-top, 0px)); --edge-b: calc(10px + env(safe-area-inset-bottom, 0px)); }
-    .farm, .money { height: 42px; }
-    .crest { width: 32px; height: 32px; }
-    .views { bottom: var(--edge-b); }
-    .card { right: var(--edge-r); left: calc(var(--edge-l) + 120px); max-width: 440px; }
-    .pop { top: calc(var(--edge-t) + 50px); bottom: auto; left: auto; width: min(340px, 42vw); margin: 0; max-height: calc(100% - var(--edge-t) - 50px - var(--edge-b)); }
-  }
-  @media (max-width: 359px) { .farm small { display: none; } }
-  body.carded .views { display: none; }          /* portrait: the place card takes the bottom; the map keeps the rest */
-  @media (orientation: landscape) and (max-height: 600px) { body.carded .views { display: flex; } }
-  @media (prefers-reduced-motion: reduce) { .views button { transition: none; } }
-  body.playing .top, body.playing .views, body.playing #labels, body.playing #card, body.playing #pop { display: none !important; }
-  .play { position: fixed; inset: 0; pointer-events: none; z-index: 20; font-family: inherit; color: #fff; }
-  .play button { pointer-events: auto; font: inherit; color: inherit; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .play svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .play .pl-btn, .play .pl-speed, .play .pl-card, .play .pl-steer button, .play .pl-pedals button, .play .pl-stick {
-    background: rgba(28, 20, 12, 0.42); -webkit-backdrop-filter: blur(16px) saturate(170%); backdrop-filter: blur(16px) saturate(170%);
-    box-shadow: inset 0 1px 0.5px rgba(255,255,255,.4), inset 0 0 0 .5px rgba(255,255,255,.18), 0 6px 18px rgba(20,10,0,.25); }
-  .pl-top { position: absolute; top: calc(var(--edge-t, 12px) + 4px); inset-inline: var(--edge-r, 12px); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .pl-btn { height: 44px; min-width: 44px; border-radius: 22px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding-inline: 12px; font-weight: 600; font-size: 13px; }
-  .pl-speed { pointer-events: none; height: 44px; border-radius: 22px; padding-inline: 16px; display: inline-flex; align-items: baseline; gap: 4px; }
-  .pl-speed b { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 44px; }
-  .pl-speed small { font-size: 11px; opacity: .85; }
-  .pl-stick { position: absolute; width: 120px; height: 120px; border-radius: 50%; }
-  .pl-knob { position: absolute; left: 34px; top: 34px; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,.88); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
-  .pl-drive { position: absolute; inset-inline: var(--edge-r, 14px); bottom: calc(var(--edge-b, 14px) + 6px); display: flex; justify-content: space-between; align-items: flex-end; direction: ltr; }   /* steering on the left, pedals on the right, as in a car */
-  .pl-steer { display: flex; gap: 12px; direction: ltr; }
-  .pl-steer button { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; }
-  .pl-steer svg { width: 30px; height: 30px; stroke-width: 2.6; }
-  .pl-pedals { display: flex; gap: 12px; align-items: flex-end; direction: ltr; }
-  .pl-pedals button { width: 76px; border-radius: 20px; font-weight: 700; font-size: 14px; }
-  .pl-pedals .brake { height: 72px; }
-  .pl-pedals .gas { height: 112px; }
-  .play button.on { background: rgba(255,255,255,.85) !important; color: #20160c; }
-  .pl-card { position: absolute; translate: -50% -100%; display: flex; gap: 6px; padding: 5px; border-radius: 24px; pointer-events: auto; }
-  .pl-card.docked { position: absolute; top: calc(var(--edge-t, 12px) + 58px); left: 50%; translate: -50% 0; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 32px); }
-  .pl-card button small { font-weight: 500; opacity: .75; font-size: 12px; }
-  .pl-credit { align-self: center; font-size: 10px; opacity: .6; padding-inline: 6px; white-space: nowrap; }
-  .pl-busy { align-self: center; padding-inline: 10px; font-weight: 700; font-size: 14px; color: #fff; }
-  .pl-card button { height: 40px; border-radius: 20px; padding-inline: 16px; font-weight: 700; font-size: 14px; background: rgba(255,255,255,.16); }
-  .pl-card button.pri { background: #fff; color: #1f160d; }
+  /* ---------- a phone lying on its side (body.land, set by the script: wide and at most 600 px high): the place card docks on the right */
+  body.land { --edge-t: calc(8px + env(safe-area-inset-top, 0px)); --edge-b: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  body.land.rot { --edge-t: calc(8px + env(safe-area-inset-right, 0px)); --edge-b: calc(10px + env(safe-area-inset-left, 0px)); }
+  body.land .card { right: var(--edge-r); left: calc(var(--edge-l) + 60px); max-width: 440px; }
+  body.land .pop { top: var(--edge-t); bottom: auto; left: auto; width: min(340px, 42%); margin: 0; max-height: calc(100% - var(--edge-t) - var(--edge-b)); }
+  @media (prefers-reduced-motion: reduce) { .side button { transition: none; } }
+  body.playing .side, body.playing #labels, body.playing #card, body.playing #pop { display: none !important; }
+
+  /* ---------- play: icons at the edges only, in from them by the system's gesture margins. Top left: the view and
+     back to the map. Walking: a stick under the left thumb where it lands; by the driver's door, get in and lock
+     (bottom right). Driving: the steering pad bottom left, the pedals bottom right (the brake left of the gas, as
+     in a car; the further up the thumb, the deeper the pedal), and the car's own buttons in a row top right, shown
+     only while it stands (moving, the gear alone stays). */
+  .play { position: fixed; inset: 0; pointer-events: none; z-index: 20; font-family: var(--display); color: #fff;
+    --px: max(calc(var(--u) * 6), var(--edge-l), var(--edge-r)); --pb: max(calc(var(--u) * 6), var(--edge-b)); --pt: max(calc(var(--u) * 4.5), var(--edge-t)); --gap: calc(var(--u) * 1.2); }
+  .play button, .pl-pedal, .pl-steer { pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+  .play button { font: inherit; color: inherit; border: 0; cursor: pointer; }
+  .play svg { width: 46%; height: 46%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .pl-ib, .pl-steer, .pl-pedal, .pl-stick { background: rgba(28, 20, 12, 0.5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 4px 14px rgba(20, 10, 0, 0.25); }
+  .pl-ib { position: relative; width: max(44px, calc(var(--u) * 5.8)); height: max(44px, calc(var(--u) * 5.8)); border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 700; font-size: max(15px, calc(var(--u) * 2.1)); line-height: 1; letter-spacing: 0.02em; }
+  .pl-ib.on { background: rgba(232, 180, 108, 0.94); color: #1b130a; }
+  .pl-ib.cut { color: rgba(255, 255, 255, 0.55); }
+  .pl-ib.cut::after { content: ""; position: absolute; left: 22%; right: 22%; top: 50%; height: 2px; margin-top: -1px; background: #f06a5d; transform: rotate(-45deg); }
+  .pl-ib.busy { animation: pl-busy 0.7s ease-in-out infinite alternate; }
+  @keyframes pl-busy { from { box-shadow: inset 0 0 0 2px rgba(232, 180, 108, 0.35); } to { box-shadow: inset 0 0 0 4px rgba(232, 180, 108, 1); } }
+  @media (prefers-reduced-motion: reduce) { .pl-ib.busy { animation: none; box-shadow: inset 0 0 0 3px rgba(232, 180, 108, 1); } }
+  .pl-tl, .pl-car { position: absolute; top: var(--pt); display: flex; gap: var(--gap); direction: ltr; }
+  .pl-tl { left: var(--px); }
+  .pl-car { right: var(--px); flex-direction: row-reverse; }                 /* the gear first, at the corner */
+  .pl-car.moving > :not([data-c="gear"]) { display: none; }
+  .pl-stick { position: absolute; width: max(96px, calc(var(--u) * 13)); height: max(96px, calc(var(--u) * 13)); border-radius: 50%; background: rgba(28, 20, 12, 0.22); }
+  .pl-knob { position: absolute; left: 29%; top: 29%; width: 42%; height: 42%; border-radius: 50%; background: rgba(255, 255, 255, 0.88); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+  .pl-door { position: absolute; right: var(--px); bottom: var(--pb); display: flex; flex-direction: row-reverse; align-items: flex-end; gap: calc(var(--u) * 2); direction: ltr; }
+  .pl-door .big { width: max(56px, calc(var(--u) * 8)); height: max(56px, calc(var(--u) * 8)); background: rgba(232, 180, 108, 0.94); color: #1b130a; }
+  .pl-steer { position: absolute; left: var(--px); bottom: var(--pb); width: max(190px, calc(var(--u) * 27)); height: max(52px, calc(var(--u) * 7.4)); border-radius: calc(var(--u) * 4); }
+  .pl-steer::after, .pl-pedal::after { content: ""; position: absolute; inset: -10px -8px; }      /* the touch area: a little past the drawn edge */
+  .pl-steer .arr { position: absolute; inset: 0 7%; display: flex; justify-content: space-between; align-items: center; color: rgba(255, 255, 255, 0.6); pointer-events: none; }
+  .pl-steer .arr svg { width: calc(var(--u) * 2.4); height: calc(var(--u) * 2.4); min-width: 16px; min-height: 16px; stroke-width: 2.4; }
+  .pl-steer .knob { position: absolute; left: 50%; top: 50%; width: 22%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: rgba(255, 255, 255, 0.9); color: #2a241c; display: grid; place-items: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); will-change: transform; pointer-events: none; }
+  .pl-steer .knob svg { width: 70%; height: 70%; }
+  .pl-pedals { position: absolute; right: var(--px); bottom: var(--pb); display: flex; align-items: flex-end; gap: calc(var(--u) * 1.1); direction: ltr; }
+  .pl-pedal { position: relative; border-radius: calc(var(--u) * 1.3); }
+  .pl-pedal.gas { width: max(48px, calc(var(--u) * 6.4)); height: max(112px, calc(var(--u) * 15)); }
+  .pl-pedal.brake { width: max(56px, calc(var(--u) * 7.8)); height: max(68px, calc(var(--u) * 9)); }
+  .pl-pedal::before { content: ""; position: absolute; inset: 9% 16%; background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.28) 0 2px, transparent 2px 7px); pointer-events: none; }
+  .pl-pedal .lvl { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: inherit; background: linear-gradient(to top, rgba(232, 180, 108, 0.95), rgba(232, 180, 108, 0.5)); pointer-events: none; }
+  .pl-pedal.brake .lvl { background: linear-gradient(to top, rgba(240, 106, 93, 0.95), rgba(240, 106, 93, 0.5)); }
 </style>
 
+<div id="root">
 <div id="stage" aria-label="عزبة الصفوة ثلاثية الأبعاد: الحلال يسرح في المرعى جنب الشبوك. اسحب للف الكاميرا، وقرّب بإصبعين، واضغط على ناقة لتختارها."></div>
 <div id="labels" dir="rtl" lang="ar" role="group" aria-label="أماكن العزبة على الخريطة"></div>
 
-<div class="top" dir="rtl">
-  <div class="farm glass">
-    <span class="crest" aria-hidden="true">
-      <svg width="36" height="36" viewBox="0 0 36 36"><path d="M0 26 6 18 12 26 18 18 24 26 30 18 36 26V36H0z" fill="#34bcaa"/><path d="M0 26 6 18 12 26z M12 26 18 18 24 26z M24 26 30 18 36 26z" fill="#c8402f" opacity=".9"/><path d="M18 6c-2.6 0-3.6 2.2-3.6 4.1 0 1.2.5 2.3 1.2 3.1l-3.7 1.2c-1 .3-1.6 1.2-1.6 2.2v1.4h15.4v-1.4c0-1-.6-1.9-1.6-2.2l-3.7-1.2c.7-.8 1.2-1.9 1.2-3.1C21.6 8.2 20.6 6 18 6z" fill="#f5f2ec"/></svg>
-    </span>
-    <div class="t"><b>عزبة الصفوة</b><small class="num" aria-label="8 نوفمبر، العصر 3:20، موسم الوسم">8 نوفمبر · العصر 3:20 · الوسم</small></div>
-  </div>
-  <div class="money glass" aria-label="الرصيد 486,300 ريال">
-    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7"/><path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg>
-    <b class="num">486,300</b><small>ريال</small>
-  </div>
-</div>
-
-<div class="views glass" dir="rtl" role="group" aria-label="زاوية الكاميرا">
-  <button id="cam-drone" type="button" aria-pressed="true" aria-label="درون"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.5"/></svg></button>
-  <button id="cam-play" type="button" aria-label="تمشّى بنفسك"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4.5" r="2"/><path d="M10 21l2.2-6.2L14.5 17v4M8 11.5l2.6-4.2c.4-.6 1.1-.9 1.8-.7l2.1.6 2.5 2.8M10.6 7.5 12 13l2.5 4"/></svg></button>
-  <button id="cam-near" type="button" aria-pressed="false" aria-label="قريب"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+<div class="side" dir="ltr" role="group" aria-label="أزرار الخريطة">
+  <button class="glass" id="cam-play" type="button" aria-label="تمشّى بنفسك"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4.5" r="2"/><path d="M10 21l2.2-6.2L14.5 17v4M8 11.5l2.6-4.2c.4-.6 1.1-.9 1.8-.7l2.1.6 2.5 2.8M10.6 7.5 12 13l2.5 4"/></svg></button>
+  <button class="glass" id="cam-view" type="button" aria-pressed="false" aria-label="الكاميرا: درون أو قريب"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2.5h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+  <button class="glass money" id="wallet" type="button" aria-label="العزبة: التاريخ والرصيد"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v3"/><rect x="3" y="8" width="18" height="11" rx="2.5"/><path d="M16 13.5h2"/></svg></button>
 </div>
 
 <section class="card glass" id="card" dir="rtl" aria-live="polite" hidden>
@@ -214,8 +197,9 @@
   <div class="acts" id="pop-acts"></div>
 </section>
 
-<div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p></div>
+<div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p><small dir="ltr">LC300 model: Ddiaz Design · CC BY-NC-SA 4.0 · modified</small></div>
 <div class="meter glass num" id="meter" dir="rtl" hidden aria-live="off"></div>
+</div>
 
 <script type="importmap">
 { "imports": {
@@ -236,6 +220,33 @@ import { buildTerrain } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
+// ------------------------------------------------------------ the screen: landscape only
+// A phone held upright shows the game turned a quarter turn (the player turns the phone; with the phone's rotation
+// lock on, the browser never turns the page itself). Everything lives in #root, which is turned then; pointer events
+// are given the game's own coordinates before any handler sees them (the map's controls included), and a box is
+// measured through rectOf(). scr.w and scr.h are the game's width and height, whichever way the phone is held.
+const root = $('root'), scr = { rot: false, w: 1, h: 1 };
+const COARSE = matchMedia('(pointer: coarse)');
+function fitScreen() {
+  const W = innerWidth, H = innerHeight;
+  scr.rot = COARSE.matches && H > W;                       // (a tall desktop window is left as it is)
+  scr.w = scr.rot ? H : W; scr.h = scr.rot ? W : H;
+  root.style.width = scr.w + 'px'; root.style.height = scr.h + 'px';
+  root.style.transform = scr.rot ? `translateX(${W}px) rotate(90deg)` : '';
+  root.style.setProperty('--u', Math.min(scr.w / 100, 9.5).toFixed(2) + 'px');
+  document.body.classList.toggle('rot', scr.rot);
+  document.body.classList.toggle('land', scr.w > scr.h && scr.h <= 600);
+}
+fitScreen(); addEventListener('resize', fitScreen);
+const rectOf = (el) => { const r = el.getBoundingClientRect(); return scr.rot ? { left: r.top, right: r.bottom, top: innerWidth - r.right, bottom: innerWidth - r.left, width: r.height, height: r.width } : r; };
+for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'click', 'wheel', 'contextmenu']) {
+  addEventListener(type, (e) => {
+    if (!scr.rot) return;
+    const x = e.clientY, y = innerWidth - e.clientX;
+    for (const k of ['clientX', 'pageX', 'x']) Object.defineProperty(e, k, { value: x, configurable: true });
+    for (const k of ['clientY', 'pageY', 'y']) Object.defineProperty(e, k, { value: y, configurable: true });
+  }, true);
+}
 const rand = mulberry(20261108);
 function mulberry(a) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const R = (a, b) => a + (b - a) * rand();
@@ -579,7 +590,7 @@ const labels = PLACES.map((pl) => {
   const el = document.createElement('button'); el.type = 'button';
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    const r = el.getBoundingClientRect();
+    const r = rectOf(el);
     if (finger && (finger[0] < r.left || finger[0] > r.right || finger[1] < r.top || finger[1] > r.bottom) && tapWorld(finger[0], finger[1])) return;
     openPlace(pl);
   });
@@ -591,7 +602,7 @@ function refreshLabels() {
     const cls = typeof l.cls === 'function' ? l.cls() : l.cls;
     l.warn = cls === 'warn';
     l.el.className = 'lbl' + (cls ? ' ' + cls : '') + (l.isEdge ? ' edge' : '') + (pop && pop.place === l ? ' on' : '');
-    l.el.innerHTML = `${tagIcon(l.icon)}<span>${l.text()}</span>${l.edge ? ARROW : ''}`;
+    l.el.innerHTML = `${tagIcon(l.icon)}${l.edge ? ARROW : ''}`;                 // a pin: the icon alone (its words are read out, not shown)
     l.el.setAttribute('aria-label', l.text());
     if (l.edge) { l.arrow = l.el.querySelector('.arr'); l.ang = null; }    // the new arrow starts unrotated
     if (!l.vis) l.el.style.display = '';
@@ -607,20 +618,15 @@ refreshLabels();
 document.fonts.ready.then(refreshLabels);
 // the free map between the HUD pieces, in px; measured on resize and when a card opens or closes
 const hud = { w: 1, h: 1, x0: 0, x1: 1, y0: 0, y1: 1 };
-const LANDSCAPE = matchMedia('(orientation: landscape) and (max-height: 600px)');
+const SIDE = () => document.body.classList.contains('land');      // the place card docks on the side
 function measureHud() {
-  const card = $('card'), popEl = $('pop'), side = LANDSCAPE.matches;
-  // in portrait the camera buttons ride above the card docked at the bottom
-  const docked = side ? null : !popEl.hidden ? popEl : !card.hidden ? card : null;
-  document.documentElement.style.setProperty('--dock', docked ? `${docked.offsetHeight + 8}px` : '0px');
-  const top = document.querySelector('.top').getBoundingClientRect();
+  const card = $('card'), popEl = $('pop');
   hud.w = stage.clientWidth; hud.h = stage.clientHeight;
-  hud.x0 = top.left; hud.x1 = top.right; hud.y0 = top.bottom + 6;
-  // the camera buttons count only while shown (they step aside for a docked card in portrait)
-  const vr = document.querySelector('.views').getBoundingClientRect();
-  let bottom = vr.height ? vr.top : hud.h - 12;
-  if (!card.hidden) bottom = Math.min(bottom, card.getBoundingClientRect().top);
-  if (!popEl.hidden) { const r = popEl.getBoundingClientRect(); if (side) hud.x1 = r.left - 6; else bottom = Math.min(bottom, r.top); }
+  // the free map: right of the three buttons, left of a card docked on the side, above one docked at the bottom
+  hud.x0 = rectOf(document.querySelector('.side')).right + 6; hud.x1 = hud.w - 10; hud.y0 = 8;
+  let bottom = hud.h - 10;
+  if (!card.hidden) bottom = Math.min(bottom, rectOf(card).top);
+  if (!popEl.hidden) { const r = rectOf(popEl); if (SIDE()) hud.x1 = r.left - 6; else bottom = Math.min(bottom, r.top); }
   hud.y1 = bottom - 6;
 }
 measureHud();
@@ -719,7 +725,7 @@ const aim = new THREE.Vector3();
 function glideTo(pl, dist) {
   // where the place should sit: 30% down the screen in portrait (the card docks below it),
   // in the left third in landscape (the card docks on the right)
-  const side = LANDSCAPE.matches;
+  const side = SIDE();
   aim.set(side ? -0.5 : 0, side ? 0 : 0.4, 0.5).unproject(camera).sub(camera.position).normalize();
   ease.t0.copy(controls.target); ease.t1.copy(controls.target); ease.yaw = 0;
   ease.o0.copy(camera.position).sub(controls.target); ease.o1.copy(ease.o0);
@@ -745,6 +751,7 @@ controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
 let follow = null, followHerd = false;
 const herdC = new THREE.Vector3();
 function herdCenter() { herdC.set(0, 0, 0); let n = 0; for (const k of camels) if (k.home === 'graze') { herdC.add(k.root.position); n++; } return herdC.multiplyScalar(1 / Math.max(1, n)); }
+let viewKind = 'drone';
 function view(kind) {
   if (kind === 'hill') {
     // up high over the yard: Aban al-Asmar ahead, Wadi al-Rumah and Aban al-Ahmar beyond
@@ -762,17 +769,20 @@ function view(kind) {
     camera.position.set(25, 6, -17);
   } else {
     const tgt = follow ? follow.root.position : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
-    const off = kind === 'near' ? tmpTo.set(7, 3.2, 9) : LANDSCAPE.matches || innerWidth > innerHeight ? tmpTo.set(-104, 40, 66) : tmpTo.set(-150, 78, 112);
+    const off = kind === 'near' ? tmpTo.set(7, 3.2, 9) : scr.w > scr.h ? tmpTo.set(-104, 40, 66) : tmpTo.set(-150, 78, 112);
     controls.target.copy(tgt).setY(1);
     camera.position.copy(controls.target).add(off);
   }
-  for (const [id, k] of [['cam-drone', 'drone'], ['cam-near', 'near']]) $(id).setAttribute('aria-pressed', String(kind === k));
+  viewKind = kind; $('cam-view').setAttribute('aria-pressed', String(kind === 'near'));
   ease.k = 1;                                    // a camera button wins over a glide in progress
   closePop();
   if (!follow && !followHerd) { if (selected) showCamel(selected); else hideCard(); }
 }
-$('cam-drone').addEventListener('click', () => view('drone'));
-$('cam-near').addEventListener('click', () => view('near'));
+$('cam-view').addEventListener('click', () => view(viewKind === 'near' ? 'drone' : 'near'));
+// the wallet: the farm's name, the date and the money, in the place card (nothing of them stays on the map)
+const WALLET = { el: $('wallet'), open: () => ({ title: 'عزبة الصفوة', sub: '8 نوفمبر · العصر 3:20 · الوسم',
+  html: row({ lead: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--warn)"><ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7"/><path d="M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg>', title: 'الرصيد', end: '<span class="num">486,300</span> ريال' }) }) };
+$('wallet').addEventListener('click', () => { if (pop && pop.place === WALLET) closePop(); else openPlace(WALLET, true); });
 
 const STATE = { graze: 'ترعى', walk: 'تمشي', idle: 'واقفة' };
 const COAT_HEX = { wodh: '#f4f1ea', shaqh: '#ead7b5', homr: '#a8694a', majaheem: '#2c2622' };
@@ -833,7 +843,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 const camelHits = [];
 // what a tap at (x, y) hits in the world: a camel first, then a place; true when it hit something
 function tapWorld(x, y) {
-  const r = renderer.domElement.getBoundingClientRect();
+  const r = rectOf(renderer.domElement);
   ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   camelHits.length = 0; for (const c of camels) camelHits.push(c.hit);
@@ -906,7 +916,7 @@ async function loadVehicles() {
 let playCar = null, play = null;
 loadVehicles().then(async () => {
   const t = await terrainReady;
-  play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod,
+  play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root,
     onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); controls.update(); } });
   window.__play = play;
 }).catch((e) => console.error(e));
@@ -947,6 +957,7 @@ function tick(now) {
   const dt = Math.min(clock.getDelta(), 0.05);
   for (const c of camels) c.update(dt, camera.position);
   const playing = play ? play.update(dt) : false;
+  if (controls.enabled === playing) controls.enabled = !playing;      // (the map's controls off in play: left on, a thumb on the walk stick or a pedal swung the camera with it)
   // follow without stealing the viewer's control of the angle
   const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
   if (tgt && !playing) { const delta = tmpTo.copy(tgt).setY(1.1).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }

@@ -34,9 +34,13 @@ or realism for a smaller app.
   (draws, triangles, texture memory, skinned camels, shadows).
 - **The map is the centre of play:**
   - Nothing permanent covers it: no menus and no bottom bar.
+  - Nothing written floats over the game: icon buttons at the screen's edges
+    only, and icon pins on the places. Words appear only in a card the player
+    opened.
   - Places are reached by tapping them on the map, and a small card opens
     beside the place.
-  - Both portrait and landscape are supported.
+  - Landscape only (the owner's decision of 11 Nov 2026). A phone held
+    upright shows the game turned a quarter turn.
 - **Models are built by code** from the owner's photos (`tool/camel3d`,
   `tool/vehicle3d`, `tool/terrain3d`).
 
