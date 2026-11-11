@@ -1,5 +1,5 @@
 """The cabin's game layer (the owner's decision of 10 Nov: layered detail; the interior is loaded only while the player
-is inside, about 40k triangles). lod_cabin.py <cabin.blend> <out.blend> [target]
+is inside, about 40k triangles). lod_cabin.py <cabin.blend> <out.blend> [target] [driver]
 1. Faces no occupant can see are dropped: a face stays if one of its points (its middle or a corner pulled 5 % in)
    is in plain view, facing it, from one of the eyes in EYES (a box of positions round each seat's eye, so that a
    head turning and leaning is allowed for). The glass is opaque from outside, so nothing inside is seen from there.
@@ -11,9 +11,17 @@ from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def eyes():
+def eyes(driver=False):
+    """driver: only the driver's (the game's first-person view is from the driver's seat: the private car's interior
+    is drawn only then, its glass being dark from outside); a wider box there, a head turned to look back included."""
     import cabin as C
     out = []
+    if driver:
+        cx, cy, cz = C.SEATED_EYE
+        for dx in (-0.20, -0.06, 0.08):
+            for dy in (-0.20, 0.0, 0.15):
+                for dz in (-0.10, 0.0, 0.08): out.append(Vector((cx + dx, cy + dy, cz + dz)))
+        return out
     for cx, cy, cz in (C.SEATED_EYE, (C.SEATED_EYE[0], -C.SEATED_EYE[1], C.SEATED_EYE[2]), (-0.20, 0.0, 1.52), (-1.0, 0.44, 1.52), (-1.0, 0.0, 1.50), (-1.0, -0.44, 1.52)):      # (and between the front seats: a head leaning in)
         for dx in (-0.12, 0.0, 0.12):
             for dy in (-0.15, 0.0, 0.15):
@@ -47,14 +55,14 @@ def visible_faces(obs, E):
 
 
 if __name__ == '__main__':
-    src, out = sys.argv[1], sys.argv[2]; target = int(sys.argv[3]) if len(sys.argv) > 3 else 40000
+    src, out = sys.argv[1], sys.argv[2]; target = int(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3].isdigit() else 40000; driver = sys.argv[-1] == 'driver'
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); obs = [o for o in bpy.data.objects if o.type == 'MESH']
     tri = lambda o: (o.data.calc_loop_triangles(), len(o.data.loop_triangles))[1]
     before = {o.name: tri(o) for o in obs}
     for o in obs:          # triangles first: a long curved face (the door's wood) can have every test point outside it
         bpy.context.view_layer.objects.active = o; m = o.modifiers.new('tri', 'TRIANGULATE'); m.keep_custom_normals = True; m.quad_method = 'BEAUTY'; m.ngon_method = 'BEAUTY'
         bpy.ops.object.modifier_apply(modifier='tri')
-    seen = visible_faces(obs, eyes())
+    seen = visible_faces(obs, eyes(driver))
     for o, s in zip(obs, seen):
         bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table()
         bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in s], context='FACES'); bm.to_mesh(o.data); bm.free()

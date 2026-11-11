@@ -1,0 +1,11 @@
+Model Information:
+* title:	2024 Toyota Land Cruiser LC300 VXR 409 TT
+* source:	https://sketchfab.com/3d-models/2024-toyota-land-cruiser-lc300-vxr-409-tt-0937e2b405964856a1aac96f54861274
+* author:	Ddiaz Design (https://sketchfab.com/ddiaz-design)
+
+Model License:
+* license type:	CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+* requirements:	Author must be credited. No commercial use. Modified versions must have the same license.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "2024 Toyota Land Cruiser LC300 VXR 409 TT" (https://sketchfab.com/3d-models/2024-toyota-land-cruiser-lc300-vxr-409-tt-0937e2b405964856a1aac96f54861274) by Ddiaz Design (https://sketchfab.com/ddiaz-design) licensed under CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)
