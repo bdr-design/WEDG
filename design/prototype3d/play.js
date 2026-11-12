@@ -442,6 +442,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4, () => { if (leaving && state.on) stepOut(); leaving = false; }), 0.35);
   }
   function stepOut() {
+    for (const m of tailMats) m.emissiveIntensity = 0.6;      // (the brake lamps out: the driving that sets them no longer runs once he is out, and they stayed lit on the empty car)
     state.mode = 'walk'; carState.v = 0; job = null; parked = true;
     if (rigged) { POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
     driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading; input.pitch = 0.18; man.way = undefined;      // (the look level again: a drag in the car moved it, and the walker stepped out looking at his feet)

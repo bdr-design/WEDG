@@ -283,10 +283,10 @@ const R = (a, b) => a + (b - a) * rand();
 
 // ------------------------------------------------------------ renderer, sky, light
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));   // sharp enough on a phone, far fewer pixels than 2x or 3x (ADR 0005's budget: 1.5x at most)
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));     // 2x (the owner, 12 Nov, of the blur: at 1.5x on his 3x screen the picture was drawn at half its pixels; 2x is 78% more pixels than 1.5x, and his phone drew 1.5x and 70% in the same time, ADR 0005)
 renderer.setSize(stage.clientWidth, stage.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.AgXToneMapping;
+renderer.toneMapping = THREE.NeutralToneMapping;      // Khronos PBR Neutral (the owner's choice, 12 Nov, of the washed-out colours: AgX left the sand's colour 40% less saturated and the contrast a quarter lower)
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 stage.appendChild(renderer.domElement);
@@ -1308,7 +1308,7 @@ async function loadVehicles() {
   // the player's SUV, ours (tool/vehicle3d/suv_model/ours_game.py): the near layer up close (150k triangles: the driver's
   // door on its hinge, the wheels on their corners, each view drawing only what it can see), the far layer (15k) beyond
   // 20 m, the cabin loaded apart. It receives the yard's shadows and casts its own from a coarse copy of the far layer
-  // (veh_suvfar_shadow.json, 1.8k triangles, within 5 cm of it), moving with it in every shadow redraw and drawn in no
+  // (veh_suvfar_shadow.json, 1.8k triangles, 99% within 5 cm of it), moving with it in every shadow redraw and drawn in no
   // picture. (The owner, 11 Nov: no shadow, its full layers cost 40k to 125k triangles a redraw; 12 Nov, the camera 8 m
   // back, without one the car looked to float over the sand: "سوها".)
   const heroCar = () => {
@@ -1316,7 +1316,7 @@ async function loadVehicles() {
     full.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = false; } });
     far.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = false; } });
     full.userData.nearParts = [...full.children]; full.userData.far = far; far.visible = false; full.add(far);
-    if (mid) {      // the middle layer (70k triangles, the same parts and split), its wheels and door moved as the near layer's
+    if (mid) {      // the middle layer (82k triangles, the same parts and split), its wheels and door moved as the near layer's
       mid.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = false; } });
       mid.name = 'mid layer'; mid.visible = false; full.add(mid); full.userData.mid = mid;
       full.userData.midSync = ['corner_FL', 'corner_FR', 'corner_RL', 'corner_RR', 'wheel_FL', 'wheel_FR', 'wheel_RL', 'wheel_RR', 'door_FL'].map((n) => [full.userData.nearParts.find((c) => c.name === n) || full.getObjectByName(n), mid.getObjectByName(n)]).filter(([a, b]) => a && b && a !== b);
@@ -1423,9 +1423,9 @@ function tick(now) {
   updateScatter(camera.position, sun.target.position, sunDir, sun.shadow.camera.right);
   if (playCar) {
     // the player's car in three layers by the camera's distance from it: the near one (150k triangles) within 6.5 m, the
-    // middle one (70k) to 20 m, so the chase camera at its 8 m draws it, and the far one (15k) beyond. From the seat and
-    // while the door swings, always the near one (its seat split, the door's inside). Each bound is 0.3 m further going
-    // out than coming in (the chase camera comes in by walls). (The owner, 12 Nov: the near layer at the chase camera's
+    // middle one (82k) to 20 m, so the chase camera at its 8 m draws it, and the far one (15k) beyond. From the seat and
+    // while the door swings, always the near one (its seat split, the door's inside). Each bound has a 0.6 m band (out at 6.8 m, back in at 6.2;
+    // 20.3 and 19.7) (the chase camera comes in by walls). (The owner, 12 Nov: the near layer at the chase camera's
     // 8 m was 145k triangles, a third of the picture.)
     const ud = playCar.userData, dCar = camera.position.distanceTo(playCar.position), drive = playing && play.debug.state.mode === 'drive';
     const seatNow = drive && play.debug.state.view === 1, doorNow = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
@@ -1465,7 +1465,11 @@ function tick(now) {
   sunFocus.set(Math.round(focusP.x / 4) * 4, 0, Math.round(focusP.z / 4) * 4);
   const shadowMoved = !sunFocus.equals(sun.target.position);
   if (shadowMoved) { sun.position.copy(sunFocus).addScaledVector(sunDir, 160); sun.target.position.copy(sunFocus); }
-  if (shadowMoved || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
+  // and every frame while the player's car moves (its shadow, drawn since 12 Nov, sat a frame behind it every other frame:
+  // 0.3 m at 30 km/h, 0.9 m at 100 km/h at 30 fps, its edge flickering at 15-30 Hz in the chase view, the review); the
+  // heaviest frame is the same, only the average rises while driving
+  const carMoving = playing && Math.abs(play.debug.carState.v) > 0.3;
+  if (shadowMoved || carMoving || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
   if (!playing) { controls.dampingFactor = 1 - Math.exp(-dt * 3.1); controls.update(); placeLabels(); }      // (OrbitControls eases by the frame: 0.05 a frame at 60 fps, the same in seconds at any rate)
   const tDraw = cpu ? performance.now() : 0;
   if (!phone.big) renderer.render(scene, camera);      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)

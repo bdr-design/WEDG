@@ -353,11 +353,17 @@ door, wheels and view split as the near one; the glass and the tailgate's trims
 kept fuller, as at half they went jagged) is drawn from 6.5 m to 20 m, so the
 chase camera at its 8 m draws it; the near one within 6.5 m, from the seat and
 while the door swings; the far one beyond 20 m. Its wheels and door are moved
-as the near layer's. Seen from the chase camera the two layers differ in about
-1% of the car's pixels (a thin trim line under the number plate the most).
+as the near layer's. Seen from the chase camera the two layers differ in 1.4 to
+1.5% of the car's pixels (the rear glass's top edge, the trim line under the
+number plate, the grille's backing, the wheels' spokes); on foot at 6.2 to 20 m
+in 0 to 1.4%. In 25k frames across 72 scenarios the swap never flickered.
 The car now casts a shadow, from a coarse copy of the far layer (1.8k
-triangles, within 5 cm of it), moving with it in every shadow redraw and drawn
-in no picture: one draw in the shadow pass. (The owner had asked for no shadow
+triangles; 99% of it within 5 cm of the far layer, 25 cm at the worst; its
+shadow overlaps the near layer's own by 92 to 99.9%), drawn in no picture: one
+draw in the shadow pass. While the car moves the shadow map is redrawn every
+frame (every other frame, the shadow sat a frame behind the car: 0.9 m at
+100 km/h at 30 fps). The middle layer carries its own copy of the tyres' and
+plate's textures (3.8 MiB on the GPU); the three layers could share one. (The owner had asked for no shadow
 on 11 Nov, when the full layers cost 40k to 125k triangles a redraw; with the
 camera 8 m back the car looked to float over the sand.) Measured the same way:
 
@@ -410,7 +416,14 @@ bones move; drawn and true poses are the same (0.00 cm) on every frame.
 Past 48 m a camel's place still moves in its animation's steps (every 2nd or
 4th frame), at most 6 to 8 cm, under a pixel at 60 fps.
 
-**The render scale stays at 1.5x** (the owner, 12 Nov: "نخليها").
+**The render scale stays at 1.5x** (the owner, 12 Nov: "نخليها"). *Later the same
+day, of the blur and the washed-out colours ("التغبيش وبهتان الالوان"), after
+pictures of each:* the render scale is 2x (on his 3x screen 1.5x drew half of
+its pixels; 2x is 78% more pixels than 1.5x, and his phone drew 1.5x and 70% in
+the same time, so the pixels were not its limit), and the tone mapping is
+Khronos PBR Neutral in place of AgX (AgX left the sand 40% less saturated and
+the contrast a quarter lower: mean saturation 0.34 to 0.56, contrast 48 to 63
+on the sand). Both his choices.
 
 Still over, for a moment: **on foot with the driver's door open, 422k** (166
 draws) for the 1.2 to 1.55 s the door swings as the player gets in or out.

@@ -158,7 +158,8 @@ owner chose our code-built car (this folder) for the game again. `ours_game.py` 
 - The wheels sit on their corners for the springs and steering. The driver's eye comes from `interior/cabin.py`'s
   SEATED_EYE, and the cabin from `cabin_lod0.glb` (44k).
 
-The game files are `design/prototype3d/models/veh_suvfull.json`, `veh_suvfar.json` and `veh_suvcabin.json`. The
+The game files are `design/prototype3d/models/veh_suvfull.json`, `veh_suvmid.json`, `veh_suvfar.json`,
+`veh_suvfar_shadow.json` and `veh_suvcabin.json`. The
 player's car casts its shadow from a coarse copy (the owner, 12 Nov; on 11 Nov he had asked for none).
 
 Moving parts and the seat view (12 Nov, ours_game.py):
