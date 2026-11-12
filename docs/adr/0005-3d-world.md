@@ -554,23 +554,26 @@ Measured here (no GPU: counted where it can be, the software renderer's time
 as a guide only):
 - **Not the calls.** By the herd the frame makes fewer WebGL calls than in the
   yard or on the sand (450 to 680 against 820 to 1,030).
-- **The pasture's grass.** It is the thickest in the game: 42% of the 42,000
-  tufts are round the camp. Standing in it, 13,000 to 15,500 tufts are drawn,
-  and the GPU shaded 1.1 to 3.5 grass fragments for every pixel of the screen
-  (up to 66 deep). 86 to 88% of them were thrown away by the alpha test,
+- **The pasture's grass.** It is the thickest in the game: about half (52%)
+  of the 42,000 tufts are round the camp. Standing in it, 13,000 to 15,500
+  tufts are drawn, and the GPU shaded 1.0 to 3.5 grass fragments for every
+  pixel of the screen (up to 69 deep). 85 to 88% of them were thrown away by
+  the alpha test,
   since the blades fill 16% of their card. In the yard and on the sand, next
   to none. Hiding the grass took a third off the software renderer's time
   there.
 - **Cut to the blades** (world.js, fitCard: the smallest four-cornered card
   holding every texel the alpha test can keep, with a one-texel margin), a
   grass card is 63% of its square for the same two triangles. By the herd
-  that is 37 to 38% fewer grass fragments, with every fragment that was kept
-  still kept. The bushes' cards (and their shadow pass) and the tamarisks'
+  that is 37 to 38% fewer grass fragments. Of those the alpha test kept, all
+  but 0.002% (and, with 4x MSAA, all but 0.02 to 0.16% of the samples at
+  far-off cards' edges) are still kept; none of it shows. The bushes' cards (and their shadow pass) and the tamarisks'
   are cut the same way. The pictures: 0.2 to 0.6% of pixels differ by more
   than 8 levels in 255, specks on the blades' edges where the card's two
   triangles now meet differently; none in the yard.
 - **The first camel to come near** sent its full and middle meshes to the GPU
-  then (1.85 MB over the next frames) and readied their shaders. That is now
+  then (about 1.5 MB) and readied a shader (743 ms in the software renderer
+  at the middle level's first use). That is now
   done under the loading screen, once for each coat.
 - What it does on his phone is for his meter to say.
 

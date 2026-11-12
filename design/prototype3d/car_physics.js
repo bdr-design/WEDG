@@ -118,13 +118,15 @@ export function createCar(geo, spec = LC300) {
   // the body's height at a point of the car's frame, from heave at the centre of gravity, pitch and roll (small angles)
   const bodyAt = (x, z) => s.yc + (x - xcg) * s.pitch - z * s.roll;
 
+  // the body seated on its wheels as they stand: on the ground less what each tyre has sunk into soft sand (seated on the
+  // bare ground, a car parked on sand rose 3.8 cm and fell back as it drove off, the review)
   function settle(pose, env) {
-    const gs = wheels.map((w) => groundAt(pose, w, env));
+    const g0 = wheels.map((w) => groundAt(pose, w, env)), gs = wheels.map((w, j) => g0[j] - w.sink);
     s.yc = (gs[0] + gs[1] + gs[2] + gs[3]) / 4 + 0;
     s.pitch = Math.atan2((gs[0] + gs[1]) - (gs[2] + gs[3]), 2 * wb);
     s.roll = Math.atan2((gs[0] + gs[2]) - (gs[1] + gs[3]), 4 * geo.half);
     s.vy = s.vp = s.vr = 0; s.vyL = s.r = s.vlat = s.yawRate = s.kk = s.vscCut = s.vyOut = 0;
-    for (let j = 0; j < 4; j++) { const w = wheels[j]; w.u = w.uPrev = 0; w.F = w.Fs = w.load; w.gLast = gs[j]; }
+    for (let j = 0; j < 4; j++) { const w = wheels[j]; w.u = w.uPrev = 0; w.F = w.Fs = w.load; w.gLast = g0[j]; }
   }
 
   function groundAt(pose, w, env) {

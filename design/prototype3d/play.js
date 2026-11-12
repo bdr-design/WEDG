@@ -445,9 +445,10 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   // On getting out, and on leaving play from the driver's seat (back from the map, the stopped car slid 0.31 m and
   // turned 3 degrees on the sway it was left with, and on the map it stood rolled 3.3 degrees with its brake lamps lit,
   // the review).
-  function park() {
+  function park(keepJob = false) {
     for (const m of tailMats) m.emissiveIntensity = 0.6;      // (the driving that sets them no longer runs: they stayed lit on the empty car)
-    carState.v = 0; job = null; parked = true;
+    carState.v = 0; parked = true;
+    if (!keepJob) job = null;      // (a trip to the map keeps a job under way: airing down or digging out went on after it before, the review)
     if (rigged) { phys.s.v = 0; phys.s.slide = 0; POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
   }
   function stepOut() {
@@ -769,7 +770,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   function stop() {
     resumeDrive = state.on && state.mode === 'drive';      // (getting out, mid-swing, counts as still in the car: the door is shut below)
-    if (resumeDrive) park();
+    if (resumeDrive) park(true);
     for (const p of puffs) p.s.visible = false;      // (their fading runs only in play: on the map they hung in the air)
     leaving = false;
     for (let i = tween.length - 1; i >= 0; i--) if (tween[i].obj === model.doors.FL) tween.splice(i, 1);      // (back to the map mid-swing: the door shut at once, or it stood open on foot when play began again)

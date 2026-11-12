@@ -1285,7 +1285,7 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, male: true, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى', tag: 'ينتظر أمه' });
   for (let i = 0; i < 4; i++) inPen({ name: ['ريم', 'غزيل', 'نوف', 'جود'][i], coat: i === 2 ? 'shaqh' : 'wodh', age: 'مفرودة', x: R(1, 15), z: R(-42, -28), heading: R(0, 6.28), scale: 0.82, pen: LAYOUT.pens.young, note: 'مفاريد هالسنة' });
   // the full and middle detail levels and their shadow stand-ins sent to the GPU now, under the loading screen, once for
-  // each coat: drawn first when a camel came near, their meshes (about 2.5 MB) went up and their shaders were made mid-play
+  // each coat: drawn first when a camel came near, their meshes (about 1.5 MB) went up and a shader was made mid-play
   // (counted by the herd, where the owner's phone stuttered, 12 Nov). Their meshes are shared, so one camel a coat does it.
   const warm = [], coatsSeen = new Set();
   for (const cm of camels) {

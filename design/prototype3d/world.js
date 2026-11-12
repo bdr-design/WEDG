@@ -49,10 +49,11 @@ function cardCluster(w, h, n = 3, upNormals = true, shape = null) {
 }
 // The smallest four-cornered card holding every texel of an alpha card that its alpha test can keep, with a margin of a
 // few texels for the texture's filtering and its smaller mip levels: its corners as (u, v), v up, anticlockwise.
-// (The grass's blades fill 16% of their square: by the herd, where the pasture's grass is thickest, the GPU shaded 2.3
-// to 2.9 grass fragments for every pixel of the screen, 86% of them thrown away by the alpha test, and the owner's phone
+// (The grass's blades fill 16% of their square: by the herd, where the pasture's grass is thickest, the GPU shaded 1.0
+// to 3.5 grass fragments for every pixel of the screen, 85-88% of them thrown away by the alpha test, and the owner's phone
 // fell from 60 frames a second to 52 there and nowhere else, 12 Nov. Cut to the blades, a grass card is 63% of the square
-// for the same two triangles, and by the herd the GPU shades 37-38% fewer grass fragments, every one it kept still kept.) The hull of the kept texels is cut from the square by every choice of up to four of its
+// for the same two triangles, and by the herd the GPU shades 37-38% fewer grass fragments; of those it kept, all but a
+// few thousandths of a percent at the cards' edges are kept still, none of it to be seen: the review.) The hull of the kept texels is cut from the square by every choice of up to four of its
 // edges, and the smallest result with at most four corners is kept.
 function fitCard(canvas, cut, margin = Math.max(1, Math.round(canvas.width / 128))) {
   const W = canvas.width, H = canvas.height, a = canvas.getContext('2d').getImageData(0, 0, W, H).data, lim = cut * 255, pts = [];
@@ -528,13 +529,14 @@ export function buildWorld(scene, renderer, sandTex) {
     const saduCurtain = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 20, w, 9); c.fillRect(0, h - 29, w, 9); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } }, true, 3);
     saduCurtain.name = 'curtain';
     // cut to the roof's slopes, 3 cm under them, wall to wall (a 1.9 m panel stood through the roof where it comes down to
-    // 1.35 m at the front and the back: the owner's picture, 12 Nov). Above 1.9 m the weave starts again, as a second strip
-    // sewn on (held at its top row, the gable was plain red, the review).
+    // 1.35 m at the front and the back: the owner's picture, 12 Nov). Woven as two strips sewn one above the other, each
+    // 1.15 m, the upper cut by the roof (one strip 1.9 m tall left the gable plain red, its weave started again only at the
+    // apex, the review).
     saduCurtain.wrapT = THREE.RepeatWrapping;
     const qa = D / 2, roofAt = (z) => H - (H - E) * Math.abs(z) / (D / 2) - 0.03, qs = new THREE.Shape();
     qs.moveTo(-qa, 0); qs.lineTo(-qa, roofAt(qa)); qs.lineTo(0, roofAt(0)); qs.lineTo(qa, roofAt(qa)); qs.lineTo(qa, 0); qs.closePath();
     const qg = new THREE.ShapeGeometry(qs), quv = qg.attributes.uv, qp = qg.attributes.position;
-    for (let i = 0; i < qp.count; i++) quv.setXY(i, (qp.getX(i) + qa) / (2 * qa), qp.getY(i) / 1.9);      // (the weave at the scale it had)
+    for (let i = 0; i < qp.count; i++) quv.setXY(i, (qp.getX(i) + qa) / (2 * qa), qp.getY(i) / 1.15);
     const qt = new THREE.Mesh(qg, new THREE.MeshStandardMaterial({ map: saduCurtain, roughness: 1, side: THREE.DoubleSide })); qt.position.set(L / 2 - 1.4, 0, 0); qt.rotation.y = Math.PI / 2; T.add(qt);
     // the hearth (وجار) with embers, the brass dallahs, a thermos, cups and dates
     const hearth = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.9), new THREE.MeshStandardMaterial({ color: '#8a7b68', roughness: 1 })); hearth.position.set(0, 0.09, D / 2 - 1.2); T.add(hearth);
