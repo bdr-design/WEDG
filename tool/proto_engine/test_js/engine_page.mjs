@@ -88,5 +88,14 @@ assert.ok(c.stats.failedWrites > 0, 'the failed write was reported');
 hang = false;
 assert.strictEqual((await c.flush()).ok, true);
 assert.ok(requests > 4);
+// a worker that no longer answers: stop() gives up on its save after 20 s, the calls still waiting fail, and a new
+// engine may start
+c.worker.dead = true;
+const pending = c.dispatch({ type: 'setShepherds', count: 1 }).then(() => 'answered', () => 'failed');
+const t1 = Date.now();
+await c.stop();
+assert.ok(Date.now() - t1 < 25000, 'stop() did not wait for ever');
+assert.strictEqual(await pending, 'failed');
+assert.notStrictEqual(await startEngine(), c, 'a new engine after stop()');
 console.log(`engine page: ok (snapshot ${c.stats.snapshotChars} chars, ${c.stats.writes} writes, ${c.stats.failedWrites} failed and retried)`);
 process.exit(0);

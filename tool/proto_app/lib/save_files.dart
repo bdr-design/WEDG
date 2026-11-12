@@ -12,8 +12,8 @@ import 'dart:typed_data';
 /// * `PUT /save/KEY`: the body becomes the key's text (written whole, then
 ///   renamed over the old file, so a crash leaves one or the other).
 /// * `DELETE /save/KEY`.
-/// * A write numbered `x-marah-write: LOAD:SEQ` that is older than one already
-///   applied is refused (409): see [_inOrder].
+/// * Every write is numbered (`x-marah-write: LOAD:SEQ`); one older than a
+///   write already applied, or not numbered, is refused (409): see [_inOrder].
 /// Every request carries the launch's random [token] in `x-marah-save` (the
 /// page has it in its address): nothing but the page reads or writes the save.
 class SaveFiles {
@@ -56,19 +56,23 @@ class SaveFiles {
   final Map<String, int> _applied = {};
 
   /// Whether a write numbered [stamp] may land on [key] now (and if so, it is
-  /// counted as applied). An unnumbered write always may.
+  /// counted as applied, and its engine becomes the one writing). Every
+  /// writer numbers its writes; one that does not, or numbers them oddly, is
+  /// refused and changes nothing.
   bool _inOrder(String key, String? stamp) {
-    if (stamp == null) return true;
+    if (stamp == null) return false;
     final i = stamp.lastIndexOf(':');
     final load = i > 0 ? stamp.substring(0, i) : '';
     final seq = int.tryParse(stamp.substring(i + 1));
-    if (load.isEmpty || seq == null || _retired.contains(load)) return false;
+    if (load.isEmpty || seq == null || seq < 1 || _retired.contains(load)) {
+      return false;
+    }
+    if (load == _load && seq <= (_applied[key] ?? 0)) return false;
     if (load != _load) {
       if (_load != null) _retired.add(_load!);
       _load = load;
       _applied.clear();
     }
-    if (seq <= (_applied[key] ?? -1)) return false;
     _applied[key] = seq;
     return true;
   }

@@ -51,13 +51,13 @@ void saveTests() {
     expect(t, hasLength(32));
     expect(await call(s, 'GET', '/save', token: t), (200, '{}'));
     final text = '{"مراح":"${'x' * 300000}"}';
-    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode(text))).$1, 204);
-    expect((await call(s, 'PUT', '/save/marah.save.prev', token: t, body: utf8.encode('old'))).$1, 204);
+    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode(text), stamp: 'E:1')).$1, 204);
+    expect((await call(s, 'PUT', '/save/marah.save.prev', token: t, body: utf8.encode('old'), stamp: 'E:1')).$1, 204);
     final (code, all) = await call(s, 'GET', '/save', token: t);
     expect(code, 200);
     expect(jsonDecode(all), {'marah.save': text, 'marah.save.prev': 'old'});
-    expect((await call(s, 'DELETE', '/save/marah.save', token: t)).$1, 204);
-    expect((await call(s, 'DELETE', '/save/marah.save', token: t)).$1, 204);
+    expect((await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'E:2')).$1, 204);
+    expect((await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'E:3')).$1, 204);
     expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), {'marah.save.prev': 'old'});
     // nothing half-written left behind
     expect(Directory('${dir.path}/Documents/marah').listSync().map((f) => f.uri.pathSegments.last), ['marah.save.prev']);
@@ -74,11 +74,11 @@ void saveTests() {
     expect((await call(s, 'GET', '/save', token: 'nope')).$1, 403);
     expect((await call(s, 'PUT', '/save/marah.save', body: [65])).$1, 403);
     for (final bad in ['/save/..%2Fx', '/save/.hidden', '/save/a%2Fb', '/save/', '/save/%FF', '/save/index.html', '/save/x1']) {
-      final (code, _) = await call(s, 'PUT', bad, token: t, body: [65]);
+      final (code, _) = await call(s, 'PUT', bad, token: t, body: [65], stamp: 'E:1');
       expect(code, anyOf(400, 500), reason: bad);
     }
-    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: [0xFF, 0xFE])).$1, 500);
-    expect((await call(s, 'POST', '/save/marah.save', token: t, body: [65])).$1, 405);
+    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: [0xFF, 0xFE], stamp: 'E:1')).$1, 500);
+    expect((await call(s, 'POST', '/save/marah.save', token: t, body: [65], stamp: 'E:1')).$1, 405);
     expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), isEmpty);
     expect(Directory('${dir.path}/Documents/marah').existsSync() ? Directory('${dir.path}/Documents/marah').listSync().where((f) => !f.uri.pathSegments.last.endsWith('.tmp')) : const [], isEmpty);
     expect(SaveFiles.validKey('marah.save.broken'), isTrue);
@@ -88,7 +88,7 @@ void saveTests() {
     // more than a save may hold is refused, and nothing is left behind
     // (answered 500 while the body is still coming, or the connection cut: either way not kept)
     try {
-      expect((await call(s, 'PUT', '/save/marah.save', token: t, body: List.filled(SaveFiles.maxBytes + 1, 65))).$1, 500);
+      expect((await call(s, 'PUT', '/save/marah.save', token: t, body: List.filled(SaveFiles.maxBytes + 1, 65), stamp: 'E:1')).$1, 500);
     } on HttpException {
       // the server stopped reading
     } on SocketException {
@@ -118,11 +118,14 @@ void saveTests() {
     expect(await saved(), 'b1');
     expect((await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'A:10')).$1, 409);
     expect(await saved(), 'b1');
-    // malformed numbers are refused; unnumbered writes (older pages) always land
+    // malformed or missing numbers are refused, and change nothing: the engine writing goes on
     expect(await put('x', 'nonsense'), 409);
     expect(await put('u', 'B'), 409);
-    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode('plain'))).$1, 204);
-    expect(await saved(), 'plain');
+    expect(await put('c', 'C:-1'), 409);
+    expect(await put('c', 'C:0'), 409);
+    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode('plain'))).$1, 409);
+    expect(await put('b2', 'B:2'), 204);
+    expect(await saved(), 'b2');
   });
 
   test('the bundle is still served beside the save', () async {

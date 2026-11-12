@@ -49,11 +49,17 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
     if (m.type === 'error') w.reject(new Error(m.error)); else w.resolve(m);
     return true;
   };
-  worker.onerror = (e) => {
-    const err = new Error(`the engine stopped: ${e.message || 'could not load'}`);
+  // every call still waiting fails, and a new engine may start
+  const down = (reason) => {
+    const err = new Error(reason);
     ready.reject(err);
     for (const w of waiting.values()) w.reject(err);
     waiting.clear();
+    running = null;
+    return err;
+  };
+  worker.onerror = (e) => {
+    const err = down(`the engine stopped: ${e.message || 'could not load'}`);
     onNotice?.({ kind: 'down', reason: err.message });
   };
   worker.onmessage = (e) => {
@@ -111,10 +117,16 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
     /** After a save that could not be read: the last one that was. */
     openPrevious: () => call('openPrevious'),
     startOver: (game = {}) => call('startOver', { newGame: game }),
-    /** Saves, stops the worker, and lets a new engine start. */
+    /** Saves (waiting 20 s at most: a save that does not answer is cut off at 15 s), stops the worker, and lets a
+     *  new engine start. */
     stop: async () => {
       document.removeEventListener?.('visibilitychange', onVisibility);
-      try { await call('pause'); } finally { worker.terminate(); running = null; }
+      try {
+        await Promise.race([call('pause'), new Promise((resolve) => setTimeout(resolve, 20000))]);
+      } catch { /* stopped all the same */ } finally {
+        worker.terminate();
+        down('the engine was stopped');
+      }
     },
   };
 }
