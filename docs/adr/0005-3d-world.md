@@ -567,10 +567,11 @@ as a guide only):
   grass card is 63% of its square for the same two triangles. By the herd
   that is 37 to 38% fewer grass fragments. Of those the alpha test kept, all
   but 0.002% (and, with 4x MSAA, all but 0.02 to 0.16% of the samples at
-  far-off cards' edges) are still kept; none of it shows. The bushes' cards (and their shadow pass) and the tamarisks'
-  are cut the same way. The pictures: 0.2 to 0.6% of pixels differ by more
-  than 8 levels in 255, specks on the blades' edges where the card's two
-  triangles now meet differently; none in the yard.
+  far-off cards' edges) are still kept; none of it shows. The bushes' cards
+  (and their shadow pass) and the tamarisks' are cut the same way. The
+  pictures: 0.17 to 0.58% of pixels differ by more than 8 levels in 255,
+  specks on the blades' edges and a few strips along bushes' shadow edges,
+  where the card's two triangles now meet differently; none in the yard.
 - **The first camel to come near** sent its full and middle meshes to the GPU
   then (about 1.5 MB) and readied a shader (743 ms in the software renderer
   at the middle level's first use). That is now

@@ -526,17 +526,17 @@ export function buildWorld(scene, renderer, sandTex) {
     const roll = new THREE.CylinderGeometry(0.11, 0.11, 0.55, 14).rotateX(Math.PI / 2);
     for (let x = -L / 2 + 1.4; x < L / 2 - 1; x += 1.25) { const r = new THREE.Mesh(roll, cush); r.position.set(x, 0.29, -D / 2 + 0.75); T.add(r); }
     // the Sadu curtain (القاطع) closing the far end
-    const saduCurtain = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 20, w, 9); c.fillRect(0, h - 29, w, 9); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } }, true, 3);
+    const saduCurtain = canvasTex(240, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 20, w, 9); c.fillRect(0, h - 29, w, 9); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } }, true, 3);
     saduCurtain.name = 'curtain';
     // cut to the roof's slopes, 3 cm under them, wall to wall (a 1.9 m panel stood through the roof where it comes down to
     // 1.35 m at the front and the back: the owner's picture, 12 Nov). Woven as two strips sewn one above the other, each
     // 1.15 m, the upper cut by the roof (one strip 1.9 m tall left the gable plain red, its weave started again only at the
     // apex, the review).
-    saduCurtain.wrapT = THREE.RepeatWrapping;
+    saduCurtain.wrapS = saduCurtain.wrapT = THREE.RepeatWrapping;
     const qa = D / 2, roofAt = (z) => H - (H - E) * Math.abs(z) / (D / 2) - 0.03, qs = new THREE.Shape();
     qs.moveTo(-qa, 0); qs.lineTo(-qa, roofAt(qa)); qs.lineTo(0, roofAt(0)); qs.lineTo(qa, roofAt(qa)); qs.lineTo(qa, 0); qs.closePath();
     const qg = new THREE.ShapeGeometry(qs), quv = qg.attributes.uv, qp = qg.attributes.position;
-    for (let i = 0; i < qp.count; i++) quv.setXY(i, (qp.getX(i) + qa) / (2 * qa), qp.getY(i) / 1.15);
+    for (let i = 0; i < qp.count; i++) quv.setXY(i, (qp.getX(i) + qa) / 2.9, qp.getY(i) / 1.15);      // (the weave repeating every 2.9 m across, 10 triangles, so they keep their shape and meet without a cut one at the seam: across the curtain's width they came out wider than tall, the review)
     const qt = new THREE.Mesh(qg, new THREE.MeshStandardMaterial({ map: saduCurtain, roughness: 1, side: THREE.DoubleSide })); qt.position.set(L / 2 - 1.4, 0, 0); qt.rotation.y = Math.PI / 2; T.add(qt);
     // the hearth (وجار) with embers, the brass dallahs, a thermos, cups and dates
     const hearth = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.9), new THREE.MeshStandardMaterial({ color: '#8a7b68', roughness: 1 })); hearth.position.set(0, 0.09, D / 2 - 1.2); T.add(hearth);
