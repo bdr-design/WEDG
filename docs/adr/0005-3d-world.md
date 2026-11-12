@@ -570,8 +570,9 @@ as a guide only):
   far-off cards' edges) are still kept; none of it shows. The bushes' cards
   (and their shadow pass) and the tamarisks' are cut the same way. The
   pictures at 2x: 0.17 to 0.46% of pixels differ by more than 8 levels in
-  255 in the pasture, 0.07 to 0.19% from the air and by the tamarisks (0.18
-  to 0.57% at 1x), specks on the blades' edges and a few strips along bushes' shadow edges,
+  255 in the pasture, 0.07 to 0.19% from the air and by the tamarisks (at
+  1x: 0.21 to 0.58% in the pasture, 0.10 to 0.25% from the air and by the
+  tamarisks), specks on the blades' edges and a few strips along bushes' shadow edges,
   where the card's two triangles now meet differently; none in the yard.
 - **The first camel to come near** sent its full and middle meshes to the GPU
   then (about 1.5 MB) and readied a shader (743 ms in the software renderer
