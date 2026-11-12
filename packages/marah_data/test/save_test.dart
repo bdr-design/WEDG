@@ -84,18 +84,129 @@ void main() {
       int n(String text, String pattern) => pattern.allMatches(text).length;
       expect(n(before, '"cat":"maghateer"'), greaterThan(0));
       expect(after.contains('maghateer'), isFalse);
+      // the rounds merged into their وضح twins (the next test) are left out
+      // of the counts
+      final kept = {
+        for (final m in RegExp(r'"id":"(r-[^"]+)"').allMatches(after))
+          m.group(1),
+      };
+      final dropped = RegExp(
+        r'\{"id":"(r-[^"]+)","cat":"maghateer","sex":"\w+","age":"(\w+)"',
+      ).allMatches(before).where((m) => !kept.contains(m.group(1))).toList();
+      int droppedAge(String a) => dropped.where((m) => m.group(2) == a).length;
       expect(
         n(after, '"cat":"wodh"'),
-        n(before, '"cat":"wodh"') + n(before, '"cat":"maghateer"'),
+        n(before, '"cat":"wodh"') +
+            n(before, '"cat":"maghateer"') -
+            dropped.length,
       );
-      expect(n(after, '"age":"haq"'), n(before, '"age":"laqi"'));
-      expect(n(after, '"age":"laqi"'), n(before, '"age":"haq"'));
-      expect(n(after, '"age":"fater"'), n(before, '"age":"mature"'));
+      expect(
+        n(after, '"age":"haq"'),
+        n(before, '"age":"laqi"') - droppedAge('laqi'),
+      );
+      expect(
+        n(after, '"age":"laqi"'),
+        n(before, '"age":"haq"') - droppedAge('haq'),
+      );
+      expect(
+        n(after, '"age":"fater"'),
+        n(before, '"age":"mature"') - droppedAge('mature'),
+      );
       expect(after.contains('"age":"mature"'), isFalse);
       // ledger categories (also under "cat") are left alone
       expect(n(after, '"cat":"feed"'), n(before, '"cat":"feed"'));
     },
   );
+
+  test(
+    'v1 to v2: a وضح round is never duplicated, entries and references kept',
+    () {
+      final raw = jsonDecode(
+        File(fixtures[1]!).readAsStringSync(),
+      ) as Map<String, Object?>;
+      final before = raw['data']! as Map<String, Object?>;
+      List<Map<String, Object?>> rounds(Map<String, Object?> d) => [
+        for (final f in (d['world']! as Map)['festivals']! as List)
+          for (final r in (f as Map)['rounds']! as List)
+            r as Map<String, Object?>,
+      ];
+      int entries(Map<String, Object?> d) =>
+          rounds(d).fold(0, (n, r) => n + (r['entries']! as List).length);
+      final n0 = entries(before);
+      final after = SaveCodec.migrations[1]!(
+        jsonDecode(jsonEncode(before)) as Map<String, Object?>,
+      );
+      for (final f in (after['world']! as Map)['festivals']! as List) {
+        final open = [
+          for (final r in (f as Map)['rounds']! as List)
+            if ((r as Map)['results'] == null)
+              '${r['cat']}/${r['sex']}/${r['age']}',
+        ];
+        expect(open.toSet().length, open.length, reason: '${f['id']}');
+      }
+      expect(entries(after), n0);
+      // every reference to a round names one that exists
+      final ids = {for (final r in rounds(after)) r['id']};
+      final text = jsonEncode(after);
+      for (final m in RegExp(r'"round":"([^"]+)"').allMatches(text)) {
+        expect(ids.contains(m.group(1)), isTrue, reason: m.group(1));
+      }
+      final state = GameState.fromJson(after);
+      expect(checkInvariants(state), isEmpty);
+    },
+  );
+
+  test('v1 to v2: favourite, deaths by age and crossbred calves', () {
+    final data = <String, Object?>{
+      'world': {
+        'camels': [
+          {'id': 'dam', 'born': 0, 'cat': 'wodh', 'crossbred': false},
+          {
+            'id': 'calf',
+            'born': 100,
+            'cat': 'maghateer',
+            'crossbred': true,
+            'sire': {'id': 'bull', 'name': 'x', 'cat': 'maghateer'},
+            'dam': {'id': 'dam', 'name': 'y', 'cat': 'wodh'},
+          },
+          {
+            'id': 'mixed',
+            'born': 100,
+            'cat': 'homr',
+            'crossbred': true,
+            'sire': {'id': 'bull', 'name': 'x', 'cat': 'maghateer'},
+            'dam': {'id': 'red', 'name': 'z', 'cat': 'homr'},
+          },
+          {'id': 'old', 'born': 0, 'cat': 'homr', 'crossbred': false},
+        ],
+        'festivals': <Object?>[],
+      },
+      'players': [
+        {'favourite': 'maghateer'},
+      ],
+      'inboxes': {
+        'p': [
+          {'type': 'died', 'day': 365 * 9, 'camel': 'old', 'age': 'mature'},
+          {'type': 'died', 'day': 365 * 15, 'camel': 'old', 'age': 'mature'},
+          {'type': 'died', 'day': 365 * 22, 'camel': 'old', 'age': 'mature'},
+          {'type': 'died', 'day': 365 * 15, 'camel': 'gone', 'age': 'mature'},
+        ],
+      },
+    };
+    final out = SaveCodec.migrations[1]!(data);
+    expect(((out['players']! as List).first as Map)['favourite'], 'wodh');
+    final cs = {
+      for (final c in (out['world']! as Map)['camels']! as List)
+        (c as Map)['id']: c,
+    };
+    expect(cs['calf']!['crossbred'], isFalse); // مغاتير x وضح: both وضح now
+    expect(cs['calf']!['cat'], 'wodh');
+    expect(cs['mixed']!['crossbred'], isTrue); // وضح x حمر still crossbred
+    final ages = [
+      for (final e in (out['inboxes']! as Map)['p']! as List) (e as Map)['age'],
+    ];
+    expect(ages, ['fater', 'naab', 'harish', 'fater']);
+  });
 
   group('rejects without losing anything', () {
     test('garbage', () {

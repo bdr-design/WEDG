@@ -11,16 +11,14 @@ enum Sex {
 /// section 1). مغاتير is the umbrella name for the five light ones, not a class
 /// of its own (the owner, 12 Nov 2026): [isMaghateer].
 ///
-/// [baseDemand] (balance) scales market prices for the family. وضح takes the
-/// 1.10 the old pure-white "مغاتير" family had: it is the most prized of the
-/// light colours (research section 1).
+/// [baseDemand] (balance) scales market prices for the family.
 enum ColorCategory {
   majaheem(
     'مجاهيم',
     'سود بدرجات، والغرابي أفخرها. إطار كبير وعظم ثقيل',
     baseDemand: 1.15,
   ),
-  wodh('وضح', 'أبيض ناصع، أرقى المغاتير', baseDemand: 1.10),
+  wodh('وضح', 'أبيض ناصع، أرقى المغاتير', baseDemand: 1.05),
   shoqh('شقح', 'أبيض أقل من الوضح، بين الوضح والشعل', baseDemand: 0.90),
   shoal('شعل', 'خليط أحمر وأشقر', baseDemand: 0.95),
   sofr('صفر', 'لون الرمل أو الدبس، وبر كثيف', baseDemand: 1.00),

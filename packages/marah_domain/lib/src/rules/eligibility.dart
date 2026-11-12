@@ -108,7 +108,11 @@ class Eligibility {
     }
     if (camel.sex != r.sex) return const DomainError(ErrorCode.wrongSex);
     final ageThen = AgeClass.fromDays(f.judgedOn.daysSince(camel.born));
-    if (ageThen != r.age) {
+    // the eldest round (فاطر) stays open to every older camel, as the old
+    // "mature" round was, until the Saudi rounds replace these (plan G1.4)
+    final senior =
+        r.age == AgeClass.fater && ageThen.index > AgeClass.fater.index;
+    if (ageThen != r.age && !senior) {
       return DomainError(ErrorCode.wrongAgeClass, {'age': ageThen.name});
     }
     if (!camel.homeBred &&

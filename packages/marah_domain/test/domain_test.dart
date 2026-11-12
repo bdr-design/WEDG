@@ -25,10 +25,17 @@ Game reload(Game g) =>
     Game(GameState.fromJson(jsonDecode(snapshot(g)) as Map<String, Object?>));
 
 /// Adds a camel to the player's herd that fits [round] of [f] on judging day.
-Camel camelFor(Game g, Festival f, ContestRound r, {double mean = 70}) {
+Camel camelFor(
+  Game g,
+  Festival f,
+  ContestRound r, {
+  double mean = 70,
+  int? daysOldOnJudging,
+}) {
   final sim = Sim(g.state);
-  // 150 days into the round's age class on judging day.
-  final ageToday = r.age.minDays + 150 - f.judgedOn.daysSince(g.today);
+  // 150 days into the round's age class on judging day, unless told.
+  final ageToday =
+      (daysOldOnJudging ?? r.age.minDays + 150) - f.judgedOn.daysSince(g.today);
   final c = WorldGen(sim).makeCamel(
     sim.rng(['test-camel', r.id.value]),
     owner: g.me.id,
@@ -99,6 +106,20 @@ void main() {
     });
   });
 
+  group('Prices by age in years', () {
+    test('as before the age classes were renamed (12 Nov 2026)', () {
+      int at(int years) =>
+          Valuation.basePrice(AgeClass.fromDays(365 * years + 10), Sex.female);
+      expect(
+        [for (var y = 0; y <= 25; y++) at(y)],
+        [
+          7000, 10000, 13000, 16000, 19000, 21000, 22000, 22000, //
+          for (var y = 8; y <= 25; y++) 20000,
+        ],
+      );
+    });
+  });
+
   group('Colour families', () {
     test('the festival\'s six, مغاتير covering the five light ones', () {
       expect(ColorCategory.values.map((c) => c.label).toList(), [
@@ -129,6 +150,14 @@ void main() {
       expect(AgeClass.fromDays(365 * 12).labelFor(Sex.male), 'عود');
       expect(AgeClass.fromDays(365 * 12).labelFor(Sex.female), 'ناب');
       expect(AgeClass.fromDays(365 * 21), AgeClass.harish);
+      // each class starts on its first day, the day before is the class before
+      for (final a in AgeClass.values.skip(1)) {
+        expect(AgeClass.fromDays(a.minDays), a);
+        expect(AgeClass.fromDays(a.minDays - 1).index, a.index - 1);
+      }
+      for (var y = 1; y <= 25; y++) {
+        expect(AgeClass.fromDays(365 * y).minDays, lessThanOrEqualTo(365 * y));
+      }
       // every day falls in exactly one class, in order
       var last = AgeClass.hwar;
       for (var d = 0; d < 365 * 25; d++) {
@@ -452,6 +481,32 @@ void main() {
         ErrorCode.ownershipTooRecent,
       );
     });
+
+    test(
+      'the eldest round (فاطر) takes every older camel, as "mature" did',
+      () {
+        final g = newGame(3);
+        final f = g.state.world.festivals.values.firstWhere(
+          (f) => f.rounds.any((r) => r.age == AgeClass.fater),
+        );
+        final r = f.rounds.firstWhere((r) => r.age == AgeClass.fater);
+        final view = GameView(g.state, g.me.id);
+        g.advanceTo(f.opensOn);
+        for (final years in [9, 11, 15, 22]) {
+          final c = camelFor(g, f, r, daysOldOnJudging: 365 * years + 30);
+          expect(
+            view.canEnter(f.id, r.id, c.id),
+            isNull,
+            reason: '$years years',
+          );
+        }
+        final young = camelFor(g, f, r, daysOldOnJudging: 365 * 7 + 30);
+        expect(
+          GameView(g.state, g.me.id).canEnter(f.id, r.id, young.id)?.code,
+          ErrorCode.wrongAgeClass,
+        );
+      },
+    );
 
     test('judging places the entry, pays prizes and records the placing', () {
       final g = newGame(21);

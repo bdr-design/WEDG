@@ -221,6 +221,7 @@ void main() {
         ])
         ..close();
       expect(raw, isNotNull);
+      final real = SaveCodec.migrations[SaveCodec.currentVersion - 1];
       SaveCodec.migrations[SaveCodec.currentVersion - 1] = (data) {
         final world = Map<String, Object?>.of(
           data['world']! as Map<String, Object?>,
@@ -241,8 +242,109 @@ void main() {
         expect(again.world.listings, isEmpty);
         expect(snap(again), snap(r.state));
       } finally {
-        SaveCodec.migrations.remove(SaveCodec.currentVersion - 1);
+        // the real step put back (removed, no later test ran it)
+        if (real == null) {
+          SaveCodec.migrations.remove(SaveCodec.currentVersion - 1);
+        } else {
+          SaveCodec.migrations[SaveCodec.currentVersion - 1] = real;
+        }
       }
+    },
+  );
+
+  test(
+    'a v1 save on disk opens, is upgraded row by row, and plays on',
+    () async {
+      // the v1 JSON fixture written into the file the way the store lays it out
+      final store0 = SqliteGameStore(path);
+      await store0.startOver();
+      await store0.save(newGame().state);
+      await store0.close();
+      final v1 =
+          (jsonDecode(
+                File('../marah_data/test/fixtures/save_v1.json')
+                    .readAsStringSync(),
+              ) as Map<String, Object?>)['data']!
+              as Map<String, Object?>;
+      final db = sqlite3.open(path)
+        ..execute('DELETE FROM doc')
+        ..execute('DELETE FROM camel')
+        ..execute('DELETE FROM meta');
+      final world = Map<String, Object?>.of(
+        v1['world']! as Map<String, Object?>,
+      );
+      final state = Map<String, Object?>.of(v1)
+        ..remove('world')
+        ..remove('players')
+        ..remove('inboxes');
+      var seq = 1;
+      for (final k in ['owners', 'listings', 'offers', 'studs', 'festivals']) {
+        for (final d in world.remove(k)! as List<Object?>) {
+          db.execute('INSERT INTO doc VALUES (?,?,?,?)', [
+            k.substring(0, k.length - 1),
+            (d! as Map<String, Object?>)['id'],
+            seq++,
+            jsonEncode(d),
+          ]);
+        }
+      }
+      for (final c in world.remove('camels')! as List<Object?>) {
+        final m = c! as Map<String, Object?>;
+        db.execute('INSERT INTO camel VALUES (?,?,?,?,?)', [
+          m['id'],
+          seq++,
+          m['owner'],
+          CamelStatus.values.byName(m['status']! as String).index,
+          jsonEncode(m),
+        ]);
+      }
+      for (final p in v1['players']! as List<Object?>) {
+        db.execute('INSERT INTO doc VALUES (?,?,?,?)', [
+          'player',
+          (p! as Map<String, Object?>)['id'],
+          seq++,
+          jsonEncode(p),
+        ]);
+      }
+      for (final e in (v1['inboxes']! as Map<String, Object?>).entries) {
+        db.execute('INSERT INTO doc VALUES (?,?,?,?)', [
+          'inbox',
+          e.key,
+          seq++,
+          jsonEncode(e.value),
+        ]);
+      }
+      db
+        ..execute(
+          "INSERT INTO meta VALUES ('format','marah-db'),('version','1'),"
+          "('state',?),('world',?)",
+          [jsonEncode(state), jsonEncode(world)],
+        )
+        ..close();
+
+      final store = SqliteGameStore(path);
+      final r = await store.open() as Opened;
+      expect(r.migratedFrom, 1);
+      expect(checkInvariants(r.state), isEmpty);
+      final rows = sqlite3.open(path, mode: OpenMode.readOnly);
+      final left = rows
+          .select(
+            'SELECT count(*) n FROM (SELECT data FROM camel UNION ALL '
+            'SELECT data FROM doc UNION ALL SELECT value AS data FROM meta) '
+            """WHERE data LIKE '%maghateer%' OR data LIKE '%"mature"%'""",
+          )
+          .first['n'];
+      final version = rows
+          .select("SELECT value FROM meta WHERE key = 'version'")
+          .first['value'];
+      rows.close();
+      expect(left, 0);
+      expect(version, '${SaveCodec.currentVersion}');
+      final g = Game(r.state)..advanceDays(30);
+      expect(checkInvariants(g.state), isEmpty);
+      await store.save(g.state);
+      await store.close();
+      expect(snap(await reopen()), snap(g.state));
     },
   );
 

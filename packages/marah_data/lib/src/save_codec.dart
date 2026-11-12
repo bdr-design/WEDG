@@ -29,23 +29,106 @@ class SaveCodec {
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
   /// - the colour family مغاتير is gone (it is only the umbrella name of the
   ///   light colours): its pure-white camels, rounds and a player's favourite
-  ///   become وضح;
+  ///   become وضح. A round not yet judged that would now duplicate a وضح round
+  ///   of the same sex and age is merged into it (its entries moved over and
+  ///   every reference to it pointed at the وضح one), or the festival would
+  ///   pay the وضح prizes twice; judged rounds stay as they were run;
+  /// - a calf marked crossbred whose parents are now both وضح is not;
   /// - the age classes حق and لقي swap places (حق is now 2 to 3 years, لقي 3
   ///   to 4), so a round or an event for the old 2-to-3 class keeps its ages
   ///   under its new name; the open-ended "mature" (8 years and up) becomes
-  ///   فاطر.
-  static Map<String, Object?> _v1ToV2(Map<String, Object?> data) {
+  ///   فاطر, and a death recorded as "mature" takes the class of the camel's
+  ///   age that day (فاطر to 10 years, ناب or عود to 20, هرش past that).
+  static Map<String, Object?> _v1ToV2(Map<String, Object?> input) {
+    // worked on a copy: the caller's JSON is left as it was
+    final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
+    final world = data['world'] as Map<String, Object?>?;
+    final rename = <String, String>{};
+    for (final f in (world?['festivals'] as List<Object?>?) ?? const []) {
+      final rounds = (f! as Map<String, Object?>)['rounds']! as List<Object?>;
+      for (final r in [...rounds]) {
+        final m = r! as Map<String, Object?>;
+        if (m['cat'] != 'maghateer' || m['results'] != null) continue;
+        final twin = rounds.cast<Map<String, Object?>>().where(
+          (t) =>
+              t['cat'] == 'wodh' &&
+              t['sex'] == m['sex'] &&
+              t['age'] == m['age'] &&
+              t['results'] == null,
+        );
+        if (twin.isEmpty) continue;
+        final into = twin.first;
+        final have = {
+          for (final e in into['entries']! as List<Object?>)
+            (e! as Map<String, Object?>)['camel'],
+        };
+        into['entries'] = [
+          ...into['entries']! as List<Object?>,
+          for (final e in m['entries']! as List<Object?>)
+            if (!have.contains((e! as Map<String, Object?>)['camel'])) e,
+        ];
+        rename[m['id']! as String] = into['id']! as String;
+        rounds.remove(m);
+      }
+    }
+    final camels = <Object?, Map<String, Object?>>{
+      for (final c in (world?['camels'] as List<Object?>?) ?? const <Object?>[])
+        if (c case final Map<String, Object?> m) m['id']: m,
+    };
+    final born = <Object?, int>{
+      for (final MapEntry(:key, :value) in camels.entries)
+        if (value['born'] case final int b) key: b,
+    };
+    // crossbred is the sire's family differing from the dam's, or the dam
+    // crossbred herself (systems.dart); with مغاتير now وضح, worked out again
+    // from the parents' families recorded at birth
+    String? fam(Object? ref) {
+      final cat = (ref as Map<String, Object?>?)?['cat'];
+      return cat == 'maghateer' ? 'wodh' : cat as String?;
+    }
+
+    final crossed = <Object?, bool>{};
+    bool crossbred(Map<String, Object?> c, [int depth = 0]) {
+      final id = c['id'];
+      if (crossed[id] case final known?) return known;
+      var v = c['crossbred'] == true;
+      final dam = c['dam'] as Map<String, Object?>?;
+      if (v && c['sire'] != null && dam != null && depth < 64) {
+        final mother = camels[dam['id']];
+        v =
+            fam(c['sire']) != fam(dam) ||
+            (mother == null ? true : crossbred(mother, depth + 1));
+      }
+      return crossed[id] = v;
+    }
+
+    final notCrossed = {
+      for (final c in camels.values)
+        if (c['crossbred'] == true && !crossbred(c)) c['id'],
+    };
     const ages = {'laqi': 'haq', 'haq': 'laqi', 'mature': 'fater'};
+    String oldAge(Map<String, Object?> m, String a) {
+      final b = born[m['camel']], day = m['day'];
+      if (a != 'mature' || m['type'] != 'died' || b == null || day is! int) {
+        return ages[a] ?? a;
+      }
+      final years = (day - b) ~/ 365;
+      return years >= 20 ? 'harish' : (years >= 10 ? 'naab' : 'fater');
+    }
+
     Object? walk(Object? v) => switch (v) {
       final Map<String, Object?> m => {
         for (final MapEntry(:key, :value) in m.entries)
           key: switch ((key, value)) {
             ('cat' || 'favourite', 'maghateer') => 'wodh',
-            ('age', final String a) => ages[a] ?? a,
+            ('age', final String a) => oldAge(m, a),
+            ('crossbred', true) when notCrossed.contains(m['id']) => false,
+            (_, final String id) when rename.containsKey(id) => rename[id],
             _ => walk(value),
           },
       },
       final List<Object?> l => [for (final x in l) walk(x)],
+      final String id when rename.containsKey(id) => rename[id],
       _ => v,
     };
     return walk(data)! as Map<String, Object?>;

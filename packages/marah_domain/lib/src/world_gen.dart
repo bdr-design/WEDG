@@ -21,10 +21,12 @@ class WorldGen {
   WorldGen(this.sim);
   final Sim sim;
 
-  /// (balance) How common each colour family is on the market.
+  /// (balance) How common each colour family is on the market. وضح takes
+  /// the old pure-white مغاتير family's share too (1.0 + 0.9), so the market's
+  /// mix of colours is as it was.
   static const categoryWeights = {
     ColorCategory.majaheem: 1.3,
-    ColorCategory.wodh: 1.0,
+    ColorCategory.wodh: 1.9,
     ColorCategory.sofr: 1.0,
     ColorCategory.homr: 0.9,
     ColorCategory.shoal: 0.9,
