@@ -37,10 +37,10 @@ What each colour looks like:
 | 6–7 years | رباع / رباعية |
 | 7–8 years | سديس / سديسة |
 | 8–10 years | فاطر (female) |
-| 10–20 years | ناب / عود / ثلب |
+| 10–20 years | عود، ثلب / ناب [103][104] |
 | 20+ years | هرش (male) |
 
-(confirmed [10][11])
+(confirmed [10][11]; the dictionaries give الناب as the old she-camel only, never the male, and العود as the old male camel that still has some strength; whether a she-camel is called عودة is disputed (لسان العرب gives it, quoting الجوهري that she is not) [103][104])
 
 - Some lists swap the order and put لقي at 2 and حق at 3 (conflicting [12]).
 - Classical fiqh puts حق in the 4th year (confirmed [13]).
@@ -328,3 +328,5 @@ Checked against search results; most news hosts cannot be opened from here, so a
 100. https://www.arabnews.com/node/1349071
 101. https://gulfbusiness.com/?p=131841
 102. https://ajel.sa/local/w4pqf6
+103. https://arabiclexicon.hawramani.com/%d8%a7%d9%84%d9%86%d9%91%d9%8e%d8%a7%d8%a8/
+104. https://arabiclexicon.hawramani.com/%d8%b9%d9%88%d8%af/?book=50
