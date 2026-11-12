@@ -23,9 +23,9 @@ class Eligibility {
 
   static DomainError? femaleCanBreed(Camel f, GameDay today) {
     if (f.sex != Sex.female) return const DomainError(ErrorCode.notFemale);
-    if (f.ageYears(today) < Balance.femaleMinBreedingYears) {
+    if (f.ageDays(today) < Balance.femaleMinBreedingDays) {
       return const DomainError(ErrorCode.tooYoungToBreed, {
-        'years': Balance.femaleMinBreedingYears,
+        'days': Balance.femaleMinBreedingDays,
       });
     }
     final p = f.pregnancy;

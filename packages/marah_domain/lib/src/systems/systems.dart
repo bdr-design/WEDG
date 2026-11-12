@@ -156,10 +156,13 @@ class HealthSystem implements DailySystem {
     for (final p in sim.state.players.values) {
       final herd = sim.herdOf(p.id).toList();
       final crowded = herd.length > p.farm.capacity;
-      final contagious = herd.any(
-        (c) =>
-            c.health == HealthStatus.sick && (c.illness?.contagious ?? false),
-      );
+      // the contagious illnesses going round the herd
+      final going = {
+        for (final c in herd)
+          if (c.health == HealthStatus.sick && (c.illness?.contagious ?? false))
+            c.illness!,
+      }.toList()..sort((a, b) => a.index - b.index);
+      final contagious = going.isNotEmpty;
       for (final c in herd) {
         final rng = sim.rng(['health', c.id.value]);
         switch (c.health) {
@@ -173,9 +176,15 @@ class HealthSystem implements DailySystem {
             if (contagious) chance *= 2;
             if (rng.chance(chance)) {
               final options = possibleIllnesses(c, sim);
+              // one going round is caught half the time; otherwise any, three
+              // times likelier in its peak months (balance)
+              final month = sim.today.month;
               final illness = (contagious && rng.chance(0.5))
-                  ? Illness.mange
-                  : rng.pick(options);
+                  ? rng.pick(going)
+                  : rng.weighted(options, [
+                      for (final i in options)
+                        i.peakMonths.contains(month) ? 3.0 : 1.0,
+                    ]);
               c
                 ..health = HealthStatus.sick
                 ..illness = illness

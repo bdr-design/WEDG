@@ -120,6 +120,89 @@ void main() {
     });
   });
 
+  group('Judging weights (GDD 5.3, the owner 12 Nov 2026)', () {
+    test(
+      'head and neck 25, top 20, forehand 15, hindquarters 10, overall 30',
+      () {
+        for (final r in JudgedRegion.values) {
+          final sum = Trait.values
+              .where((t) => t.region == r)
+              .fold(0.0, (s, t) => s + t.weight);
+          expect((sum * 100).round(), r.points, reason: r.name);
+        }
+        expect(
+          (Trait.values.fold(0.0, (s, t) => s + t.weight) * 1000).round(),
+          1000,
+        );
+      },
+    );
+
+    test('the مجاهيم and مغاتير standards differ where the GDD says', () {
+      for (final t in [Trait.ears, Trait.back, Trait.fore, Trait.hind]) {
+        expect(
+          t.describe(ColorCategory.majaheem),
+          isNot(t.describe(ColorCategory.wodh)),
+          reason: t.name,
+        );
+      }
+      expect(
+        Trait.nose.describe(ColorCategory.majaheem),
+        Trait.nose.describe(ColorCategory.homr),
+      );
+    });
+  });
+
+  group('Field numbers (research section 6)', () {
+    test('gestation stays within 356 to 410 days, near 377 on average', () {
+      final g = newGame(13)..advanceDays(45); // in the breeding season
+      final sim = Sim(g.state), gen = WorldGen(sim);
+      final days = <int>[];
+      for (var i = 0; i < 120; i++) {
+        Camel make(Sex sex, int age) => gen.makeCamel(
+          sim.rng(['gest', sex.name, i]),
+          owner: g.me.id,
+          mean: 60,
+          category: ColorCategory.homr,
+          sex: sex,
+          ageDays: age,
+        );
+        final bull = make(Sex.male, 9 * 365),
+            dam = make(Sex.female, 7 * 365)
+              ..lastCalvedOn = null
+              ..condition = 75;
+        expect(
+          g.dispatch(MateWithOwnBull(g.me.id, dam.id, bull.id)).ok,
+          isTrue,
+        );
+        final p = dam.pregnancy!;
+        days.add(p.dueOn.daysSince(p.matedOn));
+      }
+      expect(days.every((d) => d >= 356 && d <= 410), isTrue);
+      expect(days.reduce((a, b) => a + b) / days.length, closeTo(377, 3));
+    });
+
+    test('a female is first mated at 3.3 years, a bull from 5', () {
+      expect(Balance.femaleMinBreedingDays, 1209);
+      expect(Balance.maleMinBreedingYears, 5);
+      expect(Balance.shepherdMonthlyWage, 1500);
+    });
+
+    test('Tabuk\'s festival is in June', () {
+      final tabuk = WorldGen.seasonPlan(2026)
+          .firstWhere((e) => e.$2 == Region.tabuk);
+      expect((tabuk.$4 - 1) % 12 + 1, 6);
+    });
+
+    test('camelpox is commonest in summer, mange in winter', () {
+      expect(Illness.camelpox.peakMonths, {7, 8, 9});
+      expect(Illness.mange.peakMonths.contains(1), isTrue);
+      expect(
+        Illness.values.map((i) => i.label),
+        containsAll(['جرب', 'القراع', 'الجدري', 'البروسيلا']),
+      );
+    });
+  });
+
   group('Colour families', () {
     test('the festival\'s six, مغاتير covering the five light ones', () {
       expect(ColorCategory.values.map((c) => c.label).toList(), [

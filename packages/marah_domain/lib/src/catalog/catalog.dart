@@ -72,32 +72,130 @@ enum AgeClass {
   }
 }
 
-/// Body features the judges score (معايير المزاين). [weight] is the share of
-/// the total score; [matureAtYears] is when the feature is fully developed.
+/// Body features the judges score (معايير المزاين, GDD 5.3), by the approved
+/// weights (the owner, 12 Nov 2026): head and neck 25, hump and top line 20,
+/// forehand 15, hindquarters 10 and overall look 30, out of 100. How a region's
+/// share is split between its features is a game choice. [matureAtYears] is
+/// when the feature is fully developed. Where the مجاهيم and مغاتير standards
+/// differ (the ears, the bone and feet, the withers and back), [describe]
+/// says what each family is judged against.
 enum Trait {
-  head('الرأس', 'كِبر الرأس وعرضه وتناسقه مع الجسم', 0.16, 5),
-  nose('الخشم', 'ارتفاع الخشم وانحناؤه (الخشم المرتفع)', 0.12, 5),
-  lips('الشفايف', 'تدلي الشفة السفلى (الهدل) وطول المشفر', 0.10, 5),
-  ears('الأذان', 'صغر الأذنين وانتصابهما وتقاربهما', 0.08, 3),
-  neck('الرقبة', 'طول الرقبة وغلظها عند الكتف', 0.14, 6),
-  hump('السنام', 'موضع السنام للخلف وارتفاعه وتناسقه', 0.12, 6),
-  back('الظهر', 'استواء الظهر وطوله', 0.07, 6),
-  legs('القوائم', 'طول القوائم واستقامتها وغلظ الركب', 0.09, 5),
-  stance('الوقفة', 'الهيبة والشموخ وطريقة الوقوف', 0.06, 5),
-  coat('اللون', 'صفاء اللون ونقاوته داخل الفئة', 0.06, 2);
+  head(
+    'الرأس',
+    'كِبر الرأس وعرضه وتناسقه مع الجسم',
+    0.07,
+    5,
+    JudgedRegion.headNeck,
+  ),
+  nose('الخشم', 'خشم كبير مرتفع', 0.05, 5, JudgedRegion.headNeck),
+  lips('الشفايف', 'شفة طويلة متدلية', 0.05, 5, JudgedRegion.headNeck),
+  ears('الأذن', 'طول الأذن ووقفتها حسب الفئة', 0.03, 3, JudgedRegion.headNeck),
+  neck('الرقبة', 'رقبة طويلة جرداء', 0.05, 6, JudgedRegion.headNeck),
+  hump('السنام', 'موضع السنام وارتفاعه وتناسقه', 0.12, 6, JudgedRegion.top),
+  back('الغارب والظهر', 'الغارب والظهر حسب الفئة', 0.08, 6, JudgedRegion.top),
+  fore(
+    'المقدمة',
+    'الصدر والكتف والقوائم الأمامية والخف',
+    0.15,
+    5,
+    JudgedRegion.fore,
+  ),
+  hind('المؤخرة', 'الورك والقوائم الخلفية', 0.10, 5, JudgedRegion.hind),
+  stance(
+    'الوقفة',
+    'الهيبة والشموخ وطريقة الوقوف',
+    0.15,
+    5,
+    JudgedRegion.overall,
+  ),
+  coat(
+    'اللون والوبر',
+    'صفاء اللون ونقاوته داخل الفئة',
+    0.15,
+    2,
+    JudgedRegion.overall,
+  );
 
-  const Trait(this.label, this.description, this.weight, this.matureAtYears);
+  const Trait(
+    this.label,
+    this.description,
+    this.weight,
+    this.matureAtYears,
+    this.region,
+  );
 
   final String label;
   final String description;
   final double weight;
   final int matureAtYears;
+  final JudgedRegion region;
+
+  /// What a camel of [family] is judged against for this feature (GDD 5.3).
+  String describe(ColorCategory family) => switch ((this, family.isMaghateer)) {
+    (ears, false) => 'أذن طويلة مرفوعة لقدام',
+    (ears, true) => 'أذن قصيرة مرجوعة لورا',
+    (back, true) => 'غارب بارز، وظهر ينحدر للورك، وطول',
+    (fore || hind, false) => '$description، وعظم ثقيل وخف عريض مدور',
+    _ => description,
+  };
 }
 
-/// Common camel illnesses in the Arabian Peninsula. [contagious] spreads to
-/// pen-mates when untreated; [youngOnly] / [femaleOnly] restrict who gets it.
+/// The regions the approved weights are given for (GDD 5.3), out of 100.
+enum JudgedRegion {
+  headNeck('الرأس والرقبة', 25),
+  top('السنام وأعلى الجسم', 20),
+  fore('المقدمة', 15),
+  hind('المؤخرة', 10),
+  overall('المظهر العام', 30);
+
+  const JudgedRegion(this.label, this.points);
+  final String label;
+  final int points;
+}
+
+/// Common camel illnesses in the Kingdom (GDD 5.5, research-realism section 6).
+/// [contagious] spreads to pen-mates when untreated; [youngOnly] / [femaleOnly]
+/// restrict who gets it; [peakMonths] are when it is commonest (real: mange
+/// and ringworm with the winter's crowding, camelpox from July to September).
+/// Treatment costs and days are game choices (vet costs have no source).
 enum Illness {
-  mange('جرب', contagious: true, treatMin: 300, treatMax: 900, recoverDays: 21),
+  mange(
+    'جرب',
+    contagious: true,
+    treatMin: 300,
+    treatMax: 900,
+    recoverDays: 21,
+    peakMonths: {11, 12, 1, 2, 3},
+  ),
+  ringworm(
+    'القراع',
+    contagious: true,
+    treatMin: 200,
+    treatMax: 600,
+    recoverDays: 28,
+    peakMonths: {11, 12, 1, 2, 3},
+  ),
+  camelpox(
+    'الجدري',
+    contagious: true,
+    treatMin: 300,
+    treatMax: 900,
+    recoverDays: 21,
+    peakMonths: {7, 8, 9},
+  ),
+  brucellosis(
+    'البروسيلا',
+    femaleOnly: true,
+    treatMin: 1500,
+    treatMax: 3000,
+    recoverDays: 60,
+  ),
+  mineralDeficiency(
+    'نقص السيلينيوم والنحاس',
+    treatMin: 150,
+    treatMax: 400,
+    recoverDays: 30,
+  ),
   pneumonia('التهاب رئوي', treatMin: 600, treatMax: 1800, recoverDays: 10),
   calfDiarrhea(
     'إسهال الحيران',
@@ -129,9 +227,11 @@ enum Illness {
     required this.treatMin,
     required this.treatMax,
     required this.recoverDays,
+    this.peakMonths = const {},
   });
 
   final String label;
+  final Set<int> peakMonths;
   final bool contagious;
   final bool youngOnly;
   final bool femaleOnly;

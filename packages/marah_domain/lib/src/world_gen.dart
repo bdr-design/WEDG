@@ -180,7 +180,9 @@ class WorldGen {
 
   // ------------------------------------------------------------ festivals
 
-  /// (balance) The season's festivals; contests run in the cool months.
+  /// (balance) The season's festivals (month numbers past 12 fall in the next
+  /// year); most run in the cool months, and Tabuk's in June, as the real one
+  /// (GDD 4.4).
   static List<(String, Region, FestivalTier, int, int)> seasonPlan(int year) =>
       [
         ('مزاين حائل', Region.hail, FestivalTier.regional, 10, 18),
@@ -189,7 +191,7 @@ class WorldGen {
         ('مهرجان المزاين الكبير', Region.riyadh, FestivalTier.grand, 13, 10),
         ('مزاين الأحساء', Region.sharqiya, FestivalTier.regional, 14, 7),
         ('مزاين الشمال', Region.northern, FestivalTier.local, 14, 28),
-        ('مزاين تبوك', Region.tabuk, FestivalTier.local, 15, 14),
+        ('مزاين تبوك', Region.tabuk, FestivalTier.local, 18, 14),
         ('مزاين نجران', Region.najran, FestivalTier.regional, 15, 28),
       ];
 

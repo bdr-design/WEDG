@@ -14,7 +14,8 @@ import 'judging.dart';
 class Valuation {
   const Valuation._();
 
-  /// (field) Price of an average-looking camel by age class.
+  /// (balance) Price of an average-looking camel by age class, inside the
+  /// GDD's real price bands (section 6 of the GDD).
   static int basePrice(AgeClass a, Sex s) {
     final female = switch (a) {
       AgeClass.hwar || AgeClass.makhlool => 7000,

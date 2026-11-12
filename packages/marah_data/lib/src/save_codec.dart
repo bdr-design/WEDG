@@ -19,12 +19,12 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 2;
+  static const currentVersion = 3;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
   static final Map<int, Map<String, Object?> Function(Map<String, Object?>)>
-  migrations = {1: _v1ToV2};
+  migrations = {1: _v1ToV2, 2: _v2ToV3};
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
   /// - the colour family مغاتير is gone (it is only the umbrella name of the
@@ -146,6 +146,39 @@ class SaveCodec {
       },
       final List<Object?> l => [for (final x in l) walk(x)],
       final String id when rename.containsKey(id) => rename[id],
+      _ => v,
+    };
+    return walk(data)! as Map<String, Object?>;
+  }
+
+  /// v2 to v3 (the judging weights the owner approved, 12 Nov 2026): the
+  /// legs feature is judged as two, the forehand and the hindquarters. Every
+  /// camel's breeding values and environment, and a pregnancy's sire values,
+  /// stored as lists in feature order, get the hindquarters straight after
+  /// the forehand with the legs' value for both; a round's marks by feature
+  /// name do the same.
+  static Map<String, Object?> _v2ToV3(Map<String, Object?> data) {
+    Object? walk(Object? v) => switch (v) {
+      final Map<String, Object?> m => {
+        for (final MapEntry(:key, :value) in m.entries)
+          ...switch ((key, value)) {
+            ('genes' || 'env' || 'sireGenes', final List<Object?> l)
+                when l.length == 10 =>
+              {
+                key: [...l.take(8), l[7], ...l.skip(8)],
+              },
+            ('marks', final Map<String, Object?> marks) => {
+              key: {
+                for (final MapEntry(:key, :value) in marks.entries)
+                  ...key == 'legs'
+                      ? {'fore': value, 'hind': value}
+                      : {key: value},
+              },
+            },
+            _ => {key: walk(value)},
+          },
+      },
+      final List<Object?> l => [for (final x in l) walk(x)],
       _ => v,
     };
     return walk(data)! as Map<String, Object?>;

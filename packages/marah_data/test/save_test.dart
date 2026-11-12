@@ -29,6 +29,7 @@ Game sampleGame() {
 const fixtures = {
   1: 'test/fixtures/save_v1.json',
   2: 'test/fixtures/save_v2.json',
+  3: 'test/fixtures/save_v3.json',
 };
 
 void main() {
@@ -151,7 +152,8 @@ void main() {
       for (final m in RegExp(r'"round":"([^"]+)"').allMatches(text)) {
         expect(ids.contains(m.group(1)), isTrue, reason: m.group(1));
       }
-      final state = GameState.fromJson(after);
+      // decoded by today's classes after the later steps too
+      final state = GameState.fromJson(SaveCodec.migrations[2]!(after));
       expect(checkInvariants(state), isEmpty);
     },
   );
@@ -287,6 +289,30 @@ void main() {
       for (final e in (out['inboxes']! as Map)['p']! as List) (e as Map)['age'],
     ];
     expect(ages, ['fater', 'naab', 'harish', 'fater', 'makhlool', 'hwar']);
+  });
+
+  test('v2 to v3: the legs split into the forehand and the hindquarters', () {
+    final raw = jsonDecode(
+      File(fixtures[2]!).readAsStringSync(),
+    ) as Map<String, Object?>;
+    final before = raw['data']! as Map<String, Object?>;
+    final after = SaveCodec.migrations[2]!(before);
+    List<Map<String, Object?>> camels(Map<String, Object?> d) =>
+        ((d['world']! as Map)['camels']! as List).cast<Map<String, Object?>>();
+    final b = camels(before), a = camels(after);
+    expect(a.length, b.length);
+    for (var i = 0; i < a.length; i++) {
+      for (final k in ['genes', 'env']) {
+        final old = b[i][k]! as List, now = a[i][k]! as List;
+        expect(now.length, 11);
+        expect(now.sublist(0, 8), old.sublist(0, 8));
+        expect(now[8], old[7]);
+        expect(now.sublist(9), old.sublist(8));
+      }
+    }
+    final text = jsonEncode(after);
+    expect(text.contains('"legs"'), isFalse);
+    expect(checkInvariants(GameState.fromJson(after)), isEmpty);
   });
 
   group('rejects without losing anything', () {

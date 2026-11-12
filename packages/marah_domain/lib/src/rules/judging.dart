@@ -14,7 +14,8 @@ class Judging {
     Trait.neck: 0.15,
     Trait.back: 0.15,
     Trait.stance: 0.25,
-    Trait.legs: 0.05,
+    Trait.fore: 0.05,
+    Trait.hind: 0.05,
     Trait.coat: 0.10,
   };
 

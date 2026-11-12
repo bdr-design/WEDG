@@ -321,8 +321,9 @@ Result _mate(
     checkOn: sim.today + Balance.pregnancyCheckDays,
     dueOn:
         sim.today +
-        (Balance.gestationDays +
-            rng.range(-Balance.gestationSpread, Balance.gestationSpread)),
+        (Balance.gestationDays + rng.normal(sd: Balance.gestationSd))
+            .round()
+            .clamp(Balance.gestationMinDays, Balance.gestationMaxDays),
     conceived: rng.chance(chance),
   );
   bull.lastServiceOn = sim.today;

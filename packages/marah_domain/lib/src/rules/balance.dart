@@ -1,40 +1,49 @@
 /// Every tunable number in the simulation, in one place.
 ///
 /// Values marked (field) follow real husbandry and market practice in Saudi
-/// Arabia; values marked (balance) are game choices. docs/realism.md lists
-/// the sources and open questions for the (field) values.
+/// Arabia, each from docs/research-realism.md (its section named); values
+/// marked (balance) are game choices. Checked against the GDD and the research
+/// on 12 Nov 2026 (docs/plan-gameplay.md, G1 part 2).
 library;
 
 class Balance {
   const Balance._();
 
   // ------------------------------------------------------------ biology
-  /// (field) Dromedary gestation ≈ 13 months (370–395 days).
-  static const gestationDays = 385;
-  static const gestationSpread = 10;
+  /// (field) Gestation 377 days on average, 356 to 410 (section 6). How the
+  /// days spread about the average is a game choice (balance: sd 10).
+  static const gestationDays = 377;
+  static const gestationMinDays = 356;
+  static const gestationMaxDays = 410;
+  static const gestationSd = 10.0;
 
-  /// (field) Days after mating before the check (tail-cocking / scan).
+  /// (balance) Days after mating before the check (tail-cocking or a scan).
   static const pregnancyCheckDays = 21;
 
   /// (balance) Chance one mating conceives, healthy female in condition.
   static const conceptionRate = 0.62;
 
-  /// (field) Camels breed in the cool months.
+  /// (field) Camels breed from November to April (section 6).
   static const breedingMonths = {11, 12, 1, 2, 3, 4};
 
-  /// (field) Females are first put to the bull at about 4 years.
-  static const femaleMinBreedingYears = 4;
+  /// (field) Females are first mated at about 39.75 months, 3.3 years
+  /// (section 6): 1,209 days.
+  static const femaleMinBreedingDays = 1209;
 
-  /// (field) Bulls are used at stud from about 6 years.
-  static const maleMinBreedingYears = 6;
+  /// (field) Bulls are not used before 5 years, fully fertile at about 6
+  /// (section 6).
+  static const maleMinBreedingYears = 5;
 
-  /// (field) Rest after calving before mating again (calving interval ≈ 2y).
-  static const postCalvingRestDays = 300;
+  /// (balance) Rest after calving before mating again. The real calving
+  /// interval is 22.6 to 23.5 months, down to about 15 when the camel is
+  /// mated within 3 months of calving (section 6); 60 days lies inside that.
+  static const postCalvingRestDays = 60;
 
   /// (balance) Days a bull rests between coverings.
   static const studRestDays = 2;
 
-  /// (field) Oldest age the simulation lets a camel reach.
+  /// (balance) Oldest age the simulation lets a camel reach (a weak source
+  /// gives a lifespan of about 40 years, section 6).
   static const maxAgeYears = 28;
 
   /// (balance) Newborn loss chance; higher when the dam is thin.
@@ -66,7 +75,7 @@ class Balance {
   static const selfRecoveryAfterDays = 25;
   static const selfRecoveryChance = 0.03;
 
-  /// (field) Old-age deaths begin in the early twenties.
+  /// (balance) Old-age deaths begin in the early twenties.
   static const oldAgeFromYears = 22;
   static const oldAgeDeathPerYear = 0.0004;
 
@@ -74,8 +83,9 @@ class Balance {
   /// (balance) Starting money.
   static const startingCash = 600000;
 
-  /// (field) Feed for one adult on the standard plan, riyals per day
-  /// (≈ 10–12 kg mix of alfalfa, barley and straw).
+  /// (balance) Feed for one adult on the standard plan, riyals per day
+  /// (≈ 10–12 kg mix of alfalfa, barley and straw; to be replaced by the feed
+  /// stocks of G1 part 3).
   static const feedPerAdultPerDay = 26.0;
 
   static double feedAgeFactor(int ageDays) {
@@ -86,8 +96,10 @@ class Balance {
     return 1.0;
   }
 
-  /// (field) Shepherd monthly wage incl. housing and food.
-  static const shepherdMonthlyWage = 2200;
+  /// (field) A shepherd's monthly wage, housing and food on top: SAR 1,500
+  /// paid by owners in Sharurah, 1,000 to 1,400 in recruitment ads
+  /// (section 6).
+  static const shepherdMonthlyWage = 1500;
   static const camelsPerShepherd = 25;
   static const maxShepherds = 40;
 
@@ -100,7 +112,8 @@ class Balance {
   static int transportCost(int km, int head) =>
       head == 0 ? 0 : ((350 + km * 2.2) * (0.55 + 0.45 * head)).round();
 
-  /// (field) Broker's commission (السعي), share of the sale price.
+  /// (balance) Broker's commission (السعي), share of the sale price: set by
+  /// custom in the real market (section 5); 2.5% is the game's.
   static const brokerCommission = 0.025;
 
   /// (balance) Selling straight to the broker fetches less than value.
