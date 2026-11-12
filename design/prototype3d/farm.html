@@ -283,7 +283,7 @@ const R = (a, b) => a + (b - a) * rand();
 
 // ------------------------------------------------------------ renderer, sky, light
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));   // sharp enough on a phone, far fewer pixels than 2x or 3x
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));   // 1.5x until the frame meter's test shows the phone draws its full density as quickly (below)
 renderer.setSize(stage.clientWidth, stage.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.AgXToneMapping;
@@ -1190,11 +1190,18 @@ let shadowFrame = 0;
 // near 2% of the frames, so the slowest 1% it showed was partly its own
 const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0 } : null;
 if (meter) meter.el.hidden = false;
-// the render-scale test on the owner's phone (ADR 0005, whether an upscaler such as FSR1 would help): for 24 s after the
-// warm-up the picture alternates every 4 s between its own scale and 70% of it, the frames of each counted apart (the
-// first half second after a change left out); if the slow frames are much quicker at 70% the GPU is the limit
-const BASE_PR = Math.min(devicePixelRatio, 1.5);
-const bench = meter ? { t0: 0, cur: 1, at: 0, h: [new Uint32Array(400), new Uint32Array(400)], n: [0, 0], done: false } : null;
+// The resolution test on the owner's phone. First (12 Nov) it alternated 1.5x and 70% of it: the same frame times (33.0
+// and 33.0 ms, the slowest 1% 44 and 43), so the pixels were not the limit and an upscaler such as FSR1 would not help.
+// Now it alternates the screen's full density (3x on his phone) and 1.5x every 4 s for 24 s after the warm-up, the frames
+// of each counted apart (the first half second after a change left out), and keeps the full density only if it is as
+// quick (typical within 1 ms, slowest 1% within 2 ms); else 1.5x. Smoothness first, then the sharpest it can afford.
+const LOW_PR = Math.min(devicePixelRatio, 1.5), HIGH_PR = Math.min(devicePixelRatio, 3);
+let BASE_PR = LOW_PR;
+const bench = meter && HIGH_PR > LOW_PR ? { t0: 0, cur: -1, at: 0, h: [new Uint32Array(400), new Uint32Array(400)], n: [0, 0], done: false } : (meter ? { done: true, h: [new Uint32Array(400), new Uint32Array(400)], n: [0, 0], skip: true } : null);
+// and what the frame's own work takes on the phone: the game's computing (camels, the car and its physics, the grass, the
+// labels) and three.js's work issuing the drawing (the scene walked, the draws sent); with both well under the frame's
+// 16.7 ms and the frames still at 33 ms, the GPU's triangles are the limit, not the computing
+const cpu = meter ? { game: new Uint32Array(400), draw: new Uint32Array(400), n: 0 } : null;
 const pct = (h, n, q) => { let c = 0; const want = n * q; for (let i = 0; i < h.length; i++) { c += h[i]; if (c >= want) return i * 0.25; } return 100; };
 function meterFrame(now) {
   // counts only after the yard has loaded and 3 s of warm-up (shaders compile on first use);
@@ -1210,11 +1217,16 @@ function meterFrame(now) {
   if (!bench.done) {
     if (!bench.t0) bench.t0 = now;
     const k = Math.floor((now - bench.t0) / 4000);
-    if (k >= 6) { bench.done = true; renderer.setPixelRatio(BASE_PR); }
-    else {
-      const scale = k % 2 ? 0.7 : 1;
-      if (bench.cur !== scale) { bench.cur = scale; bench.at = now; renderer.setPixelRatio(BASE_PR * scale); }
-      else if (now - bench.at > 500) { bench.h[k % 2][bin]++; bench.n[k % 2]++; }
+    if (k >= 6) {
+      bench.done = true;
+      const q = (i, f) => pct(bench.h[i], bench.n[i], f);
+      bench.enough = bench.n[0] >= 30 && bench.n[1] >= 30;      // (too few frames counted on either side: no choice made on them, 1.5x kept)
+      bench.keepHigh = bench.enough && q(0, 0.5) <= q(1, 0.5) + 1 && q(0, 0.99) <= q(1, 0.99) + 2;
+      BASE_PR = bench.keepHigh ? HIGH_PR : LOW_PR; renderer.setPixelRatio(BASE_PR);
+    } else {
+      const want = k % 2 ? 1 : 0;      // (0: the full density, 1: 1.5x)
+      if (bench.cur !== want) { bench.cur = want; bench.at = now; renderer.setPixelRatio(want ? LOW_PR : HIGH_PR); }
+      else if (now - bench.at > 500) { bench.h[want][bin]++; bench.n[want]++; }
     }
   }
   if (now - meter.shown < 1000) return;
@@ -1224,11 +1236,14 @@ function meterFrame(now) {
   for (let i = 0; i < meter.recent.length && sum < 2000; i++) { k = (k + meter.recent.length - 1) % meter.recent.length; if (!meter.recent[k]) break; sum += meter.recent[k]; cnt++; }
   const p99 = pct(meter.hist, meter.n, 0.99);
   const secs = Math.round((now - meter.start) / 1000);
-  const line3 = bench.done ? `الدقة كاملة: ${pct(bench.h[0], bench.n[0], 0.5).toFixed(1)}/${pct(bench.h[0], bench.n[0], 0.99).toFixed(1)} · 70٪: ${pct(bench.h[1], bench.n[1], 0.5).toFixed(1)}/${pct(bench.h[1], bench.n[1], 0.99).toFixed(1)} م.ث` : `قياس الدقة ${Math.min(6, Math.floor((now - bench.t0) / 4000) + 1)}/6`;
+  const ms = (h, f) => pct(h, cpu.n, f).toFixed(1);
+  const line4 = cpu.n ? `<br>الحساب ${ms(cpu.game, 0.5)}/${ms(cpu.game, 0.99)} · تجهيز الرسم ${ms(cpu.draw, 0.5)}/${ms(cpu.draw, 0.99)} م.ث` : '';
+  const line3 = bench.skip ? `الدقة ${BASE_PR}×` + line4 : bench.done ? `${HIGH_PR}×: ${pct(bench.h[0], bench.n[0], 0.5).toFixed(1)}/${pct(bench.h[0], bench.n[0], 0.99).toFixed(1)} · ${LOW_PR}×: ${pct(bench.h[1], bench.n[1], 0.5).toFixed(1)}/${pct(bench.h[1], bench.n[1], 0.99).toFixed(1)} م.ث · ${bench.enough ? 'ثبّتت' : 'ما كفى القياس، ثبّتت'} ${BASE_PR}×` + line4 : `قياس الدقة ${Math.min(6, Math.floor((now - bench.t0) / 4000) + 1)}/6`;
   meter.el.innerHTML = `<b>${Math.round(cnt / (sum / 1000))}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}`;
 }
 function tick(now) {
   if (meter) meterFrame(now);
+  const tGame = cpu ? performance.now() : 0;
   const dt = Math.min(clock.getDelta(), 0.05);
   for (const c of camels) c.update(dt, camera.position);
   const playing = play ? play.update(dt) : false;
@@ -1284,7 +1299,9 @@ function tick(now) {
   if (shadowMoved) { sun.position.copy(sunFocus).addScaledVector(sunDir, 160); sun.target.position.copy(sunFocus); }
   if (shadowMoved || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
   if (!playing) { controls.update(); placeLabels(); }
+  const tDraw = cpu ? performance.now() : 0;
   if (!phone.big) renderer.render(scene, camera);      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
+  if (cpu && meter.ready && now >= meter.ready) { const tEnd = performance.now(); cpu.game[Math.min(399, Math.round((tDraw - tGame) * 4))]++; cpu.draw[Math.min(399, Math.round((tEnd - tDraw) * 4))]++; cpu.n++; }
   requestAnimationFrame(tick);
 }
 tick();
