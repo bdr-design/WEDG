@@ -142,10 +142,10 @@ and cheating (parts 4 and 5) are built; the auctions (part 6) come with G5.
 - Shepherds and the shepherd-to-herd ratio's effect on conception (real).
 - More farms and facilities.
 - The auctions' screens.
-- Whatever the owner approves from GDD section 12.
+- From GDD section 12 (the owner, 12 Nov): milk, embryo transfer, moving to
+  spring pasture, and zakat computed the way ZATCA computes it (its table
+  and conditions taken from ZATCA's own guide when built). No cloning.
 
 ## Not decided here
 
-- The owner's choices in GDD section 12 (milk, embryo transfer, cloning,
-  zakat, moving to spring pasture).
 - Every new screen's layout: shown as pictures or a prototype first.
