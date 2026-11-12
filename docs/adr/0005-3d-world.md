@@ -290,14 +290,21 @@ same way:
 Not in the table, and over before this change too: driving through the yard
 toward its pens, the view takes in the pens, the room and many camels near.
 West across the yard is 205 draws and 402k (the old camera: 203 and 402k);
-west nearer the pens 193 and 431k (old: 193 and 433k). The car is 64 draws
-and 145k of that, the camels up to 74k. Open.
+west nearer the pens 193 and 431k (old: 193 and 433k); north across the yard
+186 and 407k (old: 180 and 399k; there the camera stands outside the split's
+fan, so all of the car is drawn). The car is 64 draws and 145k of that, the
+camels 74k in these runs and 95 to 132k in the review's, as the herd stands
+elsewhere at that moment. Open.
 
 The map's camera is held like a phone's map. One finger drags the ground
 with the point under the finger staying under it, and glides on a little when
 let go moving (OrbitControls' own pan moved the ground a quarter to three
 quarters of the finger's way up or down the screen). Two fingers pinch about
-the point between them; a twist turns the map from 12 degrees, and both
+the ground between them, and the wheel about the ground under the pointer:
+the camera and the point it turns about are drawn toward that ground by the
+same factor, so it stays under the fingers (within 3 px; OrbitControls' own
+zoom to the pointer turned the camera back to its old point whenever the view
+was low, and the ground under an off-centre pinch went 960 px off); a twist turns the map from 12 degrees, and both
 fingers moved the same way up or down tilt it from 10 px, the whole tilt over
 two thirds of the screen's height; until one of those starts they only pinch
 (a pinch that was not straight tilted it 37 degrees). The point turned about

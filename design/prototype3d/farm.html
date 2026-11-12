@@ -1055,7 +1055,6 @@ controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
 controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
 controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
 controls.screenSpacePanning = false;      // (along the ground)
-controls.zoomToCursor = true;
 const TWIST_ON = 12 * Math.PI / 180, TILT_ON = 10, TILT_SPAN = 0.66, GLIDE_S = 0.3;      // (game choices)
 let groundAt = null, onGround = false, twoG = null, panFrom = null;
 const panPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0)), panRay = new THREE.Raycaster(), panNdc = new THREE.Vector2();
@@ -1126,13 +1125,28 @@ if (['_handleTouchMovePan', '_handleMouseMovePan', '_handleTouchStartPan', '_han
     if (g.mode === 'twist') this._rotateLeft(-turn);      // (the map turns with the fingers)
     else this._rotateUp((84 * Math.PI / 180) * lift / (TILT_SPAN * this.domElement.clientHeight));      // (up together: toward the horizon)
   };
-  if (typeof OC._updateZoomParameters === 'function') controls._updateZoomParameters = function (x, y) {      // (the pinch's or the pointer's point in the game's coordinates, as theirs are: held upright, the screen's were turned)
-    if (!this.zoomToCursor) return;
-    this._performCursorZoom = true;
-    const r = rectOf(this.domElement);
-    this._mouse.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
-    this._dollyDirection.set(this._mouse.x, this._mouse.y, 1).unproject(this.object).sub(this.object.position).normalize();
-  };
+  // a pinch or the wheel zooms about the ground under the fingers' middle or the pointer: the camera and the point turned
+  // about drawn toward it (or away) by the same factor, so that point stays where it is on the screen (OrbitControls'
+  // own zoom to the pointer turned the camera back to its old point whenever the view was low: the ground under an
+  // off-centre pinch went 960 px off). Following a camel or the herd, it zooms about the point in the middle.
+  if (['_handleTouchMoveDolly', '_handleMouseWheel', '_getZoomScale'].every((k) => typeof OC[k] === 'function')) {
+    const zoomAbout = (x, y, s) => {
+      const t = controls.target, dist = camera.position.distanceTo(t);
+      const k = THREE.MathUtils.clamp(dist / s, controls.minDistance, controls.maxDistance) / dist;
+      const g = follow || followHerd ? null : groundUnder(x, y, panB), c = g || t;
+      camera.position.sub(c).multiplyScalar(k).add(c);
+      if (g) t.sub(c).multiplyScalar(k).add(c);
+    };
+    controls._handleTouchMoveDolly = function (e) {
+      const q = this._getSecondPointerPosition(e), d = Math.max(1, Math.hypot(e.pageX - q.x, e.pageY - q.y));
+      zoomAbout((e.pageX + q.x) / 2, (e.pageY + q.y) / 2, Math.pow(d / Math.max(1, this._dollyStart.y), this.zoomSpeed));
+      this._dollyStart.set(0, d);
+    };
+    controls._handleMouseWheel = function (e) {
+      if (e.deltaY) zoomAbout(e.clientX, e.clientY, e.deltaY < 0 ? 1 / this._getZoomScale(e.deltaY) : this._getZoomScale(e.deltaY));
+      this.update();
+    };
+  }
   controls.addEventListener('end', () => {      // (let go while dragging: it glides on, GLIDE_S worth of its speed)
     if (panT.last && performance.now() - panT.last < 80 && panV.lengthSq() > 0.01) controls._panOffset.copy(panV).multiplyScalar(GLIDE_S);
     panT.last = 0; panV.set(0, 0, 0); panFrom = null;
@@ -1362,8 +1376,7 @@ function tick(now) {
   const dt = Math.min(clock.getDelta(), 0.05);
   for (const c of camels) c.update(dt, camera.position);
   const playing = play ? play.update(dt) : false;
-  { const on = !playing && !phone.big; if (controls.enabled !== on) controls.enabled = on; }
-  controls.zoomToCursor = !follow && !followHerd;      // (following, it zooms about the camel it keeps in the middle)      // (the map's controls off in play, and under the enlarged phone, where the scene is not drawn: left on, a thumb on the walk stick or a pedal swung the camera with it)
+  { const on = !playing && !phone.big; if (controls.enabled !== on) controls.enabled = on; }      // (the map's controls off in play, and under the enlarged phone, where the scene is not drawn: left on, a thumb on the walk stick or a pedal swung the camera with it)
   // follow without stealing the viewer's control of the angle
   const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
   if (tgt && !playing) { const delta = tmpTo.copy(tgt).setY(1.1).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }
