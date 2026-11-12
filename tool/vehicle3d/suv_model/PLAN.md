@@ -160,7 +160,19 @@ player's car casts no shadow (the owner's word).
 
 Moving parts and the seat view (12 Nov, ours_game.py):
 - The driver's door is cut from the body along its shut lines (door_split) with its window, chrome, handle and mirror,
-  under 'door_FL' at the hinge (9k triangles, 7 draws); the cabin's door trim swings with it ('doorcard_FL').
+  under 'door_FL' at the hinge (9.4k triangles, 7 draws); the cabin's door trim swings with it ('doorcard_FL'). It
+  takes its whole window frame, as the LC300's framed door: the top trim up to z 1.79 and, above the belt, back to
+  the B pillar's black strip, which stays on the body.
+- doorway: the sill under the cabin floor's edge, its scuff plate under the shut door's trim, a riser to the floor
+  and the door's two jambs, which the open door uncovers (a band under the seat showed through the car). The jambs
+  follow the skin's profile, measured before the door is cut, 1.2 cm inside it and up to z 1.15 (a straight edge
+  stood out through the skin by the belt); the rear one sits behind the shut door's trim.
+- view_split's chase eyes: rings at 5.6 and 6.8 m behind, 1.3 to 4.2 m up, 50 degrees either side, so the chase
+  view keeps its split while the camera rises over a wall (play.js's state.fan says when it is within them).
+- far: every part's normals recomputed (the decimation's own custom normals cleared, smooth by angle 25 degrees),
+  so the far layer catches the same light as the near one at the 20 m swap.
+- Parked vehicles (shas, tractor, caravan) cast their shadows from coarse copies (`../shadow_proxy.py`, 1.4k
+  triangles each, within 3 cm of the full outline), baked into the page's fixed shadow meshes.
 - The steering wheel is apart from the cabin (from the full cabin.glb by its loose pieces in the wheel's sweep) under
   'steering' on the column's axis; play.js turns it 15 times the road wheels' angle.
 - The cabin layer is rebuilt from the full cabin.glb: culled from the seats' eyes and from the open doorway, the wheel

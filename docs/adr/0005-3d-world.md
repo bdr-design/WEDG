@@ -236,13 +236,72 @@ what it can see of it. Measured the same way, at 844 × 390:
   the body.
 
 **Still over:**
-- **From behind: 404k triangles, 1% over.** The car is 143k of it, the yard
+- **From behind: 404k triangles, 1% over** (resolved later the same day, below:
+  382k). The car is 143k of it, the yard
   116k, the shadow pass 82k (59k of it the fixed casters), the camels 30k.
   Lighter than this from behind would mean a coarser car up close, which the
   owner turned down when he chose this car, so it is his call. Two smaller
   options: the grass's near band back to its old size (about 1.5k here), or a
   cached map for the fixed casters' shadows (59k from every frame that redraws
   the shadow map; real engine work).
+
+**Later the same day: every view within the budget.** Measured the same way, at 844 × 390:
+
+| View | Before | Now |
+|---|---|---|
+| Map, drone view | 183 / 273k | 183 / 252k |
+| On foot, by the car | 167 / 394k | 168 / 379k |
+| In the car, from the seat | 145 / 361k | 143 / 339k |
+| In the car, from behind | 189 / 404k | 185 / 385k |
+| In the car, out on the sand | 84 / 226k | 83 / 228k |
+
+Still over, for a moment: **on foot with the driver's door open, 422k** (166
+draws) for the 1.2 to 1.55 s the door swings as the player gets in or out.
+The whole car and the cabin are drawn then. It was about 443k before the
+shadow copies below.
+
+- **The parked vehicles' shadows come from coarse copies**
+  (tool/vehicle3d/shadow_proxy.py). The two shas, the tractor and the caravan
+  were 48k of the 81k triangles redrawn in every shadow pass, at full detail.
+  Each now casts from a copy of 1.4k triangles in place of 12k. The copy stays
+  within 3 cm of the full outline for 99% of it, against a shadow texel of
+  9.4 cm (1536 texels over 144 m). The copies are baked into the fixed shadow
+  meshes like the yard's casters and never drawn; the full models draw as
+  before. The shadow pass went from 82k to 61k in every view of the yard.
+  The ground shadows match. On the vehicles themselves the self-shadow pattern
+  they already had shifts a little: 0.07% of pixels in the yard's views, up to
+  2.7% in a close view of the caravan's ribbed side (the review's measure).
+- **The chase camera by walls and buildings** works out the height that sees
+  over a wall from where the line to the car enters it, not from its own
+  height (it shook 5-7 cm three times a second by the yard's wall). It climbs
+  at most 5 m/s (it rose 74 cm in one frame as the room came between), and
+  comes in rather than rise more than 5 m over the car. It never enters a wall
+  or a building below its top: it is put back out by the side it came in by,
+  so it slides along that face, and lets go at most 4 m/s. (Held at the face
+  along its line, it jumped up to 3 m toward the car as the line swung onto a
+  corner.) Under the room's porch roof it stays below the roof. Searches of
+  thousands of runs turning and driving by every wall end and building found
+  no frame inside a box.
+- **The chase view's split now covers the camera over a wall.** The builder's
+  eyes for it are at 5.6 and 6.8 m back and 1.3 to 4.2 m up (they were 1.6 to
+  2.6 m at 5.6 m). Where the camera is outside them (facing down a dune, 5 m
+  over the room, close in), the game draws all of the car, so no faces are
+  missing: 7 draws and about 11k triangles more for those moments. By the yard
+  wall the view stays split: 199 draws, 362k.
+- **The door takes its whole window frame, and the doorway has its sill.**
+  With the door open, a band under the seat showed straight through the car.
+  The sill, its scuff plate and the door's jambs are a few dozen triangles.
+- **The far layer's normals are recomputed.** The decimation left its own,
+  6 to 26 degrees off the faces on average, against the near layer's 1 to 9.
+  The side windows and the B pillar's black strip then caught different light
+  and popped at the 20 m swap. The pixels that change at the swap went from
+  1,618 to 1,031 over three views. What remains is the coarser shape itself:
+  the wheels' spokes and the hood's edge.
+- **The enlarged phone re-flows its screens** for the narrow width its
+  magnified content has (186 pt across at 956 × 440, 164 at 844 × 390). One
+  attribute switches it as the phone enlarges: two layouts and about 9 ms of
+  style and layout on this machine, once. A finger sliding it or scrolling an
+  app causes no layout at all.
 
 **The frame meter and the GPU question (FSR1).** The meter (#fps, on in the
 iPhone app) sorted every frame time of the session once a second. On a

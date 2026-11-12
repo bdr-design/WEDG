@@ -78,9 +78,13 @@ def tri_count():
 
 # the driver's door (front left): its shut lines on the body (seam0_L at x 0.94, seam1_L at -0.14, seam3_L at z 0.43),
 # the belt at about z 1.22, and above it the window frame from the A pillar's foot (0.94, 1.22) to its head under the
-# roof (0.11, 1.765), where the window's top chrome ends; its hinge on the front shut line, a little in from the skin
+# roof (0.11, 1.765), where the window's top chrome ends; its hinge on the front shut line, a little in from the skin.
+# The frame goes whole with the door, as the LC300's framed door: its top trim runs up to z 1.79 under the roof's edge
+# (cut at 1.775, its upper half stayed on the body), and above the belt the door reaches back to the B pillar's black
+# strip (x -0.27..-0.183, which stays): its glass did, and a 4 cm strip of it stayed on the body
 DOOR_X = (-0.14, 0.94)
-DOOR_Z = (0.43, 1.22, 1.775)
+DOOR_XU = -0.19
+DOOR_Z = (0.43, 1.22, 1.79)
 DOOR_A = ((0.94, 1.22), (0.11, 1.765))
 HINGE = (0.94, 0.92, 0.85)
 MIRROR = ((0.50, 0.82), (0.76, 1.10), (1.24, 1.50))      # the door-mounted mirror's box: it goes with the door whole
@@ -103,12 +107,12 @@ def door_split(body):
     for co, no in (((DOOR_X[0], 0, 0), (1, 0, 0)), ((DOOR_X[1], 0, 0), (1, 0, 0)), ((0, 0, DOOR_Z[0]), (0, 0, 1)), ((0, 0, DOOR_Z[1]), (0, 0, 1)), ((0, 0, DOOR_Z[2]), (0, 0, 1)), ((ax, 0, az), tuple(na))):
         bmesh.ops.bisect_plane(bm, geom=left(), plane_co=co, plane_no=no)
     bm.faces.ensure_lookup_table()
+    gloss = {i for i, m in enumerate(body.data.materials) if m and m.name == 'black_gloss'}
     def on_door(f):
         c = f.calc_center_median()
         if MIRROR[0][0] < c.x < MIRROR[0][1] and MIRROR[1][0] < c.y < MIRROR[1][1] and MIRROR[2][0] < c.z < MIRROR[2][1]: return True
-        if not DOOR_X[0] < c.x < DOOR_X[1]: return False
-        if DOOR_Z[0] < c.z < DOOR_Z[1]: return c.y > 0.55
-        return DOOR_Z[1] <= c.z < DOOR_Z[2] and c.y > 0.6 and c.x < xa(c.z)
+        if DOOR_Z[0] < c.z < DOOR_Z[1]: return DOOR_X[0] < c.x < DOOR_X[1] and c.y > 0.55
+        return DOOR_Z[1] <= c.z < DOOR_Z[2] and c.y > 0.6 and DOOR_XU < c.x < xa(c.z) and f.material_index not in gloss
     door_faces = {f.index for f in bm.faces if on_door(f)}
     bm.to_mesh(body.data); bm.free()
     door = body.copy(); door.data = body.data.copy(); bpy.context.collection.objects.link(door); door.name = door.data.name = 'door_body'
@@ -124,6 +128,58 @@ def door_split(body):
     n = sum((x.data.calc_loop_triangles(), len(x.data.loop_triangles))[1] for x in parts)
     print('door_FL: %d parts, %d triangles, hinge at (%.2f, %.2f, %.2f)' % (len(parts), n, *HINGE))
     return parts
+
+
+# the doorway's lower part, which the door hid: the sill under the cabin's floor edge (the floor's top at z 0.626, its
+# edge at y 0.66-0.70; the door trim's bottom at z 0.558, y 0.81-0.89 shut) out to the rocker's face (y 0.873 below the
+# door's cut at z 0.43), and the door's jambs at its shut lines across the door's depth (y 0.80 in to the skin)
+SILL_Z = (0.43, 0.545, 0.64)            # the rocker's top under the door; the scuff plate, under the shut door's trim; the riser's top, at the floor
+SILL_Y = (0.66, 0.875, 0.92)            # the riser under the floor's edge; the sill's outer face, on the rocker's; the rocker's top out to under the door's skin
+JAMB_X = (-0.155, 0.938)                # the B pillar's face, behind the shut door's trim (it reaches back to x -0.15); the hinge pillar's face, at the front shut line
+JAMB_Y0, JAMB_IN, JAMB_TOP = 0.80, 0.012, 1.15      # the jambs from y 0.80 out to 1.2 cm inside the skin, up to z 1.15 (above, the side curves in to the belt)
+
+
+def skin_profile(body):
+    """The side's outer skin at the two jamb planes, by height (z 0.43 to JAMB_TOP every 2 cm): measured before the door
+    is cut, by a ray from outside. A straight jamb edge at y 0.925 stood out through the skin up to 9 cm by the belt."""
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    bvh = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
+    zs = [round(SILL_Z[0] + 0.02 * i, 3) for i in range(int((JAMB_TOP - SILL_Z[0]) / 0.02) + 1)]
+    prof = {}
+    for x in JAMB_X:
+        prof[x] = [(z, bvh.ray_cast(Vector((x, 1.5, z)), Vector((0, -1, 0)), 1.0)[0].y) for z in zs]
+    return prof
+
+
+def doorway(body, prof):
+    """Faces the opened door uncovers, joined into body: with the door open, a band under the seat showed straight
+    through the car (nothing closed the sill below the floor's edge), and the space inside the door's depth at its
+    front and rear shut lines was open. Black trim for the sill and its scuff plate, paint for the jambs (a few dozen
+    triangles). Run after door_split, so they stay with the body."""
+    import bmesh
+    from mathutils import Vector
+    x0, x1 = DOOR_X[0] + 0.003, DOOR_X[1] - 0.002
+    (za, zb, zc), (ya, yb, yc) = SILL_Z, SILL_Y
+    quads = [      # four corners, the way the face looks, its material
+        (((x0, yb, za), (x1, yb, za), (x1, yb, zb), (x0, yb, zb)), (0, 1, 0), 'trim_black'),        # the sill's outer face
+        (((x0, ya, zb), (x1, ya, zb), (x1, yb, zb), (x0, yb, zb)), (0, 0, 1), 'trim_black'),        # the scuff plate
+        (((x0, ya, zb), (x1, ya, zb), (x1, ya, zc), (x0, ya, zc)), (0, 1, 0), 'trim_black'),        # the riser to the floor
+        (((x0, yb, za), (x1, yb, za), (x1, yc, za), (x0, yc, za)), (0, 0, 1), 'trim_black'),        # the rocker's top under the door
+    ]
+    for x, look in ((JAMB_X[1], (-1, 0, 0)), (JAMB_X[0], (1, 0, 0))):      # the jambs, strip by strip under the skin's profile
+        p = prof[x]
+        for (z0, y0), (z1, y1) in zip(p, p[1:]):
+            quads.append((((x, JAMB_Y0, z0), (x, y0 - JAMB_IN, z0), (x, y1 - JAMB_IN, z1), (x, JAMB_Y0, z1)), look, 'paint'))
+    slot = {m.name: i for i, m in enumerate(body.data.materials) if m}
+    bm = bmesh.new(); bm.from_mesh(body.data)
+    for corners, look, mat in quads:
+        f = bm.faces.new([bm.verts.new(c) for c in corners]); f.material_index = slot[mat]; f.smooth = False
+        f.normal_update()
+        if f.normal.dot(Vector(look)) < 0: f.normal_flip()
+    bm.to_mesh(body.data); bm.free()
+    print('doorway: %d faces (the sill and the jambs); the jambs out to y %.3f..%.3f (front), %.3f..%.3f (rear)' % (len(quads),
+          min(y for _, y in prof[JAMB_X[1]]) - JAMB_IN, max(y for _, y in prof[JAMB_X[1]]) - JAMB_IN, min(y for _, y in prof[JAMB_X[0]]) - JAMB_IN, max(y for _, y in prof[JAMB_X[0]]) - JAMB_IN))
 
 
 def see_through(o):
@@ -172,11 +228,14 @@ def chase_eyes():
     """The chase camera's places round the car (play.js: 5.6 m behind the middle, 2.05 m up; its heading lags the car's
     in a turn, about the yaw rate over 4/s, so a fan of +-50 degrees behind, held through spins under about 3.5 rad/s
     (200 degrees a second; a donut with traction control off turns at about 2.5); and higher and lower for its easing
-    over bumps)."""
+    over bumps), at 6.8 m too (it falls back 1.2 m with speed) and higher, to 4.2 m, where it rises to see over a wall (with
+    eyes only 1.6-2.6 m up at 5.6 m, the game drew all of the car whenever the camera rose over a wall, 7 draws more,
+    and low and far back thin slivers under the rear skid plate went missing)."""
     out = []
-    for a in range(-50, 51, 10):
-        for up in (1.6, 2.05, 2.6):
-            r = math.radians(a); out.append(Vector((-5.6 * math.cos(r), 5.6 * math.sin(r), up)))
+    for back in (5.6, 6.8):
+        for a in range(-50, 51, 10):
+            for up in (1.3, 1.6, 2.05, 2.6, 3.3, 4.2):
+                r = math.radians(a); out.append(Vector((-back * math.cos(r), back * math.sin(r), up)))
     return out
 
 
@@ -248,7 +307,9 @@ def near(src, out, cabin_glb=None):
     if missing: sys.exit('no wheel_%s in %s' % (missing, src))
     rest = [o for o in bpy.data.objects if o.type == 'MESH' and o not in wheels.values()]
     body = join(rest, 'body')
+    prof = skin_profile(body)
     door_split(body)
+    doorway(body, prof)
     parts = by_material(body)
     if cabin_glb: view_split(parts, wheels, cabin_glb)
     for k, w in wheels.items():
@@ -273,7 +334,15 @@ def near(src, out, cabin_glb=None):
 def far(src, out):
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); clean_scene_of()
     body = join([o for o in bpy.data.objects if o.type == 'MESH'], 'body')
-    by_material(body)
+    for o in by_material(body):
+        # each part shaded smooth only within its panels (sharp past 25 degrees), its normals recomputed: the decimation
+        # left its own, 6 to 26 degrees off the faces on average (the near layer's 1 to 9), so the side windows and
+        # the B pillar's black strip caught other light than the near layer's and popped at the 20 m swap (the
+        # reviewer: 696 of 6.1k car pixels changed, mostly the side glass)
+        for x in bpy.context.view_layer.objects: x.select_set(False)
+        o.select_set(True); bpy.context.view_layer.objects.active = o
+        bpy.ops.mesh.customdata_custom_splitnormals_clear()
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(25), keep_sharp_edges=True)
     print('far: %d triangles' % tri_count())
     export(out)
 

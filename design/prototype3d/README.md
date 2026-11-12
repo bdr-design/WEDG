@@ -73,21 +73,25 @@ in the code, and the numbers are in
   instanced.
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)
   and a 2048 px satellite image.
-- **The player's SUV:** the private car built from a downloaded model (see
-  `tool/vehicle3d/suv_model/thirdparty/README.md`: private use only, its licence and credit there).
-  - `veh_suvfull.json` (about 65k triangles, 43 draws) within 20 m or while driving, with the wheels on their own corners
-    (`corner_XX` rides and steers, `wheel_XX` spins), the driver's door on its hinge (`door_FL`), and the
-    first-person eye (`eye`, `eye_look`).
-  - `veh_suvfar.json` (about 14k, 19 draws) beyond 20 m.
-  - `veh_suvcabin.json` (about 87k, 35 draws), the interior. It loads in the background a few seconds after the page, and is
-    drawn only from the driver's seat or while the door stands open (the glass is dark from outside). It has a
-    turning steering wheel and the door's trim (`doorcard_FL`), which swings with the door.
+- **The player's SUV:** ours, built by code from the owner's photos (`tool/vehicle3d/suv_model`, made into game files by
+  `ours_game.py`; the owner's choice of 11 Nov). It casts no shadow (the owner's word).
+  - `veh_suvfull.json` (about 153k triangles) within 20 m or while driving, with the wheels on their own corners
+    (`corner_XX` rides and steers, `wheel_XX` spins), the driver's door on its hinge (`door_FL`, with its whole window
+    frame), the sill the open door shows, and the first-person eye (`eye`, `eye_look`). Each view draws only what it
+    can see of it (`seat_only`, `chase_only`, `outside`).
+  - `veh_suvfar.json` (about 15k) beyond 20 m.
+  - `veh_suvcabin.json` (about 53k, three draws), the interior. It loads in the background a few seconds after the
+    page, and is drawn only from the driver's seat or while the door stands open (the glass is dark from outside). It
+    has a turning steering wheel (`steering`) and the door's trim (`doorcard_FL`), which swings with the door.
   - `car_physics.js` does the ride, the sand and the turning (suspension, grip, sinking and digging, tyre pressure,
     low range, traction and stability control, gears, hill-start assist; the turning is a single-track model with
     slip angles, so the car understeers, slides on sand and can be drifted with the stability control off). Its
     numbers are in `docs/GDD.md` section 9.1.
 - **Shadows:**
   - Each camel's shadow comes from a lighter mesh.
+  - The parked vehicles' shadows come from coarse copies (`veh_shas_shadow.json`, `veh_tractor_shadow.json`,
+    `veh_caravan_shadow.json`: 1.4k triangles for 12k, from `tool/vehicle3d/shadow_proxy.py`), baked into the fixed
+    shadow meshes and never drawn.
   - Objects smaller than 30 cm cast none.
   - The map is redrawn every other frame.
 

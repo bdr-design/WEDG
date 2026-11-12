@@ -382,6 +382,7 @@ function takeCasters(roots) {
       pendingCasters.push({ geometry: o.geometry, world, side: o.material.side, shadowSide: o.material.shadowSide });
     }
     o.castShadow = false;
+    if (o.userData.shadowProxy) o.visible = false;      // (a shadow's coarse copy: in the shadow meshes now, never drawn)
   });
 }
 function bakeStaticShadows() {
@@ -1125,9 +1126,16 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
 async function loadVehicles() {
   const names = ['shas', 'suvfull', 'suvfar', 'tractor', 'caravan'];
   const models = Object.fromEntries(await Promise.all(names.map(async (n) => [n, (await loadLod(`veh_${n}.json`)).scene])));
+  // a parked vehicle's shadow comes from a coarse copy (tool/vehicle3d/shadow_proxy.py: 1.4k triangles for 12k, within
+  // 3 cm of the full outline where a shadow texel is 9.4 cm), baked into the fixed shadows like the yard's casters
+  // and not drawn itself (the full models were 48k of the 81k triangles in every shadow redraw)
+  const SHADOWS = ['shas', 'tractor', 'caravan'];
+  const shadows = Object.fromEntries(await Promise.all(SHADOWS.map(async (n) => { let g = null; (await loadLod(`veh_${n}_shadow.json`)).scene.traverse((o) => { if (o.isMesh && !g) g = o.geometry; }); return [n, g]; })));
+  const proxyMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, colorWrite: false, depthWrite: false });      // (double-sided as the models' own; drawing nothing, should a frame come before the bake: with the terrain late, the copies showed white through the shas)
   const make = (name, tint) => {
-    const o = models[name].clone(true);
-    o.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; if (tint) { n.material = n.material.clone(); n.material.color.set(tint); } } });
+    const o = models[name].clone(true), proxy = shadows[name];
+    o.traverse((n) => { if (n.isMesh) { n.castShadow = !proxy; n.receiveShadow = true; if (tint) { n.material = n.material.clone(); n.material.color.set(tint); } } });
+    if (proxy) { const c = new THREE.Mesh(proxy, proxyMat); c.castShadow = true; c.userData.shadowProxy = true; o.add(c); }
     return o;
   };
   const hay = new THREE.MeshStandardMaterial({ color: '#b3a256', roughness: 1 });
@@ -1261,7 +1269,8 @@ function tick(now) {
     // what a view cannot see is not drawn there (ours_game.py's view_split): from the seat, the top and 'seat_only';
     // from behind, the top and 'chase_only'; on foot, on the map and while the door stands open, all of it
     const vs = playCar.userData.viewSplit || (playCar.userData.viewSplit = ['seat_only', 'chase_only', 'outside'].map((n) => playCar.getObjectByName(n)));
-    const chase = playing && play.debug.state.view === 3 && play.debug.state.mode === 'drive', all = doorOpen || (!seat && !chase);
+    // (from behind only while the camera is where the builder's eyes saw the car from: play.js's state.fan)
+    const chase = playing && play.debug.state.view === 3 && play.debug.state.mode === 'drive' && play.debug.state.fan, all = doorOpen || (!seat && !chase);
     const want0 = near && (all || seat), want1 = near && (all || chase), want2 = near && all;
     if (vs[0] && vs[0].visible !== want0) vs[0].visible = want0;
     if (vs[1] && vs[1].visible !== want1) vs[1].visible = want1;

@@ -30,11 +30,12 @@ const CSS = `
   .phone[data-state="big"] .scr { width: calc(${W - 18}px / var(--k, 1)); height: calc(${H - 18}px / var(--k, 1)); zoom: var(--k, 1); border-radius: calc(42px / var(--k, 1)); }      /* (lengths, not percentages: a zoomed box's percentage size is not magnified, and it shrank into a corner) */
   .phone[data-state="big"] .scr .pill { top: calc(9px / var(--k, 1)); width: calc(92px / var(--k, 1)); height: calc(27px / var(--k, 1)); border-radius: calc(14px / var(--k, 1)); }
   .phone[data-state="big"] .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
-  .phone[data-state="big"] .nav { position: sticky; top: 0; z-index: 3; min-height: 44px; background: var(--bg); }
+  .phone[data-state="big"] .nav { position: sticky; top: -1px; z-index: 3; min-height: 44px; background: var(--bg); box-shadow: 0 -3px 0 var(--bg); }      /* (held a pixel past the scroll's top edge and painted a little above itself: that edge falls between two of the screen's pixels, and a row of the scrolled content showed there) */
   .phone[data-state="big"] .dock { position: sticky; bottom: 0; z-index: 3; }
   .phone[data-state="big"] .back, .phone[data-state="big"] [data-go], .phone[data-state="big"] .liveban, .phone[data-state="big"] button { min-height: 44px; min-width: 44px; }
   * { box-sizing: border-box; margin: 0; }
   .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #0b8a5c; --acc-soft: #e3f4ec; --red: #e5372b; --amber: #c27a12; }
+  b.fit { font: inherit; }
   .num { font-family: "Alexandria", "IBM Plex Sans Arabic", sans-serif; }
   svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
@@ -183,6 +184,81 @@ const CSS = `
   .green i { width: 9px; height: 5px; border-radius: 2px; background: #dfe7d6; display: block; }
   .green i.on { background: #4f9e2a; }
   .row .move { font-size: 11px; font-weight: 600; color: var(--amber); }
+  /* ---------- enlarged: the same screens re-flowed for the narrow width the magnified content has (186 pt across at
+     956 x 440, 164 at 844 x 390), as an iPhone lays its screens out at its largest text sizes: nothing cut short and
+     nothing dropped, the content, colours, icons and order kept, only the arrangement changed (the owner's proxy,
+     12 Nov). The small phone is the approved design untouched. One attribute switches it, once, as the phone enlarges. */
+  .phone[data-state="big"] .body { padding-inline: 10px; padding-top: 0; }      /* (none above the top bar that stays: scrolled content showed in it) */
+  .phone[data-state="big"] .body > * { flex-shrink: 0; }      /* (the content scrolls; squeezed, the talk's messages ran over the deal under them) */
+  .phone[data-state="big"] .nav { height: auto; }
+  .phone[data-state="big"] .title { text-wrap: balance; }
+  .phone[data-state="big"] .badge { white-space: normal; }
+  .phone[data-state="big"] .row { grid-template-columns: 36px 1fr; padding-inline: 10px; }
+  .phone[data-state="big"] .row + .row::before { inset-inline-start: 57px; }
+  .phone[data-state="big"] .row .lead { grid-row: span 3; align-self: start; }
+  .phone[data-state="big"] .row .amt, .phone[data-state="big"] .row .green { grid-row: auto; justify-self: start; margin-block: 3px 2px; }      /* (the amount under its title) */
+  /* home: the widgets one above the other, the apps three to a row, the dock two by two */
+  .hs { display: contents; }      /* (the home's widgets and apps: as before, small) */
+  .phone[data-state="big"] .scr.home .body { overflow: hidden; }
+  .phone[data-state="big"] .scr.home .hs { display: flex; flex-direction: column; gap: 14px; flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-top: 6px; }      /* (they scroll above the dock, never under it: under its round corners they showed) */
+  .phone[data-state="big"] .widgets { grid-template-columns: 1fr; gap: 10px; }
+  .phone[data-state="big"] .wg { height: auto; gap: 2px; }
+  .phone[data-state="big"] .wg .big, .phone[data-state="big"] .wg .big2 { margin-block: 2px 4px; }
+  .phone[data-state="big"] .apps { grid-template-columns: repeat(3, 1fr); column-gap: 3px; }
+  .phone[data-state="big"] .app .ic { width: 46px; height: 46px; border-radius: 13px; }      /* (three of them and their gaps in 144 pt) */
+  .phone[data-state="big"] .app .ic svg { width: 24px; height: 24px; }
+  .phone[data-state="big"] .dock { grid-template-columns: 1fr 1fr; row-gap: 8px; padding: 8px; }
+  /* bank */
+  .phone[data-state="big"] .balance { padding: 12px; }
+  .phone[data-state="big"] .balance .v { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; }
+  .phone[data-state="big"] .balance .v span { margin: 0; }
+  .phone[data-state="big"] .quick { grid-template-columns: 1fr 1fr; row-gap: 12px; }
+  .phone[data-state="big"] .due { grid-template-columns: 36px 1fr; row-gap: 2px; }
+  .phone[data-state="big"] .due small { grid-column: 2; grid-row: 2; }
+  .phone[data-state="big"] .due .btn { grid-column: 1 / -1; grid-row: 3; margin-top: 8px; height: 44px; }
+  /* market */
+  .phone[data-state="big"] .seg span { display: grid; place-items: center; min-height: 44px; padding-inline: 2px; line-height: 1.2; }
+  .phone[data-state="big"] .liveban > span:nth-child(2) { flex: 1; min-width: 0; }
+  .phone[data-state="big"] .liveban .go { flex: none; }
+  .phone[data-state="big"] .it { grid-template-columns: 1fr; row-gap: 2px; }
+  .phone[data-state="big"] .it .ph { width: 100%; height: 72px; grid-row: auto; margin-bottom: 6px; }      /* (the camel's picture above its words, as wide as the card) */
+  .phone[data-state="big"] .it .bgs { flex-wrap: wrap; }
+  .phone[data-state="big"] .sell { inset-inline: 10px; }
+  /* auction */
+  .phone[data-state="big"] .lot { padding: 10px; }
+  .phone[data-state="big"] .lot .ph { height: auto; }
+  .phone[data-state="big"] .lot .ph img { width: 100%; height: auto; }      /* (the whole camel: at a fixed height the picture was wider than the card) */
+  .phone[data-state="big"] .lot .hd { flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
+  .phone[data-state="big"] .lot .hd b { flex-basis: 100%; }
+  .phone[data-state="big"] .lot .cur { flex-wrap: wrap; align-items: center; row-gap: 6px; }
+  .phone[data-state="big"] .lot .cur .v { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: 3px; }
+  .phone[data-state="big"] .lot .cur .v span { margin: 0; }
+  .phone[data-state="big"] .bids { flex-wrap: wrap; }
+  .phone[data-state="big"] .bids .btn.step { flex: 1 1 0; padding-inline: 8px; }
+  .phone[data-state="big"] .bids .btn.pri { flex: 1 1 100%; }
+  /* the talk: its header stacked, as Messages does */
+  .phone[data-state="big"] .chathd { flex: 1; min-width: 0; flex-direction: column; gap: 3px; padding-block: 2px; text-align: center; }
+  .phone[data-state="big"] .strip { display: grid; grid-template-columns: 42px minmax(0, 1fr); column-gap: 10px; row-gap: 2px; }      /* (minmax: a plain 1fr column grew to a long figure and ran it past the strip) */
+  .phone[data-state="big"] .strip .ph { grid-row: span 2; align-self: start; }
+  .phone[data-state="big"] .strip .lim { margin: 0; text-align: start; }
+  .phone[data-state="big"] .fit { display: inline-block; white-space: nowrap; }      /* (a big number: shrunk to its card when it is wider, see fitNumbers) */
+  .phone.turned[data-state="big"] .body, .phone.turned[data-state="big"] .hs { touch-action: none; }      /* (the game turned: the phone scrolls them itself, see drag) */
+  .phone[data-state="big"] .chat { flex: none; }
+  .phone[data-state="big"] .deal { grid-template-columns: 1fr 44px; }
+  .phone[data-state="big"] .deal .pri { grid-column: 1 / -1; }
+  /* weather: the days a list, as the iPhone's Weather shows them (the rain's chance under its cloud) */
+  .phone[data-state="big"] .wnow { padding: 12px; column-gap: 6px; }
+  .phone[data-state="big"] .wnow > span { display: contents; }
+  .phone[data-state="big"] .wnow small, .phone[data-state="big"] .wnow .t { grid-column: 1; }
+  .phone[data-state="big"] .wnow .d { grid-column: 1 / -1; }
+  .phone[data-state="big"] .wnow svg { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+  .phone[data-state="big"] .days { grid-template-columns: 1fr; padding: 0 12px; text-align: start; }
+  .phone[data-state="big"] .days div { display: grid; grid-template-columns: 1fr 30px 34px; align-content: center; align-items: center; column-gap: 4px; min-height: 42px; padding-block: 4px; }
+  .phone[data-state="big"] .days div + div { border-top: .5px solid var(--line); }
+  .phone[data-state="big"] .days div > span { grid-column: 1; grid-row: 1 / 3; }
+  .phone[data-state="big"] .days svg { grid-column: 2; grid-row: 1; justify-self: center; }
+  .phone[data-state="big"] .days em { grid-column: 2; grid-row: 2; text-align: center; }
+  .phone[data-state="big"] .days b { grid-column: 3; grid-row: 1 / 3; text-align: end; }
 `;
 
 const I = {
@@ -219,10 +295,10 @@ const badgeSaid = (extra) => { const m = extra.match(/class="bd">(\d+)</); retur
 const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge: in the dock the name is hidden, and the badge alone was read)
 
 const S = {
-    home: () => `<div class="body">
+    home: () => `<div class="body"><div class="hs">
       <div class="widgets">
         <div class="wg"><small>أبانات</small><div class="big">27°</div><div class="ln">مشمس</div><div class="ln rain" style="margin-top:2px">مطر الخميس <span class="ltr">60%</span></div></div>
-        <div class="wg"><small>الرصيد</small><div class="big2">486,300</div><div class="ln ink2">ريال</div><div class="ln"><span class="pos ltr">+4,875</span> اليوم</div></div>
+        <div class="wg"><small>الرصيد</small><div class="big2"><b class="fit">486,300</b></div><div class="ln ink2">ريال</div><div class="ln"><span class="pos ltr">+4,875</span> اليوم</div></div>
       </div>
       <div class="apps">
         ${app('gavel', 'المزاد', '<span class="live">مباشر</span>')}
@@ -233,7 +309,7 @@ const S = {
         ${app('feed', 'العلف')}
         ${app('cup', 'المزاين')}
         ${app('doc', 'الأوراق')}
-      </div>
+      </div></div>
       <div class="dock">
         ${app('bank', 'البنك')}
         ${app('tag', 'الحراج', '<span class="bd">2</span>')}
@@ -241,7 +317,7 @@ const S = {
         ${app('cloud', 'الطقس')}
       </div></div>`,
     bank: () => `<div class="body">${nav()}<div class="title">البنك</div>
-      <div class="balance"><small>حساب عزبة الصفوة</small><div class="v">486,300<span>ريال</span></div>
+      <div class="balance"><small>حساب عزبة الصفوة</small><div class="v"><b class="fit">486,300</b><span>ريال</span></div>
         <div class="quick">
           <div class="q pri"><span class="c">${svg('up')}</span>تحويل</div>
           <div class="q"><span class="c">${svg('down')}</span>طلب مبلغ</div>
@@ -268,7 +344,7 @@ const S = {
     auction: () => `<div class="body">${nav('<span class="badge red">مباشر</span>')}<div class="title">مزاد بريدة</div>
       <div class="lot"><span class="ph"><img src="phone/camel_side_wodh.png" alt=""></span>
         <div class="hd"><b>لقية وضحاء مقانية</b>${ok('محصنة')}${ok('شهادة صحية')}</div>
-        <div class="cur"><span><small class="ink2" style="font-size:11.5px;display:block">آخر سوم · بو ناصر</small><span class="v">21,500<span>ريال</span></span></span><span class="timer"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="none" stroke="#fde6e4" stroke-width="3"/><circle cx="15" cy="15" r="12" fill="none" stroke="#e5372b" stroke-width="3" stroke-linecap="round" stroke-dasharray="45 75.4" transform="rotate(-90 15 15) scale(1 -1) translate(0 -30)"/></svg>0:18</span></div></div>
+        <div class="cur"><span><small class="ink2" style="font-size:11.5px;display:block">آخر سوم · بو ناصر</small><span class="v"><b class="fit">21,500</b><span>ريال</span></span></span><span class="timer"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="none" stroke="#fde6e4" stroke-width="3"/><circle cx="15" cy="15" r="12" fill="none" stroke="#e5372b" stroke-width="3" stroke-linecap="round" stroke-dasharray="45 75.4" transform="rotate(-90 15 15) scale(1 -1) translate(0 -30)"/></svg>0:18</span></div></div>
       <div class="group">
         <div class="row"><span class="lead">${svg('gavel')}</span><b>بو ناصر</b><span class="amt">21,500</span><small>قبل 4 ثواني</small></div>
         <div class="row"><span class="lead">${svg('gavel')}</span><b>أنت</b><span class="amt pos">21,000</span><small>قبل 9 ثواني</small></div>
@@ -277,13 +353,13 @@ const S = {
       <div class="bids"><button class="btn step num"><span class="ltr">+500</span></button><button class="btn step num"><span class="ltr">+1,000</span></button><button class="btn pri">زايد 22,000</button></div></div>`,
     chat: () => `<div class="body">
       <div class="nav"><button class="back" aria-label="رجوع">${svg('back')}</button><div class="chathd"><span class="av">ف</span><span><b>بو فهد</b><small>حائل · من الحراج</small></span></div></div>
-      <div class="strip"><span class="ph"><img src="phone/thumb_majaheem.png" alt=""></span><span><b>الهيفاء</b><small>ثنية · مجاهيم · مقانية</small></span><span class="lim">حدّك<span>40,000</span></span></div>
+      <div class="strip"><span class="ph"><img src="phone/thumb_majaheem.png" alt=""></span><span><b>الهيفاء</b><small>ثنية · مجاهيم · مقانية</small></span><span class="lim">حدّك<span class="fit">40,000</span></span></div>
       <div class="chat">
         <div class="msg them">السلام عليكم، الهيفاء للبيع؟</div>
         <div class="msg me">وعليكم السلام، إيه وعليها شهادة</div>
-        <div class="ofr"><small>سوم بو فهد</small><span>30,000<em>ريال</em></span></div>
+        <div class="ofr"><small>سوم بو فهد</small><span><b class="fit">30,000</b><em>ريال</em></span></div>
         <div class="msg me">ما تجي، حدها 40</div>
-        <div class="ofr"><small>آخر سوم</small><span>34,000<em>ريال</em></span></div>
+        <div class="ofr"><small>آخر سوم</small><span><b class="fit">34,000</b><em>ريال</em></span></div>
         <div class="msg them">أعطيك 34 ونقضي</div>
       </div>
       <div class="sum"><span>السعر</span><span class="n">34,000</span><span>السعي <span class="ltr">2.5%</span></span><span class="n">−850</span><span class="tot">يوصلك (ريال)</span><span class="n">33,150</span>
@@ -315,10 +391,26 @@ export function createPhone({ host }) {
   const st = { state: 'closed', play: false, screen: 'home', y: EDGE, s: SMALL };
   const listeners = new Set();
   let press = null, lastDown = 0, bigAt = 0, focusBack = null;
+  const turned = () => document.body.classList.contains('rot');      // (farm.html: a phone held upright, the game turned a quarter)
   const endPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
   function show(v) {
     st.screen = v; scr.classList.toggle('home', v === 'home');
-    scr.innerHTML = `<span class="pill"></span>${sbar}${S[v]()}<div class="hb"></div>`;
+    scr.innerHTML = `<span class="pill"></span>${sbar}${S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0')}<div class="hb"></div>`;      // (a number kept on the line of the word after it: enlarged, «3,900 | ريال» and «9 | كم» split)
+    fitNumbers();
+  }
+  // enlarged, a big figure wider than its card is set smaller to fit it, as iOS fits a label to its width (a balance or a
+  // bid in the millions ran out of its card at 844 x 390); read once as a screen shows or the phone enlarges, never per frame
+  function fitNumbers() {
+    for (const e of scr.querySelectorAll('.fit')) {
+      e.style.fontSize = '';
+      if (st.state !== 'big') continue;
+      const card = e.closest('.balance, .lot, .lim, .wg, .chat');      // (the box that holds it: the chat's limit has its own column beside the camel's picture)
+      let pad = 0;
+      for (let q = e.parentElement; q; q = q.parentElement) { const c = getComputedStyle(q); pad += parseFloat(c.paddingLeft) + parseFloat(c.paddingRight); if (q === card) break; }
+      const across = (q) => { const r = q.getBoundingClientRect(); return turned() ? r.height : r.width; };      // (along the phone's width on the screen: turned, the screen's height)
+      const cw = parseFloat(getComputedStyle(card).width), room = across(card) * (cw - pad) / cw, ew = across(e);      // (computed lengths are unzoomed; boxes are as drawn)
+      if (ew > room) e.style.fontSize = (parseFloat(getComputedStyle(e).fontSize) * room / ew * 0.97).toFixed(1) + 'px';
+    }
   }
   // the small phone's size and place: by the screen's height (it leaves the top row of buttons clear), at the right
   // edge on the map, and left of the door's buttons and the pedals in play
@@ -333,10 +425,14 @@ export function createPhone({ host }) {
   // enlarged, the whole phone in the screen, in the middle: as large as the screen's height allows, never larger than
   // true size (the owner: "half of it under the screen", its dock and buttons out of reach; it must sit balanced)
   const bigScale = () => Math.min(1, (host.clientHeight - 2 * EDGE) / H, (host.clientWidth - 2 * EDGE) / W);
+  let sized = '';
   function pan(y) {
     const sb = st.state === 'big' ? bigScale() : 1, room = host.clientHeight - H * sb;
-    box.style.setProperty('--sb', sb.toFixed(4));
-    box.style.setProperty('--k', (st.state === 'big' ? Math.max(1, 1 / sb) : 1).toFixed(4));      // (the content's magnification: true size on the screen)
+    const k = (st.state === 'big' ? Math.max(1, 1 / sb) : 1).toFixed(4);      // (the content's magnification: true size on the screen)
+    if (sized !== sb.toFixed(4) + k) {      // (set only when they change, as it enlarges or the screen turns: --k sizes the screen's content, and a finger sliding the phone moves it by transform alone)
+      sized = sb.toFixed(4) + k;
+      box.style.setProperty('--sb', sb.toFixed(4)); box.style.setProperty('--k', k);
+    }
     st.y = room >= 2 * EDGE - 0.5 ? room / 2 : Math.max(room - EDGE, Math.min(EDGE, y));
     box.style.setProperty('--y', st.y.toFixed(1) + 'px');
   }
@@ -352,7 +448,8 @@ export function createPhone({ host }) {
     box.setAttribute('aria-hidden', String(state === 'closed'));
     if (state === 'big') { box.setAttribute('aria-modal', 'true'); scr.inert = false; focusBack = document.activeElement; dev.focus({ preventScroll: true }); }
     else { box.removeAttribute('aria-modal'); scr.inert = true; if (was === 'big' && focusBack && focusBack.isConnected) focusBack.focus({ preventScroll: true }); }
-    layout();
+    layout(); fitNumbers();
+    box.classList.toggle('turned', turned());
     for (const f of listeners) f(state);
   }
   // is a point of the game's frame on the small phone? (the small phone takes no pointer itself: the page asks)
@@ -372,13 +469,41 @@ export function createPhone({ host }) {
   addEventListener('pointercancel', endPress, true);
   // enlarged: a drag slides the phone up and down; a tap outside it makes it small again; a tap on it is the phone's
   let drag = null, slid = false;
-  dev.addEventListener('pointerdown', (e) => { if (st.state === 'big') { drag = { id: e.pointerId, y: e.clientY, y0: st.y }; slid = false; } });
+  // The game turned (a phone held upright), the browser's own scrolling goes by the screen's axes and the enlarged phone's
+  // content did not scroll at all. There the phone scrolls it itself, by the finger's travel along the phone (the page
+  // hands pointer events over in the game's frame, where the phone stands upright, at true size), with a fling as it
+  // lets go that slows as iOS's does (by 0.998 a millisecond). A finger slides the phone instead when it is taller than
+  // the screen.
+  let fling = 0;
+  const fits = () => host.clientHeight - H * bigScale() >= 2 * EDGE - 0.5;
+  dev.addEventListener('pointerdown', (e) => {
+    if (st.state !== 'big') return;
+    cancelAnimationFrame(fling);
+    const sc = turned() && fits() ? e.target.closest('.hs, .body') : null;
+    drag = { id: e.pointerId, y: e.clientY, y0: st.y, sc, top: sc ? sc.scrollTop : 0, t: e.timeStamp, last: e.clientY, v: 0 }; slid = false;
+  });
   dev.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     if (!slid && Math.abs(e.clientY - drag.y) > SLOP) slid = true;
-    if (slid) pan(drag.y0 + e.clientY - drag.y);
+    if (!slid) return;
+    if (drag.sc) {
+      drag.sc.scrollTop = drag.top - (e.clientY - drag.y);
+      const dt = e.timeStamp - drag.t; if (dt > 0) drag.v = 0.8 * ((drag.last - e.clientY) / dt) + 0.2 * drag.v;
+      drag.t = e.timeStamp; drag.last = e.clientY;
+    } else pan(drag.y0 + e.clientY - drag.y);
   });
-  const endDrag = (e) => { if (drag && e.pointerId === drag.id) drag = null; };
+  const endDrag = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { sc, v, t } = drag; drag = null;
+    if (!sc || !slid || Math.abs(v) < 0.05 || e.timeStamp - t > 100) return;
+    let speed = v, at = performance.now();
+    const step = (now) => {
+      const dt = now - at; at = now; const before = sc.scrollTop;
+      sc.scrollTop += speed * dt; speed *= Math.pow(0.998, dt);
+      if (Math.abs(speed) > 0.02 && sc.scrollTop !== before) fling = requestAnimationFrame(step);
+    };
+    fling = requestAnimationFrame(step);
+  };
   dev.addEventListener('pointerup', endDrag); dev.addEventListener('pointercancel', endDrag); dev.addEventListener('pointerleave', endDrag);
   dim.addEventListener('mousedown', (e) => e.preventDefault());      // (the mouse events after a long press by touch land on the dim and took the focus out of the phone)
   dim.addEventListener('click', () => { if (lastDown > bigAt) set('small'); });      // (not the lift of the very finger whose long press enlarged it: its click lands on the dim, now on top)
@@ -395,7 +520,8 @@ export function createPhone({ host }) {
     show(t.dataset.go || (t.classList.contains('liveban') ? 'auction' : 'home'));
     if (e.detail === 0) (scr.querySelector('.back, [data-go], button') || dev).focus({ preventScroll: true });      // (from the keyboard, Enter on the back button: the focus stays in the rebuilt screen)
   });
-  addEventListener('resize', () => { if (st.state !== 'closed') layout(); });
+  addEventListener('resize', () => { if (st.state !== 'closed') { layout(); fitNumbers(); box.classList.toggle('turned', turned()); } });
+  document.fonts?.ready.then(() => fitNumbers());      // (a figure measured before its font came in)
   // big, Tab goes round the phone's own buttons only (the game behind the dim is not reachable)
   addEventListener('keydown', (e) => {
     if (st.state !== 'big' || e.key !== 'Tab') return;
