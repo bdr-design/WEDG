@@ -15,33 +15,50 @@ import 'worker_backend.dart';
 /// `self`; the tests drive it directly, on the VM and in node.
 ///
 /// page -> worker (JSON text):
-/// * `{op: 'start', id, store: {key: text}, newGame: {seed, playerName,
-///   farmName, region, favourite}, timeScale}`: opens the game kept in
-///   `store`, or makes a new one. A second start closes the first engine
-///   (saved, its clock stopped) before the next opens.
+/// * `{op: 'start', id, server: {base, token}, newGame: {seed, playerName,
+///   farmName, region, favourite}, timeScale}`: opens the game kept by the
+///   iPhone app's server (the worker reads and writes it itself, so the page
+///   never holds the save's text), or with `store: {key: text}` instead of
+///   `server`, the game the page keeps (the browser tests). A new game when
+///   there is none. A second start closes the first engine (saved, its clock
+///   stopped) before the next opens.
 /// * `{op: 'dispatch', id, command: {type, ...}}` (commands_json.dart).
 /// * `{op: 'flush' | 'pause' | 'resume' | 'openPrevious', id}`;
 ///   `{op: 'startOver', id, newGame}`.
-/// * `{op: 'stored', seq, ok, error}`: the page kept write `seq`, or could not.
-///   Answered at once, never queued (every other op waits its turn, in order).
+/// * `{op: 'stored', seq, ok, error}`: the page kept write `seq`, or could not
+///   (only when it keeps the save). Answered at once, never queued (every
+///   other op waits its turn, in order).
 ///
 /// worker -> page: JSON text `{type: 'ready' | 'reply' | 'snapshot' | 'save' |
-/// 'catchUp' | 'notice' | 'error', ...}`, and the save's writes through
-/// [postStore] (`{type: 'store', seq, key, value}`, a null value deletes; sent
-/// as an object, so a save of megabytes is not written as JSON a second time).
+/// 'wrote' | 'catchUp' | 'notice' | 'error', ...}` ('wrote': a write's key,
+/// characters, milliseconds and outcome, for the frame meter); and, when the
+/// page keeps the save, its writes through [postStore] (`{type: 'store', seq,
+/// key, value}`, a null value deletes; sent as an object, so the save is not
+/// written as JSON a second time).
 class WorkerHost {
   WorkerHost({
     required this.post,
     required this.postStore,
+    this.http,
+    this.saveTimeout = const Duration(seconds: 15),
     DateTime Function()? wallClock,
   }) : _wall = wallClock ?? DateTime.now;
 
+  /// A request to the app's server that has not answered by then is cut off
+  /// and the write counts as failed (one that never answered held up every
+  /// later write, and every command waited behind it).
+  final Duration saveTimeout;
+
   final void Function(String json) post;
   final void Function(int seq, String key, String? value) postStore;
+
+  /// How the worker reaches the app's server (fetch in bin/worker.dart);
+  /// without it only the page can keep the save.
+  final HttpCall? http;
   final DateTime Function() _wall;
 
   EngineCore? _core;
-  WorkerBackend? _backend;
+  PageSaveIo? _pageIo;
   Timer? _ticker;
   Duration? _tick;
   Future<void> _tail = Future.value();
@@ -78,7 +95,7 @@ class WorkerHost {
   void _stored(Map<String, Object?> m) {
     final seq = m['seq'];
     if (seq is! num) return;
-    _backend?.stored(
+    _pageIo?.stored(
       seq.toInt(),
       ok: m['ok'] == true,
       error: m['error'] is String ? m['error']! as String : null,
@@ -132,7 +149,16 @@ class WorkerHost {
             'status': _status(await core.openPrevious()),
           });
         case 'startOver':
-          final p = _params(m['newGame']);
+          final NewGameParams p;
+          try {
+            p = _params(m['newGame']);
+          } on FormatException catch (e) {
+            return _reply(id, {
+              'ok': false,
+              'error': 'badNewGame',
+              'detail': e.message,
+            });
+          }
           await core.startOver();
           await core.newGame(p);
           _reply(id, {'ok': true, 'status': 'new'});
@@ -147,7 +173,15 @@ class WorkerHost {
   Future<void> _start(Object? id, Map<String, Object?> m) async {
     // everything checked before anything changes: a bad start leaves the
     // engine that runs, if any, as it was
+    final server = m['server'];
     final rawStore = m['store'] ?? const <String, Object?>{};
+    if (server != null &&
+        (server is! Map ||
+            server['base'] is! String ||
+            server['token'] is! String ||
+            http == null)) {
+      return _reply(id, {'ok': false, 'error': 'badServer'});
+    }
     if (rawStore is! Map ||
         rawStore.entries.any((e) => e.key is! String || e.value is! String)) {
       return _reply(id, {'ok': false, 'error': 'badStore'});
@@ -158,9 +192,7 @@ class WorkerHost {
     }
     final NewGameParams? fresh;
     try {
-      fresh = m['newGame'] == null && rawStore.containsKey('marah.save')
-          ? null
-          : _params(m['newGame']);
+      fresh = m['newGame'] == null ? null : _params(m['newGame']);
     } on FormatException catch (e) {
       return _reply(id, {
         'ok': false,
@@ -175,11 +207,39 @@ class WorkerHost {
     await _core?.close();
     _core = null;
 
-    final backend = _backend = WorkerBackend(
-      rawStore.cast<String, String>(),
-      postStore,
-      nextSeq: () => ++_seq,
-    );
+    final SaveIo io;
+    if (server is Map) {
+      _pageIo = null;
+      io = _Measured(
+        ServerSaveIo(
+          http!,
+          base: server['base']! as String,
+          token: server['token']! as String,
+          timeout: saveTimeout,
+        ),
+        _send,
+      );
+    } else {
+      io = _Measured(
+        _pageIo = PageSaveIo(
+          rawStore.cast<String, String>(),
+          postStore,
+          nextSeq: () => ++_seq,
+        ),
+        _send,
+      );
+    }
+    final Map<String, String> kept;
+    try {
+      kept = await io.load();
+    } on Object catch (e) {
+      return _reply(id, {
+        'ok': false,
+        'error': 'saveUnreadable',
+        'detail': '$e',
+      });
+    }
+    final backend = WorkerBackend(kept, io);
     // a faster clock for trying things in tests; a save played on one is
     // ahead of the real clock, and waits for it at a normal speed
     final s = scale.toDouble();
@@ -214,8 +274,18 @@ class WorkerHost {
     final every = tick < const Duration(milliseconds: 10)
         ? const Duration(milliseconds: 10)
         : tick;
+    // one catch-up at a time: a tick that comes while the last one (its
+    // day, save and snapshot) is still running is skipped, never queued
+    var busy = false;
     _ticker = Timer.periodic(every, (_) {
-      unawaited(core.catchUp().catchError((Object _) {}));
+      if (busy) return;
+      busy = true;
+      unawaited(
+        core
+            .catchUp()
+            .catchError((Object _) {})
+            .whenComplete(() => busy = false),
+      );
     });
   }
 
@@ -296,4 +366,41 @@ class WorkerHost {
       'reason': reason,
     },
   });
+}
+
+/// Reports each write to the page ('wrote'): what the frame meter shows of
+/// the save, wherever it is kept.
+class _Measured implements SaveIo {
+  _Measured(this.io, this.send);
+  final SaveIo io;
+  final void Function(Map<String, Object?>) send;
+
+  @override
+  Future<Map<String, String>> load() => io.load();
+
+  @override
+  Future<void> keep(String key, String? value) async {
+    final sw = Stopwatch()..start();
+    try {
+      await io.keep(key, value);
+      send(_note(key, value, sw, null));
+    } on Object catch (e) {
+      send(_note(key, value, sw, '$e'));
+      rethrow;
+    }
+  }
+
+  static Map<String, Object?> _note(
+    String key,
+    String? value,
+    Stopwatch sw,
+    String? error,
+  ) => {
+    'type': 'wrote',
+    'key': key,
+    'chars': value?.length ?? 0,
+    'ms': sw.elapsedMicroseconds / 1000,
+    'ok': error == null,
+    'error': error,
+  };
 }

@@ -52,10 +52,13 @@ G2 is built but for the phone's numbers:
   command as JSON and sends the main screens' view (the player's snapshot)
   as JSON; the detail views (a camel, a festival, a page of the herd) get
   theirs with G3, which needs them.
-- **The save:** kept by the page and acknowledged write by write, so a write
-  that fails reaches the engine, which reports it and tries again. In the
-  iPhone app it is files through the app's own server (`/save`, a key per
-  launch in the page's address); in the browser tests, localStorage.
+- **The save:** in the iPhone app, files behind the app's own server
+  (`/save`, a key per launch in the page's address), which the worker reads
+  and writes itself, so the page's thread never holds the save's text; a
+  request that does not answer within 15 s is cut off and counts as failed.
+  In the browser tests the page keeps it in localStorage and answers each
+  write. Either way a write that fails reaches the engine, which reports it
+  and tries again.
 - **Same seed, same game:** two years of the scripted bot, with every
   command it does not send itself added, give the same state, hashed every
   four weeks, on the Dart VM and in node; the save JavaScript wrote reads
@@ -64,9 +67,9 @@ G2 is built but for the phone's numbers:
   in node only as far as the same-seed save shows.
 - **Measured** (the worker's own work is on its thread, not the frame's): a
   new game or the saved one is up 0.1 to 1.8 s after the yard (desktop,
-  software renderer); the snapshot is 25 KB and the save 59 KB at the start,
-  kept through a stand-in for the app's server (its own save code) in 16 to
-  24 ms, a request the frame does not wait for. At 10,000 head, in
+  software renderer); the snapshot is 25,000 characters and the save 59,000
+  at the start, the snapshot read on the page's thread in under half a
+  millisecond after the first. At 10,000 head, in
   node on a desktop: the save is 6.7 MB and takes 417 ms to write as text, a
   game day 24 ms, a snapshot 118 ms (22 ms on the Dart VM), so a command at
   that size answers in about half a second. The frame meter (`#fps`) shows
@@ -133,7 +136,7 @@ and cheating (parts 4 and 5) are built; the auctions (part 6) come with G5.
   never carries hidden values).
 - The same file runs in the iPhone app and in the headless browser tests.
 - **Saves go through the iPhone app to a file**, over the app's own local
-  server (the one that serves the page). The page's own storage would be lost: the app serves the page on a new
+  server (the one that serves the page), which the worker calls itself. The page's own storage would be lost: the app serves the page on a new
   port each launch, so its origin, and the storage tied to it, changes; and
   a worker has no localStorage. In the browser tests a stand-in keeps them.
 - The worker's entry point (it needs `dart:js_interop`) lives outside

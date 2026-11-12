@@ -140,18 +140,19 @@ void main() {
       bool Function()? refuse,
       List<int>? seqs,
     }) {
-      late final WorkerBackend b;
-      b = WorkerBackend(seed, (seq, k, v) {
+      var n = 0;
+      late final PageSaveIo io;
+      io = PageSaveIo(seed, (seq, k, v) {
         seqs?.add(seq);
         scheduleMicrotask(() {
           if (refuse?.call() ?? false) {
-            return b.stored(seq, ok: false, error: 'disk full');
+            return io.stored(seq, ok: false, error: 'disk full');
           }
           v == null ? kept.remove(k) : kept[k] = v;
-          b.stored(seq, ok: true);
+          io.stored(seq, ok: true);
         });
-      });
-      return b;
+      }, nextSeq: () => ++n);
+      return WorkerBackend(seed, io);
     }
 
     test('every change goes to the page, numbered, and lands', () async {
@@ -174,17 +175,63 @@ void main() {
       final b = backend({}, refuse: () => true);
       await expectLater(b.write('k', 'v'), throwsA(isA<SaveWriteFailed>()));
 
-      final silent = WorkerBackend(
+      final silent = PageSaveIo(
         const {},
         (_, _, _) {},
+        nextSeq: () => 1,
         timeout: const Duration(milliseconds: 20),
       );
-      await expectLater(
-        silent.write('k', 'v'),
-        throwsA(isA<SaveWriteFailed>()),
-      );
+      await expectLater(silent.keep('k', 'v'), throwsA(isA<SaveWriteFailed>()));
       silent.stored(1, ok: true); // a late answer changes nothing
     });
+
+    test(
+      'the app server: read, written, refused, or silent and cut off',
+      () async {
+        final files = <String, String>{'marah.save': 'S'};
+        var mode = 'ok';
+        final calls = <String>[];
+        Future<(int, String)> http(
+          String method,
+          String url,
+          Map<String, String> headers,
+          String? body,
+          Duration timeout,
+        ) async {
+          calls.add('$method $url ${headers['x-marah-save']}');
+          if (mode == 'silent') {
+            // never answers: the call must be cut off at the timeout
+            return Future<(int, String)>.delayed(const Duration(days: 1))
+                .timeout(timeout);
+          }
+          if (mode == 'refuse') return (500, '');
+          final key = Uri.decodeComponent(url.split('/save/').last);
+          if (method == 'GET') return (200, jsonEncode(files));
+          method == 'PUT' ? files[key] = body! : files.remove(key);
+          return (204, '');
+        }
+
+        final io = ServerSaveIo(
+          http,
+          base: 'http://127.0.0.1:9',
+          token: 't0k',
+          timeout: const Duration(milliseconds: 30),
+        );
+        expect(await io.load(), {'marah.save': 'S'});
+        await io.keep('marah.save.prev', 'P');
+        await io.keep('marah.save', null);
+        expect(files, {'marah.save.prev': 'P'});
+        expect(calls.first, 'GET http://127.0.0.1:9/save t0k');
+        expect(calls.last, 'DELETE http://127.0.0.1:9/save/marah.save t0k');
+        mode = 'refuse';
+        await expectLater(io.keep('k', 'v'), throwsA(isA<SaveWriteFailed>()));
+        await expectLater(io.load(), throwsA(isA<SaveWriteFailed>()));
+        mode = 'silent';
+        final sw = Stopwatch()..start();
+        await expectLater(io.keep('k', 'v'), throwsA(isA<SaveWriteFailed>()));
+        expect(sw.elapsedMilliseconds, lessThan(2000));
+      },
+    );
 
     test(
       'a write the page refuses reaches the engine, which tries again',

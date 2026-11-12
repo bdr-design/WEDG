@@ -72,7 +72,7 @@ void saveTests() {
     expect((await call(s, 'GET', '/save')).$1, 403);
     expect((await call(s, 'GET', '/save', token: 'nope')).$1, 403);
     expect((await call(s, 'PUT', '/save/marah.save', body: [65])).$1, 403);
-    for (final bad in ['/save/..%2Fx', '/save/.hidden', '/save/a%2Fb', '/save/', '/save/%FF']) {
+    for (final bad in ['/save/..%2Fx', '/save/.hidden', '/save/a%2Fb', '/save/', '/save/%FF', '/save/index.html', '/save/x1']) {
       final (code, _) = await call(s, 'PUT', bad, token: t, body: [65]);
       expect(code, anyOf(400, 500), reason: bad);
     }
@@ -83,6 +83,17 @@ void saveTests() {
     expect(SaveFiles.validKey('marah.save.broken'), isTrue);
     expect(SaveFiles.validKey('../marah'), isFalse);
     expect(SaveFiles.validKey('a..b'), isFalse);
+    expect(SaveFiles.validKey('index.html'), isFalse);
+    // more than a save may hold is refused, and nothing is left behind
+    // (answered 500 while the body is still coming, or the connection cut: either way not kept)
+    try {
+      expect((await call(s, 'PUT', '/save/marah.save', token: t, body: List.filled(SaveFiles.maxBytes + 1, 65))).$1, 500);
+    } on HttpException {
+      // the server stopped reading
+    } on SocketException {
+      // likewise
+    }
+    expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), isEmpty);
   });
 
   test('the bundle is still served beside the save', () async {

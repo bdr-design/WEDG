@@ -21,8 +21,12 @@ class SaveFiles {
   final String token;
   int _n = 0;
 
-  /// The most a save may hold (a 10,000-head farm's is about 10 MB).
-  static const maxBytes = 256 << 20;
+  /// The most a save may hold (a 10,000-head farm's is 6.7 MB).
+  static const maxBytes = 64 << 20;
+
+  /// The only keys there are: the save, the last one proven readable, and a
+  /// copy of one that could not be read (marah_data's SaveStore).
+  static const keys = {'marah.save', 'marah.save.prev', 'marah.save.broken'};
 
   static String _newToken() {
     final r = Random.secure();
@@ -33,9 +37,7 @@ class SaveFiles {
   }
 
   /// A key may be a file name and nothing else.
-  static bool validKey(String key) =>
-      RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$').hasMatch(key) &&
-      !key.contains('..');
+  static bool validKey(String key) => keys.contains(key);
 
   File _file(String key) => File('${dir.path}/$key');
 
@@ -71,8 +73,14 @@ class SaveFiles {
           utf8.decode(bytes); // text only: GET reads it back as text
           await dir.create(recursive: true);
           final tmp = File('${dir.path}/.$key.${_n++}.tmp');
-          await tmp.writeAsBytes(bytes, flush: true);
-          await tmp.rename(_file(key).path);
+          try {
+            await tmp.writeAsBytes(bytes, flush: true);
+            await tmp.rename(_file(key).path);
+          } catch (_) {
+            // a full disk: the old file stays whole, and no half-written copy is left
+            if (await tmp.exists()) await tmp.delete();
+            rethrow;
+          }
           res.statusCode = HttpStatus.noContent;
         } else if (req.method == 'DELETE') {
           final f = _file(key);

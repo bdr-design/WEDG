@@ -8,12 +8,14 @@ import 'package:test/test.dart';
 /// The page's side: keeps every write (or refuses while [refuse] is set) and
 /// answers it a moment later, as engine.js does.
 class Page {
-  Page() {
+  Page({this.answerAfter = Duration.zero, bool server = false}) {
     host = WorkerHost(
       post: (j) => messages.add(jsonDecode(j) as Map<String, Object?>),
+      http: server ? _http : null,
+      saveTimeout: const Duration(milliseconds: 200),
       postStore: (seq, k, v) {
         writes.add((seq, k, v));
-        scheduleMicrotask(() {
+        Future<void>.delayed(answerAfter, () {
           if (!refuse) v == null ? kept.remove(k) : kept[k] = v;
           host.receive(
             jsonEncode({
@@ -29,6 +31,28 @@ class Page {
   }
 
   late final WorkerHost host;
+  final Duration answerAfter;
+
+  /// The app's server, as the worker reaches it: keeps the files in [kept];
+  /// while [hang] is set a request never answers (cut off at the timeout).
+  bool hang = false;
+  Future<(int, String)> _http(
+    String method,
+    String url,
+    Map<String, String> headers,
+    String? body,
+    Duration timeout,
+  ) async {
+    if (headers['x-marah-save'] != 'tok') return (403, '');
+    if (hang) return Completer<(int, String)>().future.timeout(timeout);
+    await Future<void>.delayed(answerAfter);
+    if (method == 'GET') return (200, jsonEncode(kept));
+    final key = Uri.decodeComponent(url.split('/save/').last);
+    writes.add((0, key, body));
+    method == 'PUT' ? kept[key] = body! : kept.remove(key);
+    return (204, '');
+  }
+
   final kept = <String, String>{};
   final messages = <Map<String, Object?>>[];
   final writes = <(int, String, String?)>[];
@@ -231,4 +255,97 @@ void main() {
       await broken.call('pause');
     },
   );
+
+  test('the app server: the worker keeps the save itself', () async {
+    final page = Page(server: true);
+    const server = {'base': 'http://127.0.0.1:9', 'token': 'tok'};
+    final r = await page.call('start', {'server': server, 'newGame': newGame});
+    expect(r, containsPair('status', 'new'));
+    expect(page.kept.keys, containsAll(['marah.save', 'marah.save.prev']));
+    expect(
+      page.messages.where((m) => m['type'] == 'wrote' && m['ok'] == true),
+      isNotEmpty,
+    );
+    await page.call('dispatch', {
+      'command': {'type': 'orderSupply', 'supply': 'water', 'units': 1},
+    });
+    await page.call('pause');
+    // opened again from the server's files
+    final again = Page(server: true)..kept.addAll(page.kept);
+    expect(
+      await again.call('start', {'server': server}),
+      containsPair('status', 'opened'),
+    );
+    await again.call('pause');
+    // without a way to reach it, or with a bad key, nothing starts
+    expect(
+      await Page().call('start', {'server': server}),
+      containsPair('error', 'badServer'),
+    );
+    expect(
+      await Page(server: true).call('start', {
+        'server': {...server, 'token': 'nope'},
+      }),
+      containsPair('error', 'saveUnreadable'),
+    );
+  });
+
+  test(
+    'a request that never answers is cut off; later commands go on',
+    () async {
+      final page = Page(server: true);
+      await page.call('start', {
+        'server': {'base': 'http://127.0.0.1:9', 'token': 'tok'},
+        'newGame': newGame,
+      });
+      page.hang = true;
+      final sw = Stopwatch()..start();
+      await page.call('dispatch', {
+        'command': {'type': 'orderSupply', 'supply': 'barley', 'units': 1},
+      });
+      expect(sw.elapsedMilliseconds, lessThan(1500));
+      await page.waitFor((m) => m['type'] == 'save' && m['ok'] == false);
+      page.hang = false;
+      sw.reset();
+      final r = await page.call('dispatch', {
+        'command': {'type': 'orderSupply', 'supply': 'barley', 'units': 1},
+      });
+      expect(r, containsPair('ok', true));
+      expect(sw.elapsedMilliseconds, lessThan(1500));
+      await page.call('flush');
+      await page.waitFor((m) => m['type'] == 'save' && m['ok'] == true);
+      await page.call('pause');
+    },
+  );
+
+  test('a fast clock never queues its ticks behind slow saves', () async {
+    // each write answered after 20 ms, a game day every 12 ms
+    final page = Page(answerAfter: const Duration(milliseconds: 20));
+    await page.call('start', {'newGame': newGame, 'timeScale': 1e6});
+    await Future<void>.delayed(const Duration(seconds: 2));
+    final sw = Stopwatch()..start();
+    await page.call('dispatch', {
+      'command': {'type': 'setShepherds', 'count': 1},
+    });
+    expect(
+      sw.elapsedMilliseconds,
+      lessThan(600),
+      reason: 'waited behind ticks',
+    );
+    sw.reset();
+    await page.call('pause');
+    expect(sw.elapsedMilliseconds, lessThan(600));
+  });
+
+  test('startOver with bad settings is refused, not thrown', () async {
+    final page = Page();
+    await page.call('start', {'newGame': newGame});
+    expect(
+      await page.call('startOver', {
+        'newGame': {'region': 'mars'},
+      }),
+      containsPair('error', 'badNewGame'),
+    );
+    await page.call('pause');
+  });
 }

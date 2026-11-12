@@ -44,6 +44,39 @@ const reply = (id) => until((m) => (m.type === 'reply' || m.type === 'error') &&
   send({ op: 'pause', id: 4 });
   assert.strictEqual((await reply(4)).ok, true);
   assert.ok(kept['marah.save'].includes('"supply":"water"'), 'the order is in the save');
+
+  // the app's server: the worker fetches and writes the files itself (fetch faked here, aborts honoured); one request
+  // that never answers is cut off and the next goes through
+  const files = { ...kept };
+  let hang = false, fetched = 0;
+  globalThis.fetch = (url, init) => new Promise((resolve, reject) => {
+    fetched++;
+    assert.strictEqual(init.headers['x-marah-save'], 'tok', 'the key goes with every request');
+    if (hang) { init.signal.addEventListener('abort', () => reject(new Error('aborted'))); return; }
+    const key = decodeURIComponent(url.split('/save/')[1] || '');
+    if (init.method === 'GET') return resolve({ status: 200, text: async () => JSON.stringify(files) });
+    if (init.method === 'PUT') files[key] = init.body; else delete files[key];
+    resolve({ status: 204, text: async () => '' });
+  });
+  send({ op: 'start', id: 5, server: { base: 'http://127.0.0.1:9', token: 'tok' } });
+  assert.strictEqual((await reply(5)).status, 'opened');      // (the first engine saved to the page as it closed)
+  const before = got.filter((m) => m.type === 'store').length;
+  send({ op: 'dispatch', id: 6, command: { type: 'orderSupply', supply: 'barley', units: 2 } });
+  assert.strictEqual((await reply(6)).ok, true);
+  assert.ok(files['marah.save'].includes('"supply":"barley"'), 'written to the server');
+  assert.strictEqual(got.filter((m) => m.type === 'store').length, before, 'nothing handed to the page');
+  assert.ok(got.some((m) => m.type === 'wrote' && m.ok), 'each write reported for the meter');
+  hang = true;
+  send({ op: 'dispatch', id: 7, command: { type: 'orderSupply', supply: 'barley', units: 1 } });
+  await reply(7);
+  await until((m) => m.type === 'save' && m.ok === false, 30000);
+  hang = false;
+  send({ op: 'flush', id: 8 });
+  assert.strictEqual((await reply(8)).ok, true);
+  await until((m) => m.type === 'save' && m.ok === true, 30000);
+  assert.ok(fetched > 3);
+  send({ op: 'pause', id: 9 });
+  await reply(9);
   console.log(`worker smoke: ok (${got.length} messages, save ${kept['marah.save'].length} chars)`);
   process.exit(0);
 })().catch((e) => { console.error('worker smoke: FAILED', e); process.exit(1); });
