@@ -30,7 +30,7 @@ const CSS = `
   .phone[data-state="big"] .scr { width: calc(${W - 18}px / var(--k, 1)); height: calc(${H - 18}px / var(--k, 1)); zoom: var(--k, 1); border-radius: calc(42px / var(--k, 1)); }      /* (lengths, not percentages: a zoomed box's percentage size is not magnified, and it shrank into a corner) */
   .phone[data-state="big"] .scr .pill { top: calc(9px / var(--k, 1)); width: calc(92px / var(--k, 1)); height: calc(27px / var(--k, 1)); border-radius: calc(14px / var(--k, 1)); }
   .phone[data-state="big"] .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
-  .phone[data-state="big"] .nav { position: sticky; top: -1px; z-index: 3; min-height: 44px; background: var(--bg); box-shadow: 0 -3px 0 var(--bg); }      /* (held a pixel past the scroll's top edge and painted a little above itself: that edge falls between two of the screen's pixels, and a row of the scrolled content showed there) */
+  .phone[data-state="big"] .nav { position: sticky; top: -1px; margin-top: -1px; padding-top: 1px; z-index: 3; min-height: 45px; background: var(--bg); box-shadow: 0 -3px 0 var(--bg); }      /* (held a pixel past the scroll's top edge, where it already rests, and painted a little above itself: that edge falls between two of the screen's pixels, and a row of the scrolled content showed there; resting a pixel lower, it stepped up as a scroll began) */
   .phone[data-state="big"] .dock { position: sticky; bottom: 0; z-index: 3; }
   .phone[data-state="big"] .back, .phone[data-state="big"] [data-go], .phone[data-state="big"] .liveban, .phone[data-state="big"] button { min-height: 44px; min-width: 44px; }
   * { box-sizing: border-box; margin: 0; }
@@ -200,7 +200,7 @@ const CSS = `
   /* home: the widgets one above the other, the apps three to a row, the dock two by two */
   .hs { display: contents; }      /* (the home's widgets and apps: as before, small) */
   .phone[data-state="big"] .scr.home .body { overflow: hidden; }
-  .phone[data-state="big"] .scr.home .hs { display: flex; flex-direction: column; gap: 14px; flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-top: 6px; }      /* (they scroll above the dock, never under it: under its round corners they showed) */
+  .phone[data-state="big"] .scr.home .hs { display: flex; flex-direction: column; gap: 14px; flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 6px 10px 0; margin-inline: -10px; }      /* (out to the screen's sides: the widgets' and icons' shadows were cut at its edges) */      /* (they scroll above the dock, never under it: under its round corners they showed) */
   .phone[data-state="big"] .widgets { grid-template-columns: 1fr; gap: 10px; }
   .phone[data-state="big"] .wg { height: auto; gap: 2px; }
   .phone[data-state="big"] .wg .big, .phone[data-state="big"] .wg .big2 { margin-block: 2px 4px; }
@@ -474,11 +474,11 @@ export function createPhone({ host }) {
   // hands pointer events over in the game's frame, where the phone stands upright, at true size), with a fling as it
   // lets go that slows as iOS's does (by 0.998 a millisecond). A finger slides the phone instead when it is taller than
   // the screen.
-  let fling = 0;
+  let fling = 0, flinging = false, stopTap = false;
   const fits = () => host.clientHeight - H * bigScale() >= 2 * EDGE - 0.5;
   dev.addEventListener('pointerdown', (e) => {
     if (st.state !== 'big') return;
-    cancelAnimationFrame(fling);
+    stopTap = flinging; cancelAnimationFrame(fling); flinging = false;      // (a tap on a moving list only stops it, as on iOS)
     const sc = turned() && fits() ? e.target.closest('.hs, .body') : null;
     drag = { id: e.pointerId, y: e.clientY, y0: st.y, sc, top: sc ? sc.scrollTop : 0, t: e.timeStamp, last: e.clientY, v: 0 }; slid = false;
   });
@@ -500,9 +500,9 @@ export function createPhone({ host }) {
     const step = (now) => {
       const dt = now - at; at = now; const before = sc.scrollTop;
       sc.scrollTop += speed * dt; speed *= Math.pow(0.998, dt);
-      if (Math.abs(speed) > 0.02 && sc.scrollTop !== before) fling = requestAnimationFrame(step);
+      if (Math.abs(speed) > 0.02 && sc.scrollTop !== before) fling = requestAnimationFrame(step); else flinging = false;
     };
-    fling = requestAnimationFrame(step);
+    flinging = true; fling = requestAnimationFrame(step);
   };
   dev.addEventListener('pointerup', endDrag); dev.addEventListener('pointercancel', endDrag); dev.addEventListener('pointerleave', endDrag);
   dim.addEventListener('mousedown', (e) => e.preventDefault());      // (the mouse events after a long press by touch land on the dim and took the focus out of the phone)
@@ -514,14 +514,15 @@ export function createPhone({ host }) {
     (scr.querySelector('.back, [data-go], button') || dev).focus({ preventScroll: true });      // (the screen is rebuilt: the focus stays in the phone, not dropped to the page)
   });
   scr.addEventListener('click', (e) => {
-    if (slid) { slid = false; return; }                 // (the finger slid the phone: not a tap)
+    if (e.detail !== 0 && (slid || stopTap)) { slid = stopTap = false; return; }      // (the finger slid the phone or stopped a fling: not a tap; a keyboard's or assistive technology's click is never one of those)
+    stopTap = false;
     const t = e.target.closest('[data-go], .back, .liveban');
     if (!t) return;
     show(t.dataset.go || (t.classList.contains('liveban') ? 'auction' : 'home'));
     if (e.detail === 0) (scr.querySelector('.back, [data-go], button') || dev).focus({ preventScroll: true });      // (from the keyboard, Enter on the back button: the focus stays in the rebuilt screen)
   });
   addEventListener('resize', () => { if (st.state !== 'closed') { layout(); fitNumbers(); box.classList.toggle('turned', turned()); } });
-  document.fonts?.ready.then(() => fitNumbers());      // (a figure measured before its font came in)
+  document.fonts?.addEventListener?.('loadingdone', () => fitNumbers());      // (a figure measured before its font came in: the phone's faces load only as it first shows, after fonts.ready has long resolved)
   // big, Tab goes round the phone's own buttons only (the game behind the dim is not reachable)
   addEventListener('keydown', (e) => {
     if (st.state !== 'big' || e.key !== 'Tab') return;

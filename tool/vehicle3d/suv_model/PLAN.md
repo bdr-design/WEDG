@@ -162,7 +162,9 @@ Moving parts and the seat view (12 Nov, ours_game.py):
 - The driver's door is cut from the body along its shut lines (door_split) with its window, chrome, handle and mirror,
   under 'door_FL' at the hinge (9.4k triangles, 7 draws); the cabin's door trim swings with it ('doorcard_FL'). It
   takes its whole window frame, as the LC300's framed door: the top trim up to z 1.79 and, above the belt, back to
-  the B pillar's black strip, which stays on the body.
+  the B pillar's black strip, which stays on the body. Its glass is cut clean 3 cm past the A pillar's line (the
+  pane runs under the pillar's trim), and a front sash member runs along the pane's front edge inside it (sash): open,
+  the door's window has its frame all round; shut, the dark glass hides the member from outside.
 - doorway: the sill under the cabin floor's edge, its scuff plate under the shut door's trim, a riser to the floor
   and the door's two jambs, which the open door uncovers (a band under the seat showed through the car). The jambs
   follow the skin's profile, measured before the door is cut, 1.2 cm inside it and up to z 1.15 (a straight edge

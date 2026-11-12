@@ -87,6 +87,8 @@ DOOR_XU = -0.19
 DOOR_Z = (0.43, 1.22, 1.79)
 DOOR_A = ((0.94, 1.22), (0.11, 1.765))
 HINGE = (0.94, 0.92, 0.85)
+APIL_GLASS = 0.03                       # the door's glass cut clean this far past the A pillar's line and taken to there (it runs 2-4 cm under the pillar's trim)
+SASH = (-0.027, -0.003, 0.012)          # the front sash member: from 2.7 cm to 3 mm forward of the line (along the pane's front edge), 1.2 cm inside the glass
 MIRROR = ((0.50, 0.82), (0.76, 1.10), (1.24, 1.50))      # the door-mounted mirror's box: it goes with the door whole
 
 
@@ -106,13 +108,21 @@ def door_split(body):
     left = lambda: [e for e in bm.verts[:] + bm.edges[:] + bm.faces[:] if near_door(mid(e))]
     for co, no in (((DOOR_X[0], 0, 0), (1, 0, 0)), ((DOOR_X[1], 0, 0), (1, 0, 0)), ((0, 0, DOOR_Z[0]), (0, 0, 1)), ((0, 0, DOOR_Z[1]), (0, 0, 1)), ((0, 0, DOOR_Z[2]), (0, 0, 1)), ((ax, 0, az), tuple(na))):
         bmesh.ops.bisect_plane(bm, geom=left(), plane_co=co, plane_no=no)
+    # the glass alone cut again APIL_GLASS forward of the line, so the door's pane ends on a clean edge there
+    gl = {i for i, m in enumerate(body.data.materials) if m and m.name == 'glass'}
+    gface = [f for f in bm.faces if f.material_index in gl and near_door(f.calc_center_median())]
+    gset = set(gface) | {e for f in gface for e in f.edges} | {v for f in gface for v in f.verts}
+    A = Vector((ax, 0, az))
+    bmesh.ops.bisect_plane(bm, geom=list(gset), plane_co=A + na * APIL_GLASS, plane_no=na)
     bm.faces.ensure_lookup_table()
     gloss = {i for i, m in enumerate(body.data.materials) if m and m.name == 'black_gloss'}
+    glass = {i for i, m in enumerate(body.data.materials) if m and m.name == 'glass'}
     def on_door(f):
         c = f.calc_center_median()
         if MIRROR[0][0] < c.x < MIRROR[0][1] and MIRROR[1][0] < c.y < MIRROR[1][1] and MIRROR[2][0] < c.z < MIRROR[2][1]: return True
         if DOOR_Z[0] < c.z < DOOR_Z[1]: return DOOR_X[0] < c.x < DOOR_X[1] and c.y > 0.55
-        return DOOR_Z[1] <= c.z < DOOR_Z[2] and c.y > 0.6 and DOOR_XU < c.x < xa(c.z) and f.material_index not in gloss
+        if not (DOOR_Z[1] <= c.z < DOOR_Z[2] and c.y > 0.6 and DOOR_XU < c.x and f.material_index not in gloss): return False
+        return c.x < xa(c.z) or (f.material_index in glass and (c - A).dot(na) < APIL_GLASS)      # (the pane to its clean cut: it runs 2-4 cm under the pillar's trim, and a strip of it stayed on the body)
     door_faces = {f.index for f in bm.faces if on_door(f)}
     bm.to_mesh(body.data); bm.free()
     door = body.copy(); door.data = body.data.copy(); bpy.context.collection.objects.link(door); door.name = door.data.name = 'door_body'
@@ -139,6 +149,46 @@ JAMB_X = (-0.155, 0.938)                # the B pillar's face, behind the shut d
 JAMB_Y0, JAMB_IN, JAMB_TOP = 0.80, 0.012, 1.15      # the jambs from y 0.80 out to 1.2 cm inside the skin, up to z 1.15 (above, the side curves in to the belt)
 
 
+def sash_line(body):
+    """The door glass's surface along the A pillar's line, at its front edge (where the front sash member runs), from the belt to
+    the roof every 5%: measured on the glass alone (the mirror stands in front of it from outside)."""
+    import bmesh
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    gi = {i for i, m in enumerate(body.data.materials) if m and m.name == 'glass'}
+    bm = bmesh.new(); bm.from_mesh(body.data)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index not in gi], context='FACES')
+    bvh = BVHTree.FromBMesh(bm)
+    (ax, az), (bx, bz) = DOOR_A
+    d = Vector((bx - ax, 0, bz - az)).normalized(); back = Vector((-d.z, 0, d.x))      # (across the line, into the door: -x, -z)
+    if back.x > 0: back = -back
+    out = []
+    for i in range(21):
+        t = i / 20; p = Vector((ax + (bx - ax) * t, 0, az + (bz - az) * t))
+        row = []
+        for off in (SASH[0], SASH[1]):
+            q = p + back * off; h = bvh.ray_cast(Vector((q.x, 1.5, q.z)), Vector((0, -1, 0)), 1.2)
+            row.append(Vector((q.x, h[0].y - SASH[2], q.z)) if h[0] else None)
+        out.append(row)
+    bm.free()
+    return [r for r in out if r[0] and r[1]]
+
+
+def sash(door_parts, line):
+    """The front sash member along the door glass's front edge, inside it (the window's run channel, as the LC300's
+    framed door has): a black strip on the door from the belt to the roof. From outside the dark glass hides it; open,
+    the door's window had nothing round its front edge."""
+    import bmesh
+    trim = next((o for o in door_parts if o.name == 'door_trim_black'), None)
+    if trim is None or len(line) < 2: print('sash: no door trim part or no glass along the line'); return
+    bm = bmesh.new(); bm.from_mesh(trim.data)
+    inv = trim.matrix_world.inverted()
+    for (a0, a1), (b0, b1) in zip(line, line[1:]):
+        f = bm.faces.new([bm.verts.new(inv @ v) for v in (a0, a1, b1, b0)]); f.smooth = False
+    bm.to_mesh(trim.data); bm.free()
+    print('sash: %d faces along the A pillar' % (len(line) - 1))
+
+
 def skin_profile(body):
     """The side's outer skin at the two jamb planes, by height (z 0.43 to JAMB_TOP every 2 cm): measured before the door
     is cut, by a ray from outside. A straight jamb edge at y 0.925 stood out through the skin up to 9 cm by the belt."""
@@ -159,7 +209,7 @@ def doorway(body, prof):
     triangles). Run after door_split, so they stay with the body."""
     import bmesh
     from mathutils import Vector
-    x0, x1 = DOOR_X[0] + 0.003, DOOR_X[1] - 0.002
+    x0, x1 = JAMB_X[0], DOOR_X[1] - 0.002      # (the sill back to the rear jamb behind the shut door's trim: ended at the shut line, it left a see-through notch at the doorway's rear corner)
     (za, zb, zc), (ya, yb, yc) = SILL_Z, SILL_Y
     quads = [      # four corners, the way the face looks, its material
         (((x0, yb, za), (x1, yb, za), (x1, yb, zb), (x0, yb, zb)), (0, 1, 0), 'trim_black'),        # the sill's outer face
@@ -307,8 +357,9 @@ def near(src, out, cabin_glb=None):
     if missing: sys.exit('no wheel_%s in %s' % (missing, src))
     rest = [o for o in bpy.data.objects if o.type == 'MESH' and o not in wheels.values()]
     body = join(rest, 'body')
-    prof = skin_profile(body)
-    door_split(body)
+    prof, line = skin_profile(body), sash_line(body)
+    door = door_split(body)
+    sash(door, line)
     doorway(body, prof)
     parts = by_material(body)
     if cabin_glb: view_split(parts, wheels, cabin_glb)

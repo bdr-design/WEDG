@@ -279,7 +279,9 @@ shadow copies below.
   or a building below its top: it is put back out by the side it came in by,
   so it slides along that face, and lets go at most 4 m/s. (Held at the face
   along its line, it jumped up to 3 m toward the car as the line swung onto a
-  corner.) Under the room's porch roof it stays below the roof. Searches of
+  corner.) Where its line to the car passes under a roof (the room's porch,
+  the car shade's cloth) it stays low enough for that line to clear the roof.
+  Searches of
   thousands of runs turning and driving by every wall end and building found
   no frame inside a box.
 - **The chase view's split now covers the camera over a wall.** The builder's
@@ -289,6 +291,9 @@ shadow copies below.
   missing: 7 draws and about 11k triangles more for those moments. By the yard
   wall the view stays split: 199 draws, 362k.
 - **The door takes its whole window frame, and the doorway has its sill.**
+  The frame is whole all round: the top, the rear post and a front sash
+  member along the pane's front edge (the pane cut clean 3 cm under the A
+  pillar's trim).
   With the door open, a band under the seat showed straight through the car.
   The sill, its scuff plate and the door's jambs are a few dozen triangles.
 - **The far layer's normals are recomputed.** The decimation left its own,

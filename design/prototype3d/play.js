@@ -35,9 +35,10 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   rects.push({ x0: 34, x1: 40, z0: 4.4, z1: 7.6, h: 3.0 });           // the shepherds' cabin
   rects.push({ x0: 13.4, x1: 15.4, z0: 4.2, z1: 9.4, h: 2.1 });       // the white shas under the shade
   rects.push({ x0: 25.2, x1: 27.6, z0: -16.9, z1: -11.5, h: 2.1 });   // the shas by the feed shed
-  // roofs a car drives under, with the height of their underside: the chase camera stays below it while the car is under
-  // (it rose over the room's porch roof and saw only the roof); world.js's pergola before the room, 3.25 m up, 12 cm thick
-  const roofs = [{ x0: 1.0, x1: 11.0, z0: 0.55, z1: 3.75, under: 3.19 }];
+  // roofs a car drives under, with the height of their underside (world.js): the porch's pergola before the room, 3.25 m
+  // up and 12 cm thick, and the car shade's cloth, 2.7 m at its edges and 3.2 at its middle. The chase camera keeps the
+  // line to the car under them (it rose over them and saw only the roof)
+  const roofs = [{ x0: 1.0, x1: 11.0, z0: 0.55, z1: 3.75, under: 3.19 }, { x0: 12.25, x1: 20.75, z0: 3.25, z1: 9.75, under: 2.7 }];
   const posts = [];
   for (const dx of [-1.4, 1.4]) for (const dz of [-1.4, 1.4]) posts.push({ x: 30 + dx, z: -40 + dz, r: 0.18 });
   for (const dx of [-3.2, 3.2]) for (const dz of [-6.2, 0, 6.2]) posts.push({ x: 32 + dx, z: -21 + dz, r: 0.15 });
@@ -634,9 +635,6 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
           need = Math.max(need, Math.min(h, cap));
           if (h > cap) wantBack = Math.min(wantBack, at * (cap - lookY) / top);
         }
-        let ceil = Infinity;      // (under a roof: the camera stays 0.3 m below it)
-        for (const r of roofs) if (carState.pos.x > r.x0 && carState.pos.x < r.x1 && carState.pos.z > r.z0 && carState.pos.z < r.z1) ceil = Math.min(ceil, r.under - 0.3);
-        need = Math.min(need, ceil);
         wantBack = Math.max(CHASE_NEAR, wantBack);
         camBack = camBack === null || state.snap ? wantBack : camBack + (wantBack - camBack) * Math.min(1, dt * (wantBack < camBack ? 12 : 4));      // (in quickly, out slowly)
         const rawX = carState.pos.x + bx * camBack, rawZ = carState.pos.z + bz * camBack;
@@ -657,6 +655,17 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
           else { const d = Math.min(camPos.x - x0, x1 - camPos.x, camPos.z - z0, z1 - camPos.z); if (d === camPos.x - x0) camPos.x = x0; else if (d === x1 - camPos.x) camPos.x = x1; else if (d === camPos.z - z0) camPos.z = z0; else camPos.z = z1; }      // (it was inside already: out by the nearest side)
         }
         camPullX = camPos.x - rawX; camPullZ = camPos.z - rawZ;
+        // a roof the line from the car to the camera passes under: the camera low enough for that line to clear the roof's
+        // underside by 0.25 m where it leaves the roof (with the car under the porch, or just in front of it, the camera
+        // rose over the porch and saw only its roof; held at the room's face under it, it climbed through it)
+        let ceil = Infinity;
+        for (const r of roofs) {
+          if (lookY >= r.under - 0.25) continue;
+          SEG.t0 = 0; SEG.t1 = 1;
+          if (!slab(carState.pos.x, camPos.x - carState.pos.x, r.x0, r.x1, SEG) || !slab(carState.pos.z, camPos.z - carState.pos.z, r.z0, r.z1, SEG)) continue;
+          ceil = Math.min(ceil, lookY + (r.under - 0.25 - lookY) / Math.max(SEG.t1, 0.05));
+        }
+        need = Math.min(need, ceil);
         // the car's climb, smoothed: the height eases at 6/s, so it lagged a climb by its rate over 6 (0.6 m over the car's base
         // on a 25 degree slope at 70 km/h, the car hiding the slope ahead); led by that much, it keeps its height over the car
         if (camY === null) { camVy = 0; camPrevY = carState.pos.y; }
@@ -665,8 +674,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         camY = camY === null ? want : camY + (want - camY) * Math.min(1, dt * 6);
         // the lift over the wall eases on top of that, no faster than CHASE_CLIMB (at 14/s it rose 74 cm in one frame as
         // the room came between, 1.5 m at 30 fps)
-        const lift = Math.max(0, need - camY), dl = (lift - camLift) * Math.min(1, dt * 8);
-        camLift = state.snap ? lift : camLift + Math.max(-CHASE_CLIMB * dt, Math.min(CHASE_CLIMB * dt, dl));
+        const lift = Math.max(0, need - camY), dl = (lift - camLift) * Math.min(1, dt * 8), down = camY + camLift > ceil ? 10 : CHASE_CLIMB;      // (above a roof's limit it comes down faster)
+        camLift = state.snap ? lift : camLift + Math.max(-down * dt, Math.min(CHASE_CLIMB * dt, dl));
         camPos.y = camY + camLift; camera.position.copy(camPos); camPrev.copy(camPos); camHad = true;
         camLook.copy(carState.pos).addScaledVector(fwd, 2.2).add(tmp.set(0, 1.05, 0)); camera.lookAt(camLook);
         // is the camera where ours_game.py's eyes saw the car from (behind it within 50 degrees, 1.3-4.2 m up, 5.6 and
