@@ -134,7 +134,7 @@
 
   /* ---------- pins over the world: an icon in a drop, no words (the place's name is its card's title) */
   #labels { position: fixed; inset: 0; pointer-events: none; }
-  .lbl { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 44px; padding: 0 0 9px; box-sizing: border-box; isolation: isolate; will-change: transform; color: var(--ink); pointer-events: auto; }
+  .lbl { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 44px; padding: 0 0 9px; box-sizing: border-box; isolation: isolate; will-change: transform; color: var(--ink); pointer-events: none; }
   .lbl::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 0; width: 35px; height: 35px; margin-left: -17.5px; box-sizing: border-box; border-radius: 50% 50% 0 50%; transform: rotate(45deg); background: rgba(15, 18, 25, 0.8); border: 1px solid var(--line); }
   .lbl:hover::before, .lbl.on::before { background: var(--najdi); border-color: transparent; }
   .lbl.warn::before { background: var(--warn); border-color: transparent; }
@@ -488,7 +488,7 @@ function mergeStatic(roots) {
   }
   for (const o of drop) o.removeFromParent();
 }
-const terrainReady = buildTerrain(scene, renderer, sand).then((t) => { drapeOnTerrain(t.heightAt); return t; });
+const terrainReady = buildTerrain(scene, renderer, sand).then((t) => { drapeOnTerrain(t.heightAt); groundAt = t.heightAt; return t; });
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
@@ -611,17 +611,17 @@ class Camel {
     // - the camel's matrices are recomputed only on the frames its animation steps (every frame up close, every 2nd past
     //   48 m, every 4th past 150 m), not by the scene's walk every frame (the herd's group keeps it out); far off its place then moves in steps of a
     //   few centimetres, under a pixel there;
-    // - the skeleton's matrices and its bone texture are redone only on those frames (three.js redid and re-sent them
-    //   every frame for every camel drawn).
+    // - the skeleton's matrices and its bone texture are redone only on those frames, here, straight after the bones
+    //   move (three.js redid and re-sent them every frame for every camel drawn, and only once a frame by its count,
+    //   which the shadow pass moves on before it draws: on the frame after each shadow redraw it skipped them, and every
+    //   camel in sight was drawn with the frame before's pose, the head 22-27 cm behind, at 30 fps 15 poses a second).
     const top = (o) => { const r = []; o.traverse((n) => { if (n.isBone && !(n.parent && n.parent.isBone)) r.push(n); }); return r; };
     for (let li = 1; li < this.lods.length; li++) {
       const L = this.lods[li];
       if (L.meshes.every((m) => !m.isSkinnedMesh || m.skeleton === skel)) for (const b of top(L.o)) b.parent.remove(b);
     }
     for (const b of top(rig)) b.visible = false;
-    this.moved = true;
-    const redo = skel.update.bind(skel);
-    skel.update = () => { if (this.moved) { redo(); this.moved = false; } };
+    this.redo = skel.update.bind(skel); skel.update = () => {};
     this.li = -1; this.clip = null; this.speed = 0; this.timer = R(2, 9); this.animDt = 0; this.frame = Math.floor(R(0, 4));
     this.mode = spec.home === 'graze' ? 'graze' : 'idle';
     this.target = null; this.contact = [true, true, true, true];
@@ -679,7 +679,7 @@ class Camel {
     // full rate up close, every 2nd frame past 48 m, every 4th past 150 m (the time adds up, so the pace is unchanged)
     this.animDt += dt; this.frame++;
     const every = d < 48 ? 1 : d < 150 ? 2 : 4;
-    if (this.frame % every === 0 || !this.placed) { this.mixer.update(this.animDt); this.animDt = 0; this.root.updateMatrixWorld(true); this.moved = this.placed = true; }
+    if (this.frame % every === 0 || !this.placed) { this.mixer.update(this.animDt); this.animDt = 0; this.root.updateMatrixWorld(true); this.redo(); this.placed = true; }
     if (this.clip === 'walk' && this.li < 2 && this.speed > 0.2) {
       for (let i = 0; i < this.feet.length; i++) {
         const w = this.feet[i].getWorldPosition(tmpV);
@@ -809,17 +809,9 @@ const placeHits = [];
     m.position.set(b[0], b[1], b[2]); m.userData.place = pl; m.updateMatrixWorld(); placeHits.push(m);
   }
 }
-let finger = null;
-addEventListener('pointerdown', (e) => { finger = [e.clientX, e.clientY]; }, true);
 const labels = PLACES.map((pl) => {
   const el = document.createElement('button'); el.type = 'button';
-  el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (finger && phone.hit(finger[0], finger[1])) return;       // (under the small phone: a tap there does nothing)
-    const r = rectOf(el);
-    if (finger && (finger[0] < r.left || finger[0] > r.right || finger[1] < r.top || finger[1] > r.bottom) && tapWorld(finger[0], finger[1])) return;
-    openPlace(pl);
-  });
+  el.addEventListener('click', (e) => { e.stopPropagation(); openPlace(pl); });      // (a key's press only: the pins take no touch, the map's tap finds them, pinAt)
   labelLayer.appendChild(el); pl.el = el; return pl;
 });
 const order = labels.slice();      // labels by collision priority, set in refreshLabels
@@ -1022,6 +1014,7 @@ const ease = { k: 1, t0: new THREE.Vector3(), t1: new THREE.Vector3(), o0: new T
 const EASE_S = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1e-3 : 0.6;
 const aim = new THREE.Vector3();
 function glideTo(pl, dist) {
+  onGround = false;
   // where the place should sit: 30% down the screen when the card docks at the bottom (a big screen),
   // in the left third in landscape (the card docks on the right)
   const side = SIDE();
@@ -1047,11 +1040,40 @@ function glideTo(pl, dist) {
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.minDistance = 4; controls.maxDistance = 9000;
 controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
+// held like a phone's map (the owner: hard to control, one finger turned it round): one finger drags the ground along,
+// two pinch it nearer or further, twist it round and, moved up or down together, tilt it; with a mouse the left button
+// drags, the right turns and tilts, the wheel zooms. The ground is dragged along itself, not the screen's plane, and the
+// point turned about keeps to the ground as it is dragged over a rise (a hill's foot was left under it, turned about
+// from inside the hill). (OrbitControls' two-finger turn by the fingers moved sideways together is taken out: a pinch
+// that drifted turned the map.)
+controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
+controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+controls.screenSpacePanning = false;
+let groundAt = null, onGround = false, twistA = null;
+const twoTurn = controls._handleTouchMoveRotate;
+if (typeof twoTurn === 'function' && typeof controls._getSecondPointerPosition === 'function' && typeof controls._rotateLeft === 'function') {
+  controls._handleTouchMoveRotate = function (e) {
+    if (this._pointers.length !== 2) { twistA = null; return twoTurn.call(this, e); }
+    const q = this._getSecondPointerPosition(e), first = e.pointerId === this._pointers[0];
+    const a = first ? Math.atan2(q.y - e.pageY, q.x - e.pageX) : Math.atan2(e.pageY - q.y, e.pageX - q.x);      // (the same way round whichever finger moved)
+    if (twistA !== null) this._rotateLeft(-Math.atan2(Math.sin(a - twistA), Math.cos(a - twistA)));      // (the map turns with the fingers)
+    twistA = a;
+    this._rotateEnd.set(this._rotateStart.x, 0.5 * (e.pageY + q.y));      // (up or down together: tilt; sideways: nothing)
+    this._rotateDelta.subVectors(this._rotateEnd, this._rotateStart).multiplyScalar(this.rotateSpeed);
+    this._rotateUp(2 * Math.PI * this._rotateDelta.y / this.domElement.clientHeight);
+    this._rotateStart.copy(this._rotateEnd);
+  };
+}
+controls.addEventListener('start', () => {
+  twistA = null;
+  if (controls.state === 2 || controls.state === 4) { onGround = true; if (follow || followHerd) { follow = null; followHerd = false; } }      // (PAN, TOUCH_PAN: dragged away from a camel it followed, it stops following; the card and the ring stay)
+});
 let follow = null, followHerd = false;
 const herdC = new THREE.Vector3();
 function herdCenter() { herdC.set(0, 0, 0); let n = 0; for (const k of camels) if (k.home === 'graze') { herdC.add(k.root.position); n++; } return herdC.multiplyScalar(1 / Math.max(1, n)); }
 let viewKind = 'drone';
 function view(kind) {
+  onGround = false;      // (each view sets its own point to turn about)
   if (kind === 'hill') {
     // up high over the yard: Aban al-Asmar ahead, Wadi al-Rumah and Aban al-Ahmar beyond
     follow = null; followHerd = false;
@@ -1105,8 +1127,20 @@ let downAt = null;
 renderer.domElement.addEventListener('pointerdown', (e) => { if ((play && play.on) || phone.hit(e.clientX, e.clientY)) { downAt = null; return; } downAt = [e.clientX, e.clientY]; ease.k = 1; });      // (in play a tap on the scene is not a tap on the map: it opened a place's card behind the hidden HUD)
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!downAt || (play && play.on) || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
-  if (!tapWorld(e.clientX, e.clientY)) closePop();
+  const pin = pinAt(e.clientX, e.clientY);
+  if (pin) openPlace(pin); else if (!tapWorld(e.clientX, e.clientY)) closePop();
 });
+// the pin under (x, y), the first by its order on the map. The pins take no touch of their own (a finger that came down
+// on a pin did not drag the map, and a second finger landing on one did not pinch it: the map felt hard to hold); a tap
+// on the map is tried against them first. (Kept as buttons, so a key still opens them.)
+function pinAt(x, y) {
+  for (const l of order) {
+    if (!l.vis) continue;
+    const r = l.el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return l;
+  }
+  return null;
+}
 const camelHits = [];
 // what a tap at (x, y) hits in the world: a camel first, then a place; true when it hit something
 function tapWorld(x, y) {
@@ -1252,6 +1286,7 @@ function tick(now) {
   // follow without stealing the viewer's control of the angle
   const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
   if (tgt && !playing) { const delta = tmpTo.copy(tgt).setY(1.1).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }
+  else if (onGround && groundAt && !playing && ease.k >= 1) { const dy = (groundAt(controls.target.x, controls.target.z) + 1.1 - controls.target.y) * Math.min(1, dt * 4); controls.target.y += dy; camera.position.y += dy; }      // (dragged: the point turned about eases onto the ground under it)
   if (selected && selectedRing) selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z);
   if (pop && pop.camel && pop.camel.mode !== popMode) { popMode = pop.camel.mode; const m = $('c-meta'); if (m) m.textContent = metaOf(pop.camel); }      // (only when its state word changes)
   if (printsLive > 0) {

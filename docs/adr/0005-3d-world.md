@@ -255,6 +255,47 @@ what it can see of it. Measured the same way, at 844 × 390:
 | In the car, from behind | 189 / 404k | 187 / 385k |
 | In the car, out on the sand | 84 / 226k | 83 / 228k |
 
+**The cameras, after the owner's phone (12 Nov).** The chase camera sat too
+close and turned with the car; the map was hard to hold. The chase camera is
+now 8 m behind the car's middle and 2.7 m up (it was 5.6 and 2.05), its
+heading follows the car's at 2/s (it was 4/s, so about half a second behind in
+a turn), and a finger dragged across the screen turns it round the car and
+tilts it, easing back behind 2 s after the finger lifts. The view split's
+chase eyes moved with it (8 and 9.2 m back, 1.4 to 5 m up, 50 degrees either
+side): 150 views across that range show at most 2 px missing. Turned further
+round by the finger, the game draws all of the car, as by a wall. Measured the
+same way:
+
+| View | Before | Now |
+|---|---|---|
+| In the car, from behind | 187 / 385k | 190 / 373k |
+| Every other view of the table above | | the same, within a draw |
+
+Not in the table, and over before this change too: driving through the yard
+toward its pens, the view takes in the pens, the room and many camels near.
+West across the yard is 205 draws and 402k (the old camera: 203 and 402k);
+west nearer the pens 193 and 431k (old: 193 and 433k). The car is 64 draws
+and 145k of that, the camels up to 74k. Open.
+
+The map's camera is held like a phone's map: one finger drags the ground
+along (along the ground, not the screen), two pinch, twist to turn and move
+up or down together to tilt; the point turned about keeps to the ground.
+The place pins take no touch of their own: a finger that came down on a pin
+did not drag the map, and a second finger landing on one did not pinch it. A
+tap is tried against the pins first.
+
+**The camels drawn a frame late (found by the review of the bones change).**
+three.js counts its frames before the shadow pass, so a skeleton the shadow
+pass updated was skipped by the next frame's picture. With the shadow map
+redrawn every other frame, every camel in sight was drawn on those frames
+with the frame before's pose: the head 22 to 27 cm behind, at 30 fps 15 poses
+a second. Each camel now updates its skeleton itself, straight after its
+bones move; drawn and true poses are the same (0.00 cm) on every frame.
+Past 48 m a camel's place still moves in its animation's steps (every 2nd or
+4th frame), at most 6 to 8 cm, under a pixel at 60 fps.
+
+**The render scale stays at 1.5x** (the owner, 12 Nov: "نخليها").
+
 Still over, for a moment: **on foot with the driver's door open, 422k** (166
 draws) for the 1.2 to 1.55 s the door swings as the player gets in or out.
 The whole car and the cabin are drawn then. It was about 443k before the
@@ -285,8 +326,8 @@ shadow copies below.
   thousands of runs turning and driving by every wall end and building found
   no frame inside a box.
 - **The chase view's split now covers the camera over a wall.** The builder's
-  eyes for it are at 5.6 and 6.8 m back and 1.3 to 4.2 m up (they were 1.6 to
-  2.6 m at 5.6 m). Where the camera is outside them (facing down a dune, 5 m
+  eyes for it were at 5.6 and 6.8 m back and 1.3 to 4.2 m up (they were 1.6 to
+  2.6 m at 5.6 m; moved with the camera since, below). Where the camera is outside them (facing down a dune, 5 m
   over the room, close in), the game draws all of the car, so no faces are
   missing: 7 draws and about 11k triangles more for those moments. By the yard
   wall the view stays split: 199 draws, 362k.

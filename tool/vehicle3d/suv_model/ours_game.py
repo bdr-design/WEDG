@@ -283,16 +283,16 @@ OUT_MIN = 500             # triangles: a group goes apart only past this (it cos
 
 
 def chase_eyes():
-    """The chase camera's places round the car (play.js: 5.6 m behind the middle, 2.05 m up; its heading lags the car's
-    in a turn, about the yaw rate over 4/s, so a fan of +-50 degrees behind, held through spins under about 3.5 rad/s
-    (200 degrees a second; a donut with traction control off turns at about 2.5); and higher and lower for its easing
-    over bumps), at 6.8 m too (it falls back 1.2 m with speed) and higher, to 4.2 m, where it rises to see over a wall (with
-    eyes only 1.6-2.6 m up at 5.6 m, the game drew all of the car whenever the camera rose over a wall, 7 draws more,
-    and low and far back thin slivers under the rear skid plate went missing)."""
+    """The chase camera's places round the car (play.js: 8 m behind the middle, 2.7 m up; its heading lags the car's in a
+    turn, about the yaw rate over 2/s, so a fan of +-50 degrees behind, held through turns under about 1.75 rad/s (100
+    degrees a second: the full-lock turn at 20 km/h is about 0.9); and higher and lower for its easing over bumps and the
+    finger's tilt), at 9.2 m too (it falls back 1.2 m with speed) and higher, to 5 m, where it rises to see over a wall
+    (CHASE_CAP). (Until 12 Nov 2026 the camera sat 5.6 m back and 2.05 m up, the eyes at 5.6 and 6.8 m, 1.3-4.2 m up; the
+    owner: very close.) Turned further round the car by the finger, or come in by a wall, the game draws all of it."""
     out = []
-    for back in (5.6, 6.8):
+    for back in (8.0, 9.2):
         for a in range(-50, 51, 10):
-            for up in (1.3, 1.6, 2.05, 2.6, 3.3, 4.2):
+            for up in (1.4, 1.9, 2.4, 2.9, 3.5, 4.2, 5.0):
                 r = math.radians(a); out.append(Vector((-back * math.cos(r), back * math.sin(r), up)))
     return out
 

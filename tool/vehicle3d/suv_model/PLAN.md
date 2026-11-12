@@ -169,7 +169,7 @@ Moving parts and the seat view (12 Nov, ours_game.py):
   and the door's two jambs, which the open door uncovers (a band under the seat showed through the car). The jambs
   follow the skin's profile, measured before the door is cut, 1.2 cm inside it and up to z 1.15 (a straight edge
   stood out through the skin by the belt); the rear one sits behind the shut door's trim.
-- view_split's chase eyes: rings at 5.6 and 6.8 m behind, 1.3 to 4.2 m up, 50 degrees either side, so the chase
+- view_split's chase eyes: rings at 8 and 9.2 m behind, 1.4 to 5 m up, 50 degrees either side (the camera moved back from 5.6 m on 12 Nov), so the chase
   view keeps its split while the camera rises over a wall (play.js's state.fan says when it is within them).
 - far: every part's normals recomputed (the decimation's own custom normals cleared, smooth by angle 25 degrees),
   so the far layer catches the same light as the near one at the 20 m swap.
