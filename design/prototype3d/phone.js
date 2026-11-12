@@ -351,26 +351,34 @@ const sbar = `<div class="sbar"><span>3:20</span><span class="r"><svg width="16"
 const nav = (end = '') => `<div class="nav"><button class="back">${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
 const ok = (t) => `<span class="badge">${svg('check')}${t}</span>`;
 const APP_GO = { gavel: 'auction', bank: 'bank', tag: 'haraj', chat: 'chat', cloud: 'weather', water: 'water', feed: 'feed' };      // the apps that open a screen (the rest are not built yet)
-const badgeSaid = (extra, k) => { const m = extra.match(/class="bd">(\d+)</); return /class="live"/.test(extra) ? '، مباشر' : m ? `، ${m[1]} ${k === 'water' || k === 'feed' ? 'تخلص' : 'جديدة'}` : ''; };
+const badgeSaid = (extra, k) => { const m = extra.match(/class="bd">(\d+)</); return /class="live"/.test(extra) ? '، مباشر' : !m ? '' : k === 'water' ? '، الماء يخلص' : k === 'feed' ? (m[1] === '1' ? '، صنف يخلص' : '، الشعير والبرسيم يخلصون') : `، ${m[1]} جديدة`; };
 const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra, k)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge: in the dock the name is hidden, and the badge alone was read)
 
 
 // ---------------------------------------------------------------- the game's own numbers (the rules engine, engine.js)
 // G: the engine's latest view of the game (marah_runtime's SnapshotJson); null until it has started. ORD: the feed order
-// being made up (bags and bales), set to three weeks' need when العلف opens.
-let G = null;
+// being made up (bags and bales), set when العلف opens. ERR: the engine's refusal of the last order, said on the screen
+// until the next tap.
+let G = null, ERR = null;
 const ORD = { barley: null, alfalfa: null };
 const n0 = (v) => Math.round(v).toLocaleString('en-US');
 // the GDD's counting rule (8): one and two by the word, 3 to 10 the plural, 11 and up the singular
-const count = (n, one, two, few, many = one) => n === 1 ? `${one} واحد` : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`;
-const days = (n) => n === 1 ? 'يوم واحد' : n === 2 ? 'يومين' : n >= 3 && n <= 10 ? `${n} أيام` : `${n} يوم`;
-// a stepper's word under its number (the number is shown, so one and two take the singular)
-const unitWord = (n, sing, plural) => n >= 3 && n <= 10 ? plural : sing;
+const NOUN = {
+  day: ['يوم واحد', 'يومين', 'أيام', 'يوم'],
+  bag: ['كيس واحد', 'كيسين', 'أكياس', 'كيس'],
+  bale: ['بالة وحدة', 'بالتين', 'بالات', 'بالة'],
+  tanker: ['وايت واحد', 'وايتين', 'وايتات', 'وايت'],
+};
+const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
+const days = (n) => count(n, 'day');
+// a stepper's word under its number: the number is shown, so one takes the bare singular and two the dual
+const unitWord = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 2 ? two : n >= 3 && n <= 10 ? few : n === 1 ? one.split(' ')[0] : many; };
 const WEEKDAY = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const MONTH = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-// the seasons of the Najdi calendar, by their start (month, day): الوسم from about 16 October for 52 days, المربعانية 40
-// days from 7 December, الشبط from 15 January, العقارب from 10 February (research section 7); the rest of the year by
-// its plain season (the folk dates there vary by source and year)
+// the seasons of the Najdi calendar, by their start (month, day; research section 7): الوسم from about 16 October for 52
+// days, المربعانية 40 days from 7 December, الشبط from 15 January, العقارب from 10 February for 39 days, and سهيل from
+// its rising about 24 August. Between them the plain seasons, a game choice: الربيع from 21 March, القيظ from 1 June
+// (the folk names there vary by source and year)
 const SEASONS = [[1, 15, 'الشبط'], [2, 10, 'العقارب'], [3, 21, 'الربيع'], [6, 1, 'القيظ'], [8, 24, 'سهيل'], [10, 16, 'الوسم'], [12, 7, 'المربعانية']];
 function season(d) {
   const m = d.getUTCMonth() + 1, day = d.getUTCDate();
@@ -391,17 +399,31 @@ const lowCount = (keys) => !G ? 0 : keys.filter((k) => { const x = sup(k); retur
 const badge = (n) => n ? `<span class="bd">${n}</span>` : '';
 const waiting = () => `<div class="note" style="margin-top:6px">يجهّز…</div>`;
 const alertCard = (title, line) => `<div class="warn"><span class="lead">${svg('alert')}</span><b>${title}</b><small>${line}</small></div>`;
-const stepper = (k, n, unit, canUp) => `<span class="stp"><button data-act="step" data-s="${k}" data-d="-1" aria-label="أقل" ${n ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button data-act="step" data-s="${k}" data-d="1" aria-label="أكثر" ${canUp ? '' : 'disabled'}>${svg('plus')}</button></span>`;
+const errCard = () => ERR ? alertCard('ما تم الطلب', ERR) : '';
+const FEED = { barley: 'شعير', alfalfa: 'برسيم' };
+const stepper = (k, n, unit, canUp) => `<span class="stp"><button data-act="step" data-s="${k}" data-d="-1" aria-label="${FEED[k]} أقل" ${n ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button data-act="step" data-s="${k}" data-d="1" aria-label="${FEED[k]} أكثر" ${canUp ? '' : 'disabled'}>${svg('plus')}</button></span>`;
+// the engine's refusal of [command] in words
+function refusal(r, command) {
+  const code = r.error?.code, p = r.error?.params || {};
+  const water = command.supply === 'water', where = water ? 'الخزان' : 'المستودع';
+  const unit = water ? 'tanker' : command.supply === 'barley' ? 'bag' : 'bale';
+  if (code === 'insufficientFunds') return `رصيدك ما يكفي: الطلب بـ ${n0(p.needed ?? 0)} ريال.`;
+  if (code === 'storeFull') return p.room ? `${where} ما يشيل إلا ${count(p.room, unit)} بعد.` : `${where} ما فيه مكان الحين.`;
+  return 'المحرك رفض الطلب، جرّب مرة ثانية.';
+}
 
 function waterScreen() {
   if (!G) return `<div class="body">${nav()}<div class="title">الوايت</div>${waiting()}</div>`;
   const f = G.farm, w = sup('water'), need = w.need, have = w.amount, coming = w.onTheWayAmount;
   const lasts = need > 0 ? Math.floor(have / need) : null;
-  const pct = Math.max(0, Math.min(100, have / f.tankL * 100));
+  const pct = (v) => Math.max(0, Math.min(100, v / f.tankL * 100));
   let warn = '';
   if (f.dryDays > 0) {
+    // deaths begin the day after the herd's limit (the limit's day itself it still lasts)
     const left = f.thirstDays - f.dryDays;
-    warn = alertCard(`الحلال عطشان من ${days(f.dryDays)}`, `${left > 0 ? `باقي ${days(left)} ويبدأ يموت` : 'بدأ يموت من العطش'}، وحالته تنزل كل يوم. اطلب اليوم يوصل بكرة.`);
+    warn = alertCard(`الحلال عطشان من ${days(f.dryDays)}`, `${left > 0 ? `باقي ${days(left)} ويبدأ يموت` : left === 0 ? 'يبدأ يموت بكرة' : 'بدأ يموت من العطش'}، وحالته تنزل كل يوم. اطلب اليوم يوصل بكرة.`);
+  } else if (w.short || have <= 0) {
+    warn = alertCard('الماء خلص', 'الحلال ما شرب كفايته اليوم. اطلب اليوم يوصل بكرة.');
   } else if (lasts != null && lasts <= 3) {
     warn = alertCard(lasts <= 1 ? 'الماء يخلص بكرة' : `الماء يخلص بعد ${days(lasts)}`, 'اطلب اليوم يوصل بكرة.');
   }
@@ -413,74 +435,89 @@ function waterScreen() {
       const under = f.tankL - t.litres, wait = need > 0 ? Math.ceil((have + coming - under) / need) : null;
       line = `الخزان ما يشيله لين ينزل تحت ${n0(under)} لتر${wait ? `، بعد ${days(wait)} تقريبًا` : ''}`;
     }
+    if (t.room > 0 && G.cash < t.price) line = `${n0(t.price)} ريال · رصيدك ما يكفي`;
     const can = t.room > 0 && G.cash >= t.price;
     return `<div class="row"><span class="lead">${svg('water')}</span><b>${name}</b><span class="act"><button class="btn ${can ? 'pri' : ''}" data-act="tanker" data-t="${t.tanker}" ${can ? '' : 'disabled'}>اطلب</button></span><small>${line}</small></div>`;
   };
-  return `<div class="body">${nav()}<div class="title">الوايت</div>${warn}
+  const bar = `<div class="bar${f.dryDays > 0 ? ' low' : ''}"><i style="width:${pct(have).toFixed(1)}%"></i>${coming ? `<i class="in" style="width:${(pct(have + coming) - pct(have)).toFixed(1)}%"></i>` : ''}</div>`;
+  return `<div class="body">${nav()}<div class="title">الوايت</div>${errCard()}${warn}
     <div class="tank"><small>خزان العزبة · ${n0(f.tankL)} لتر</small><div class="v"><b class="fit">${n0(have)}</b><span>لتر</span></div>
-      <div class="bar${f.dryDays > 0 ? ' low' : ''}"><i style="width:${pct.toFixed(1)}%"></i></div>
-      <div class="ln">${lasts != null ? `يكفي ${days(lasts)} · ` : ''}يشربون ${n0(need)} لتر باليوم</div></div>
+      ${bar}
+      <div class="ln">${lasts ? `يكفي ${days(lasts)} · ` : ''}يشربون ${n0(need)} لتر باليوم</div></div>
     <div class="sec">اطلب وايت</div>
     <div class="group">${f.tankers.map(row).join('')}</div>
     <div class="note">${coming ? `بالطريق: ${n0(coming)} لتر، يوصل بكرة.` : 'بالطريق: ما فيه وايت.'}</div></div>`;
 }
 
-// three weeks' need of a feed, less what is in store and on its way, in whole units
+// a feed's need over [weeks], less what is in store and on its way, in whole units
 const suggest = (x, weeks = 3) => Math.max(0, Math.ceil((x.need * 7 * weeks - x.amount - x.onTheWayAmount) / x.unitSize));
+// the store's room left (kg), orders on the way counted
+const storeRoom = (f, b, a) => f.storeKg - (b.amount + a.amount + b.onTheWayAmount + a.onTheWayAmount);
+// [nb] bags and [na] bales cut down, in proportion, to what the store still holds
+function fitRoom(nb, na, b, a, room) {
+  const kg = nb * b.unitSize + na * a.unitSize;
+  if (kg <= room || kg <= 0) return [nb, na];
+  const k = Math.max(0, room) / kg;
+  return [Math.floor(nb * k), Math.floor(na * k)];
+}
 function feedScreen() {
   if (!G) return `<div class="body">${nav()}<div class="title">العلف</div>${waiting()}</div>`;
-  const f = G.farm, b = sup('barley'), a = sup('alfalfa');
-  if (ORD.barley == null) { ORD.barley = suggest(b); ORD.alfalfa = suggest(a); }
+  const f = G.farm, b = sup('barley'), a = sup('alfalfa'), room = storeRoom(f, b, a);
+  if (ORD.barley == null) [ORD.barley, ORD.alfalfa] = fitRoom(suggest(b), suggest(a), b, a, room);
   const lastsOf = (x) => x.need > 0 ? Math.floor(x.amount / x.need) : null;
   const lb = lastsOf(b), la = lastsOf(a);
-  const out = (x, l) => x.short || l === 0;
-  let warn = '';
-  const lowB = b.short || (lb != null && lb <= 3), lowA = a.short || (la != null && la <= 3);
-  if (lowB || lowA) {
-    const soonest = Math.min(lowB ? lb ?? 0 : 99, lowA ? la ?? 0 : 99);
-    const what = lowB && lowA ? 'الشعير والبرسيم' : lowB ? 'الشعير' : 'البرسيم';
-    const verb = lowB && lowA ? (soonest === 0 ? 'خلصوا' : 'يخلصون') : (soonest === 0 ? 'خلص' : 'يخلص');
-    const when = soonest === 0 ? '' : soonest <= 1 ? ' بكرة' : ` بعد ${days(soonest)}`;
-    warn = alertCard(`${what} ${verb}${when}`, soonest === 0 ? 'الحلال ما شبع اليوم وحالته تنزل. اطلب اليوم يوصل بكرة.' : 'اطلب اليوم يوصل بكرة قبل العلفة.');
-  }
+  const out = (x, l) => x.short || x.amount <= 0 || l === 0;
   const line = (name, x, l) => {
     const withOrder = x.need > 0 && x.onTheWayAmount ? Math.floor((x.amount + x.onTheWayAmount) / x.need) : null;
     const full = 21, now = Math.min(100, (l ?? full) / full * 100), all = Math.min(100, (withOrder ?? 0) / full * 100);
     const bad = !withOrder && (out(x, l) || (l != null && l <= 3));
-    const tail = l == null ? '' : withOrder != null ? `${days(l)}، و${days(withOrder)} لما يوصل` : days(l);
+    const today = out(x, l) ? 'خلص' : l == null ? '' : days(l);
+    const tail = withOrder != null ? `${today}، و${days(withOrder)} لما يوصل` : today;
     return `<div class="kind"><span>${name} ${n0(x.amount)} كجم</span><span class="d${bad ? ' bad' : ''}">${tail}</span></div><div class="bar feed${bad ? ' low' : ''}"><i style="width:${now.toFixed(1)}%"></i>${withOrder != null ? `<i class="in" style="width:${Math.max(0, all - now).toFixed(1)}%"></i>` : ''}</div>`;
   };
-  const plans = { economy: 'خفيفة', standard: 'عادية', premium: 'قوية' };
-  const R = f.rations, cur = R.find((r) => r.plan === f.feedPlan);
-  const asFed = (r) => (r.dryMatterKg * r.barleyShare / 0.88 + r.dryMatterKg * (1 - r.barleyShare) / 0.89).toFixed(1);
-  const ration = `<div class="sec">العليقة</div>
-    <div class="seg">${R.map((r) => `<span data-act="plan" data-p="${r.plan}" role="button" tabindex="0" ${r.plan === f.feedPlan ? 'class="on"' : ''}>${plans[r.plan]}</span>`).join('')}</div>
-    <div class="cmp">${R.map((r) => `<span><b>${n0(r.costPerDay)} ريال</b>باليوم<br>حالة لين ${r.conditionTarget}</span>`).join('')}</div>
-    <div class="note">${plans[cur.plan]} ${asFed(cur)} كجم علف للراس الكبير باليوم (${cur.dryMatterKg} كجم مادة جافة)، <span class="ltr">${Math.round(cur.barleyShare * 100)}%</span> منها شعير. الحالة توصل لين حدها مع رعاية زينة.</div>`;
-  const roomKg = f.storeKg - (b.amount + a.amount + b.onTheWayAmount + a.onTheWayAmount);
+  const store = `<div class="tank"><small>مستودع العلف · ${n0(f.storeKg)} كجم</small>${line('شعير', b, lb)}${line('برسيم', a, la)}
+      <div class="ln">ياكلون باليوم ${n0(b.need)} كجم شعير و${n0(a.need)} كجم برسيم</div></div>`;
   const usedKg = ORD.barley * b.unitSize + ORD.alfalfa * a.unitSize;
   const total = ORD.barley * b.unitPrice + ORD.alfalfa * a.unitPrice;
-  const rows = `<div class="group">
-      <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stepper('barley', ORD.barley, unitWord(ORD.barley, 'كيس', 'أكياس'), usedKg + b.unitSize <= roomKg)}<small>الكيس ${b.unitSize} كجم بـ ${n0(b.unitPrice)} ريال</small></div>
-      <div class="row ord"><span class="lead">${svg('leaf')}</span><b>برسيم</b>${stepper('alfalfa', ORD.alfalfa, unitWord(ORD.alfalfa, 'بالة', 'بالات'), usedKg + a.unitSize <= roomKg)}<small>البالة ${a.unitSize} كجم بـ ${n0(a.unitPrice)} ريال</small></div></div>`;
-  let orderPart;
-  if (total > G.cash) {
-    const wb = suggest(b, 1), wa = suggest(a, 1), wt = wb * b.unitPrice + wa * a.unitPrice;
-    orderPart = alertCard('رصيدك ما يكفي الطلب', `عندك ${n0(G.cash)} ريال.${wt > 0 && wt <= G.cash ? ` يكفي لأسبوع: ${count(wb, 'كيس', 'كيسين', 'أكياس')} و${count(wa, 'بالة', 'بالتين', 'بالات', 'بالة')}.` : ''} أو بع ناقة من الحراج.`)
-      + (wt > 0 && wt <= G.cash ? `<button class="btn ghost two" data-act="week"><span>اطلب لأسبوع</span><span>${n0(wt)} ريال</span></button>` : '')
-      + rows + `<div class="order"><span><small>المجموع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div>`;
-  } else if (total > 0) {
-    orderPart = rows + `<div class="order"><span><small>المجموع · يوصل بكرة للمستودع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>`;
-  } else {
-    orderPart = rows + `<div class="note">زد الكمية ويطلع لك المجموع وزر الطلب.</div>`;
-  }
-  const way = (b.onTheWayAmount || a.onTheWayAmount) ? `<div class="sec">بالطريق</div><div class="group way">${[[b, 'شعير', 'كيس', 'كيسين', 'أكياس'], [a, 'برسيم', 'بالة', 'بالتين', 'بالات']].filter(([x]) => x.onTheWayAmount).map(([x, nm, o, t, fw]) => `<div class="row"><span class="lead">${svg('truck')}</span><b>${nm} · ${count(x.onTheWay, o, t, fw)}</b><small>${n0(x.onTheWayAmount)} كجم · يوصل بكرة</small></div>`).join('')}</div>` : '';
+  const rows = (canUp) => `<div class="group">
+      <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stepper('barley', ORD.barley, unitWord(ORD.barley, 'bag'), canUp(b))}<small>الكيس ${b.unitSize} كجم بـ ${n0(b.unitPrice)} ريال</small></div>
+      <div class="row ord"><span class="lead">${svg('leaf')}</span><b>برسيم</b>${stepper('alfalfa', ORD.alfalfa, unitWord(ORD.alfalfa, 'bale'), canUp(a))}<small>البالة ${a.unitSize} كجم بـ ${n0(a.unitPrice)} ريال</small></div></div>`;
+  const canUp = (x) => usedKg + x.unitSize <= room;
+  const heading = (ordered) => `<div class="sec">${ordered ? 'اطلب زيادة' : suggest(b) + suggest(a) > 0 ? 'اطلب لـ 3 أسابيع' : 'اطلب'}</div>`;
   const ordered = b.onTheWayAmount || a.onTheWayAmount;
-  return `<div class="body">${nav()}<div class="title">العلف</div>${warn}
-    <div class="tank"><small>مستودع العلف · ${n0(f.storeKg)} كجم</small>${line('شعير', b, lb)}${line('برسيم', a, la)}
-      <div class="ln">ياكلون باليوم ${n0(b.need)} كجم شعير و${n0(a.need)} كجم برسيم</div></div>
-    ${ration}${way}
-    <div class="sec">${ordered ? 'اطلب زيادة' : 'اطلب لـ 3 أسابيع'}</div>${orderPart}</div>`;
+  // short of money: as the approved screen has it, the warning and a week's order first
+  if (total > G.cash) {
+    const [wb, wa] = fitRoom(suggest(b, 1), suggest(a, 1), b, a, room), wt = wb * b.unitPrice + wa * a.unitPrice;
+    const week = wt > 0 && wt <= G.cash;
+    return `<div class="body">${nav()}<div class="title">العلف</div>${errCard()}
+      ${alertCard(`رصيدك ما يكفي لـ 3 أسابيع`, `عندك ${n0(G.cash)} ريال.${week ? ` يكفي لأسبوع: ${[wb ? count(wb, 'bag') : '', wa ? count(wa, 'bale') : ''].filter(Boolean).join(' و')}،` : ''} أو بع ناقة من الحراج.`)}
+      ${week ? `<button class="btn ghost two" data-act="week"><span>اطلب لأسبوع</span><span>${n0(wt)} ريال</span></button>` : ''}
+      ${store}${heading(ordered)}${rows(canUp)}
+      <div class="order"><span><small>المجموع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div></div>`;
+  }
+  let warn = '';
+  const lowB = out(b, lb) || (lb != null && lb <= 3), lowA = out(a, la) || (la != null && la <= 3);
+  if ((lowB || lowA) && !ordered) {
+    const gone = (lowB && out(b, lb)) || (lowA && out(a, la));
+    const soonest = Math.min(lowB ? lb ?? 0 : 99, lowA ? la ?? 0 : 99);
+    const what = lowB && lowA ? 'الشعير والبرسيم' : lowB ? 'الشعير' : 'البرسيم';
+    const verb = gone ? (lowB && lowA ? 'خلصوا' : 'خلص') : (lowB && lowA ? 'يخلصون' : 'يخلص');
+    const when = gone ? '' : soonest <= 1 ? ' بكرة' : ` بعد ${days(soonest)}`;
+    warn = alertCard(`${what} ${verb}${when}`, gone ? 'الحلال ما شبع اليوم وحالته تنزل. اطلب اليوم يوصل بكرة.' : 'اطلب اليوم يوصل بكرة قبل العلفة.');
+  }
+  const plans = { economy: 'خفيفة', standard: 'عادية', premium: 'قوية' };
+  const R = f.rations, cur = R.find((r) => r.plan === f.feedPlan);
+  const ration = `<div class="sec">العليقة</div>
+    <div class="seg" role="group" aria-label="العليقة">${R.map((r) => `<span data-act="plan" data-p="${r.plan}" role="button" tabindex="0" aria-pressed="${r.plan === f.feedPlan}" ${r.plan === f.feedPlan ? 'class="on"' : ''}>${plans[r.plan]}</span>`).join('')}</div>
+    <div class="cmp">${R.map((r) => `<span><b>${n0(r.costPerDay)} ريال</b>باليوم<br>حالة لين ${r.conditionTarget}</span>`).join('')}</div>
+    <div class="note">${plans[cur.plan]} ${cur.asFedKg.toFixed(1)} كجم علف للراس الكبير باليوم (${cur.dryMatterKg} كجم مادة جافة)، <span class="ltr">${Math.round(cur.barleyShare * 100)}%</span> منها شعير. الحالة توصل لين حدها مع رعاية زينة.</div>`;
+  const way = ordered ? `<div class="sec">بالطريق</div><div class="group way">${[[b, 'شعير', 'bag'], [a, 'برسيم', 'bale']].filter(([x]) => x.onTheWayAmount).map(([x, nm, k]) => `<div class="row"><span class="lead">${svg('truck')}</span><b>${nm} · ${count(x.onTheWay, k)}</b><small>${n0(x.onTheWayAmount)} كجم · ${n0(x.onTheWay * x.unitPrice)} ريال · يوصل بكرة</small></div>`).join('')}</div>` : '';
+  let order;
+  if (usedKg > room) order = `<div class="order"><span><small>المستودع يشيل ${n0(Math.max(0, room))} كجم بعد</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div>`;
+  else if (total > 0) order = `<div class="order"><span><small>المجموع · يوصل بكرة للمستودع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>`;
+  else order = `<div class="note">${suggest(b) + suggest(a) > 0 || ordered ? 'زد الكمية ويطلع لك المجموع وزر الطلب.' : 'المستودع يكفي أكثر من 3 أسابيع.'}</div>`;
+  return `<div class="body">${nav()}<div class="title">العلف</div>${errCard()}${warn}
+    ${store}${ration}${way}${heading(ordered)}${rows(canUp)}${order}</div>`;
 }
 
 const S = {
@@ -585,6 +622,7 @@ export function createPhone({ host }) {
   const turned = () => document.body.classList.contains('rot');      // (farm.html: a phone held upright, the game turned a quarter)
   const endPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
   function show(v) {
+    if (v !== st.screen) ERR = null;
     if (v === 'feed' && st.screen !== 'feed') ORD.barley = ORD.alfalfa = null;      // (opened afresh: the order starts at three weeks' need)
     st.screen = v; scr.classList.toggle('home', v === 'home');
     scr.innerHTML = `<span class="pill"></span>${sbar}${S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0')}<div class="hb"></div>`;      // (a number kept on the line of the word after it: enlarged, «3,900 | ريال» and «9 | كم» split)
@@ -720,32 +758,44 @@ export function createPhone({ host }) {
     const again = scr.querySelector('.hs') || scr.querySelector('.body');
     if (again) again.scrollTop = top;
   }
-  // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen)
+  // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen);
+  // a refusal is said on the screen, and what was not taken stays in the order
   let engine = null, busy = false;
+  const keyOf = (t) => ['act', 's', 'd', 'p', 't'].map((k) => t.dataset[k] ?? '').join('|');
   async function act(t) {
-    const kind = t.dataset.act;
+    const kind = t.dataset.act, focused = root.activeElement === t ? keyOf(t) : null;
+    ERR = null;
+    const done = () => {
+      if (!live()) return;
+      redraw();
+      // the keyboard's place kept: the control is drawn again, so the same one takes the focus
+      if (focused) { const again = [...scr.querySelectorAll('[data-act]')].find((e) => keyOf(e) === focused && !e.disabled); if (again) again.focus({ preventScroll: true }); }
+    };
     if (kind === 'step') {
-      const k = t.dataset.s; ORD[k] = Math.max(0, (ORD[k] ?? 0) + Number(t.dataset.d)); redraw(); return;
+      const k = t.dataset.s; ORD[k] = Math.max(0, (ORD[k] ?? 0) + Number(t.dataset.d)); done(); return;
     }
     if (!engine || !G || busy) return;
     busy = true;
+    const send = async (command) => { const r = await engine.dispatch(command); if (!r.ok) ERR = refusal(r, command); return r.ok; };
     try {
-      if (kind === 'plan' && t.dataset.p !== G.farm.feedPlan) await engine.dispatch({ type: 'setFeedPlan', plan: t.dataset.p });
-      else if (kind === 'tanker') await engine.dispatch({ type: 'orderSupply', supply: 'water', units: 1, tanker: t.dataset.t });
+      if (kind === 'plan' && t.dataset.p !== G.farm.feedPlan) await send({ type: 'setFeedPlan', plan: t.dataset.p });
+      else if (kind === 'tanker') await send({ type: 'orderSupply', supply: 'water', units: 1, tanker: t.dataset.t });
       else if (kind === 'feed' || kind === 'week') {
         const b = sup('barley'), a = sup('alfalfa');
-        const nb = kind === 'week' ? suggest(b, 1) : ORD.barley, na = kind === 'week' ? suggest(a, 1) : ORD.alfalfa;
+        let [nb, na] = kind === 'week' ? fitRoom(suggest(b, 1), suggest(a, 1), b, a, storeRoom(G.farm, b, a)) : [ORD.barley, ORD.alfalfa];
         // the whole order's total checked first (the engine takes the two feeds as two orders)
-        if (nb * b.unitPrice + na * a.unitPrice > G.cash) return;
-        if (nb > 0) await engine.dispatch({ type: 'orderSupply', supply: 'barley', units: nb });
-        if (na > 0) await engine.dispatch({ type: 'orderSupply', supply: 'alfalfa', units: na });
-        ORD.barley = ORD.alfalfa = 0;
+        if (nb * b.unitPrice + na * a.unitPrice > G.cash) { ERR = 'رصيدك ما يكفي الطلب كامل.'; return; }
+        if (nb > 0 && await send({ type: 'orderSupply', supply: 'barley', units: nb })) nb = 0;
+        if (!ERR && na > 0 && await send({ type: 'orderSupply', supply: 'alfalfa', units: na })) na = 0;
+        // what went through leaves the order; what did not stays for another try
+        if (kind === 'feed') { ORD.barley = nb; ORD.alfalfa = na; }
       }
     } catch (err) {
+      ERR = 'ما وصل الطلب للمحرك، جرّب مرة ثانية.';
       console.warn('phone:', err);
     } finally {
       busy = false;
-      if (live()) redraw();
+      done();
     }
   }
   scr.addEventListener('keydown', (e) => {

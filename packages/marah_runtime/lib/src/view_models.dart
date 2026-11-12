@@ -363,6 +363,7 @@ class RationSummary {
   const RationSummary({
     required this.plan,
     required this.dryMatterKg,
+    required this.asFedKg,
     required this.barleyShare,
     required this.costPerDay,
     required this.conditionTarget,
@@ -370,6 +371,9 @@ class RationSummary {
 
   final FeedPlan plan;
   final double dryMatterKg;
+
+  /// The feed a grown head eats a day, as delivered (kg).
+  final double asFedKg;
   final double barleyShare;
   final int costPerDay;
   final int conditionTarget;
@@ -379,13 +383,20 @@ class RationSummary {
       other is RationSummary &&
       other.plan == plan &&
       other.dryMatterKg == dryMatterKg &&
+      other.asFedKg == asFedKg &&
       other.barleyShare == barleyShare &&
       other.costPerDay == costPerDay &&
       other.conditionTarget == conditionTarget;
 
   @override
-  int get hashCode =>
-      Object.hash(plan, dryMatterKg, barleyShare, costPerDay, conditionTarget);
+  int get hashCode => Object.hash(
+    plan,
+    dryMatterKg,
+    asFedKg,
+    barleyShare,
+    costPerDay,
+    conditionTarget,
+  );
 }
 
 /// A water tanker the farm can order (the owner, 12 Nov 2026: a 19 t and a

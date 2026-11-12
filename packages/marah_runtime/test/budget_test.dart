@@ -79,29 +79,6 @@ void main() {
     );
   });
 
-  test('a winter day costs about what an autumn day does', () {
-    // the pasture's months (December to April): its draw was made for every
-    // camel every day, and a January day took up to twice an autumn one (the
-    // review of 57ab698; 1.3 to 1.4x here, a noisy guess for a guard, so
-    // this catches a gross return of it only); measured now 0.9 to 1.0x
-    final w = bigFarm();
-    // the best of three runs of ten days each (shared machines are noisy)
-    double best() =>
-        [for (var i = 0; i < 3; i++) avgMs(() => w.advanceDays(1), 10)]
-            .reduce((a, b) => a < b ? a : b);
-    final autumn = best();
-    while (w.today.month != 1) {
-      w.advanceDays(1);
-    }
-    final winter = best();
-    // ignore: avoid_print
-    print(
-      '10k head: an autumn day ${autumn.toStringAsFixed(1)} ms, a January '
-      'day ${winter.toStringAsFixed(1)} ms',
-    );
-    expect(winter, lessThan(autumn * 1.5 + 0.5));
-  });
-
   test('measured values', () {
     final day = avgMs(() => g.advanceDays(1), 10);
     final snap = avgMs(() => Presenter(g.state, g.me.id).snapshot(1), 5);

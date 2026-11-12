@@ -10,7 +10,12 @@ import 'balance.dart';
 class Pasture {
   const Pasture._();
 
+  /// How many times it has been worked out (the tests count it: drawn for
+  /// every camel every day, it made a winter day at 10,000 head twice as long).
+  static int lookups = 0;
+
   static bool green(int worldSeed, Region region, GameDay day) {
+    lookups++;
     final month = day.month;
     if (!Balance.greenMonths.contains(month)) return false;
     final year = day.date.year;

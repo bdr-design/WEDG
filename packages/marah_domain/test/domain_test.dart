@@ -411,6 +411,22 @@ void main() {
       expect(f.waterL, lessThanOrEqualTo(before + 6000));
     });
 
+    test('the pasture is looked up once a farm a day, and only when dry', () {
+      final g = stocked(newGame(4));
+      while (g.today.month != 1) {
+        g.advanceDays(1);
+      }
+      Pasture.lookups = 0;
+      g.advanceDays(10);
+      expect(Pasture.lookups, 0, reason: 'nothing dry: no look-up');
+      g.me.farm.waterL = 0;
+      g.me.farm.tankL = 0; // and no tanker
+      g.advanceDays(1); // the first dry day
+      Pasture.lookups = 0;
+      g.advanceDays(3);
+      expect(Pasture.lookups, 3, reason: 'once a day for the one farm');
+    });
+
     test('the pasture greens in a wet season, and the herd lasts longer', () {
       // winter on dry feed 10 days, on green pasture 17; summer 7 either way
       expect(Balance.thirstDays(1, green: false), 10);

@@ -68,6 +68,7 @@ class SnapshotJson {
         {
           'plan': r.plan.name,
           'dryMatterKg': r.dryMatterKg,
+          'asFedKg': r.asFedKg,
           'barleyShare': r.barleyShare,
           'costPerDay': r.costPerDay,
           'conditionTarget': r.conditionTarget,

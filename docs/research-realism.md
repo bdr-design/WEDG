@@ -226,6 +226,8 @@ Checked against search results; most news hosts cannot be opened from here, so a
 - **Water tankers (الوايت):** sold by the tonne. The National Water Company's 19 t tanker costs SAR 114–135 and its 30 t SAR 225, VAT on top (confirmed [107], undated); private 6 t tankers in Riyadh are advertised at SAR 100–150 (uncertain: classified adverts [108]); a 19 t tanker is advertised in Jeddah (confirmed [109]). A delivery to a farm out of town: not found (uncertain).
 - **Dry matter of feeds:** barley grain 82.8–91.6% as fed, 87.1% on average (confirmed [110]); extension tables give 87–90.4% for barley and 88–90% for alfalfa hay by its cut (confirmed [111]). A ration's dry matter is divided by these to get the feed's delivered weight.
 - **الوسم:** the season of the first rains (الوسمي) begins about 16 October and lasts 52 days, to about 6 December; its rains green the ground and bring up grass and truffles (confirmed [114][115]).
+- **The winter seasons after it:** المربعانية from 7 December for 40 days, الشبط from 15 January (26 days), العقارب from 10 February (39 days by one account) (confirmed in search summaries of [116][117], the dates of the researcher الحصيني; they move a day or so between years).
+- **سهيل:** its rising begins its season about 24 August in central Arabia, for 53 days, the summer's heat breaking (confirmed [118][119]). Between العقارب and سهيل the folk names (الحميمين، الذراعين، الكنة، الثريا، الجوزاء، المرزم، الكليبين) vary in their dates by source and year (uncertain).
 - **Camels' water a day:** FAO gives about 4.5 L a day on autumn browse, 13 L in spring and 30 L on salty pasture, and up to ten days without water on straw and concentrates (confirmed [112]); penned camels with free water in Oman drank 17.0–30.4 L a day, 24.1 on average (confirmed [113], not a winter study).
 
 ---
@@ -346,3 +348,7 @@ Checked against search results; most news hosts cannot be opened from here, so a
 113. https://mdpi.com/2076-2615/11/5/1342
 114. https://www.raya.com/2026/10/15/موسم-الوسم-يبدأ-غدا-52-يوما-تبشر-باعتدال-الأجواء-وفرص-الأمطار
 115. https://www.alraimedia.com/article/281043/محليات/الوسم-يبدأ-الأحد-ويستمر-52-يوما-واللبس-الشتوي-26-نوفمبر-المقبل
+116. https://www.alwatan.com.sa/article/1141426
+117. https://www.sayidaty.net/node/816856
+118. https://sabq.org/saudia/s4jey8eiho
+119. https://www.emaratalyoum.com/local-section/other/2026-08-17-1.2074728

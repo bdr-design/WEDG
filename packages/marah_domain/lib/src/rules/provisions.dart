@@ -69,6 +69,11 @@ class Provisions {
     );
   }
 
+  /// Kilograms of feed, as delivered, a grown head eats a day under [plan].
+  static double asFedKg(FeedPlan plan) =>
+      plan.dryMatterKg * plan.barleyShare / Balance.barleyDryMatter +
+      plan.dryMatterKg * (1 - plan.barleyShare) / Balance.alfalfaDryMatter;
+
   /// What a day's feed costs at [needs] in [region] (water is paid by the
   /// tanker, not by the day).
   static double feedCost(

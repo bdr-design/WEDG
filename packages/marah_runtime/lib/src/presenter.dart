@@ -172,6 +172,7 @@ class Presenter {
           RationSummary(
             plan: r,
             dryMatterKg: r.dryMatterKg,
+            asFedKg: Provisions.asFedKg(r),
             barleyShare: r.barleyShare,
             costPerDay: v.dailyFeedFor(r).value,
             conditionTarget: r.conditionTarget,
