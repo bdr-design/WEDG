@@ -247,6 +247,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWorld, LAYOUT, VEHICLES, drapeOnTerrain, updateScatter } from './world.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildTerrain } from './terrain.js';
+import { startEngine } from './engine.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -1297,6 +1298,9 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   renderer.shadowMap.needsUpdate = true;
   $('status').hidden = true;
   refreshLabels();
+  // the game's rules engine, in its worker (docs/plan-gameplay.md, G2), started once the yard is up so it never competes
+  // with the loading; nothing on screen uses it yet (G3). Without its file (not built) the yard goes on without it.
+  startEngine().then((e) => { window.marahEngine = e; }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); });
 }).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
 
 // ------------------------------------------------------------ vehicles built from the owner's photos
@@ -1403,7 +1407,10 @@ function meterFrame(now) {
   const p99 = pct(meter.hist, meter.n, 0.99);
   const secs = Math.round((now - meter.start) / 1000);
   const line3 = cpu.n ? `الحساب ${(cpu.sg / cpu.n).toFixed(1)} · تجهيز الرسم ${(cpu.sd / cpu.n).toFixed(1)} م.ث بالمعدل · أبطأ 1٪: ${Math.round(pct(cpu.game, cpu.n, 0.99))} و${Math.round(pct(cpu.draw, cpu.n, 0.99))}` : '';
-  meter.el.innerHTML = `<b>${Math.round(cnt / (sum / 1000))}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}`;
+  // the engine's cost to the page (its own work is on its thread): reading each new view of the game, and the save
+  const es = window.marahEngine?.stats;
+  const line4 = es ? `المحرك ${es.today ?? ''} · بدأ ${Math.round(es.startMs)} م.ث · العرض ${(es.snapshotBytes / 1024).toFixed(0)} ك.ب في ${es.maxParseMs.toFixed(1)} م.ث · الحفظ ${(es.writeBytes / 1024).toFixed(0)} ك.ب في ${Math.round(es.maxWriteMs)} م.ث${es.failedWrites ? ` · <span class="bad">فشل ${es.failedWrites}</span>` : ''}` : window.marahEngineError ? '<span class="bad">المحرك ما اشتغل</span>' : '';
+  meter.el.innerHTML = `<b>${Math.round(cnt / (sum / 1000))}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}${line4 ? '<br>' + line4 : ''}`;
 }
 function tick(now) {
   if (meter) meterFrame(now);

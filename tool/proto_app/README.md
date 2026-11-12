@@ -9,10 +9,17 @@ is `apps/marah`.
   bundled files to a WKWebView. Module scripts do not load from `file://`
   URLs, and `NSAllowsLocalNetworking` lets the web view reach it.
 - **The bundle:** `assemble.py` copies the prototype into `assets/web/`, which
-  is not committed. It includes the terrain, the models in
+  is not committed, and compiles the rules engine for its worker (it needs
+  `dart`). It includes the terrain, the models in
   `design/prototype3d/models/` and three.js r170, with the import map
   rewritten from the CDN to the local copy. Only the web fonts come from the
   network.
+- **The game's save:** the page's rules engine (`design/prototype3d/engine.js`)
+  keeps its save as files in the app's Documents folder through the same
+  server (`GET /save`, `PUT` and `DELETE /save/KEY`), each write whole and
+  then renamed into place. A random key for each launch, in the page's
+  address, must come with every request. The page's own storage would not
+  last: its origin, which holds the port, changes every launch.
 - **Performance:** the same as Safari on that phone. WKWebView uses Safari's
   engine.
 

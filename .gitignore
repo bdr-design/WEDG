@@ -50,3 +50,6 @@ app.*.map.json
 # Test coverage output
 coverage/
 .dart_tool/
+
+# The rules engine compiled for the 3D prototype (tool/proto_engine/build_worker.py)
+design/prototype3d/engine_worker.js

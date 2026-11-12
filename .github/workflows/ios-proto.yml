@@ -1,7 +1,8 @@
 name: iOS prototype app
 
 # Builds tool/proto_app (the 3D prototype in design/prototype3d inside an iPhone
-# app) on a macOS runner and uploads the IPA as the run's artifact.
+# app, with the game's rules engine compiled for its worker from tool/proto_engine
+# and packages/) on a macOS runner and uploads the IPA as the run's artifact.
 #
 # Signed with the repository's secrets when they are set (Settings > Secrets and
 # variables > Actions); without them it builds an unsigned IPA (to sign and
@@ -15,7 +16,7 @@ on:
   workflow_dispatch:
   push:
     branches: ["claude/**"]
-    paths: ["design/prototype3d/**", "tool/proto_app/**", ".github/workflows/ios-proto.yml"]
+    paths: ["design/prototype3d/**", "tool/proto_app/**", "tool/proto_engine/**", "packages/**", ".github/workflows/ios-proto.yml"]
 
 concurrency:
   group: ios-proto-${{ github.ref }}
@@ -37,8 +38,10 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Bundle the prototype
-        run: python3 tool/proto_app/assemble.py
+      - name: Bundle the prototype (and the rules engine compiled for its worker)
+        run: |
+          flutter pub get
+          python3 tool/proto_app/assemble.py
 
       - name: Test the app's server
         working-directory: tool/proto_app

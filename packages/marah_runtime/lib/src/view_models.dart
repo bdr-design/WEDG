@@ -356,10 +356,10 @@ class FarmSummary {
     required this.dailyFeed,
     required this.monthlyWages,
     required this.expansionCost,
-    this.supplies = const [],
-    this.storeKg = 0,
-    this.tankL = 0,
-    this.dryDays = 0,
+    required this.supplies,
+    required this.storeKg,
+    required this.tankL,
+    required this.dryDays,
   });
 
   final String name;
@@ -392,7 +392,7 @@ class FarmSummary {
       other.dailyFeed == dailyFeed &&
       other.monthlyWages == monthlyWages &&
       other.expansionCost == expansionCost &&
-      _sameList(other.supplies, supplies) &&
+      _listEquals(other.supplies, supplies) &&
       other.storeKg == storeKg &&
       other.tankL == tankL &&
       other.dryDays == dryDays;
@@ -413,14 +413,6 @@ class FarmSummary {
     tankL,
     dryDays,
   ]);
-}
-
-bool _sameList<T>(List<T> a, List<T> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }
 
 /// Everything the main screens show, sent after every change.

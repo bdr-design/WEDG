@@ -45,6 +45,8 @@ jobs:
           dart pub global activate coverage 1.11.1
           dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --report-on=lib
           python3 ../../tool/coverage_floor.py coverage/lcov.info 85
+          # and compiled to JavaScript, as the 3D prototype's worker runs it
+          dart test -p node
 
       - name: Save format tests (golden saves must load)
         working-directory: packages/marah_data
@@ -65,15 +67,16 @@ jobs:
           dart compile js -O2 bin/same_seed.dart -o "$RUNNER_TEMP/same_seed.js"
           node "$RUNNER_TEMP/same_seed.js" > "$RUNNER_TEMP/js.txt"
           dart run bin/same_seed.dart > "$RUNNER_TEMP/vm.txt"
-          # two years of the scripted bot, the whole state hashed every 4 weeks
+          # two years of the scripted bot and the commands it never sends, the whole state hashed every 4 weeks
           diff <(sed '/--save--/,$d' "$RUNNER_TEMP/vm.txt") <(sed '/--save--/,$d' "$RUNNER_TEMP/js.txt")
           # the save JavaScript wrote, read on the VM, is the same state
-          vm_end=$(sed '/--save--/,$d' "$RUNNER_TEMP/vm.txt" | tail -1 | grep -o 'length .*')
+          vm_end=$(sed '/--save--/,$d' "$RUNNER_TEMP/vm.txt" | grep '^week' | tail -1 | grep -o 'length .*')
           js_read=$(dart run bin/read_save.dart "$RUNNER_TEMP/js.txt")
           echo "VM: $vm_end / JS save read on the VM: $js_read"
           test -n "$vm_end" && test "$vm_end" = "$js_read"
-          # the worker the prototype loads compiles
-          dart compile js -O2 bin/worker.dart -o "$RUNNER_TEMP/engine.js"
+          # the worker the prototype loads compiles, and answers in node with a fake page
+          python3 build_worker.py "$RUNNER_TEMP/engine_worker.js"
+          node test_js/worker_smoke.cjs "$RUNNER_TEMP/engine_worker.js"
 
       - name: App tests
         working-directory: apps/marah

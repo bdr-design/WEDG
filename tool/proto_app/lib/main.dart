@@ -1,12 +1,18 @@
 // The 3D prototype (design/prototype3d) inside an iPhone app, to try it on a
 // phone: full screen, landscape only, everything bundled. A small HTTP server
 // on the loopback address serves the bundled files to a WKWebView (module
-// scripts do not load from file:// URLs).
+// scripts do not load from file:// URLs), and keeps the game's save in files
+// (the page's own storage would be lost: its origin, with the port in it,
+// changes every launch).
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+import 'save_files.dart';
+
+export 'save_files.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,12 +24,19 @@ Future<void> main() async {
   runApp(const ProtoApp());
 }
 
-/// The server for the bundled files on the loopback address (an error on its
-/// socket is dropped: the app checks the server when it comes back to the front).
-Future<HttpServer> bindServer() async {
+/// The server for the bundled files and the save on the loopback address (an
+/// error on its socket is dropped: the app checks the server when it comes
+/// back to the front).
+Future<HttpServer> bindServer(SaveFiles saves) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-  server.listen(serveBundled, onError: (Object _) {});
+  server.listen((req) => serve(req, saves), onError: (Object _) {});
   return server;
+}
+
+Future<void> serve(HttpRequest req, SaveFiles saves) {
+  final path = req.uri.path;
+  if (path == '/save' || path.startsWith('/save/')) return saves.handle(req);
+  return serveBundled(req);
 }
 
 /// The MIME type of a bundled file; module scripts need a JavaScript type.
@@ -83,6 +96,12 @@ class _ProtoAppState extends State<ProtoApp> with WidgetsBindingObserver {
     ..setJavaScriptMode(JavaScriptMode.unrestricted)
     ..setBackgroundColor(Colors.black);
   HttpServer? _server;
+  // the save beside the app's other files: iOS gives the app its own HOME
+  late final SaveFiles _saves = SaveFiles(
+    Directory(
+      '${Platform.environment['HOME'] ?? Directory.systemTemp.path}/Documents/marah',
+    ),
+  );
 
   @override
   void initState() {
@@ -100,11 +119,15 @@ class _ProtoAppState extends State<ProtoApp> with WidgetsBindingObserver {
 
   Future<void> _start() async {
     await _server?.close(force: true);
-    final server = await bindServer();
+    final server = await bindServer(_saves);
     _server = server;
     // #fps shows the frame meter: frames a second, the slowest 1%, stutters,
-    // and the render-scale test.
-    await _web.loadRequest(Uri.parse('http://127.0.0.1:${server.port}/index.html#fps'));
+    // and the engine's costs; ?save= gives the page the key to its save.
+    await _web.loadRequest(
+      Uri.parse(
+        'http://127.0.0.1:${server.port}/index.html?save=${_saves.token}#fps',
+      ),
+    );
   }
 
   // Back in front: if iOS took the server's socket or ended the page's process
@@ -119,7 +142,8 @@ class _ProtoAppState extends State<ProtoApp> with WidgetsBindingObserver {
     final server = _server;
     var alive = server != null;
     if (server != null) {
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 2);
       try {
         final req = await client.get('127.0.0.1', server.port, '/index.html');
         final res = await req.close().timeout(const Duration(seconds: 2));
@@ -133,7 +157,9 @@ class _ProtoAppState extends State<ProtoApp> with WidgetsBindingObserver {
     }
     if (alive) {
       try {
-        await _web.runJavaScriptReturningResult('document.readyState').timeout(const Duration(seconds: 2));
+        await _web
+            .runJavaScriptReturningResult('document.readyState')
+            .timeout(const Duration(seconds: 2));
       } catch (_) {
         alive = false;
       }

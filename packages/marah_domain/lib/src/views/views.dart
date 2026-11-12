@@ -239,8 +239,12 @@ class GameView {
   double inStore(Supply s) => Provisions.stocked(me.farm, s, withOrders: false);
 
   /// Whole days a store lasts at today's needs (null when nothing is needed).
-  int? daysLeft(Supply s) {
-    final n = dailyNeeds;
+  /// [needs] saves walking the herd again when the caller has them already.
+  int? daysLeft(
+    Supply s, [
+    ({double barley, double alfalfa, double water})? needs,
+  ]) {
+    final n = needs ?? dailyNeeds;
     return Provisions.daysLeft(inStore(s), switch (s) {
       Supply.barley => n.barley,
       Supply.alfalfa => n.alfalfa,

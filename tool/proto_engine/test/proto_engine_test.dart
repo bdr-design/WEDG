@@ -1,5 +1,6 @@
 // Runs on the Dart VM and in node (`dart test -p vm,node`): the prototype's
 // worker runs this code compiled to JavaScript.
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:marah_data/marah_data.dart';
@@ -77,6 +78,8 @@ void main() {
         {'type': 'orderSupply', 'supply': 'water', 'units': 2.5},
         {'type': 'orderSupply', 'supply': 'water', 'units': double.nan},
         {'type': 'setShepherds', 'count': double.infinity},
+        {'type': 'listForSale', 'camel': 'c1', 'askPrice': 1e300},
+        {'type': 'bargain', 'listing': 'l1', 'amount': 9.007199254740992e15},
         {'type': 'treat', 'camel': 7},
         {'type': 'enterRound', 'festival': 'f1', 'camel': 'c1'},
       ]) {
@@ -129,20 +132,84 @@ void main() {
   });
 
   group('the worker backend', () {
+    /// A page that keeps every write in [kept] and answers it a moment later
+    /// (or refuses while [refuse] is set).
+    WorkerBackend backend(
+      Map<String, String> kept, {
+      Map<String, String> seed = const {},
+      bool Function()? refuse,
+      List<int>? seqs,
+    }) {
+      late final WorkerBackend b;
+      b = WorkerBackend(seed, (seq, k, v) {
+        seqs?.add(seq);
+        scheduleMicrotask(() {
+          if (refuse?.call() ?? false) {
+            return b.stored(seq, ok: false, error: 'disk full');
+          }
+          v == null ? kept.remove(k) : kept[k] = v;
+          b.stored(seq, ok: true);
+        });
+      });
+      return b;
+    }
+
+    test('every change goes to the page, numbered, and lands', () async {
+      final kept = <String, String>{'a': '1'};
+      final seqs = <int>[];
+      final b = backend(kept, seed: {'a': '1'}, seqs: seqs);
+      expect(await b.read('a'), '1');
+      await b.write('b', '2');
+      await b.copy('a', 'c');
+      await b.copy('missing', 'd');
+      await b.delete('a');
+      expect(seqs, [1, 2, 3]);
+      expect(kept, {'b': '2', 'c': '1'});
+      expect(await b.read('a'), isNull);
+      expect(await b.read('d'), isNull);
+      expect(await b.read('c'), '1');
+    });
+
+    test('a write the page refuses, or never answers, fails', () async {
+      final b = backend({}, refuse: () => true);
+      await expectLater(b.write('k', 'v'), throwsA(isA<SaveWriteFailed>()));
+
+      final silent = WorkerBackend(
+        const {},
+        (_, _, _) {},
+        timeout: const Duration(milliseconds: 20),
+      );
+      await expectLater(
+        silent.write('k', 'v'),
+        throwsA(isA<SaveWriteFailed>()),
+      );
+      silent.stored(1, ok: true); // a late answer changes nothing
+    });
+
     test(
-      'every change goes to the page; a missing copy does nothing',
+      'a write the page refuses reaches the engine, which tries again',
       () async {
-        final seen = <(String, String?)>[];
-        final b = WorkerBackend({'a': '1'}, (k, v) => seen.add((k, v)));
-        expect(await b.read('a'), '1');
-        await b.write('b', '2');
-        await b.copy('a', 'c');
-        await b.copy('missing', 'd');
-        await b.delete('a');
-        expect(seen, [('b', '2'), ('c', '1'), ('a', null)]);
-        expect(await b.read('a'), isNull);
-        expect(await b.read('d'), isNull);
-        expect(await b.read('c'), '1');
+        var refuse = false;
+        final kept = <String, String>{};
+        final pushes = <Push>[];
+        final e = EngineCore(
+          store: SaveStore(backend(kept, refuse: () => refuse)),
+          emit: pushes.add,
+          now: fixedNow,
+        );
+        await e.open();
+        await e.newGame(params);
+        refuse = true;
+        await e.dispatch(OrderSupply(e.game!.me.id, Supply.barley, 1));
+        expect(
+          pushes.whereType<SaveStatus>().map((p) => p.ok),
+          contains(false),
+        );
+        refuse = false;
+        await e.flush();
+        expect(pushes.whereType<SaveStatus>().last.ok, isTrue);
+        expect(kept['marah.save'], contains('"units":1'));
+        await e.close();
       },
     );
 
@@ -150,13 +217,9 @@ void main() {
       'a game saved through the page opens again from what it kept',
       () async {
         final page = <String, String>{};
-        void keep(String k, String? v) =>
-            v == null ? page.remove(k) : page[k] = v;
-
-        final pushes = <Push>[];
         final first = EngineCore(
-          store: SaveStore(WorkerBackend(const {}, keep)),
-          emit: pushes.add,
+          store: SaveStore(backend(page)),
+          emit: (_) {},
           now: fixedNow,
         );
         expect(await first.open(), isA<NoGame>());
@@ -173,9 +236,10 @@ void main() {
         final saved = stateLine(first.game!.state);
         await first.close();
         expect(page, contains('marah.save'));
+        expect(page, contains('marah.save.prev'));
 
         final second = EngineCore(
-          store: SaveStore(WorkerBackend(page, keep)),
+          store: SaveStore(backend(page, seed: page)),
           emit: (_) {},
           now: fixedNow,
         );
@@ -217,17 +281,63 @@ void main() {
       final herd = j['herd']! as Map<String, Object?>;
       expect(herd['total'], snap.herd.total);
       expect((j['herdTop']! as List).length, snap.herdTop.length);
-      // the cards carry what the screens show and nothing hidden
+      // the cards carry what the screens show, and only that (CamelCard's
+      // fields: a new one is a choice to look at, not a leak by default)
       final card = (j['herdTop']! as List).first as Map<String, Object?>;
-      expect(card.keys, isNot(contains('genes')));
-      expect(card.keys, isNot(contains('env')));
+      expect(card.keys.toSet(), {
+        'id', 'name', 'sex', 'category', 'ageClass', 'ageDays', 'quality', //
+        'estimateLow', 'estimateHigh', 'condition', 'health', 'illness',
+        'pregnant', 'dueOn', 'awaitingCheck', 'listed', 'entered', 'bestRank',
+        'crossbred',
+      });
+    });
+
+    test('the stores as the game holds them', () async {
+      final pushes = <Push>[];
+      final e = EngineCore(
+        store: SaveStore(MemoryBackend()),
+        emit: pushes.add,
+        now: fixedNow,
+      );
+      await e.open();
+      await e.newGame(params);
+      final me = e.game!.me.id;
+      await e.dispatch(OrderSupply(me, Supply.alfalfa, 2));
+      await e.dispatch(SetFeedPlan(me, FeedPlan.premium));
+      final snap = pushes.whereType<SnapshotPush>().last.snapshot;
+      final v = GameView(e.game!.state, me);
+      final farm = e.game!.me.farm;
+      await e.close();
+
+      final f =
+          (jsonDecode(jsonEncode(SnapshotJson.snapshot(snap)))
+                  as Map<String, Object?>)['farm']!
+              as Map<String, Object?>;
+      expect(f['storeKg'], farm.storeKg);
+      expect(f['tankL'], farm.tankL);
+      expect(f['dryDays'], farm.dryDays);
+      expect(f['feedPlan'], 'premium');
+      final supplies = (f['supplies']! as List).cast<Map<String, Object?>>();
+      for (final (i, s) in Supply.values.indexed) {
+        final j = supplies[i];
+        expect(j['supply'], s.name);
+        expect(j['amount'], v.inStore(s).floor(), reason: s.name);
+        expect(j['daysLeft'], v.daysLeft(s), reason: s.name);
+        expect(j['room'], v.roomFor(s), reason: s.name);
+        expect(j['unitPrice'], v.unitPrice(s).value, reason: s.name);
+        expect(j['unitSize'], Provisions.unitSize(s), reason: s.name);
+        expect(j['onTheWay'], s == Supply.alfalfa ? 2 : 0, reason: s.name);
+        expect(j['short'], farm.short.contains(s), reason: s.name);
+      }
+      // a richer ration empties the stores sooner
+      expect(supplies[0]['daysLeft'], lessThan(30));
     });
   });
 
   test('the same seed gives the same lines (CI compares VM and node)', () {
     final a = sameSeedLines(weeks: 8).toList();
     final b = sameSeedLines(weeks: 8).toList();
-    expect(a, hasLength(3));
+    expect(a, hasLength(4)); // weeks 0, 4, 8, and the extras' counts
     expect(a, b);
   });
 }

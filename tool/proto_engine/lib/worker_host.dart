@@ -1,0 +1,299 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:marah_data/marah_data.dart';
+import 'package:marah_domain/marah_domain.dart';
+import 'package:marah_runtime/marah_runtime.dart';
+
+import 'commands_json.dart';
+import 'worker_backend.dart';
+
+/// The rules engine as the 3D prototype's Web Worker runs it
+/// (docs/plan-gameplay.md, G2): marah_runtime's EngineCore (the clock's
+/// catch-up, commands in order, saving, the screens' view models) behind a
+/// message protocol in JSON text. bin/worker.dart connects it to the worker's
+/// `self`; the tests drive it directly, on the VM and in node.
+///
+/// page -> worker (JSON text):
+/// * `{op: 'start', id, store: {key: text}, newGame: {seed, playerName,
+///   farmName, region, favourite}, timeScale}`: opens the game kept in
+///   `store`, or makes a new one. A second start closes the first engine
+///   (saved, its clock stopped) before the next opens.
+/// * `{op: 'dispatch', id, command: {type, ...}}` (commands_json.dart).
+/// * `{op: 'flush' | 'pause' | 'resume' | 'openPrevious', id}`;
+///   `{op: 'startOver', id, newGame}`.
+/// * `{op: 'stored', seq, ok, error}`: the page kept write `seq`, or could not.
+///   Answered at once, never queued (every other op waits its turn, in order).
+///
+/// worker -> page: JSON text `{type: 'ready' | 'reply' | 'snapshot' | 'save' |
+/// 'catchUp' | 'notice' | 'error', ...}`, and the save's writes through
+/// [postStore] (`{type: 'store', seq, key, value}`, a null value deletes; sent
+/// as an object, so a save of megabytes is not written as JSON a second time).
+class WorkerHost {
+  WorkerHost({
+    required this.post,
+    required this.postStore,
+    DateTime Function()? wallClock,
+  }) : _wall = wallClock ?? DateTime.now;
+
+  final void Function(String json) post;
+  final void Function(int seq, String key, String? value) postStore;
+  final DateTime Function() _wall;
+
+  EngineCore? _core;
+  WorkerBackend? _backend;
+  Timer? _ticker;
+  Duration? _tick;
+  Future<void> _tail = Future.value();
+  int _seq = 0;
+
+  /// The game's own clock: a real day is a game week (approved by the owner;
+  /// RealTimeClock).
+  static const gameDay = Duration(
+    microseconds: Duration.microsecondsPerDay ~/ 7,
+  );
+
+  /// The fastest clock a test may ask for (a game day in about 12 ms).
+  static const maxTimeScale = 1e6;
+
+  void ready() => _send({'type': 'ready'});
+
+  /// One message from the page.
+  void receive(Object? data) {
+    final Map<String, Object?> m;
+    try {
+      final decoded = jsonDecode(data! as String);
+      m = (decoded as Map).cast<String, Object?>();
+    } on Object {
+      return _send({'type': 'error', 'id': null, 'error': 'badMessage'});
+    }
+    if (m['op'] == 'stored') return _stored(m);
+    _tail = _tail.then((_) => _handle(m));
+  }
+
+  void _send(Map<String, Object?> m) => post(jsonEncode(m));
+  void _reply(Object? id, Map<String, Object?> m) =>
+      _send({'type': 'reply', 'id': id, ...m});
+
+  void _stored(Map<String, Object?> m) {
+    final seq = m['seq'];
+    if (seq is! num) return;
+    _backend?.stored(
+      seq.toInt(),
+      ok: m['ok'] == true,
+      error: m['error'] is String ? m['error']! as String : null,
+    );
+  }
+
+  Future<void> _handle(Map<String, Object?> m) async {
+    final id = m['id'];
+    try {
+      final op = m['op'];
+      if (op == 'start') return await _start(id, m);
+      final core = _core;
+      if (core == null) {
+        return _reply(id, {'ok': false, 'error': 'noEngine'});
+      }
+      switch (op) {
+        case 'dispatch':
+          final game = core.game;
+          if (game == null) {
+            return _reply(id, {'ok': false, 'error': 'noGame'});
+          }
+          final j = m['command'];
+          final cmd = j is Map
+              ? commandFromJson(game.me.id, j.cast<String, Object?>())
+              : null;
+          if (cmd == null) {
+            return _reply(id, {'ok': false, 'error': 'badCommand'});
+          }
+          final r = await core.dispatch(cmd);
+          _reply(id, {
+            'ok': r.ok,
+            'error': r is Err
+                ? {'code': r.error.code.name, 'params': r.error.params}
+                : null,
+            'events': [for (final e in r.events) e.toJson()],
+          });
+        case 'flush':
+          await core.flush();
+          _reply(id, {'ok': true});
+        case 'pause':
+          _ticker?.cancel();
+          await core.pause();
+          _reply(id, {'ok': true});
+        case 'resume':
+          await core.resume();
+          _startTicker();
+          _reply(id, {'ok': true});
+        case 'openPrevious':
+          _reply(id, {
+            'ok': true,
+            'status': _status(await core.openPrevious()),
+          });
+        case 'startOver':
+          final p = _params(m['newGame']);
+          await core.startOver();
+          await core.newGame(p);
+          _reply(id, {'ok': true, 'status': 'new'});
+        default:
+          _reply(id, {'ok': false, 'error': 'unknownOp'});
+      }
+    } on Object catch (e) {
+      _send({'type': 'error', 'id': id, 'error': '$e'});
+    }
+  }
+
+  Future<void> _start(Object? id, Map<String, Object?> m) async {
+    // everything checked before anything changes: a bad start leaves the
+    // engine that runs, if any, as it was
+    final rawStore = m['store'] ?? const <String, Object?>{};
+    if (rawStore is! Map ||
+        rawStore.entries.any((e) => e.key is! String || e.value is! String)) {
+      return _reply(id, {'ok': false, 'error': 'badStore'});
+    }
+    final scale = m['timeScale'] ?? 1;
+    if (scale is! num || !scale.isFinite || scale < 1 || scale > maxTimeScale) {
+      return _reply(id, {'ok': false, 'error': 'badTimeScale'});
+    }
+    final NewGameParams? fresh;
+    try {
+      fresh = m['newGame'] == null && rawStore.containsKey('marah.save')
+          ? null
+          : _params(m['newGame']);
+    } on FormatException catch (e) {
+      return _reply(id, {
+        'ok': false,
+        'error': 'badNewGame',
+        'detail': e.message,
+      });
+    }
+
+    // the engine that ran stops first: saved, its clock and retries stopped,
+    // so it never writes over the next one's save
+    _ticker?.cancel();
+    await _core?.close();
+    _core = null;
+
+    final backend = _backend = WorkerBackend(
+      rawStore.cast<String, String>(),
+      postStore,
+      nextSeq: () => ++_seq,
+    );
+    // a faster clock for trying things in tests; a save played on one is
+    // ahead of the real clock, and waits for it at a normal speed
+    final s = scale.toDouble();
+    final t0 = _wall();
+    DateTime now() => s == 1 ? _wall() : t0.add(_wall().difference(t0) * s);
+    _tick = s == 1 ? null : gameDay * (1 / s);
+    final core = _core = EngineCore(
+      store: SaveStore(backend),
+      emit: _push,
+      now: now,
+    );
+    final opened = await core.open();
+    var status = _status(opened);
+    if (opened is NoGame) {
+      await core.newGame(
+        fresh ??
+            _params(<String, Object?>{'seed': now().millisecondsSinceEpoch}),
+      );
+      status = 'new';
+    }
+    _startTicker();
+    _reply(id, {'ok': !status.startsWith('failed'), 'status': status});
+  }
+
+  /// EngineCore waits for the next game day in real time; under a faster
+  /// clock the worker wakes it as often as a game day passes.
+  void _startTicker() {
+    _ticker?.cancel();
+    final tick = _tick;
+    final core = _core;
+    if (tick == null || core == null) return;
+    final every = tick < const Duration(milliseconds: 10)
+        ? const Duration(milliseconds: 10)
+        : tick;
+    _ticker = Timer.periodic(every, (_) {
+      unawaited(core.catchUp().catchError((Object _) {}));
+    });
+  }
+
+  static String _status(OpenStatus s) => switch (s) {
+    GameOpened() => 'opened',
+    NoGame() => 'none',
+    GameOpenFailed(:final problem, :final detail) =>
+      'failed ${problem.name}: $detail',
+  };
+
+  /// A new game's settings, the defaults for any left out.
+  static NewGameParams _params(Object? raw) {
+    if (raw != null && raw is! Map)
+      throw const FormatException('not an object');
+    final p = raw == null ? const <String, Object?>{} : (raw as Map);
+    T pick<T>(String k, T fallback) {
+      final v = p[k];
+      if (v == null) return fallback;
+      if (v is! T) throw FormatException('$k: ${v.runtimeType}');
+      return v;
+    }
+
+    final seed = pick<num>('seed', DateTime.now().millisecondsSinceEpoch);
+    if (seed != seed.roundToDouble() || seed.abs() > 9007199254740991) {
+      throw FormatException('seed: $seed');
+    }
+    E byName<E extends Enum>(List<E> values, String k, E fallback) {
+      final n = pick<String>(k, fallback.name);
+      for (final v in values) {
+        if (v.name == n) return v;
+      }
+      throw FormatException('$k: $n');
+    }
+
+    return NewGameParams(
+      seed: seed.toInt(),
+      playerName: pick<String>('playerName', 'اللاعب'),
+      farmName: pick<String>('farmName', 'العزبة'),
+      region: byName(Region.values, 'region', Region.qassim),
+      favourite: byName(ColorCategory.values, 'favourite', ColorCategory.wodh),
+    );
+  }
+
+  void _push(Push p) => _send(switch (p) {
+    SnapshotPush(:final snapshot) => {
+      'type': 'snapshot',
+      'snapshot': SnapshotJson.snapshot(snapshot),
+    },
+    SaveStatus(:final ok, :final error) => {
+      'type': 'save',
+      'ok': ok,
+      'error': error,
+    },
+    CatchUpProgress(:final done, :final total) => {
+      'type': 'catchUp',
+      'done': done,
+      'total': total,
+    },
+    CatchUpCapped(:final skippedDays) => {
+      'type': 'notice',
+      'kind': 'catchUpCapped',
+      'skippedDays': skippedDays,
+    },
+    StateRecovered(:final reason) => {
+      'type': 'notice',
+      'kind': 'recovered',
+      'reason': reason,
+    },
+    BackupWarning() => {'type': 'notice', 'kind': 'backup'},
+    EngineHalted(:final reason) => {
+      'type': 'notice',
+      'kind': 'halted',
+      'reason': reason,
+    },
+    EngineDown(:final reason) => {
+      'type': 'notice',
+      'kind': 'down',
+      'reason': reason,
+    },
+  });
+}

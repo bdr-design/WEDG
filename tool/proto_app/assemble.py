@@ -5,7 +5,8 @@ The page as the app serves it: farm.html as index.html, with a doctype, a charse
 and a viewport (the claude.ai artifact skeleton adds these when it publishes), its
 scripts, the phone's pictures, the terrain and the models next to it, and three.js
 r170 bundled (the import map rewritten from the CDN to the local copy), so only the
-web fonts come from the network. Run from anywhere; THREE_DIR may name an unpacked
+web fonts come from the network; and the rules engine compiled for its worker
+(tool/proto_engine/build_worker.py, which needs `dart` on the PATH). Run from anywhere; THREE_DIR may name an unpacked
 `three@0.170.0` npm package, otherwise it is fetched with `npm pack`.
 """
 import os, re, shutil, subprocess, sys, tempfile
@@ -18,7 +19,7 @@ PROTO = REPO / 'design' / 'prototype3d'
 OUT = APP / 'assets' / 'web'
 ADDONS = ['controls/OrbitControls.js', 'geometries/RoundedBoxGeometry.js', 'loaders/GLTFLoader.js',
           'objects/Sky.js', 'utils/BufferGeometryUtils.js', 'utils/SkeletonUtils.js']
-SCRIPTS = ['play.js', 'world.js', 'terrain.js', 'car_physics.js', 'phone.js']
+SCRIPTS = ['play.js', 'world.js', 'terrain.js', 'car_physics.js', 'phone.js', 'engine.js']
 CDN = f'https://cdn.jsdelivr.net/npm/three@{THREE_VERSION}/'
 
 
@@ -51,6 +52,9 @@ def main():
     for name in SCRIPTS:
         shutil.copy2(PROTO / name, OUT / name)
     shutil.copytree(PROTO / 'phone', OUT / 'phone')
+    sys.path.insert(0, str(REPO / 'tool' / 'proto_engine'))
+    import build_worker
+    build_worker.build(OUT / 'engine_worker.js')
     for folder in ('terrain', 'models'):
         for f in (PROTO / folder).iterdir():
             if f.is_file():

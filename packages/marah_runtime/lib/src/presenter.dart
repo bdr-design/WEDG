@@ -119,6 +119,7 @@ class Presenter {
       signature =
           (signature * 31 + Object.hashAll(c.mutableFields())) & 0x3FFFFFFF;
     }
+    final needs = v.dailyNeeds; // once: each walks the whole herd
     final farm = FarmSummary(
       name: me.farm.name,
       region: me.farm.region,
@@ -134,7 +135,7 @@ class Presenter {
           SupplySummary(
             supply: s,
             amount: v.inStore(s).floor(),
-            daysLeft: v.daysLeft(s),
+            daysLeft: v.daysLeft(s, needs),
             room: v.roomFor(s),
             unitPrice: v.unitPrice(s).value,
             unitSize: Provisions.unitSize(s),

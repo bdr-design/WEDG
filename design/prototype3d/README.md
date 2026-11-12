@@ -59,6 +59,14 @@ A camel yard (عزبة), not a farm.
 Grass, bushes and tree foliage are crossed alpha cards with textures drawn
 on canvas. Everything that repeats is instanced.
 
+## The game's rules
+
+`engine.js` runs the game's rules engine (the packages under `packages/`,
+compiled to `engine_worker.js` by `python3 tool/proto_engine/build_worker.py`;
+built, not committed) in a Web Worker once the yard has loaded. Nothing on
+screen uses it yet (G3 in `docs/plan-gameplay.md`); the frame meter (`#fps`)
+shows its cost to the page. Without the file the yard runs without it.
+
 ## Weight on a phone
 
 A performance review measured this page at a phone viewport. The fixes are

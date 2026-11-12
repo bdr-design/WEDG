@@ -63,10 +63,14 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
   }
 }
 
-/// A whole number, or a throw (2.5 units is a malformed command, not 2).
+/// A whole number JavaScript holds exactly, or a throw: 2.5 units is a
+/// malformed command, not 2, and 1e300 riyals is not a price (the VM would
+/// clamp it, JavaScript would keep a double the VM cannot read back).
 int _int(Object? v) {
   final n = v! as num;
-  if (n != n.roundToDouble()) throw FormatException('not whole: $n');
+  if (n != n.roundToDouble() || n.abs() > 9007199254740991) {
+    throw FormatException('not a whole number in range: $n');
+  }
   return n.toInt();
 }
 
