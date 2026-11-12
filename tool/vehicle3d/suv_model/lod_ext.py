@@ -1,4 +1,4 @@
-"""The car's outside in game layers (the owner's decision of 10 Nov: layered detail). lod_ext.py <suv.blend> <out.blend> <target> [far|game]
+"""The car's outside in game layers (the owner's decision of 10 Nov: layered detail). lod_ext.py <suv.blend> <out.blend> <target> [far|game|mid]
 1. Faces nobody sees are dropped: a face stays if a point of it is in plain view, facing it, from one of the eyes:
    a ring round the car at several heights and distances (a player standing, crouching, on a camel, the camera
    behind the car), from above, and from the seats inside (the bonnet, the mirrors and the wipers through the glass,
@@ -55,6 +55,8 @@ if __name__ == '__main__':
         WHOLE = ('plate',); KEEP = {'glass': 0.12, 'wheel': 0.10}
     elif len(sys.argv) > 4 and sys.argv[4] == 'game':       # the player's car close up in the game (11 Nov): the wheels' spokes, the arches and the chrome keep more
         KEEP = {'glass': 0.8, 'front': 0.8, 'rear': 0.8, 'wheel': 0.6, 'roof': 0.8, 'arch': 0.7}
+    elif len(sys.argv) > 4 and sys.argv[4] == 'mid':        # the player's car at the chase camera's 8 m (12 Nov): the near layer's shares, about half
+        KEEP = {'glass': 0.7, 'front': 0.55, 'rear': 0.7, 'wheel': 0.3, 'roof': 0.55, 'arch': 0.35}      # (the glass's edges and the tailgate's trims kept fuller: at 0.45 the rear glass's top edge went jagged)
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath(src)); obs = [o for o in bpy.data.objects if o.type == 'MESH']
     tri = lambda o: (o.data.calc_loop_triangles(), len(o.data.loop_triangles))[1]
     before = sum(tri(o) for o in obs)

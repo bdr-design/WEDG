@@ -359,7 +359,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   // the view: on foot always the walker's own eyes; in the car from the seat (1) or from behind it (3)
   const viewBtn = ui.querySelector('[data-a="view"]');
   function toggleView() {
-    if (state.mode !== 'drive') return;
+    if (state.mode !== 'drive' || leaving) return;      // (not while getting out: from behind the open door drew all of the car and the cabin)
     state.view = state.view === 3 ? 1 : 3; state.snap = true;
     viewBtn.classList.toggle('on', state.view === 3);
   }
@@ -431,13 +431,14 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   // getting out: the driver's door opens and shuts with the driver still in his seat (from behind, the view goes to the
   // seat first), and then he stands outside by the shut door. (The owner, 12 Nov: the door is not to open while he is
   // on foot. It swung shut in front of the walker, and open it drew all of the car and the cabin: 422k triangles for a
-  // second and a half.) The car is held on its brake meanwhile.
+  // second and a half.) The car stands still meanwhile, its driving not run (held on the brake pedal, the pedals read it
+  // as a press at a stop and put it in reverse, the review).
   let leaving = false;
   function exit() {
     if (leaving || state.mode !== 'drive' || Math.abs(carState.v) > 1.5) return;                   // not while moving
     leaving = true; carState.v = 0; parked = true; job = null;
     if (state.view !== 1) { state.view = 1; state.snap = true; viewBtn.classList.remove('on'); }
-    steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; viewBtn.hidden = true; pedal.gas = 0; pedal.brake = 1; pad.reset();
+    steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; viewBtn.hidden = true; pedal.gas = pedal.brake = 0; pad.reset();
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4, () => { if (leaving && state.on) stepOut(); leaving = false; }), 0.35);
   }
   function stepOut() {
@@ -748,6 +749,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   function stop() {
     leaving = false;
+    for (let i = tween.length - 1; i >= 0; i--) if (tween[i].obj === model.doors.FL) tween.splice(i, 1);      // (back to the map mid-swing: the door shut at once, or it stood open on foot when play began again)
+    if (model.doors.FL) model.doors.FL.rotation.y = 0;
     if (phone) { phone.close(); phone.setPlay(false); }
     state.on = false; ui.hidden = true; document.body.classList.remove('playing'); stickId = lookId = null; stick.hidden = true; knob.style.transform = ''; input.mx = input.mz = 0; input.run = false; man.speed = 0; keys.clear(); pedal.gas = pedal.brake = 0; pad.reset();
     cabin.visible = false;
@@ -763,8 +766,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
     if (model.doorcard && model.doors.FL) model.doorcard.rotation.y = model.doors.FL.rotation.y;      // the door's trim swings with it
     if (!state.on) return false;
-    if (leaving) { keys.clear(); pedal.gas = 0; pedal.brake = 1; carState.v = 0; }      // (getting out: held where it stands)
-    if (state.mode === 'walk') updateWalk(dt); else updateDrive(dt);
+    if (leaving) { keys.clear(); pedal.gas = pedal.brake = 0; carState.v = 0; }      // (getting out: held where it stands)
+    if (state.mode === 'walk') updateWalk(dt); else if (!leaving) updateDrive(dt);
     updateCamera(dt);
     return true;
   }

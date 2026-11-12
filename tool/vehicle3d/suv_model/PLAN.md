@@ -152,11 +152,14 @@ owner chose our code-built car (this folder) for the game again. `ours_game.py` 
 - `lod_ext.py ... 150000 game`: the near layer, 150k triangles (185k of 210k are seen; the wheels, arches and chrome
   keep more).
 - `lod_ext.py ... 15000 far`: the far layer.
+- `lod_ext.py ... 80000 mid` then `ours_game.py near <mid.blend> ...`: the middle layer (12 Nov), 82k triangles with
+  the near layer's parts, door, wheels and view split, drawn from 6.5 m to 20 m (the chase camera's 8 m).
+- `../shadow_proxy.py <models> suvfar`: the car's shadow, a 1.8k copy of the far layer (12 Nov, the owner: give it one).
 - The wheels sit on their corners for the springs and steering. The driver's eye comes from `interior/cabin.py`'s
   SEATED_EYE, and the cabin from `cabin_lod0.glb` (44k).
 
 The game files are `design/prototype3d/models/veh_suvfull.json`, `veh_suvfar.json` and `veh_suvcabin.json`. The
-player's car casts no shadow (the owner's word).
+player's car casts its shadow from a coarse copy (the owner, 12 Nov; on 11 Nov he had asked for none).
 
 Moving parts and the seat view (12 Nov, ours_game.py):
 - The driver's door is cut from the body along its shut lines (door_split) with its window, chrome, handle and mirror,

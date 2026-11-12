@@ -290,11 +290,16 @@ beyond the camera's own turn 0.45 m at 30 fps; the largest turn of the view
 before: no frame inside anything, and the same eight frames of the car hidden
 (the tamarisk at (-4, 11), which no obstacle list holds, and frames the
 reviews' sight test, with boxes 0.3 m larger than the walls, counted though
-the picture shows the car). Two things remain: parked under the porch with
-its back to the room, the camera turned away by the finger stays where it was
-left (the place behind the car is inside the room's box) until the car moves
-off; and swept behind a building, the car can be hidden for a moment until the
-camera comes in. The view split's chase eyes moved with it (8 and 9.2 m back,
+the picture shows the car). What remains: parked under the porch with its
+back to the room, the camera turned by the finger eases back only as far as
+the room lets it (62 degrees round from behind, 6.3 m out, the car in view)
+and stays there until the car moves off (the place behind the car is inside
+the room's box); after a long drag it can stay over the car's rear quarter,
+about 1 m over the roof. Under the porch with the room behind, with or without
+a finger, the camera can stand about 1 m over the tailgate, 2.3 m from the
+car's middle (the room's face leaves no more room; so before this change too).
+Swept behind a building, the car can be hidden for a moment until the camera
+comes in. Turned round by the finger, a few yard views reach 203-204 draws. The view split's chase eyes moved with it (8 and 9.2 m back,
 1.4 to 5 m up, 50 degrees either side): 952 views across that range show at
 most 4 px missing. Turned further round by the finger, the game draws all of
 the car, as by a wall.
@@ -303,15 +308,21 @@ the car, as by a wall.
 many camels near: 193 to 205 draws and up to 431k triangles, with the old
 camera as with the new. Two changes, neither visible:
 - **The camels' full detail level only within 8 m** (40k triangles; the 8k
-  level to 48 m, the 1.5k beyond). It was used to 16 m. At 8 to 16 m (a camel
-  a fifth to a third of the screen's height) the 8k level differs in 2% of the
-  camel's pixels in shape and light, measured with the camel alone at 6 to 30
-  m. The camel whose card is open keeps the full level to 16 m (its close view
-  is at 14 m). Each bound is 3% further going out than coming in, so a camel
-  at a bound does not flicker.
-- **The ground cover in 50 m cells** (35 m before): one draw per cell, 10 to
-  19 draws fewer in every view for 2k to 7k triangles more. The phone's frame
-  is bound by its CPU issuing the draws, so the draws count for more.
+  level to 48 m, the 1.5k beyond). It was used to 16 m. The 8k level now
+  receives the shadows that fall on it too (it did not: a camel in a pen's
+  shade past the bound was drawn as in full sun, 20% brighter, the review).
+  In the real lit scene, at 7.7 to 16 m, in the sun and in a shade, from eye
+  height and from the chase camera, the two levels differ in 0.2 to 0.4% of
+  the camel's pixels, its brightness within 0.4%. The camel whose card is open
+  keeps the full level to 16 m (its close view is at 14 m). Each bound is 3%
+  further going out than coming in; in 600 s of camels at and bobbing across a
+  bound, no change was undone within a second.
+- **The ground cover in 50 m cells** (35 m before): one draw per cell, up to
+  19 draws fewer (none out on the sand, 7 in the map's close view), for 2k to
+  7k triangles more in most views and 21k more in the map's close view. All of
+  the cover within 45 m is drawn in every view; at 45 to 90 m it is denser
+  than before, not thinner. The phone's frame is bound by its CPU issuing the
+  draws, so the draws count for more.
 
 Measured the same way, at 844 x 390:
 
@@ -332,9 +343,34 @@ yard's heavy directions (397k to 412k). The view from behind at the start is
 higher than before because under the car shade the camera now comes in under
 the cloth instead of rising, which puts it outside the split's fan, so all of
 the car is drawn there (8k more). The camels move between runs, so a yard view
-varies by about 10 draws and 20k triangles. What remains heavy: the player's
+varies by about 10 draws and 20k triangles. What remained heavy: the player's
 car at the chase camera's 8 m (64 draws, 145k triangles, a third of the
 picture) and the terrain (3 draws, 73k).
+
+**The player's car in three layers, and its shadow (the owner, 12 Nov:
+"سوها").** A middle layer (lod_ext.py's 'mid', 82k triangles, the same parts,
+door, wheels and view split as the near one; the glass and the tailgate's trims
+kept fuller, as at half they went jagged) is drawn from 6.5 m to 20 m, so the
+chase camera at its 8 m draws it; the near one within 6.5 m, from the seat and
+while the door swings; the far one beyond 20 m. Its wheels and door are moved
+as the near layer's. Seen from the chase camera the two layers differ in about
+1% of the car's pixels (a thin trim line under the number plate the most).
+The car now casts a shadow, from a coarse copy of the far layer (1.8k
+triangles, within 5 cm of it), moving with it in every shadow redraw and drawn
+in no picture: one draw in the shadow pass. (The owner had asked for no shadow
+on 11 Nov, when the full layers cost 40k to 125k triangles a redraw; with the
+camera 8 m back the car looked to float over the sand.) Measured the same way:
+
+| View | Before | Now |
+|---|---|---|
+| In the car, from behind | 180 / 397k | 178 / 328k |
+| In the car, out on the sand | 84 / 233k | 84 / 168k |
+| West across the yard | 186 / 405k | 186 / 339k |
+| West, nearer the pens | 179 / 398k | 179 / 333k |
+| North across the yard | 177 / 412k | 178 / 414k |
+
+North across the yard the camera comes in by the room to within 6.5 m of the
+car, which then draws its near layer: still over, by 14k.
 
 The map's camera is held like a phone's map. One finger drags the ground,
 the point under the finger staying under it (to 0 px once the drag ends, on
@@ -385,8 +421,11 @@ driver still in his seat (from behind, the view goes to the seat first), and
 then he stands outside by the shut door; getting in, the view was already the
 seat's. From the seat's eye nothing is missing with the door open at any
 angle if only the seat's split is drawn, so it stays drawn so: the frames of
-the swing are 282k getting out and 343k getting in (the cabin loading then),
-and no frame shows the door open on foot (31 to 33 frames at 418k before).
+the swing are 265k to 343k (343k while the cabin first loads), and no frame
+shows the door open on foot (31 to 33 frames at 418k before), interrupted or
+not. While the door swings the car stands still with its driving not run
+(held on the brake pedal at first, the pedals read it as a press at a stop
+and put the car in reverse, the review).
 
 - **The parked vehicles' shadows come from coarse copies**
   (tool/vehicle3d/shadow_proxy.py). The two shas, the tractor and the caravan

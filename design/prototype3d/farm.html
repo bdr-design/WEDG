@@ -599,7 +599,7 @@ class Camel {
       o.traverse((n) => {
         if (!n.isMesh) return;
         if (li > 0 && n.isSkinnedMesh && sameBones(n.skeleton)) n.bind(skel, n.bindMatrix);
-        n.castShadow = li === 2; n.receiveShadow = li === 0; n.material = coatMaterial(n.material, li, spec.coat);
+        n.castShadow = li === 2; n.receiveShadow = li <= 1;      /* (the 8k level too: a camel in a shade past its full level's 8 m was drawn as in full sun, 20% brighter, the review) */ n.material = coatMaterial(n.material, li, spec.coat);
         n.boundingSphere = sphere.clone(); n.visible = false; meshes.push(n);
       });
       return { o, meshes };
@@ -1068,12 +1068,12 @@ const panA = new THREE.Vector3(), panB = new THREE.Vector3(), panV = new THREE.V
 const twoV = new THREE.Vector3(), twoS = new THREE.Spherical();
 // the point of the ground plane (at the sand under the point turned about) under (x, y) in the game's own coordinates;
 // null where the line of sight misses it or meets it very far off (near the horizon)
-function groundUnder(x, y, out) {
+function groundUnder(x, y, out, atTarget = false) {
   const r = rectOf(renderer.domElement);
   panNdc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   panRay.setFromCamera(panNdc, camera);
   if (panRay.ray.direction.y > -0.03) return null;
-  panPlane.constant = -(groundAt ? groundAt(controls.target.x, controls.target.z) : controls.target.y);      // (the sand itself: a plane at the point turned about, 1.1 m over it, slid the sand a quarter of the finger's way in a low view)
+  panPlane.constant = -(atTarget || !groundAt ? controls.target.y : groundAt(controls.target.x, controls.target.z));      // (the sand itself: a plane at the point turned about, 1.1 m over it, slid the sand a quarter of the finger's way in a low view)
   if (!panRay.ray.intersectPlane(panPlane, out)) return null;
   return out.distanceTo(camera.position) < 6 * camera.position.distanceTo(controls.target) + 50 ? out : null;
 }
@@ -1149,7 +1149,7 @@ if (['_handleTouchMovePan', '_handleMouseMovePan', '_handleTouchStartPan', '_han
     const zoomAbout = (x, y, s) => {
       const t = controls.target, dist = camera.position.distanceTo(t);
       const k = THREE.MathUtils.clamp(dist / s, controls.minDistance, controls.maxDistance) / dist;
-      const g = follow || followHerd ? null : groundUnder(x, y, panB), c = g || t;
+      const g = follow || followHerd ? null : groundUnder(x, y, panB, true), c = g || t;      // (about a plane at the point turned about, as its height is kept: about the sand, the point left its height, and the ground's ease back to it slid the whole picture 50 to 190 px after each pinch)
       camera.position.sub(c).multiplyScalar(k).add(c);
       if (g) t.sub(c).multiplyScalar(k).add(c);
     };
@@ -1290,12 +1290,12 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
 
 // ------------------------------------------------------------ vehicles built from the owner's photos
 async function loadVehicles() {
-  const names = ['shas', 'suvfull', 'suvfar', 'tractor', 'caravan'];
+  const names = ['shas', 'suvfull', 'suvmid', 'suvfar', 'tractor', 'caravan'];
   const models = Object.fromEntries(await Promise.all(names.map(async (n) => [n, (await loadLod(`veh_${n}.json`)).scene])));
   // a parked vehicle's shadow comes from a coarse copy (tool/vehicle3d/shadow_proxy.py: 1.4k triangles for 12k, within
   // 3 cm of the full outline where a shadow texel is 9.4 cm), baked into the fixed shadows like the yard's casters
   // and not drawn itself (the full models were 48k of the 81k triangles in every shadow redraw)
-  const SHADOWS = ['shas', 'tractor', 'caravan'];
+  const SHADOWS = ['shas', 'tractor', 'caravan', 'suvfar'];
   const shadows = Object.fromEntries(await Promise.all(SHADOWS.map(async (n) => { let g = null; (await loadLod(`veh_${n}_shadow.json`)).scene.traverse((o) => { if (o.isMesh && !g) g = o.geometry; }); return [n, g]; })));
   const proxyMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, colorWrite: false, depthWrite: false });      // (double-sided as the models' own; drawing nothing, should a frame come before the bake: with the terrain late, the copies showed white through the shas)
   const make = (name, tint) => {
@@ -1307,14 +1307,22 @@ async function loadVehicles() {
   const hay = new THREE.MeshStandardMaterial({ color: '#b3a256', roughness: 1 });
   // the player's SUV, ours (tool/vehicle3d/suv_model/ours_game.py): the near layer up close (150k triangles: the driver's
   // door on its hinge, the wheels on their corners, each view drawing only what it can see), the far layer (15k) beyond
-  // 20 m, the cabin loaded apart; the car casts no shadow (the owner's word), it receives the yard's.
+  // 20 m, the cabin loaded apart. It receives the yard's shadows and casts its own from a coarse copy of the far layer
+  // (veh_suvfar_shadow.json, 1.8k triangles, within 5 cm of it), moving with it in every shadow redraw and drawn in no
+  // picture. (The owner, 11 Nov: no shadow, its full layers cost 40k to 125k triangles a redraw; 12 Nov, the camera 8 m
+  // back, without one the car looked to float over the sand: "سوها".)
   const heroCar = () => {
-    const full = models.suvfull.clone(true), far = models.suvfar.clone(true);
-    // the player's car casts no shadow (the owner's word, 11 Nov: "no need for its shadow, leave it without"); it still
-    // receives the yard's and the camels'. (Its shadow cost 40k to 125k triangles a shadow redraw.)
+    const full = models.suvfull.clone(true), far = models.suvfar.clone(true), mid = models.suvmid ? models.suvmid.clone(true) : null;
     full.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = false; } });
     far.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = false; } });
     full.userData.nearParts = [...full.children]; full.userData.far = far; far.visible = false; full.add(far);
+    if (mid) {      // the middle layer (70k triangles, the same parts and split), its wheels and door moved as the near layer's
+      mid.traverse((n) => { if (n.isMesh) { n.receiveShadow = true; n.castShadow = false; } });
+      mid.name = 'mid layer'; mid.visible = false; full.add(mid); full.userData.mid = mid;
+      full.userData.midSync = ['corner_FL', 'corner_FR', 'corner_RL', 'corner_RR', 'wheel_FL', 'wheel_FR', 'wheel_RL', 'wheel_RR', 'door_FL'].map((n) => [full.userData.nearParts.find((c) => c.name === n) || full.getObjectByName(n), mid.getObjectByName(n)]).filter(([a, b]) => a && b && a !== b);
+      full.userData.midSplit = ['seat_only', 'chase_only', 'outside'].map((n) => mid.getObjectByName(n));
+    }
+    if (shadows.suvfar) { const c = new THREE.Mesh(shadows.suvfar, shadowOnly(THREE.DoubleSide)); c.name = 'car shadow'; c.userData.shadowOnly = true; c.castShadow = true; c.receiveShadow = false; full.add(c); }      // (shadowOnly: play.js leaves its material uncopied, or the copy, outside SHADOW_MATS, was never shown even to the shadow pass)
     return full;
   };
   for (const v of VEHICLES) {
@@ -1413,13 +1421,24 @@ function tick(now) {
     camera.position.copy(controls.target).add(tmpAway);
   }
   updateScatter(camera.position, sun.target.position, sunDir, sun.shadow.camera.right);
-  if (playCar) {           // the player's car: full model near (or while playing), light model far
-    const near = (playing && play.debug.state.mode === 'drive') || camera.position.distanceTo(playCar.position) < 20;
-    if (playCar.userData.lodNear !== near) {
-      playCar.userData.lodNear = near;
-      for (const c of playCar.userData.nearParts) c.visible = near;
-      playCar.userData.far.visible = !near;
+  if (playCar) {
+    // the player's car in three layers by the camera's distance from it: the near one (150k triangles) within 6.5 m, the
+    // middle one (70k) to 20 m, so the chase camera at its 8 m draws it, and the far one (15k) beyond. From the seat and
+    // while the door swings, always the near one (its seat split, the door's inside). Each bound is 0.3 m further going
+    // out than coming in (the chase camera comes in by walls). (The owner, 12 Nov: the near layer at the chase camera's
+    // 8 m was 145k triangles, a third of the picture.)
+    const ud = playCar.userData, dCar = camera.position.distanceTo(playCar.position), drive = playing && play.debug.state.mode === 'drive';
+    const seatNow = drive && play.debug.state.view === 1, doorNow = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
+    const was = ud.layer || 'near', inMid = was === 'near' ? 6.8 : 6.2, inFar = was === 'far' ? 19.7 : 20.3;
+    const layer = seatNow || doorNow || !ud.mid ? (drive || dCar < inFar ? 'near' : 'far') : dCar < inMid ? 'near' : drive || dCar < inFar ? 'mid' : 'far';
+    if (ud.layer !== layer) {
+      ud.layer = layer;
+      for (const c of ud.nearParts) c.visible = layer === 'near';
+      ud.far.visible = layer === 'far';
+      if (ud.mid) ud.mid.visible = layer === 'mid';
     }
+    if (layer === 'mid') for (const [a, b] of ud.midSync) { b.position.copy(a.position); b.quaternion.copy(a.quaternion); }      // (its wheels spin and steer, its corners ride their springs)
+    const near = layer === 'near';
     // the cabin (ours: about 53k triangles in three draws, the steering wheel and the door's trim apart as they move) only when it can be seen: from the driver's seat or
     // through the open door (the older photo car: close enough to look in); never with the far layer
     const cabin = playCar.userData.cabin || (playCar.userData.cabin = (play?.model.interior || (playCar.userData.darkGlass ? null : playCar.getObjectByName('interior'))));
@@ -1435,6 +1454,7 @@ function tick(now) {
     // (from behind only while the camera is where the builder's eyes saw the car from: play.js's state.fan)
     const chase = playing && play.debug.state.view === 3 && play.debug.state.mode === 'drive' && play.debug.state.fan, all = !seat && (doorOpen || !chase);
     const want0 = near && (all || seat), want1 = near && (all || chase), want2 = near && all;
+    if (ud.midSplit && layer === 'mid') { const ms = ud.midSplit, m0 = all || seat, m1 = all || chase; if (ms[0] && ms[0].visible !== m0) ms[0].visible = m0; if (ms[1] && ms[1].visible !== m1) ms[1].visible = m1; if (ms[2] && ms[2].visible !== all) ms[2].visible = all; }
     if (vs[0] && vs[0].visible !== want0) vs[0].visible = want0;
     if (vs[1] && vs[1].visible !== want1) vs[1].visible = want1;
     if (vs[2] && vs[2].visible !== want2) vs[2].visible = want2;

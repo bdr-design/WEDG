@@ -8,7 +8,9 @@ ours_game.py near <near.blend> <out.glb> [cabin.glb]
 ours_game.py far <far.blend> <out.glb>        the far layer: everything merged by material, wheels and all
 ours_game.py cabin <cabin.glb> <out.glb>      the cabin layer (interior/lod_cabin.py's cabin_lod0.glb) under an empty
                                               'interior', as play.js loads it while the player is at the car
-play.js reads these names (part(), getObjectByName). The player's car casts no shadow (the owner's word, 11 Nov).
+play.js reads these names (part(), getObjectByName). The player's car casts its shadow from a coarse copy of the far
+layer (../shadow_proxy.py suvfar; the owner, 12 Nov). 'ours_game.py near' on lod_ext.py's 'mid' layer gives the
+middle layer (veh_suvmid.json).
 The owner's choice (11 Nov): this car, ours and built by code from his photos, replaces the downloaded model.
 """
 import bpy, sys, os, math
