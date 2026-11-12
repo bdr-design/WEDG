@@ -191,6 +191,7 @@ void main() {
         final files = <String, String>{'marah.save': 'S'};
         var mode = 'ok';
         final calls = <String>[];
+        final stamps = <String>[];
         Future<(int, String)> http(
           String method,
           String url,
@@ -199,12 +200,14 @@ void main() {
           Duration timeout,
         ) async {
           calls.add('$method $url ${headers['x-marah-save']}');
+          if (method != 'GET') stamps.add(headers['x-marah-write']!);
           if (mode == 'silent') {
             // never answers: the call must be cut off at the timeout
             return Future<(int, String)>.delayed(const Duration(days: 1))
                 .timeout(timeout);
           }
           if (mode == 'refuse') return (500, '');
+          if (mode == 'superseded') return (409, '');
           final key = Uri.decodeComponent(url.split('/save/').last);
           if (method == 'GET') return (200, jsonEncode(files));
           method == 'PUT' ? files[key] = body! : files.remove(key);
@@ -223,6 +226,14 @@ void main() {
         expect(files, {'marah.save.prev': 'P'});
         expect(calls.first, 'GET http://127.0.0.1:9/save t0k');
         expect(calls.last, 'DELETE http://127.0.0.1:9/save/marah.save t0k');
+        // each write numbered in order under this engine's mark
+        expect(stamps, ['${io.loadId}:1', '${io.loadId}:2']);
+        expect(
+          ServerSaveIo(http, base: '', token: '').loadId,
+          isNot(io.loadId),
+        );
+        mode = 'superseded';
+        await expectLater(io.keep('k', 'v'), throwsA(isA<SaveWriteFailed>()));
         mode = 'refuse';
         await expectLater(io.keep('k', 'v'), throwsA(isA<SaveWriteFailed>()));
         await expectLater(io.load(), throwsA(isA<SaveWriteFailed>()));

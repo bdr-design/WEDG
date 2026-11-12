@@ -21,7 +21,9 @@ import 'worker_backend.dart';
 ///   never holds the save's text), or with `store: {key: text}` instead of
 ///   `server`, the game the page keeps (the browser tests). A new game when
 ///   there is none. A second start closes the first engine (saved, its clock
-///   stopped) before the next opens.
+///   stopped) before the next opens; in the page's keeping it then opens the
+///   save as the worker last wrote it. A start that cannot read the save
+///   (saveUnreadable) leaves no engine: the page may start again.
 /// * `{op: 'dispatch', id, command: {type, ...}}` (commands_json.dart).
 /// * `{op: 'flush' | 'pause' | 'resume' | 'openPrevious', id}`;
 ///   `{op: 'startOver', id, newGame}`.
@@ -58,6 +60,7 @@ class WorkerHost {
   final DateTime Function() _wall;
 
   EngineCore? _core;
+  WorkerBackend? _backend;
   PageSaveIo? _pageIo;
   Timer? _ticker;
   Duration? _tick;
@@ -220,9 +223,13 @@ class WorkerHost {
         _send,
       );
     } else {
+      // a second start in the page's keeping opens the save as the worker last
+      // wrote it: the page's copy, taken as it sent the start, can miss the
+      // writes still on their way (a command just before was lost)
+      final previous = _pageIo != null ? _backend?.kept : null;
       io = _Measured(
         _pageIo = PageSaveIo(
-          rawStore.cast<String, String>(),
+          previous ?? rawStore.cast<String, String>(),
           postStore,
           nextSeq: () => ++_seq,
         ),
@@ -239,7 +246,7 @@ class WorkerHost {
         'detail': '$e',
       });
     }
-    final backend = WorkerBackend(kept, io);
+    final backend = _backend = WorkerBackend(kept, io);
     // a faster clock for trying things in tests; a save played on one is
     // ahead of the real clock, and waits for it at a normal speed
     final s = scale.toDouble();

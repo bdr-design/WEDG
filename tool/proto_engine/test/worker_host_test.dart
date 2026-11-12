@@ -200,6 +200,24 @@ void main() {
     expect(saved, contains('"units":5'));
   });
 
+  test(
+    'a second start just after a command keeps it (the page\'s copy was older)',
+    () async {
+      final page = Page();
+      await page.call('start', {'newGame': newGame});
+      final stale = {...page.kept};
+      final order = page.send('dispatch', {
+        'command': {'type': 'orderSupply', 'supply': 'barley', 'units': 7},
+      });
+      final again = page.send('start', {'store': stale});
+      expect(await page.answer(order), containsPair('ok', true));
+      expect(await page.answer(again), containsPair('status', 'opened'));
+      await page.call('flush');
+      expect(page.kept['marah.save'], contains('"units":7'));
+      await page.call('pause');
+    },
+  );
+
   test('a faster clock moves the world on its own', () async {
     final page = Page();
     await page.call('start', {'newGame': newGame, 'timeScale': 1e6});

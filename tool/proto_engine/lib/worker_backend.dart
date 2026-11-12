@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:marah_data/marah_data.dart';
 
@@ -12,6 +13,9 @@ class WorkerBackend implements SaveBackend {
 
   final Map<String, String> _data;
   final SaveIo io;
+
+  /// The save as this engine last wrote it.
+  Map<String, String> get kept => Map.of(_data);
 
   @override
   Future<String?> read(String key) async => _data[key];
@@ -119,7 +123,18 @@ class ServerSaveIo implements SaveIo {
     required this.base,
     required this.token,
     this.timeout = const Duration(seconds: 15),
-  });
+    String? loadId,
+  }) : loadId =
+           loadId ??
+           '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'
+               '${Random().nextInt(1 << 30).toRadixString(36)}';
+
+  /// This engine's mark on its writes, with their order (`x-marah-write:
+  /// LOAD:SEQ`): the server refuses a write older than one it has applied,
+  /// such as one cut off here and delivered late, and every write of an
+  /// engine before this one once this one has written.
+  final String loadId;
+  int _seq = 0;
 
   final HttpCall http;
 
@@ -163,13 +178,14 @@ class ServerSaveIo implements SaveIo {
       r = await http(
         value == null ? 'DELETE' : 'PUT',
         '$base/save/${Uri.encodeComponent(key)}',
-        _headers,
+        {..._headers, 'x-marah-write': '$loadId:${++_seq}'},
         value,
         timeout,
       );
     } on Object catch (e) {
       throw SaveWriteFailed('$key: $e');
     }
+    if (r.$1 == 409) throw SaveWriteFailed('$key: a newer write is there');
     if (r.$1 != 204 && r.$1 != 200) throw SaveWriteFailed('$key: ${r.$1}');
   }
 }

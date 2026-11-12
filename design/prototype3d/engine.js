@@ -11,11 +11,19 @@
 const KEYS = ['marah.save', 'marah.save.prev', 'marah.save.broken'];
 const PREFIX = 'marah.proto.';
 
+let running = null;
+
 /** Starts the engine and opens the saved game, or a new one with [newGame] ({seed, playerName, farmName, region,
  *  favourite}; the engine's defaults for any left out). [onSnapshot] gets each new view of the game. Resolves to
  *  {status ('opened' | 'new' | 'failed …': a save it could not read, kept as .broken), dispatch(command), flush(),
- *  openPrevious(), startOver(newGame), stats, worker}. Every call resolves to the worker's reply ({ok, ...}). */
-export async function startEngine({ url = './engine_worker.js', newGame = {}, timeScale, onSnapshot, onNotice } = {}) {
+ *  openPrevious(), startOver(newGame), stop(), stats, worker}. Every call resolves to the worker's reply ({ok, ...}).
+ *  One engine at a time: called again before stop(), it gives the same one (two would write the same save). */
+export function startEngine(options = {}) {
+  if (!running) running = start(options).catch((err) => { running = null; throw err; });
+  return running;
+}
+
+async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSnapshot, onNotice } = {}) {
   const token = new URLSearchParams(location.search).get('save');
   const t0 = performance.now();
   // what it costs, for the frame meter (#fps) and the tests. Sizes are characters of JSON text. The parse is the
@@ -89,9 +97,8 @@ export async function startEngine({ url = './engine_worker.js', newGame = {}, ti
   if (opened.ok === false && !opened.status) throw new Error(`the engine did not start: ${opened.error} ${opened.detail ?? ''}`);
   // into the background: saved, and the clock stopped; back in front: caught up (iOS may suspend the page any moment
   // after it is hidden)
-  document.addEventListener('visibilitychange', () => {
-    call(document.hidden ? 'pause' : 'resume').catch(() => {});
-  });
+  const onVisibility = () => { call(document.hidden ? 'pause' : 'resume').catch(() => {}); };
+  document.addEventListener('visibilitychange', onVisibility);
   return {
     status: opened.status,
     stats,
@@ -104,6 +111,11 @@ export async function startEngine({ url = './engine_worker.js', newGame = {}, ti
     /** After a save that could not be read: the last one that was. */
     openPrevious: () => call('openPrevious'),
     startOver: (game = {}) => call('startOver', { newGame: game }),
+    /** Saves, stops the worker, and lets a new engine start. */
+    stop: async () => {
+      document.removeEventListener?.('visibilitychange', onVisibility);
+      try { await call('pause'); } finally { worker.terminate(); running = null; }
+    },
   };
 }
 

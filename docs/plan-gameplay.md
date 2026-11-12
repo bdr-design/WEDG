@@ -47,7 +47,7 @@ weights, the (field) numbers to their sources and the illnesses (saves v3,
 v4); feed and water as stores that run out and are ordered (save v5).
 G2 is built but for the phone's numbers:
 - **The engine in the page:** compiled to JavaScript (`tool/proto_engine`,
-  its worker 260 KB, 80 KB gzipped) and run in a Web Worker
+  its worker 270 KB, 83 KB gzipped) and run in a Web Worker
   (`design/prototype3d/engine.js`), once the yard has loaded. It takes every
   command as JSON and sends the main screens' view (the player's snapshot)
   as JSON; the detail views (a camel, a festival, a page of the herd) get
@@ -56,6 +56,8 @@ G2 is built but for the phone's numbers:
   (`/save`, a key per launch in the page's address), which the worker reads
   and writes itself, so the page's thread never holds the save's text; a
   request that does not answer within 15 s is cut off and counts as failed.
+  Each write is numbered, and the app's server refuses one older than a
+  write it has applied (a request cut off here can still arrive late).
   In the browser tests the page keeps it in localStorage and answers each
   write. Either way a write that fails reaches the engine, which reports it
   and tries again.
@@ -71,8 +73,10 @@ G2 is built but for the phone's numbers:
   at the start, the snapshot read on the page's thread in under half a
   millisecond after the first. At 10,000 head, in
   node on a desktop: the save is 6.7 MB and takes 417 ms to write as text, a
-  game day 24 ms, a snapshot 118 ms (22 ms on the Dart VM), so a command at
-  that size answers in about half a second. The frame meter (`#fps`) shows
+  game day 24 ms, a snapshot 118 ms (22 ms on the Dart VM); with the request
+  to the app's server a command at that size answered in 0.76 s in Chromium
+  (the review's measure), the page's thread free all the while (no frame
+  later than 17 ms). The frame meter (`#fps`) shows
   the page's side on the phone: reading each view and keeping the save.
   What the phone itself says is still to come.
 

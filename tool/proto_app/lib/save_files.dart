@@ -12,6 +12,8 @@ import 'dart:typed_data';
 /// * `PUT /save/KEY`: the body becomes the key's text (written whole, then
 ///   renamed over the old file, so a crash leaves one or the other).
 /// * `DELETE /save/KEY`.
+/// * A write numbered `x-marah-write: LOAD:SEQ` that is older than one already
+///   applied is refused (409): see [_inOrder].
 /// Every request carries the launch's random [token] in `x-marah-save` (the
 /// page has it in its address): nothing but the page reads or writes the save.
 class SaveFiles {
@@ -40,6 +42,43 @@ class SaveFiles {
   static bool validKey(String key) => keys.contains(key);
 
   File _file(String key) => File('${dir.path}/$key');
+
+  // The writes' order. Each comes numbered from the engine that sent it
+  // (`x-marah-write: LOAD:SEQ`, LOAD new each time an engine opens the save):
+  // a write the engine gave up on (cut off after 15 s) can still reach here,
+  // or be delayed here, after a newer one; it must not land over it. So the
+  // writes are applied one at a time, a write older than the last applied to
+  // its key from the same engine is refused, and once an engine's writes come
+  // the previous engine's are refused for good.
+  Future<void> _writes = Future.value();
+  String? _load;
+  final Set<String> _retired = {};
+  final Map<String, int> _applied = {};
+
+  /// Whether a write numbered [stamp] may land on [key] now (and if so, it is
+  /// counted as applied). An unnumbered write always may.
+  bool _inOrder(String key, String? stamp) {
+    if (stamp == null) return true;
+    final i = stamp.lastIndexOf(':');
+    final load = i > 0 ? stamp.substring(0, i) : '';
+    final seq = int.tryParse(stamp.substring(i + 1));
+    if (load.isEmpty || seq == null || _retired.contains(load)) return false;
+    if (load != _load) {
+      if (_load != null) _retired.add(_load!);
+      _load = load;
+      _applied.clear();
+    }
+    if (seq <= (_applied[key] ?? -1)) return false;
+    _applied[key] = seq;
+    return true;
+  }
+
+  /// Runs [write] after every write before it.
+  Future<T> _inTurn<T>(Future<T> Function() write) {
+    final done = _writes.then((_) => write());
+    _writes = done.then((_) {}, onError: (Object _) {});
+    return done;
+  }
 
   Future<void> handle(HttpRequest req) async {
     final res = req.response;
@@ -71,21 +110,29 @@ class SaveFiles {
           }
           final bytes = body.takeBytes();
           utf8.decode(bytes); // text only: GET reads it back as text
-          await dir.create(recursive: true);
-          final tmp = File('${dir.path}/.$key.${_n++}.tmp');
-          try {
-            await tmp.writeAsBytes(bytes, flush: true);
-            await tmp.rename(_file(key).path);
-          } catch (_) {
-            // a full disk: the old file stays whole, and no half-written copy is left
-            if (await tmp.exists()) await tmp.delete();
-            rethrow;
-          }
-          res.statusCode = HttpStatus.noContent;
+          final stamp = req.headers.value('x-marah-write');
+          res.statusCode = await _inTurn(() async {
+            if (!_inOrder(key, stamp)) return HttpStatus.conflict;
+            await dir.create(recursive: true);
+            final tmp = File('${dir.path}/.$key.${_n++}.tmp');
+            try {
+              await tmp.writeAsBytes(bytes, flush: true);
+              await tmp.rename(_file(key).path);
+            } catch (_) {
+              // a full disk: the old file stays whole, and no half-written copy is left
+              if (await tmp.exists()) await tmp.delete();
+              rethrow;
+            }
+            return HttpStatus.noContent;
+          });
         } else if (req.method == 'DELETE') {
-          final f = _file(key);
-          if (await f.exists()) await f.delete();
-          res.statusCode = HttpStatus.noContent;
+          final stamp = req.headers.value('x-marah-write');
+          res.statusCode = await _inTurn(() async {
+            if (!_inOrder(key, stamp)) return HttpStatus.conflict;
+            final f = _file(key);
+            if (await f.exists()) await f.delete();
+            return HttpStatus.noContent;
+          });
         } else {
           res.statusCode = HttpStatus.methodNotAllowed;
         }

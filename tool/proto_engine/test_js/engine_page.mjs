@@ -31,20 +31,20 @@ class FakeWorker {
   constructor() {
     const ctx = { console, setTimeout, clearTimeout, setInterval, clearInterval, AbortController, fetch: fetchInWorker, Date, Math, JSON };
     ctx.self = ctx;
-    ctx.postMessage = (data) => setTimeout(() => this.onmessage?.({ data }), 0);
+    ctx.postMessage = (data) => setTimeout(() => { if (!this.dead) this.onmessage?.({ data }); }, 0);
     vm.createContext(ctx);
     vm.runInContext(workerCode, ctx);
     this.ctx = ctx;
   }
-  postMessage(data) { setTimeout(() => this.ctx.onmessage({ data }), 0); }
-  terminate() {}
+  postMessage(data) { if (!this.dead) setTimeout(() => this.ctx.onmessage({ data }), 0); }
+  terminate() { this.dead = true; this.onmessage = null; }
 }
 
 const storage = new Map();
 const listeners = [];
 globalThis.Worker = FakeWorker;
 globalThis.localStorage = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)), removeItem: (k) => storage.delete(k) };
-globalThis.document = { hidden: false, addEventListener: (t, f) => listeners.push(f) };
+globalThis.document = { hidden: false, addEventListener: (t, f) => listeners.push(f), removeEventListener: (t, f) => { const i = listeners.indexOf(f); if (i >= 0) listeners.splice(i, 1); } };
 const setPage = (search) => { globalThis.location = { search, origin: 'http://127.0.0.1:9' }; };
 const hide = (hidden) => { globalThis.document.hidden = hidden; for (const f of listeners) f(); };
 
@@ -60,11 +60,14 @@ assert.strictEqual((await a.dispatch({ type: 'orderSupply', supply: 'water', uni
 assert.strictEqual((await a.dispatch({ type: 'orderSupply', supply: 'water', units: 1.5 })).error, 'badCommand');
 assert.strictEqual((await a.startOver({ region: 'mars' })).error, 'badNewGame', 'resolved, not thrown');
 assert.ok(a.stats.writes > 0 && a.stats.failedWrites === 0 && a.stats.snapshotChars > 1000);
+assert.strictEqual(await startEngine(), a, 'one engine at a time');
+await a.stop();
 const b = await startEngine();
 assert.strictEqual(b.status, 'opened', 'opened again from what the page kept');
 assert.ok(storage.get('marah.proto.marah.save').includes('"supply":"water"'));
 
 // 2. the app's way: the worker reads and writes the server's files; the page never sees the save
+await b.stop();      // (its last save goes to the page's storage first)
 setPage('?save=tok');
 for (const [k, v] of storage) if (k.startsWith('marah.proto.')) files[k.slice('marah.proto.'.length)] = v;
 storage.clear();

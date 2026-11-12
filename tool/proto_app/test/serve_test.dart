@@ -26,11 +26,12 @@ Future<(HttpServer, SaveFiles, Directory)> saveServer() async {
   return (await bindServer(saves), saves, dir);
 }
 
-Future<(int, String)> call(HttpServer s, String method, String path, {String? token, List<int>? body}) async {
+Future<(int, String)> call(HttpServer s, String method, String path, {String? token, List<int>? body, String? stamp}) async {
   final client = HttpClient();
   try {
     final req = await client.open(method, '127.0.0.1', s.port, path);
     if (token != null) req.headers.set('x-marah-save', token);
+    if (stamp != null) req.headers.set('x-marah-write', stamp);
     if (body != null) req.add(body);
     final res = await req.close();
     return (res.statusCode, await utf8.decoder.bind(res).join());
@@ -94,6 +95,34 @@ void saveTests() {
       // likewise
     }
     expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), isEmpty);
+  });
+
+  test('the save: a write older than one applied never lands over it', () async {
+    final (s, saves, dir) = await saveServer();
+    addTearDown(() async {
+      await s.close(force: true);
+      await dir.delete(recursive: true);
+    });
+    final t = saves.token;
+    Future<int> put(String text, String stamp) async =>
+        (await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode(text), stamp: stamp)).$1;
+    Future<String?> saved() async => (jsonDecode((await call(s, 'GET', '/save', token: t)).$2) as Map)['marah.save'] as String?;
+    expect(await put('a2', 'A:2'), 204);
+    // the engine gave up on its write 1, which arrives late
+    expect(await put('a1', 'A:1'), 409);
+    expect(await saved(), 'a2');
+    expect(await put('a3', 'A:3'), 204);
+    // the next engine opens the save and writes: the first one's late writes are refused for good
+    expect(await put('b1', 'B:1'), 204);
+    expect(await put('a9', 'A:9'), 409);
+    expect(await saved(), 'b1');
+    expect((await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'A:10')).$1, 409);
+    expect(await saved(), 'b1');
+    // malformed numbers are refused; unnumbered writes (older pages) always land
+    expect(await put('x', 'nonsense'), 409);
+    expect(await put('u', 'B'), 409);
+    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode('plain'))).$1, 204);
+    expect(await saved(), 'plain');
   });
 
   test('the bundle is still served beside the save', () async {
