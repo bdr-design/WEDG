@@ -636,6 +636,11 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         // it rose, cleared, fell and rose again by the yard's wall, a shake of 5-7 cm three times a second; and the fixed
         // 0.6 m over the top left the car behind the wall); more than CHASE_CAP over the car, it comes in instead
         const lookY = carState.pos.y + 1.05, cap = carState.pos.y + CHASE_CAP, nowY = camY === null ? Infinity : camY + camLift;
+        // under a roof (the porch, the car shade) it cannot rise over a building to the roof's own limit, so it comes in
+        // in front of the building instead (the finger's turn swung it over the room as the car turned under the porch:
+        // held over the room's top, the porch's roof hid the car 2 s)
+        let capHere = cap;
+        for (const r of roofs) if (lookY < r.under - 0.25 && carState.pos.x > r.x0 && carState.pos.x < r.x1 && carState.pos.z > r.z0 && carState.pos.z < r.z1) capHere = Math.min(capHere, r.under - 0.25);      // (the roofs' undersides are heights above the ground, as lookY is)
         let need = -Infinity, wantBack = back;
         for (const b of rects) {
           if (!b.h) continue;
@@ -644,8 +649,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
           const t = segBox(carState.pos.x, carState.pos.z, carState.pos.x + bx * back, carState.pos.z + bz * back, b);
           if (t >= 1) continue;
           const at = Math.max(0.05, t) * back, h = lookY + top * back / at;      // (m from the car to where it enters; the height that sees over it from 'back')
-          need = Math.max(need, Math.min(h, cap));
-          if (h > cap) wantBack = Math.min(wantBack, at * (cap - lookY) / top);
+          need = Math.max(need, Math.min(h, capHere));
+          if (h > capHere) wantBack = Math.min(wantBack, at * (capHere - lookY) / top);
         }
         wantBack = Math.max(CHASE_NEAR, wantBack);
         camBack = camBack === null || state.snap ? wantBack : camBack + Math.max(-CHASE_IN * dt, (wantBack - camBack) * Math.min(1, dt * (wantBack < camBack ? 12 : 4)));      // (in quickly, out slowly; in no faster than CHASE_IN: at 30 fps it stepped 0.85 m in a frame)
@@ -690,6 +695,12 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         // the room came between, 1.5 m at 30 fps)
         const lift = Math.max(0, need - camY), dl = (lift - camLift) * Math.min(1, dt * 8), down = camY + camLift > ceil ? 10 : CHASE_CLIMB;      // (above a roof's limit it comes down faster)
         camLift = state.snap ? lift : camLift + Math.max(-down * dt, Math.min(CHASE_CLIMB * dt, dl));
+        // over a building's top it stays over it until it is off it (it came down onto the room and was put out by its
+        // nearest side, 2.1 m in a frame)
+        if (camHad && !state.snap) for (const b of rects) {
+          if (!b.h || camPrev.y < b.h + 0.3 - 1e-6 || camPos.x <= b.x0 - 0.3 || camPos.x >= b.x1 + 0.3 || camPos.z <= b.z0 - 0.3 || camPos.z >= b.z1 + 0.3) continue;
+          camLift = Math.max(camLift, b.h + 0.3 - camY);
+        }
         camPos.y = camY + camLift; camera.position.copy(camPos); camPrev.copy(camPos); camHad = true;
         camLook.copy(carState.pos).addScaledVector(carFwd(carState.yaw + orbYaw, tmp), 2.2).add(tmp.set(0, 1.05, 0)); camera.lookAt(camLook);      // (a little ahead of the car, turned with the finger's turn)
         // is the camera where ours_game.py's eyes saw the car from (behind it within 50 degrees, 1.4-5 m up, 8 and 9.2 m
