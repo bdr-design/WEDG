@@ -379,7 +379,14 @@ Past 48 m a camel's place still moves in its animation's steps (every 2nd or
 Still over, for a moment: **on foot with the driver's door open, 422k** (166
 draws) for the 1.2 to 1.55 s the door swings as the player gets in or out.
 The whole car and the cabin are drawn then. It was about 443k before the
-shadow copies below.
+shadow copies below. *Settled 12 Nov (the owner: the door is not to open
+while he is on foot):* getting out, the door now opens and shuts with the
+driver still in his seat (from behind, the view goes to the seat first), and
+then he stands outside by the shut door; getting in, the view was already the
+seat's. From the seat's eye nothing is missing with the door open at any
+angle if only the seat's split is drawn, so it stays drawn so: the frames of
+the swing are 282k getting out and 343k getting in (the cabin loading then),
+and no frame shows the door open on foot (31 to 33 frames at 418k before).
 
 - **The parked vehicles' shadows come from coarse copies**
   (tool/vehicle3d/shadow_proxy.py). The two shas, the tractor and the caravan

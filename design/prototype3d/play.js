@@ -421,15 +421,26 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     let n = 0; const t = setInterval(() => { set(n % 2 === 0); if (++n > 3) { clearInterval(t); set(false); } }, 140);
   }
   function enter() {
+    leaving = false;
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.35);
     state.mode = 'drive'; carState.v = 0; viewBtn.hidden = false; state.snap = true; state.view = 1; viewBtn.classList.remove('on');      // (from the seat each time)
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = false; stick.hidden = true; stickId = null; input.mx = input.mz = 0;
     nearDoor = false; doorButtons(); rowKey = -1; carOpen = false; driveCard();
     loadCabin();
   }
+  // getting out: the driver's door opens and shuts with the driver still in his seat (from behind, the view goes to the
+  // seat first), and then he stands outside by the shut door. (The owner, 12 Nov: the door is not to open while he is
+  // on foot. It swung shut in front of the walker, and open it drew all of the car and the cabin: 422k triangles for a
+  // second and a half.) The car is held on its brake meanwhile.
+  let leaving = false;
   function exit() {
-    if (Math.abs(carState.v) <= 1.5) animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4), 0.7);
-    if (Math.abs(carState.v) > 1.5) return;                   // not while moving
+    if (leaving || state.mode !== 'drive' || Math.abs(carState.v) > 1.5) return;                   // not while moving
+    leaving = true; carState.v = 0; parked = true; job = null;
+    if (state.view !== 1) { state.view = 1; state.snap = true; viewBtn.classList.remove('on'); }
+    steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; viewBtn.hidden = true; pedal.gas = 0; pedal.brake = 1; pad.reset();
+    animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4, () => { if (leaving && state.on) stepOut(); leaving = false; }), 0.35);
+  }
+  function stepOut() {
     state.mode = 'walk'; carState.v = 0; job = null; parked = true;
     if (rigged) { POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
     driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading; input.pitch = 0.18; man.way = undefined;      // (the look level again: a drag in the car moved it, and the walker stepped out looking at his feet)
@@ -736,6 +747,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     camera.near = 0.08; camera.updateProjectionMatrix();
   }
   function stop() {
+    leaving = false;
     if (phone) { phone.close(); phone.setPlay(false); }
     state.on = false; ui.hidden = true; document.body.classList.remove('playing'); stickId = lookId = null; stick.hidden = true; knob.style.transform = ''; input.mx = input.mz = 0; input.run = false; man.speed = 0; keys.clear(); pedal.gas = pedal.brake = 0; pad.reset();
     cabin.visible = false;
@@ -751,6 +763,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
     if (model.doorcard && model.doors.FL) model.doorcard.rotation.y = model.doors.FL.rotation.y;      // the door's trim swings with it
     if (!state.on) return false;
+    if (leaving) { keys.clear(); pedal.gas = 0; pedal.brake = 1; carState.v = 0; }      // (getting out: held where it stands)
     if (state.mode === 'walk') updateWalk(dt); else updateDrive(dt);
     updateCamera(dt);
     return true;

@@ -1427,11 +1427,13 @@ function tick(now) {
     const darkGlass = playCar.userData.darkGlass, doorOpen = Math.abs(play?.model.doors.FL?.rotation.y || 0) > 0.01;
     const seat = playing && play.debug.state.view === 1 && play.debug.state.mode === 'drive';
     if (cabin) cabin.visible = near && (seat || doorOpen || (!darkGlass && camera.position.distanceTo(playCar.position) < 6));
-    // what a view cannot see is not drawn there (ours_game.py's view_split): from the seat, the top and 'seat_only';
-    // from behind, the top and 'chase_only'; on foot, on the map and while the door stands open, all of it
+    // what a view cannot see is not drawn there (ours_game.py's view_split): from the seat, the top and 'seat_only', the
+    // door open or not (from the seat's eye, the door at any angle, nothing is missing; it drew all of the car and the
+    // cabin then, 442k, as the driver got in and out); from behind, the top and 'chase_only'; on foot and on the map, all
+    // of it (the door no longer opens on foot: play.js's exit)
     const vs = playCar.userData.viewSplit || (playCar.userData.viewSplit = ['seat_only', 'chase_only', 'outside'].map((n) => playCar.getObjectByName(n)));
     // (from behind only while the camera is where the builder's eyes saw the car from: play.js's state.fan)
-    const chase = playing && play.debug.state.view === 3 && play.debug.state.mode === 'drive' && play.debug.state.fan, all = doorOpen || (!seat && !chase);
+    const chase = playing && play.debug.state.view === 3 && play.debug.state.mode === 'drive' && play.debug.state.fan, all = !seat && (doorOpen || !chase);
     const want0 = near && (all || seat), want1 = near && (all || chase), want2 = near && all;
     if (vs[0] && vs[0].visible !== want0) vs[0].visible = want0;
     if (vs[1] && vs[1].visible !== want1) vs[1].visible = want1;
