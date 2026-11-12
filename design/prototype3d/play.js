@@ -653,7 +653,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
           if (h > capHere) wantBack = Math.min(wantBack, at * (capHere - lookY) / top);
         }
         wantBack = Math.max(CHASE_NEAR, wantBack);
-        camBack = camBack === null || state.snap ? wantBack : camBack + Math.max(-CHASE_IN * dt, (wantBack - camBack) * Math.min(1, dt * (wantBack < camBack ? 12 : 4)));      // (in quickly, out slowly; in no faster than CHASE_IN: at 30 fps it stepped 0.85 m in a frame)
+        camBack = camBack === null || state.snap ? wantBack : camBack + Math.min(CHASE_LETGO * dt, Math.max(-CHASE_IN * dt, (wantBack - camBack) * Math.min(1, dt * (wantBack < camBack ? 12 : 4))));      // (in quickly, out slowly; in no faster than CHASE_IN: at 30 fps it stepped 0.85 m in a frame)      // (and out no faster than CHASE_LETGO: let go as the car backed out from under the shade, it stepped 47 cm a frame)
         const rawX = carState.pos.x + bx * camBack, rawZ = carState.pos.z + bz * camBack;
         // never into a wall or a building below its top (0.3 m clear of it): put back out by the side it came in by, from
         // where it was the frame before, so it slides along that face; let go, the push eases off over half a second.
