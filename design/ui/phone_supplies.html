@@ -175,37 +175,125 @@
   .green i.on { background: #4f9e2a; }
   .row .move { font-size: 11px; font-weight: 600; color: var(--amber); }
 
-  /* ---------- water and feed (G3 mockup) ---------- */
-  .tank { background: var(--card); border-radius: 20px; padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; column-gap: 12px; }
+  /* ---------- water and feed (G3 mockup, second draft) ---------- */
+  .tank { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
   .tank small { font-size: 12px; color: var(--ink2); font-weight: 500; }
-  .tank .v { font: 700 30px/1.1 "Alexandria", sans-serif; margin-top: 4px; letter-spacing: -.01em; }
-  .tank .v span { font-size: 14px; font-weight: 600; color: var(--ink2); margin-inline-start: 4px; }
-  .tank .ln { grid-column: 1 / -1; font-size: 12px; font-weight: 500; margin-top: 8px; }
-  .tank .gauge { grid-row: span 2; width: 34px; height: 74px; border-radius: 10px; background: #e8eef3; position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px #d6dee6; }
-  .tank .gauge i { position: absolute; inset-inline: 0; bottom: 0; background: linear-gradient(180deg, #5aa8ea, #2f7fcf); }
-  .tank .gauge.feed { background: #f3ede2; box-shadow: inset 0 0 0 1px #e6dccb; }
-  .tank .gauge.feed i { background: linear-gradient(180deg, #e2b25c, #c58a2b); }
-  .tank .gauge.low i { background: linear-gradient(180deg, #f08a7e, #e5372b); }
+  .tank .v { font: 700 30px/1.1 "Alexandria", sans-serif; letter-spacing: -.01em; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; }
+  .tank .v span { font-size: 14px; font-weight: 600; color: var(--ink2); }
+  .tank .ln { font-size: 12px; font-weight: 500; }
+  .bar { height: 8px; border-radius: 4px; background: #e8eef3; overflow: hidden; margin-block: 4px 2px; }
+  .bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2f7fcf, #5aa8ea); }
+  .bar.feed i { background: linear-gradient(90deg, #c58a2b, #e2b25c); }
+  .bar.low i { background: var(--red); }
+  .kind { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 6px; font-size: 12.5px; font-weight: 600; margin-top: 6px; }
+  .kind .d { color: var(--ink2); font-weight: 500; }
+  .kind .d.bad { color: var(--red); font-weight: 700; }
   .warn { display: grid; grid-template-columns: 36px 1fr; column-gap: 11px; align-items: center; padding: 10px 12px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1.5px #f3c2bd; }
-  .warn .lead { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #fde6e4; color: var(--red); grid-row: span 2; }
+  .warn .lead { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #fde6e4; color: var(--red); grid-row: span 2; align-self: start; }
   .warn b { font-size: 13.5px; } .warn small { font-size: 11.5px; color: var(--ink2); }
-  .stp { grid-row: span 2; display: flex; align-items: center; gap: 2px; direction: ltr; }
+  .row .act { grid-row: span 2; }
+  .row .act .btn { height: 36px; border-radius: 11px; font-size: 13px; padding-inline: 14px; }
+  .btn[disabled] { background: #eeeef1; color: #a5a5ab; }
+  .stp { grid-row: span 2; display: flex; align-items: center; gap: 4px; }
   .stp button { width: 32px; height: 32px; border-radius: 10px; background: var(--acc-soft); color: var(--acc); display: grid; place-items: center; }
-  .stp button[disabled] { background: #eeeef1; color: #b8b8bd; }
   .stp button svg { width: 16px; height: 16px; stroke-width: 2.6; }
-  .stp .n { min-width: 34px; text-align: center; font: 700 15px/1 "Alexandria", sans-serif; }
-  .order { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; background: var(--card); border-radius: 16px; padding: 10px 12px; }
-  .order small { font-size: 11.5px; color: var(--ink2); }
+  .stp .n { min-width: 54px; text-align: center; font-weight: 700; font-size: 13px; }
+  .stp .n b { font: 700 15px/1 "Alexandria", sans-serif; }
+  .order { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; background: var(--card); border-radius: 16px; padding: 10px 12px; }
+  .order small { font-size: 11.5px; color: var(--ink2); display: block; }
   .order .t { font: 700 18px/1.1 "Alexandria", sans-serif; }
   .order .btn { padding-inline: 26px; }
-  .order > span > small { display: block; }
-  .plan { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 2px; border-radius: 10px; background: #e3e3e8; }
-  .plan span { text-align: center; padding: 6px 0; border-radius: 8px; font-weight: 600; font-size: 12.5px; color: #3a3a3f; }
-  .plan span.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); color: var(--ink); }
   .note { font-size: 11.5px; color: var(--ink2); padding-inline: 4px; margin-top: -6px; }
-  .way .row { grid-template-columns: 36px 1fr; }
   .way .lead { background: #e6eef8; color: #2f7fcf; }
-  .wg .date { font: 700 15px/1.2 "Alexandria", "IBM Plex Sans Arabic", sans-serif; margin-top: 6px; }
+  .row .tag { font-size: 11px; font-weight: 700; color: var(--amber); }
+  .hs { display: flex; flex-direction: column; gap: 14px; }
+  .datebar { align-self: center; font-size: 12px; font-weight: 700; color: #2b2116; background: rgba(255,255,255,.7); border-radius: 12px; padding: 4px 12px; }
+  .enl .datebar { align-self: stretch; text-align: center; }
+
+  /* the enlarged phone (phone.js): laid out narrow and magnified, so its content is at true size on the screen */
+  body.landscape { width: 956px; height: 440px; overflow: hidden; }
+  body.landscape .island, body.landscape .homebar { display: none; }
+  body.landscape .dev { left: 50%; top: 10px; bottom: auto; translate: -50% 0; transform-origin: 50% 0; transform: scale(var(--sb)); }
+  .enl { width: calc(316px / var(--k)); height: calc(694px / var(--k)); position: absolute; left: 9px; top: 9px; transform: scale(var(--k)); transform-origin: 0 0; border-radius: calc(42px / var(--k)); }
+  .enl .pill { top: calc(9px / var(--k)); width: calc(92px / var(--k)); height: calc(27px / var(--k)); border-radius: calc(14px / var(--k)); }
+  .enl .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  .enl .nav { position: sticky; top: -1px; margin-top: -1px; padding-top: 1px; z-index: 3; min-height: 45px; background: var(--bg); box-shadow: 0 -3px 0 var(--bg); }
+  .enl .dock { position: sticky; bottom: 0; z-index: 3; }
+  .enl .back, .enl [data-go], .enl .liveban, .enl button { min-height: 44px; min-width: 44px; }
+  .enl .body { padding-inline: 10px; padding-top: 0; }
+  .enl .body > * { flex-shrink: 0; }
+  .enl .nav { height: auto; }
+  .enl .title { text-wrap: balance; }
+  .enl .badge { white-space: normal; }
+  .enl .row { grid-template-columns: 36px 1fr; padding-inline: 10px; }
+  .enl .row + .row::before { inset-inline-start: 57px; }
+  .enl .row .lead { grid-row: span 3; align-self: start; }
+  .enl .row .amt, .enl .row .green { grid-row: auto; justify-self: start; margin-block: 3px 2px; }
+  .enl.home .body { overflow: hidden; }
+  .enl.home .hs { display: flex; flex-direction: column; gap: 14px; flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 6px 10px 0; margin-inline: -10px; }
+  .enl .widgets { grid-template-columns: 1fr; gap: 10px; }
+  .enl .wg { height: auto; gap: 2px; }
+  .enl .wg .big, .enl .wg .big2 { margin-block: 2px 4px; }
+  .enl .apps { grid-template-columns: repeat(3, 1fr); column-gap: 3px; }
+  .enl .app .ic { width: 46px; height: 46px; border-radius: 13px; }
+  .enl .app .ic svg { width: 24px; height: 24px; }
+  .enl .dock { grid-template-columns: 1fr 1fr; row-gap: 8px; padding: 8px; }
+  .enl .balance { padding: 12px; }
+  .enl .balance .v { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; }
+  .enl .balance .v span { margin: 0; }
+  .enl .quick { grid-template-columns: 1fr 1fr; row-gap: 12px; }
+  .enl .due { grid-template-columns: 36px 1fr; row-gap: 2px; }
+  .enl .due small { grid-column: 2; grid-row: 2; }
+  .enl .due .btn { grid-column: 1 / -1; grid-row: 3; margin-top: 8px; height: 44px; }
+  .enl .seg span { display: grid; place-items: center; min-height: 44px; padding-inline: 2px; line-height: 1.2; }
+  .enl .liveban > span:nth-child(2) { flex: 1; min-width: 0; }
+  .enl .liveban .go { flex: none; }
+  .enl .it { grid-template-columns: 1fr; row-gap: 2px; }
+  .enl .it .ph { width: 100%; height: 72px; grid-row: auto; margin-bottom: 6px; }
+  .enl .it .bgs { flex-wrap: wrap; }
+  .enl .sell { inset-inline: 10px; }
+  .enl .lot { padding: 10px; }
+  .enl .lot .ph { height: auto; }
+  .enl .lot .ph img { width: 100%; height: auto; }
+  .enl .lot .hd { flex-wrap: wrap; justify-content: flex-start; gap: 4px; }
+  .enl .lot .hd b { flex-basis: 100%; }
+  .enl .lot .cur { flex-wrap: wrap; align-items: center; row-gap: 6px; }
+  .enl .lot .cur .v { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: 3px; }
+  .enl .lot .cur .v span { margin: 0; }
+  .enl .bids { flex-wrap: wrap; }
+  .enl .bids .btn.step { flex: 1 1 0; padding-inline: 8px; }
+  .enl .bids .btn.pri { flex: 1 1 100%; }
+  .enl .chathd { flex: 1; min-width: 0; flex-direction: column; gap: 3px; padding-block: 2px; text-align: center; }
+  .enl .strip { display: grid; grid-template-columns: 42px minmax(0, 1fr); column-gap: 10px; row-gap: 2px; }
+  .enl .strip .ph { grid-row: span 2; align-self: start; }
+  .enl .strip .lim { margin: 0; text-align: start; }
+  .enl .fit { display: inline-block; white-space: nowrap; }
+  .enl .chat { flex: none; }
+  .enl .deal { grid-template-columns: 1fr 44px; }
+  .enl .deal .pri { grid-column: 1 / -1; }
+  .enl .wnow { padding: 12px; column-gap: 6px; }
+  .enl .wnow > span { display: contents; }
+  .enl .wnow small, .enl .wnow .t { grid-column: 1; }
+  .enl .wnow .d { grid-column: 1 / -1; }
+  .enl .wnow svg { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+  .enl .days { grid-template-columns: 1fr; padding: 0 12px; text-align: start; }
+  .enl .days div { display: grid; grid-template-columns: 1fr 30px 34px; align-content: center; align-items: center; column-gap: 4px; min-height: 42px; padding-block: 4px; }
+  .enl .days div + div { border-top: .5px solid var(--line); }
+  .enl .days div > span { grid-column: 1; grid-row: 1 / 3; }
+  .enl .days svg { grid-column: 2; grid-row: 1; justify-self: center; }
+  .enl .days em { grid-column: 2; grid-row: 2; text-align: center; }
+  .enl .days b { grid-column: 3; grid-row: 1 / 3; text-align: end; }
+  .enl .row .act { grid-row: auto; grid-column: 2; justify-self: start; margin-top: 6px; }
+  .row.ord .lead { grid-column: 1; grid-row: 1 / span 2; }
+  .row.ord b { grid-column: 2; grid-row: 1; }
+  .row.ord small { grid-column: 2; grid-row: 2; }
+  .row.ord .stp { grid-column: 3; grid-row: 1 / span 2; }
+  .enl .row.ord .lead { grid-row: 1 / span 2; }
+  .enl .row.ord .stp { grid-column: 1 / -1; grid-row: 3; justify-self: stretch; margin-top: 8px; }
+  .enl .stp .n { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; line-height: 1.15; font-size: 11px; }
+  .enl .order { grid-template-columns: 1fr; }
+  .enl .order .btn { width: 100%; }
+  .enl .tank { padding: 12px; }
 </style>
 </head>
 <body>
@@ -245,15 +333,22 @@
   const ok = (t) => `<span class="badge">${svg('check')}${t}</span>`;
   const app = (k, n, extra = '') => `<div class="app">${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;
 
-  const minus = '<path d="M5 12h14"/>';
-  I.minus = minus;
-  const stp = (n, canDown, canUp) => `<span class="stp"><button ${canDown ? '' : 'disabled'}>${svg('minus')}</button><span class="n">${n}</span><button ${canUp ? '' : 'disabled'}>${svg('plus')}</button></span>`;
-  // the numbers are the engine's own, a new farm six weeks in (seed 11): 8 head, Sunday 15 November 2026
+  I.minus = '<path d="M5 12h14"/>';
+  I.alert = '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>';
+  const stp = (n, unit) => `<span class="stp"><button aria-label="أقل">${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button aria-label="أكثر">${svg('plus')}</button></span>`;
+  const act = (t, on = true) => `<span class="act"><button class="btn ${on ? 'pri' : ''}" ${on ? '' : 'disabled'}>${t}</button></span>`;
+  const pct = (n) => `<span class="ltr">${n}%</span>`;
+  const ration = (on, line) => `<div class="sec">العليقة</div>
+      <div class="seg"><span ${on === 'e' ? 'class="on"' : ''}>خفيفة</span><span ${on === 's' ? 'class="on"' : ''}>عادية</span><span ${on === 'p' ? 'class="on"' : ''}>قوية</span></div>
+      <div class="note">${line}</div>`;
+  const standard = `عادية: 11 كجم علف جاف للراس الكبير باليوم، ${pct(30)} منها شعير. تكلفك 93 ريال باليوم، وتثبّت حالة الحلال على 74 من 100. (الخفيفة 74 ريال وحالة 58، والقوية 121 ريال وحالة 90.)`;
+  // every number is the engine's own: a new farm six weeks in (seed 11, 8 head), Sunday 15 November 2026
   const S = {
-    home: () => `<div class="body">
+    home: () => `<div class="body"><div class="hs">
+      <div class="datebar">الأحد 15 نوفمبر · الوسم · وقت الضراب</div>
       <div class="widgets">
-        <div class="wg"><small>أبانات</small><div class="big">27°</div><div class="ln">الأحد 15 نوفمبر</div><div class="ln ink2" style="margin-top:2px">الوسم · موسم الضراب</div></div>
-        <div class="wg"><small>الرصيد</small><div class="big2">353,011</div><div class="ln ink2">ريال</div><div class="ln">صرفت أمس 810</div></div>
+        <div class="wg"><small>أبانات</small><div class="big">27°</div><div class="ln">مشمس</div><div class="ln rain" style="margin-top:2px">مطر الخميس <span class="ltr">60%</span></div></div>
+        <div class="wg"><small>الرصيد</small><div class="big2">353,037</div><div class="ln ink2">ريال</div><div class="ln ink2">ما فيه حركة اليوم</div></div>
       </div>
       <div class="apps">
         ${app('gavel', 'المزاد')}
@@ -261,10 +356,10 @@
         ${app('truck', 'النقل')}
         ${app('vet', 'البيطري')}
         ${app('water', 'الوايت')}
-        ${app('feed', 'العلف', '<span class="bd">1</span>')}
+        ${app('feed', 'العلف', '<span class="bd">2</span>')}
         ${app('cup', 'المزاين')}
         ${app('doc', 'الأوراق')}
-      </div>
+      </div></div>
       <div class="dock">
         ${app('bank', 'البنك')}
         ${app('tag', 'الحراج')}
@@ -272,44 +367,80 @@
         ${app('cloud', 'الطقس')}
       </div></div>`,
     water: () => `<div class="body">${nav()}<div class="title">الوايت</div>
-      <div class="tank"><span><small>خزان العزبة · 40,000 لتر</small><div class="v">17,339<span>لتر</span></div></span>
-        <span class="gauge"><i style="height:43%"></i></span>
-        <div class="ln">يكفي <b>176 يوم</b> · الحلال يشرب 98 لتر باليوم</div></div>
+      <div class="tank"><small>خزان العزبة · 40,000 لتر</small><div class="v">16,339<span>لتر</span></div>
+        <div class="bar"><i style="width:100%"></i></div>
+        <div class="ln">يكفي 166 يوم على شربهم اليوم: 98 لتر باليوم</div></div>
       <div class="sec">اطلب وايت</div>
       <div class="group">
-        <div class="row"><span class="lead">${svg('water')}</span><b>وايت 20,000 لتر</b>${stp(1, false, false)}<small>450 ريال · الخزان يشيل واحد</small></div>
+        <div class="row"><span class="lead">${svg('water')}</span><b>وايت 19 طن</b>${act('اطلب')}<small>200 ريال · يوصل بكرة ويعبّي الخزان</small></div>
+        <div class="row"><span class="lead">${svg('water')}</span><b>وايت 6 طن <span class="tag">مقترح</span></b>${act('اطلب')}<small>120 ريال · للتعبئة لما ما يشيل الكبير</small></div>
       </div>
-      <div class="order"><span><small>المجموع · يوصل بكرة ويفضي بالخزان</small><div class="t num">450 <small>ريال</small></div></span><button class="btn pri">اطلب</button></div>
-      <div class="sec">بالطريق</div>
-      <div class="note">ما فيه وايت بالطريق.</div></div>`,
-    feed: () => `<div class="body">${nav()}<div class="title">العلف</div>
-      <div class="warn"><span class="lead">${svg('feed')}</span><b>البرسيم يخلص بكرة</b><small>والشعير بعد يومين</small></div>
-      <div class="tank"><span><small>مستودع العلف · 20,000 كجم</small><div class="v">100<span>كجم</span></div></span>
-        <span class="gauge feed low"><i style="height:4%"></i></span>
-        <div class="ln">الحلال ياكل 72 كجم باليوم: 22 شعير و50 برسيم</div></div>
-      <div class="sec">العليقة</div>
-      <div class="plan"><span>خفيفة</span><span class="on">عادية</span><span>ممتازة</span></div>
-      <div class="note">11 كجم للناقة الكبيرة باليوم، 30٪ منها شعير.</div>
-      <div class="sec">اطلب لثلاث أسابيع</div>
+      <div class="note">بالطريق: ما فيه وايت.</div></div>`,
+    waterFull: () => `<div class="body">${nav()}<div class="title">الوايت</div>
+      <div class="tank"><small>خزان العزبة · 40,000 لتر</small><div class="v">35,241<span>لتر</span></div>
+        <div class="bar"><i style="width:100%"></i></div>
+        <div class="ln">يكفي 358 يوم على شربهم اليوم: 98 لتر باليوم</div></div>
+      <div class="sec">اطلب وايت</div>
       <div class="group">
-        <div class="row"><span class="lead">${svg('feed')}</span><b>شعير · 9 أكياس</b>${stp(9, true, true)}<small>عندك 47 كجم</small></div>
-        <div class="row"><span class="lead">${svg('leaf')}</span><b>برسيم · 41 بالة</b>${stp(41, true, true)}<small>عندك 53 كجم</small></div>
+        <div class="row"><span class="lead">${svg('water')}</span><b>وايت 19 طن</b>${act('اطلب', false)}<small>الخزان ما يشيله لين ينزل تحت 21,000 لتر، بعد 145 يوم تقريبًا</small></div>
+        <div class="row"><span class="lead">${svg('water')}</span><b>وايت 6 طن <span class="tag">مقترح</span></b>${act('اطلب', false)}<small>ما يشيله لين ينزل تحت 34,000 لتر، بعد 13 يوم</small></div>
+      </div></div>`,
+    waterThirst: () => `<div class="body">${nav()}<div class="title">الوايت</div>
+      <div class="warn"><span class="lead">${svg('alert')}</span><b>الحلال عطشان من 4 أيام</b><small>يصبر 17 يوم بالشتاء، وحالته تنزل كل يوم بلا ماء. اطلب اليوم يوصل بكرة.</small></div>
+      <div class="tank"><small>خزان العزبة · 40,000 لتر</small><div class="v">0<span>لتر</span></div>
+        <div class="bar low"><i style="width:2%"></i></div>
+        <div class="ln">يشربون 98 لتر باليوم</div></div>
+      <div class="sec">اطلب وايت</div>
+      <div class="group">
+        <div class="row"><span class="lead">${svg('water')}</span><b>وايت 19 طن</b>${act('اطلب')}<small>200 ريال · يكفي 193 يوم</small></div>
+      </div></div>`,
+    feed: () => `<div class="body">${nav()}<div class="title">العلف</div>
+      <div class="warn"><span class="lead">${svg('alert')}</span><b>الشعير والبرسيم يخلصون بكرة</b><small>اطلب اليوم يوصل بكرة قبل العلفة.</small></div>
+      <div class="tank"><small>مستودع العلف · 20,000 كجم</small>
+        <div class="kind"><span>شعير 29 كجم</span><span class="d bad">يوم واحد</span></div><div class="bar feed low"><i style="width:5%"></i></div>
+        <div class="kind"><span>برسيم 58 كجم</span><span class="d bad">يوم واحد</span></div><div class="bar feed low"><i style="width:5%"></i></div>
+        <div class="ln">ياكلون 81 كجم باليوم: 25 شعير و57 برسيم</div></div>
+      ${ration('s', standard)}
+      <div class="sec">اطلب لـ 3 أسابيع</div>
+      <div class="group">
+        <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stp(10, 'أكياس')}<small>الكيس 50 كجم بـ 64 ريال</small></div>
+        <div class="row ord"><span class="lead">${svg('leaf')}</span><b>برسيم</b>${stp(46, 'بالة')}<small>البالة 25 كجم بـ 27 ريال</small></div>
       </div>
-      <div class="note">كيس الشعير 50 كجم بـ 64 ريال، وبالة البرسيم 25 كجم بـ 27.</div>
-      <div class="order"><span><small>المجموع · يوصل بكرة للمستودع</small><div class="t num">1,683 <small>ريال</small></div></span><button class="btn pri">اطلب</button></div></div>`,
+      <div class="order"><span><small>المجموع · يوصل بكرة للمستودع</small><span class="t num">1,882 <small style="display:inline">ريال</small></span></span><button class="btn pri">اطلب</button></div></div>`,
     feedOrdered: () => `<div class="body">${nav()}<div class="title">العلف</div>
-      <div class="tank"><span><small>مستودع العلف · 20,000 كجم</small><div class="v">100<span>كجم</span></div></span>
-        <span class="gauge feed low"><i style="height:4%"></i></span>
-        <div class="ln">الحلال ياكل 72 كجم باليوم: 22 شعير و50 برسيم</div></div>
+      <div class="tank"><small>مستودع العلف · 20,000 كجم</small>
+        <div class="kind"><span>شعير 29 كجم</span><span class="d">يوم واحد، و21 يوم لما يوصل</span></div><div class="bar feed"><i style="width:100%"></i></div>
+        <div class="kind"><span>برسيم 58 كجم</span><span class="d">يوم واحد، و21 يوم لما يوصل</span></div><div class="bar feed"><i style="width:100%"></i></div>
+        <div class="ln">ياكلون 81 كجم باليوم: 25 شعير و57 برسيم</div></div>
+      ${ration('s', standard)}
       <div class="sec">بالطريق</div>
       <div class="group way">
-        <div class="row"><span class="lead">${svg('truck')}</span><b>شعير · 9 أكياس</b><small>450 كجم · 576 ريال · يوصل بكرة</small></div>
-        <div class="row"><span class="lead">${svg('truck')}</span><b>برسيم · 41 بالة</b><small>1,025 كجم · 1,107 ريال · يوصل بكرة</small></div>
+        <div class="row"><span class="lead">${svg('truck')}</span><b>شعير · 10 أكياس</b><small>500 كجم · 640 ريال · يوصل بكرة</small></div>
+        <div class="row"><span class="lead">${svg('truck')}</span><b>برسيم · 46 بالة</b><small>1,150 كجم · 1,242 ريال · يوصل بكرة</small></div>
       </div>
-      <div class="note">لما يوصل يكفي 3 أسابيع تقريبًا.</div>
-      <div class="sec">العليقة</div>
-      <div class="plan"><span>خفيفة</span><span class="on">عادية</span><span>ممتازة</span></div></div>`,
+      <div class="sec">اطلب زيادة</div>
+      <div class="group">
+        <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stp(0, 'كيس')}<small>الكيس 50 كجم بـ 64 ريال</small></div>
+        <div class="row ord"><span class="lead">${svg('leaf')}</span><b>برسيم</b>${stp(0, 'بالة')}<small>البالة 25 كجم بـ 27 ريال</small></div>
+      </div></div>`,
+    feedBroke: () => `<div class="body">${nav()}<div class="title">العلف</div>
+      <div class="warn"><span class="lead">${svg('alert')}</span><b>رصيدك ما يكفي الطلب</b><small>عندك 1,200 ريال. خفّف الطلب، أو بع ناقة من الحراج.</small></div>
+      <div class="sec">اطلب لـ 3 أسابيع</div>
+      <div class="group">
+        <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stp(10, 'أكياس')}<small>الكيس 50 كجم بـ 64 ريال</small></div>
+        <div class="row ord"><span class="lead">${svg('leaf')}</span><b>برسيم</b>${stp(46, 'بالة')}<small>البالة 25 كجم بـ 27 ريال</small></div>
+      </div>
+      <div class="order"><span><small>المجموع</small><span class="t num">1,882 <small style="display:inline">ريال</small></span></span><button class="btn" disabled>اطلب</button></div></div>`,
   };
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('big')) {
+    // as the game shows it enlarged on a 956 x 440 screen (phone.js: the phone drawn at 0.59, its content magnified back)
+    const sb = Math.min(1, (440 - 20) / 712, (956 - 20) / 334), k = 1 / sb;
+    document.body.classList.add('landscape');
+    document.body.style.setProperty('--sb', sb.toFixed(4));
+    document.body.style.setProperty('--k', k.toFixed(4));
+    document.getElementById('scr').classList.add('enl');
+  }
   const v = new URLSearchParams(location.search).get('v') || 'home';
   const scr = document.getElementById('scr');
   if (v === 'home') scr.classList.add('home');
