@@ -204,11 +204,22 @@
   .order .t { font: 700 18px/1.1 "Alexandria", sans-serif; }
   .order .btn { padding-inline: 26px; }
   .note { font-size: 11.5px; color: var(--ink2); padding-inline: 4px; margin-top: -6px; }
+  .way .row { grid-template-columns: 36px 1fr; }
   .way .lead { background: #e6eef8; color: #2f7fcf; }
+  .body > * { flex-shrink: 0; }
+  .bar .in, .bar.feed .in { display: inline-block; background: #ecd9b4; border-radius: 0; }
+  .bar .in { height: 100%; vertical-align: top; }
+  .bar.feed i:first-child { display: inline-block; vertical-align: top; }
+  .cmp { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; font-size: 11px; color: var(--ink2); margin-top: -4px; }
+  .cmp b { display: block; font: 700 12px/1.3 "Alexandria", sans-serif; color: var(--ink); }
+  .stp button[disabled] { background: #eeeef1; color: #b8b8bd; }
   .row .tag { font-size: 11px; font-weight: 700; color: var(--amber); }
   .hs { display: flex; flex-direction: column; gap: 14px; }
-  .datebar { align-self: center; font-size: 12px; font-weight: 700; color: #2b2116; background: rgba(255,255,255,.7); border-radius: 12px; padding: 4px 12px; }
+  .datebar { align-self: center; font-size: 12px; font-weight: 700; color: #2b2116; background: rgba(255,255,255,.7); border-radius: 12px; padding: 4px 12px; text-align: center; }
+  .datebar span { white-space: nowrap; }
   .enl .datebar { align-self: stretch; text-align: center; }
+  .enl .datebar span { display: block; }
+  .enl .datebar .sep { display: none; }
 
   /* the enlarged phone (phone.js): laid out narrow and magnified, so its content is at true size on the screen */
   body.landscape { width: 956px; height: 440px; overflow: hidden; }
@@ -335,17 +346,17 @@
 
   I.minus = '<path d="M5 12h14"/>';
   I.alert = '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>';
-  const stp = (n, unit) => `<span class="stp"><button aria-label="أقل">${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button aria-label="أكثر">${svg('plus')}</button></span>`;
+  const stp = (n, unit) => `<span class="stp"><button aria-label="أقل" ${n ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button aria-label="أكثر">${svg('plus')}</button></span>`;
   const act = (t, on = true) => `<span class="act"><button class="btn ${on ? 'pri' : ''}" ${on ? '' : 'disabled'}>${t}</button></span>`;
   const pct = (n) => `<span class="ltr">${n}%</span>`;
-  const ration = (on, line) => `<div class="sec">العليقة</div>
+  const ration = (on) => `<div class="sec">العليقة</div>
       <div class="seg"><span ${on === 'e' ? 'class="on"' : ''}>خفيفة</span><span ${on === 's' ? 'class="on"' : ''}>عادية</span><span ${on === 'p' ? 'class="on"' : ''}>قوية</span></div>
-      <div class="note">${line}</div>`;
-  const standard = `عادية: 11 كجم علف جاف للراس الكبير باليوم، ${pct(30)} منها شعير. تكلفك 93 ريال باليوم، وتثبّت حالة الحلال على 74 من 100. (الخفيفة 74 ريال وحالة 58، والقوية 121 ريال وحالة 90.)`;
+      <div class="cmp"><span><b>74 ريال</b>باليوم<br>حالة لين 58</span><span><b>93 ريال</b>باليوم<br>حالة لين 74</span><span><b>121 ريال</b>باليوم<br>حالة لين 90</span></div>
+      <div class="note">العادية 12.4 كجم علف للراس الكبير باليوم (11 كجم مادة جافة)، ${pct(30)} منها شعير. الحالة توصل لين حدها مع رعاية زينة.</div>`;
   // every number is the engine's own: a new farm six weeks in (seed 11, 8 head), Sunday 15 November 2026
   const S = {
     home: () => `<div class="body"><div class="hs">
-      <div class="datebar">الأحد 15 نوفمبر · الوسم · وقت الضراب</div>
+      <div class="datebar"><span>الأحد 15 نوفمبر</span><span class="sep"> · </span><span>الوسم · وقت الضراب</span></div>
       <div class="widgets">
         <div class="wg"><small>أبانات</small><div class="big">27°</div><div class="ln">مشمس</div><div class="ln rain" style="margin-top:2px">مطر الخميس <span class="ltr">60%</span></div></div>
         <div class="wg"><small>الرصيد</small><div class="big2">353,037</div><div class="ln ink2">ريال</div><div class="ln ink2">ما فيه حركة اليوم</div></div>
@@ -368,8 +379,8 @@
       </div></div>`,
     water: () => `<div class="body">${nav()}<div class="title">الوايت</div>
       <div class="tank"><small>خزان العزبة · 40,000 لتر</small><div class="v">16,339<span>لتر</span></div>
-        <div class="bar"><i style="width:100%"></i></div>
-        <div class="ln">يكفي 166 يوم على شربهم اليوم: 98 لتر باليوم</div></div>
+        <div class="bar"><i style="width:41%"></i></div>
+        <div class="ln">يكفي 166 يوم · يشربون 98 لتر باليوم</div></div>
       <div class="sec">اطلب وايت</div>
       <div class="group">
         <div class="row"><span class="lead">${svg('water')}</span><b>وايت 19 طن</b>${act('اطلب')}<small>200 ريال · يوصل بكرة ويعبّي الخزان</small></div>
@@ -378,29 +389,30 @@
       <div class="note">بالطريق: ما فيه وايت.</div></div>`,
     waterFull: () => `<div class="body">${nav()}<div class="title">الوايت</div>
       <div class="tank"><small>خزان العزبة · 40,000 لتر</small><div class="v">35,241<span>لتر</span></div>
-        <div class="bar"><i style="width:100%"></i></div>
-        <div class="ln">يكفي 358 يوم على شربهم اليوم: 98 لتر باليوم</div></div>
+        <div class="bar"><i style="width:88%"></i></div>
+        <div class="ln">يكفي 358 يوم · يشربون 98 لتر باليوم</div></div>
       <div class="sec">اطلب وايت</div>
       <div class="group">
         <div class="row"><span class="lead">${svg('water')}</span><b>وايت 19 طن</b>${act('اطلب', false)}<small>الخزان ما يشيله لين ينزل تحت 21,000 لتر، بعد 145 يوم تقريبًا</small></div>
         <div class="row"><span class="lead">${svg('water')}</span><b>وايت 6 طن <span class="tag">مقترح</span></b>${act('اطلب', false)}<small>ما يشيله لين ينزل تحت 34,000 لتر، بعد 13 يوم</small></div>
       </div></div>`,
     waterThirst: () => `<div class="body">${nav()}<div class="title">الوايت</div>
-      <div class="warn"><span class="lead">${svg('alert')}</span><b>الحلال عطشان من 4 أيام</b><small>يصبر 17 يوم بالشتاء، وحالته تنزل كل يوم بلا ماء. اطلب اليوم يوصل بكرة.</small></div>
+      <div class="warn"><span class="lead">${svg('alert')}</span><b>الحلال عطشان من 4 أيام</b><small>باقي 13 يوم ويبدأ يموت، وحالته تنزل كل يوم. اطلب اليوم يوصل بكرة.</small></div>
       <div class="tank"><small>خزان العزبة · 40,000 لتر</small><div class="v">0<span>لتر</span></div>
-        <div class="bar low"><i style="width:2%"></i></div>
+        <div class="bar low"><i style="width:0"></i></div>
         <div class="ln">يشربون 98 لتر باليوم</div></div>
       <div class="sec">اطلب وايت</div>
       <div class="group">
         <div class="row"><span class="lead">${svg('water')}</span><b>وايت 19 طن</b>${act('اطلب')}<small>200 ريال · يكفي 193 يوم</small></div>
+        <div class="row"><span class="lead">${svg('water')}</span><b>وايت 6 طن <span class="tag">مقترح</span></b>${act('اطلب')}<small>120 ريال · يكفي 61 يوم</small></div>
       </div></div>`,
     feed: () => `<div class="body">${nav()}<div class="title">العلف</div>
       <div class="warn"><span class="lead">${svg('alert')}</span><b>الشعير والبرسيم يخلصون بكرة</b><small>اطلب اليوم يوصل بكرة قبل العلفة.</small></div>
       <div class="tank"><small>مستودع العلف · 20,000 كجم</small>
         <div class="kind"><span>شعير 29 كجم</span><span class="d bad">يوم واحد</span></div><div class="bar feed low"><i style="width:5%"></i></div>
         <div class="kind"><span>برسيم 58 كجم</span><span class="d bad">يوم واحد</span></div><div class="bar feed low"><i style="width:5%"></i></div>
-        <div class="ln">ياكلون 81 كجم باليوم: 25 شعير و57 برسيم</div></div>
-      ${ration('s', standard)}
+        <div class="ln">ياكلون باليوم 25 كجم شعير و57 كجم برسيم</div></div>
+      ${ration('s')}
       <div class="sec">اطلب لـ 3 أسابيع</div>
       <div class="group">
         <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stp(10, 'أكياس')}<small>الكيس 50 كجم بـ 64 ريال</small></div>
@@ -409,10 +421,10 @@
       <div class="order"><span><small>المجموع · يوصل بكرة للمستودع</small><span class="t num">1,882 <small style="display:inline">ريال</small></span></span><button class="btn pri">اطلب</button></div></div>`,
     feedOrdered: () => `<div class="body">${nav()}<div class="title">العلف</div>
       <div class="tank"><small>مستودع العلف · 20,000 كجم</small>
-        <div class="kind"><span>شعير 29 كجم</span><span class="d">يوم واحد، و21 يوم لما يوصل</span></div><div class="bar feed"><i style="width:100%"></i></div>
-        <div class="kind"><span>برسيم 58 كجم</span><span class="d">يوم واحد، و21 يوم لما يوصل</span></div><div class="bar feed"><i style="width:100%"></i></div>
-        <div class="ln">ياكلون 81 كجم باليوم: 25 شعير و57 برسيم</div></div>
-      ${ration('s', standard)}
+        <div class="kind"><span>شعير 29 كجم</span><span class="d">يوم واحد، و21 يوم لما يوصل</span></div><div class="bar feed"><i style="width:5%"></i><i class="in" style="width:95%"></i></div>
+        <div class="kind"><span>برسيم 58 كجم</span><span class="d">يوم واحد، و21 يوم لما يوصل</span></div><div class="bar feed"><i style="width:5%"></i><i class="in" style="width:95%"></i></div>
+        <div class="ln">ياكلون باليوم 25 كجم شعير و57 كجم برسيم</div></div>
+      ${ration('s')}
       <div class="sec">بالطريق</div>
       <div class="group way">
         <div class="row"><span class="lead">${svg('truck')}</span><b>شعير · 10 أكياس</b><small>500 كجم · 640 ريال · يوصل بكرة</small></div>
@@ -422,9 +434,13 @@
       <div class="group">
         <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stp(0, 'كيس')}<small>الكيس 50 كجم بـ 64 ريال</small></div>
         <div class="row ord"><span class="lead">${svg('leaf')}</span><b>برسيم</b>${stp(0, 'بالة')}<small>البالة 25 كجم بـ 27 ريال</small></div>
-      </div></div>`,
+      </div>
+      <div class="note">زد الكمية ويطلع لك المجموع وزر الطلب.</div></div>`,
     feedBroke: () => `<div class="body">${nav()}<div class="title">العلف</div>
-      <div class="warn"><span class="lead">${svg('alert')}</span><b>رصيدك ما يكفي الطلب</b><small>عندك 1,200 ريال. خفّف الطلب، أو بع ناقة من الحراج.</small></div>
+      <div class="warn"><span class="lead">${svg('alert')}</span><b>رصيدك ما يكفي لـ 3 أسابيع</b><small>عندك 1,200 ريال. لأسبوع: 3 أكياس و14 بالة بـ 570 ريال، أو بع ناقة من الحراج.</small></div>
+      <div class="tank"><small>مستودع العلف · 20,000 كجم</small>
+        <div class="kind"><span>شعير 29 كجم</span><span class="d bad">يوم واحد</span></div><div class="bar feed low"><i style="width:5%"></i></div>
+        <div class="kind"><span>برسيم 58 كجم</span><span class="d bad">يوم واحد</span></div><div class="bar feed low"><i style="width:5%"></i></div></div>
       <div class="sec">اطلب لـ 3 أسابيع</div>
       <div class="group">
         <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stp(10, 'أكياس')}<small>الكيس 50 كجم بـ 64 ريال</small></div>

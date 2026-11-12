@@ -59,6 +59,7 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
     return err;
   };
   worker.onerror = (e) => {
+    worker.terminate();      // (an error event does not end a worker: left running, it and a new one would both write)
     const err = down(`the engine stopped: ${e.message || 'could not load'}`);
     onNotice?.({ kind: 'down', reason: err.message });
   };

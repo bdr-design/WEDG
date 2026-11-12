@@ -153,7 +153,9 @@ class Balance {
   };
 
   /// (field) Days a camel can go without water: about 17 in winter, 7 in
-  /// summer (section 6); (balance) 12 in between.
+  /// summer (section 6), camels that graze, as the game's herd does each day
+  /// with its shepherd (GDD 8); on straw and concentrates alone FAO gives up
+  /// to ten (section 7). (balance) 12 in between.
   static int thirstDays(int month) => switch (month) {
     5 || 6 || 7 || 8 || 9 => 7,
     11 || 12 || 1 || 2 || 3 => 17,
