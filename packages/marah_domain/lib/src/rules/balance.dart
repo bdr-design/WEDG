@@ -57,7 +57,7 @@ class Balance {
   /// survey, section 6), the losses at birth included. The rest of it is a
   /// daily chance through the first year, a thin calf's doubled (balance),
   /// with the calves' illnesses on top: 0.00033 a day gives a first-year loss
-  /// of about 18% on the scripted player's farms (24 farms, 10 years, the
+  /// of 16.5 to 18.5% on the scripted player's farms (24 farms, 10 years, the
   /// calves sold young counted only while on the farm; measured 12 Nov 2026).
   static const calfDeathFirstYear = 0.17;
   static const calfDailyDeath = 0.00033;
@@ -73,7 +73,8 @@ class Balance {
   static const latePregnancyDays = 90;
 
   // ------------------------------------------------------------ health
-  /// (balance) Daily chance a healthy camel falls ill (≈ 0.5 times a year).
+  /// (balance) Daily chance a healthy camel falls ill (≈ 0.5 times a year;
+  /// the seasons move it, not the year's total: HealthSystem.seasonFactor).
   static const dailySickChance = 0.0014;
   static const sickChanceThinFactor = 2.0;
   static const sickChanceCrowdedFactor = 1.8;

@@ -30,6 +30,7 @@ const fixtures = {
   1: 'test/fixtures/save_v1.json',
   2: 'test/fixtures/save_v2.json',
   3: 'test/fixtures/save_v3.json',
+  4: 'test/fixtures/save_v4.json',
 };
 
 void main() {
@@ -153,7 +154,9 @@ void main() {
         expect(ids.contains(m.group(1)), isTrue, reason: m.group(1));
       }
       // decoded by today's classes after the later steps too
-      final state = GameState.fromJson(SaveCodec.migrations[2]!(after));
+      final state = GameState.fromJson(
+        SaveCodec.migrations[3]!(SaveCodec.migrations[2]!(after)),
+      );
       expect(checkInvariants(state), isEmpty);
     },
   );
@@ -312,7 +315,42 @@ void main() {
     }
     final text = jsonEncode(after);
     expect(text.contains('"legs"'), isFalse);
-    expect(checkInvariants(GameState.fromJson(after)), isEmpty);
+    expect(
+      checkInvariants(GameState.fromJson(SaveCodec.migrations[3]!(after))),
+      isEmpty,
+    );
+  });
+
+  test('v3 to v4: a camel down with brucellosis is well, its events gone', () {
+    final raw = jsonDecode(
+      File(fixtures[3]!).readAsStringSync(),
+    ) as Map<String, Object?>;
+    final data = raw['data']! as Map<String, Object?>;
+    final camel =
+        ((data['world']! as Map)['camels']! as List).first
+            as Map<String, Object?>;
+    camel
+      ..['health'] = 'sick'
+      ..['illness'] = 'brucellosis'
+      ..['sickSince'] = 300;
+    final inbox = (data['inboxes']! as Map).values.first as List;
+    inbox.add({
+      'type': 'fellSick',
+      'day': 300,
+      'owner': camel['owner'],
+      'camel': camel['id'],
+      'name': camel['name'],
+      'illness': 'brucellosis',
+    });
+    final n = inbox.length;
+    final out = SaveCodec.migrations[3]!(data);
+    final c = ((out['world']! as Map)['camels']! as List).first as Map;
+    expect(c['health'], 'healthy');
+    expect(c['illness'], isNull);
+    expect(c['sickSince'], isNull);
+    expect(((out['inboxes']! as Map).values.first as List).length, n - 1);
+    expect(jsonEncode(out).contains('brucellosis'), isFalse);
+    expect(checkInvariants(GameState.fromJson(out)), isEmpty);
   });
 
   group('rejects without losing anything', () {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/persistence.dart';
@@ -222,20 +223,60 @@ void main() {
       expect((tabuk.$4 - 1) % 12 + 1, 6);
     });
 
-    test('camels fall ill more often in winter and summer than in spring', () {
-      final adult = [
-        for (final i in Illness.values)
-          if (!i.youngOnly && !i.femaleOnly) i,
-      ];
-      double mean(int month) {
-        final w = HealthSystem.seasonWeights(adult, month);
-        return w.reduce((a, b) => a + b) / w.length;
-      }
+    test(
+      'camels fall ill more often in winter and summer, as often a year',
+      () {
+        final adult = [
+          for (final i in Illness.values)
+            if (!i.youngOnly && !i.femaleOnly) i,
+        ];
+        double f(int month) => HealthSystem.seasonFactor(adult, month);
+        expect(f(1), greaterThan(f(5)));
+        expect(f(8), greaterThan(f(5)));
+        var year = 0.0;
+        for (var m = 1; m <= 12; m++) {
+          year += f(m);
+        }
+        expect(year / 12, closeTo(1.0, 1e-9));
+      },
+    );
 
-      expect(mean(5), 1.0);
-      expect(mean(1), greaterThan(1.0));
-      expect(mean(8), greaterThan(1.0));
-    });
+    test(
+      'about 11% of calves die young in their first year besides illness',
+      () {
+        // the daily chance alone, for calves in condition: 1 - (1 - h)^365
+        final g = newGame(17);
+        final sim = Sim(g.state), gen = WorldGen(sim);
+        final calves = [
+          for (var i = 0; i < 600; i++)
+            gen.makeCamel(
+              sim.rng(['calf-death', i]),
+              owner: g.me.id,
+              mean: 55,
+              category: ColorCategory.homr,
+              sex: i.isEven ? Sex.female : Sex.male,
+              ageDays: 0,
+            )..condition = 80,
+        ];
+        g.me.farm.capacity = 1000; // no crowding
+        var young = 0;
+        for (var d = 0; d < 365; d++) {
+          for (final c in calves) {
+            if (!c.isAlive) continue;
+            c // kept in condition and well: the young cause alone
+              ..condition = 80
+              ..health = HealthStatus.healthy
+              ..illness = null
+              ..sickSince = null;
+          }
+          for (final e in g.advanceDays(1)) {
+            if (e is Died && e.cause == DeathCause.young) young++;
+          }
+        }
+        final expected = 1 - math.pow(1 - Balance.calfDailyDeath, 365);
+        expect(young / calves.length, closeTo(expected, 0.035));
+      },
+    );
 
     test('a contagious illness other than mange spreads through a herd', () {
       final g = newGame(9);

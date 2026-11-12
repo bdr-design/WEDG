@@ -19,12 +19,12 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 3;
+  static const currentVersion = 4;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
   static final Map<int, Map<String, Object?> Function(Map<String, Object?>)>
-  migrations = {1: _v1ToV2, 2: _v2ToV3};
+  migrations = {1: _v1ToV2, 2: _v2ToV3, 3: _v3ToV4};
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
   /// - the colour family مغاتير is gone (it is only the umbrella name of the
@@ -179,6 +179,38 @@ class SaveCodec {
           },
       },
       final List<Object?> l => [for (final x in l) walk(x)],
+      _ => v,
+    };
+    return walk(data)! as Map<String, Object?>;
+  }
+
+  /// v3 to v4: brucellosis is left out until the vet's tests come (plan G5;
+  /// modelled as an ordinary illness it was cured, never spread and caused no
+  /// abortion). A camel down with it is well again, and its illness's events
+  /// (fell sick, treated) are dropped.
+  static Map<String, Object?> _v3ToV4(Map<String, Object?> data) {
+    Object? walk(Object? v) => switch (v) {
+      final Map<String, Object?> m when m['illness'] == 'brucellosis' =>
+        m.containsKey('type')
+            ? null
+            : {
+                for (final MapEntry(:key, :value) in m.entries)
+                  key: switch (key) {
+                    'health' => 'healthy',
+                    'illness' || 'sickSince' || 'recoversOn' => null,
+                    _ => walk(value),
+                  },
+              },
+      final Map<String, Object?> m => {
+        for (final MapEntry(:key, :value) in m.entries) key: walk(value),
+      },
+      final List<Object?> l => [
+        for (final x in l)
+          if (!(x is Map<String, Object?> &&
+              x.containsKey('type') &&
+              x['illness'] == 'brucellosis'))
+            walk(x),
+      ],
       _ => v,
     };
     return walk(data)! as Map<String, Object?>;

@@ -149,11 +149,29 @@ class HealthSystem implements DailySystem {
     for (final i in options) i.peakMonths.contains(month) ? 3.0 : 1.0,
   ];
 
-  static List<Illness> possibleIllnesses(Camel c, Sim sim) => [
+  /// How much likelier a camel that can have [options] falls ill in [month]
+  /// than on average over the year: the illnesses' mean weight that month over
+  /// its mean across the twelve, so the year's rate stays the balance's (about
+  /// 0.5 illnesses a camel) and only moves into the winter and the summer
+  /// (GDD 5.5).
+  static double seasonFactor(List<Illness> options, int month) {
+    double mean(int m) =>
+        seasonWeights(options, m).fold(0.0, (a, b) => a + b) / options.length;
+    var year = 0.0;
+    for (var m = 1; m <= 12; m++) {
+      year += mean(m);
+    }
+    return mean(month) / (year / 12);
+  }
+
+  static List<Illness> possibleIllnesses(Camel c, Sim sim) => _options(
+    c.ageDays(sim.today) < 365,
+    c.sex == Sex.female && c.calvings > 0,
+  );
+
+  static List<Illness> _options(bool young, bool mother) => [
     for (final i in Illness.values)
-      if ((!i.youngOnly || c.ageDays(sim.today) < 365) &&
-          (!i.femaleOnly || (c.sex == Sex.female && c.calvings > 0)))
-        i,
+      if ((!i.youngOnly || young) && (!i.femaleOnly || mother)) i,
   ];
 
   @override
@@ -168,6 +186,17 @@ class HealthSystem implements DailySystem {
             c.illness!,
       }.toList()..sort((a, b) => a.index - b.index);
       final contagious = going.isNotEmpty;
+      // the illnesses, their weights and the season's factor for each kind of
+      // camel, worked out once a day (a camel's own lists cost 40% more a day
+      // at 10,000 head, the review)
+      final month = sim.today.month;
+      final kinds = [
+        for (var k = 0; k < 4; k++)
+          () {
+            final o = _options(k & 1 == 1, k & 2 == 2);
+            return (o, seasonWeights(o, month), seasonFactor(o, month));
+          }(),
+      ];
       for (final c in herd) {
         final rng = sim.rng(['health', c.id.value]);
         switch (c.health) {
@@ -179,13 +208,11 @@ class HealthSystem implements DailySystem {
               chance *= Balance.sickChanceCalfFactor;
             }
             if (contagious) chance *= 2;
-            // an illness is three times likelier in its peak months (balance),
-            // and so camels fall ill more often then: the chance scales with
-            // the illnesses' mean weight that month (GDD 5.5: more disease in
-            // the winter's crowding and the summer)
-            final options = possibleIllnesses(c, sim);
-            final weights = seasonWeights(options, sim.today.month);
-            chance *= weights.fold(0.0, (a, b) => a + b) / weights.length;
+            // more often in the illnesses' peak months, as often over a year
+            final (options, weights, season) =
+                kinds[(c.ageDays(sim.today) < 365 ? 1 : 0) |
+                    (c.sex == Sex.female && c.calvings > 0 ? 2 : 0)];
+            chance *= season;
             if (rng.chance(chance)) {
               // one going round, that this camel can catch, half the time
               final catching = [
