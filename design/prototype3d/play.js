@@ -741,14 +741,28 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     for (const p of puffs) if (p.s.visible) { p.age += dt; const t = p.age / p.life; p.s.scale.setScalar(0.7 + t * 2.0); p.s.position.y += dt * 0.35; p.s.material.opacity = 0.38 * (1 - t); if (t >= 1) p.s.visible = false; }
   }
 
+  // back from the map: where the player left it. Left while driving, he is back in the driver's seat of the car where it
+  // stands, in the view he had (the owner, 12 Nov: driving far out and back from the map, it put him on foot at the yard,
+  // where he had got in); the car stopped meanwhile.
+  let resumeDrive = false;
   function start() {
-    state.on = true; state.mode = 'walk'; ui.hidden = false; document.body.classList.add('playing'); state.snap = true; viewBtn.hidden = true;
+    state.on = true; ui.hidden = false; document.body.classList.add('playing'); state.snap = true;
     if (phone) { phone.close(); phone.setPlay(true); phoneBtn.hidden = false; }
-    steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; nearDoor = false; doorButtons();
-    man.pos.y = ground(man.pos.x, man.pos.z); input.yaw = man.heading; man.way = undefined;
+    nearDoor = false; doorButtons();
+    if (resumeDrive) {
+      state.mode = 'drive'; carState.v = 0; parked = true; viewBtn.hidden = false; viewBtn.classList.toggle('on', state.view === 3);
+      steerPad.hidden = pedalsEl.hidden = carRow.hidden = false; stick.hidden = true; stickId = null; input.mx = input.mz = 0;
+      rowKey = -1; carOpen = false; driveCard(); loadCabin();
+    } else {
+      state.mode = 'walk'; viewBtn.hidden = true; steerPad.hidden = pedalsEl.hidden = carRow.hidden = true;
+      man.pos.y = ground(man.pos.x, man.pos.z); input.yaw = man.heading; man.way = undefined;
+    }
+    resumeDrive = false;
     camera.near = 0.08; camera.updateProjectionMatrix();
   }
   function stop() {
+    resumeDrive = state.on && state.mode === 'drive';      // (getting out, mid-swing, counts as still in the car: the door is shut below)
+    if (resumeDrive) { carState.v = 0; parked = true; }
     leaving = false;
     for (let i = tween.length - 1; i >= 0; i--) if (tween[i].obj === model.doors.FL) tween.splice(i, 1);      // (back to the map mid-swing: the door shut at once, or it stood open on foot when play began again)
     if (model.doors.FL) model.doors.FL.rotation.y = 0;

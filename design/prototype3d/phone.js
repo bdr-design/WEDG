@@ -24,10 +24,10 @@ const CSS = `
   .phone[data-state="big"] .dev { left: 50%; top: 0; margin-left: ${-W / 2}px; transform-origin: 50% 0; transform: translateY(var(--y)) scale(var(--sb, 1)); pointer-events: auto; will-change: transform; }
   [data-go], .liveban, .back, button { cursor: pointer; }
   /* enlarged on a short screen the whole upright phone is drawn smaller than true size (0.59 at 956 x 440), so its own
-     content is magnified back (--k, set once as it enlarges): what the phone shows sits at its true size on the screen,
+     content is magnified back (--k, set once as it enlarges, by a transform): what the phone shows sits at its true size on the screen,
      the smallest text 11 pt and every target at least 44 x 44 pt (Apple's minimums; the owner's proxy, 12 Nov: the
      buttons were 12 px tall and the text 6.5 px). Only an app's content scrolls; its top bar and the dock stay. */
-  .phone[data-state="big"] .scr { width: calc(${W - 18}px / var(--k, 1)); height: calc(${H - 18}px / var(--k, 1)); zoom: var(--k, 1); border-radius: calc(42px / var(--k, 1)); }      /* (lengths, not percentages: a zoomed box's percentage size is not magnified, and it shrank into a corner) */
+  .phone[data-state="big"] .scr { width: calc(${W - 18}px / var(--k, 1)); height: calc(${H - 18}px / var(--k, 1)); position: absolute; left: 9px; top: 9px; transform: scale(var(--k, 1)); transform-origin: 0 0; border-radius: calc(42px / var(--k, 1)); }      /* (laid out at the narrow width, set at the frame's corner whatever the writing direction, and magnified by a transform, which every browser draws alike: magnified by CSS zoom, the iPhone's browser did not magnify its height, and the content ended at 59% of the screen with the dock over the widgets, the owner's phone, 12 Nov) */
   .phone[data-state="big"] .scr .pill { top: calc(9px / var(--k, 1)); width: calc(92px / var(--k, 1)); height: calc(27px / var(--k, 1)); border-radius: calc(14px / var(--k, 1)); }
   .phone[data-state="big"] .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
   .phone[data-state="big"] .nav { position: sticky; top: -1px; margin-top: -1px; padding-top: 1px; z-index: 3; min-height: 45px; background: var(--bg); box-shadow: 0 -3px 0 var(--bg); }      /* (held a pixel past the scroll's top edge, where it already rests, and painted a little above itself: that edge falls between two of the screen's pixels, and a row of the scrolled content showed there; resting a pixel lower, it stepped up as a scroll began) */

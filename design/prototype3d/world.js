@@ -15,8 +15,8 @@ export function noise2(x, y) {
   return L(L(h(xi, yi), h(xi + 1, yi), u), L(h(xi, yi + 1), h(xi + 1, yi + 1), u), v);
 }
 const fbm = (x, y) => noise2(x, y) * 0.55 + noise2(x * 2.1 + 7, y * 2.1 - 3) * 0.3 + noise2(x * 4.3 - 11, y * 4.3 + 5) * 0.15;
-function canvasTex(w, h, draw, srgb = true) {
-  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+function canvasTex(w, h, draw, srgb = true, k = 1) {      // (k: drawn k times finer, the same pattern: the Sadu's diamonds showed their pixels as steps up close, the owner's picture, 12 Nov)
+  const c = document.createElement('canvas'); c.width = w * k; c.height = h * k; const g = c.getContext('2d'); g.scale(k, k); draw(g, w, h);
   const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 const M4 = () => new THREE.Matrix4();
@@ -425,11 +425,19 @@ export function buildWorld(scene, renderer, sandTex) {
     const uv = []; for (let i = 0; i < v.length; i += 3) uv.push(v[i] / 3, (v[i + 1] + v[i + 2]) / 3);
     g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals();
     const tent = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: wool, roughness: 1, side: THREE.DoubleSide })); tent.position.set(-12, 0, 7); tent.rotation.y = Math.PI; tent.castShadow = tent.receiveShadow = true; scene.add(tent);
-    const sadu = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 18, w, 10); c.fillRect(0, h - 28, w, 10); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } c.fillStyle = '#efe6d6'; for (let x = 12; x < w; x += 24) { c.beginPath(); c.moveTo(x - 5, 64); c.lineTo(x, 54); c.lineTo(x + 5, 64); c.lineTo(x, 74); c.fill(); } });
+    const sadu = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 18, w, 10); c.fillRect(0, h - 28, w, 10); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } c.fillStyle = '#efe6d6'; for (let x = 12; x < w; x += 24) { c.beginPath(); c.moveTo(x - 5, 64); c.lineTo(x, 54); c.lineTo(x + 5, 64); c.lineTo(x, 74); c.fill(); } }, true, 3);
     sadu.name = 'sadu';
     const rug = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.4).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: sadu, roughness: 1 })); rug.position.set(-12, 0.04, 2.6); rug.receiveShadow = true; scene.add(rug);
-    const stones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.16, 0), new THREE.MeshStandardMaterial({ color: '#6f6559', roughness: 1 }), 10);
-    for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; stones.setMatrixAt(i, M4().makeTranslation(-12 + Math.cos(a) * 0.55, 0.08, 0.6 + Math.sin(a) * 0.55)); } scene.add(stones);
+    // the fire pit's ring: rounded stones of different sizes, turned every way and sat into the sand (twelve-faced ones
+    // read as blocks, the owner's picture, 12 Nov)
+    const stones = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.15, 1), new THREE.MeshStandardMaterial({ color: '#a39684', roughness: 0.95 }), 12);      // (a pale sandstone: the old colour went black in their own shade)
+    const sq = new THREE.Quaternion(), se = new THREE.Euler(), sv = new THREE.Vector3(), ss = new THREE.Vector3();
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * 6.283 + R(-0.12, 0.12), k = R(0.7, 1.15);
+      sq.setFromEuler(se.set(R(0, 6.28), R(0, 6.28), R(0, 6.28))); ss.set(k * R(0.9, 1.3), k * R(0.55, 0.8), k * R(0.85, 1.15));
+      stones.setMatrixAt(i, M4().compose(sv.set(-12 + Math.cos(a) * 0.56, 0.15 * ss.y * 0.55, 0.6 + Math.sin(a) * 0.56), sq, ss));
+    }
+    stones.castShadow = stones.receiveShadow = true; scene.add(stones);
     const ash = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: 1 })); ash.position.set(-12, 0.05, 0.6); scene.add(ash);
     const ropes = []; for (const sx of [-1, -0.5, 0, 0.5, 1]) ropes.push(-12 + sx * L / 2, H, 7, -12 + sx * L / 2 * 1.05, 0, 7 + D / 2 + 2.4);
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(ropes, 3)); scene.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: '#cbb994' })));
@@ -447,11 +455,11 @@ export function buildWorld(scene, renderer, sandTex) {
       g.lineWidth = 2; g.strokeRect(18, 18, w - 36, h - 36);
       g.fillStyle = mid; for (let i = 0; i < 5; i++) { const cx = 40 + i * 44; g.beginPath(); g.moveTo(cx, 40); g.lineTo(cx + 16, 64); g.lineTo(cx, 88); g.lineTo(cx - 16, 64); g.fill(); }
       for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(0,0,0,${rand() * 0.06})`; g.fillRect(rand() * w, rand() * h, 1, 1); }
-    });
+    }, true, 2);
     const rugs = [[rugTex('#7d1d1b', '#d9b25e', '#1f2f52'), 0, -0.6, 5.2, 3.0], [rugTex('#5e1a2a', '#e3c27a', '#7d1d1b'), -3.6, 0.2, 3.6, 3.8], [rugTex('#1f2f52', '#d9b25e', '#7d1d1b'), 3.6, 0.2, 3.6, 3.8]];
     rugs.forEach(([t], i) => { t.name = 'rug' + i; });
     for (const [tex, x, z, w, d] of rugs) { const r = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 1 })); r.position.set(x, 0.03 + rand() * 0.004, z); r.receiveShadow = true; T.add(r); }
-    const cushTex = canvasTex(128, 32, (g, w, h) => { g.fillStyle = '#8c2420'; g.fillRect(0, 0, w, h); g.fillStyle = '#d6ad55'; for (let x = 0; x < w; x += 16) { g.beginPath(); g.moveTo(x, h / 2); g.lineTo(x + 8, 4); g.lineTo(x + 16, h / 2); g.lineTo(x + 8, h - 4); g.fill(); } g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2); });
+    const cushTex = canvasTex(128, 32, (g, w, h) => { g.fillStyle = '#8c2420'; g.fillRect(0, 0, w, h); g.fillStyle = '#d6ad55'; for (let x = 0; x < w; x += 16) { g.beginPath(); g.moveTo(x, h / 2); g.lineTo(x + 8, 4); g.lineTo(x + 16, h / 2); g.lineTo(x + 8, h - 4); g.fill(); } g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2); }, true, 2);
     cushTex.name = 'cushion'; cushTex.wrapS = THREE.RepeatWrapping; cushTex.repeat.set(6, 1);
     const cush = new THREE.MeshStandardMaterial({ map: cushTex, roughness: 0.95 });
     const seat = new THREE.Mesh(new RoundedBoxGeometry(L - 1.2, 0.16, 0.75, 2, 0.05), cush); seat.position.set(0, 0.1, -D / 2 + 0.55); T.add(seat);
@@ -460,12 +468,22 @@ export function buildWorld(scene, renderer, sandTex) {
     const roll = new THREE.CylinderGeometry(0.11, 0.11, 0.55, 14).rotateX(Math.PI / 2);
     for (let x = -L / 2 + 1.4; x < L / 2 - 1; x += 1.25) { const r = new THREE.Mesh(roll, cush); r.position.set(x, 0.29, -D / 2 + 0.75); T.add(r); }
     // the Sadu curtain (القاطع) closing the far end
-    const saduCurtain = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 20, w, 9); c.fillRect(0, h - 29, w, 9); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } });
+    const saduCurtain = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 20, w, 9); c.fillRect(0, h - 29, w, 9); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } }, true, 3);
     saduCurtain.name = 'curtain';
-    const qt = new THREE.Mesh(new THREE.PlaneGeometry(D - 0.4, 1.9), new THREE.MeshStandardMaterial({ map: saduCurtain, roughness: 1, side: THREE.DoubleSide })); qt.position.set(L / 2 - 1.4, 0.95, 0); qt.rotation.y = Math.PI / 2; T.add(qt);
+    // cut to the roof's slopes, 3 cm under them (a 1.9 m panel stood through the roof where it comes down to 1.35 m at the
+    // front and the back: the owner's picture, 12 Nov)
+    const qa = (D - 0.4) / 2, roofAt = (z) => H - (H - E) * Math.abs(z) / (D / 2) - 0.03, qs = new THREE.Shape();
+    qs.moveTo(-qa, 0); qs.lineTo(-qa, roofAt(qa)); qs.lineTo(0, roofAt(0)); qs.lineTo(qa, roofAt(qa)); qs.lineTo(qa, 0); qs.closePath();
+    const qg = new THREE.ShapeGeometry(qs), quv = qg.attributes.uv, qp = qg.attributes.position;
+    for (let i = 0; i < qp.count; i++) quv.setXY(i, (qp.getX(i) + qa) / (2 * qa), qp.getY(i) / 1.9);      // (the weave at the scale it had)
+    const qt = new THREE.Mesh(qg, new THREE.MeshStandardMaterial({ map: saduCurtain, roughness: 1, side: THREE.DoubleSide })); qt.position.set(L / 2 - 1.4, 0, 0); qt.rotation.y = Math.PI / 2; T.add(qt);
     // the hearth (وجار) with embers, the brass dallahs, a thermos, cups and dates
     const hearth = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.18, 0.9), new THREE.MeshStandardMaterial({ color: '#8a7b68', roughness: 1 })); hearth.position.set(0, 0.09, D / 2 - 1.2); T.add(hearth);
-    const embers = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#2a1d14', emissive: '#ff5a1f', emissiveIntensity: 0.9, roughness: 1 })); embers.position.set(0, 0.185, D / 2 - 1.2); T.add(embers);
+    // the coals: ash and dark coal with a few live coals glowing in it (one glowing orange slab, the owner's picture, 12 Nov)
+    const coals = canvasTex(128, 96, (c, w, h) => { c.fillStyle = '#2b2622'; c.fillRect(0, 0, w, h); for (let i = 0; i < 260; i++) { const v = 30 + rand() * 60; c.fillStyle = `rgb(${v},${v * 0.92},${v * 0.85})`; c.fillRect(rand() * w, rand() * h, 2 + rand() * 5, 2 + rand() * 4); } for (let i = 0; i < 70; i++) { c.fillStyle = '#100c0a'; c.fillRect(rand() * w, rand() * h, 3 + rand() * 6, 3 + rand() * 5); } });
+    const glow = canvasTex(128, 96, (c, w, h) => { c.fillStyle = '#000'; c.fillRect(0, 0, w, h); for (let i = 0; i < 26; i++) { const x = w * (0.2 + rand() * 0.6), y = h * (0.2 + rand() * 0.6), r = 2 + rand() * 4, gr = c.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#ffb066'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(x - r, y - r, 2 * r, 2 * r); } });
+    coals.name = 'coals'; glow.name = 'coals glow';
+    const embers = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: coals, emissive: '#ff6a2a', emissiveMap: glow, emissiveIntensity: 1.2, roughness: 1 })); embers.position.set(0, 0.185, D / 2 - 1.2); T.add(embers);
     const brass = new THREE.MeshStandardMaterial({ color: '#caa14c', metalness: 1, roughness: 0.28 });
     const dallahProfile = [[0, 0], [0.075, 0], [0.08, 0.015], [0.06, 0.05], [0.05, 0.09], [0.066, 0.13], [0.072, 0.16], [0.06, 0.19], [0.035, 0.22], [0.03, 0.25], [0.046, 0.27], [0.03, 0.3], [0.012, 0.33], [0.006, 0.36], [0, 0.37]].map(([r, y]) => new THREE.Vector2(r, y));
     const dallahGeo = new THREE.LatheGeometry(dallahProfile, 24);
