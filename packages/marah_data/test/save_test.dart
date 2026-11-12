@@ -156,6 +156,85 @@ void main() {
     },
   );
 
+  test(
+    'v1 to v2: a merge moves the entries and the references, within the limit',
+    () {
+      Map<String, Object?> v1() =>
+          (jsonDecode(File(fixtures[1]!).readAsStringSync())
+                  as Map<String, Object?>)['data']!
+              as Map<String, Object?>;
+      // an open مغاتير round and its open وضح twin in the fixture
+      (Map<String, Object?>, Map<String, Object?>) pair(
+        Map<String, Object?> d,
+      ) {
+        for (final f in (d['world']! as Map)['festivals']! as List) {
+          final rs = ((f as Map)['rounds']! as List)
+              .cast<Map<String, Object?>>();
+          for (final m in rs) {
+            if (m['cat'] != 'maghateer' || m['results'] != null) continue;
+            for (final t in rs) {
+              if (t['cat'] == 'wodh' &&
+                  t['sex'] == m['sex'] &&
+                  t['age'] == m['age'] &&
+                  t['results'] == null) {
+                return (m, t);
+              }
+            }
+          }
+        }
+        throw StateError('no pair in the fixture');
+      }
+
+      Map<String, Object?> entry(String camel) => {
+        'camel': camel,
+        'owner': 'p',
+      };
+      List<Map<String, Object?>> roundsOf(Map<String, Object?> d) => [
+        for (final f in (d['world']! as Map)['festivals']! as List)
+          for (final r in (f as Map)['rounds']! as List)
+            r as Map<String, Object?>,
+      ];
+
+      // within the limit: 2 + 1 of one owner's camels, and an event naming the
+      // مغاتير round
+      var d = v1();
+      var (m, t) = pair(d);
+      final mid = m['id']! as String, tid = t['id']! as String;
+      m['entries'] = [entry('a'), entry('b')];
+      t['entries'] = [entry('c')];
+      ((d['inboxes']! as Map).values.first as List).add({
+        'type': 'entered',
+        'day': 1,
+        'owner': 'p',
+        'camel': 'a',
+        'round': mid,
+      });
+      var out = SaveCodec.migrations[1]!(d);
+      var rs = roundsOf(out);
+      expect(rs.any((r) => r['id'] == mid), isFalse);
+      final twin = rs.firstWhere((r) => r['id'] == tid);
+      expect(
+        [for (final e in twin['entries']! as List) (e as Map)['camel']],
+        ['c', 'a', 'b'],
+      );
+      expect(jsonEncode(out).contains('"round":"$mid"'), isFalse);
+      expect(jsonEncode(out).contains('"round":"$tid"'), isTrue);
+
+      // over the limit (3 + 2 of one owner's camels): the two stay apart
+      d = v1();
+      (m, t) = pair(d);
+      m['entries'] = [entry('a'), entry('b'), entry('c')];
+      t['entries'] = [entry('d'), entry('e')];
+      out = SaveCodec.migrations[1]!(d);
+      rs = roundsOf(out);
+      expect(rs.any((r) => r['id'] == m['id']), isTrue);
+      expect(
+        (rs.firstWhere((r) => r['id'] == m['id'])['entries']! as List).length,
+        3,
+      );
+    },
+  );
+
   test('v1 to v2: favourite, deaths by age and crossbred calves', () {
     final data = <String, Object?>{
       'world': {
@@ -190,6 +269,8 @@ void main() {
           {'type': 'died', 'day': 365 * 15, 'camel': 'old', 'age': 'mature'},
           {'type': 'died', 'day': 365 * 22, 'camel': 'old', 'age': 'mature'},
           {'type': 'died', 'day': 365 * 15, 'camel': 'gone', 'age': 'mature'},
+          {'type': 'died', 'day': 200, 'camel': 'old', 'age': 'hwar'},
+          {'type': 'died', 'day': 100, 'camel': 'old', 'age': 'hwar'},
         ],
       },
     };
@@ -205,7 +286,7 @@ void main() {
     final ages = [
       for (final e in (out['inboxes']! as Map)['p']! as List) (e as Map)['age'],
     ];
-    expect(ages, ['fater', 'naab', 'harish', 'fater']);
+    expect(ages, ['fater', 'naab', 'harish', 'fater', 'makhlool', 'hwar']);
   });
 
   group('rejects without losing anything', () {

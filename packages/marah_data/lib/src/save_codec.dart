@@ -32,13 +32,15 @@ class SaveCodec {
   ///   become وضح. A round not yet judged that would now duplicate a وضح round
   ///   of the same sex and age is merged into it (its entries moved over and
   ///   every reference to it pointed at the وضح one), or the festival would
-  ///   pay the وضح prizes twice; judged rounds stay as they were run;
+  ///   pay the وضح prizes twice; judged rounds stay as they were run, and so
+  ///   do two whose entries together would give an owner more than 3;
   /// - a calf marked crossbred whose parents are now both وضح is not;
   /// - the age classes حق and لقي swap places (حق is now 2 to 3 years, لقي 3
   ///   to 4), so a round or an event for the old 2-to-3 class keeps its ages
   ///   under its new name; the open-ended "mature" (8 years and up) becomes
   ///   فاطر, and a death recorded as "mature" takes the class of the camel's
-  ///   age that day (فاطر to 10 years, ناب or عود to 20, هرش past that).
+  ///   age that day (فاطر to 10 years, ناب or عود to 20, هرش past that), as
+  ///   does one recorded as حوار at 6 to 12 months (مخلول).
   static Map<String, Object?> _v1ToV2(Map<String, Object?> input) {
     // worked on a copy: the caller's JSON is left as it was
     final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
@@ -62,11 +64,21 @@ class SaveCodec {
           for (final e in into['entries']! as List<Object?>)
             (e! as Map<String, Object?>)['camel'],
         };
-        into['entries'] = [
+        final merged = [
           ...into['entries']! as List<Object?>,
           for (final e in m['entries']! as List<Object?>)
             if (!have.contains((e! as Map<String, Object?>)['camel'])) e,
         ];
+        // not if an owner would then have more camels in the round than v2
+        // allows (3, Balance.maxEntriesPerOwnerInRound): the two stay apart
+        // rather than an entry be dropped
+        final perOwner = <Object?, int>{};
+        for (final e in merged) {
+          final o = (e! as Map<String, Object?>)['owner'];
+          perOwner[o] = (perOwner[o] ?? 0) + 1;
+        }
+        if (perOwner.values.any((n) => n > 3)) continue;
+        into['entries'] = merged;
         rename[m['id']! as String] = into['id']! as String;
         rounds.remove(m);
       }
@@ -109,10 +121,15 @@ class SaveCodec {
     const ages = {'laqi': 'haq', 'haq': 'laqi', 'mature': 'fater'};
     String oldAge(Map<String, Object?> m, String a) {
       final b = born[m['camel']], day = m['day'];
-      if (a != 'mature' || m['type'] != 'died' || b == null || day is! int) {
+      if ((a != 'mature' && a != 'hwar') ||
+          m['type'] != 'died' ||
+          b == null ||
+          day is! int) {
         return ages[a] ?? a;
       }
-      final years = (day - b) ~/ 365;
+      final days = day - b;
+      if (a == 'hwar') return days >= 183 ? 'makhlool' : 'hwar';
+      final years = days ~/ 365;
       return years >= 20 ? 'harish' : (years >= 10 ? 'naab' : 'fater');
     }
 
