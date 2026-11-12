@@ -298,6 +298,8 @@ class SupplySummary {
     required this.unitPrice,
     required this.unitSize,
     required this.onTheWay,
+    required this.onTheWayAmount,
+    required this.need,
     required this.short,
   });
 
@@ -317,6 +319,12 @@ class SupplySummary {
   /// Units ordered and not yet delivered.
   final int onTheWay;
 
+  /// Kilograms or litres on their way (tankers of two sizes).
+  final int onTheWayAmount;
+
+  /// The herd's need a day now (kg or L).
+  final double need;
+
   /// It did not cover the day's need.
   final bool short;
 
@@ -330,6 +338,8 @@ class SupplySummary {
       other.unitPrice == unitPrice &&
       other.unitSize == unitSize &&
       other.onTheWay == onTheWay &&
+      other.onTheWayAmount == onTheWayAmount &&
+      other.need == need &&
       other.short == short;
 
   @override
@@ -341,8 +351,41 @@ class SupplySummary {
     unitPrice,
     unitSize,
     onTheWay,
+    onTheWayAmount,
+    need,
     short,
   );
+}
+
+/// A ration the player can choose: what it feeds, what it costs the herd a
+/// day, and the body condition it brings the herd to with good care.
+class RationSummary {
+  const RationSummary({
+    required this.plan,
+    required this.dryMatterKg,
+    required this.barleyShare,
+    required this.costPerDay,
+    required this.conditionTarget,
+  });
+
+  final FeedPlan plan;
+  final double dryMatterKg;
+  final double barleyShare;
+  final int costPerDay;
+  final int conditionTarget;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RationSummary &&
+      other.plan == plan &&
+      other.dryMatterKg == dryMatterKg &&
+      other.barleyShare == barleyShare &&
+      other.costPerDay == costPerDay &&
+      other.conditionTarget == conditionTarget;
+
+  @override
+  int get hashCode =>
+      Object.hash(plan, dryMatterKg, barleyShare, costPerDay, conditionTarget);
 }
 
 /// A water tanker the farm can order (the owner, 12 Nov 2026: a 19 t and a
@@ -392,6 +435,7 @@ class FarmSummary {
     required this.tankers,
     required this.pastureGreen,
     required this.thirstDays,
+    required this.rations,
   });
 
   final String name;
@@ -420,6 +464,9 @@ class FarmSummary {
   final bool pastureGreen;
   final int thirstDays;
 
+  /// The three rations, light first.
+  final List<RationSummary> rations;
+
   @override
   bool operator ==(Object other) =>
       other is FarmSummary &&
@@ -438,7 +485,8 @@ class FarmSummary {
       other.dryDays == dryDays &&
       _listEquals(other.tankers, tankers) &&
       other.pastureGreen == pastureGreen &&
-      other.thirstDays == thirstDays;
+      other.thirstDays == thirstDays &&
+      _listEquals(other.rations, rations);
 
   @override
   int get hashCode => Object.hashAll([
@@ -458,6 +506,7 @@ class FarmSummary {
     ...tankers,
     pastureGreen,
     thirstDays,
+    ...rations,
   ]);
 }
 
@@ -470,6 +519,7 @@ class PlayerSnapshot {
     required this.playerName,
     required this.cash,
     required this.herdValue,
+    required this.todayNet,
     required this.farm,
     required this.herd,
     required this.herdTop,
@@ -493,6 +543,9 @@ class PlayerSnapshot {
   final String playerName;
   final int cash;
   final int herdValue;
+
+  /// The money in and out today.
+  final int todayNet;
   final FarmSummary farm;
 
   /// Counts over the whole herd; screens page through it with `herdPage`.

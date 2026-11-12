@@ -69,6 +69,15 @@ class Provisions {
     );
   }
 
+  /// What a day's feed costs at [needs] in [region] (water is paid by the
+  /// tanker, not by the day).
+  static double feedCost(
+    ({double barley, double alfalfa, double water}) needs,
+    Region region,
+  ) =>
+      needs.barley / Balance.barleyBagKg * unitPrice(Supply.barley, region) +
+      needs.alfalfa / Balance.alfalfaBaleKg * unitPrice(Supply.alfalfa, region);
+
   /// What is in store, or on order, of [s] (kg or L).
   static double stocked(Farm f, Supply s, {bool withOrders = true}) {
     var v = switch (s) {

@@ -63,14 +63,7 @@ class UpkeepSystem implements DailySystem {
   /// reckoning: feed is paid for when ordered).
   static Riyal dailyFeed(Sim sim, PlayerState p) {
     final n = Provisions.needs(sim.herdOf(p.id), p.farm.feedPlan, sim.today);
-    final r = p.farm.region;
-    return Riyal(
-      (n.barley / Balance.barleyBagKg * Provisions.unitPrice(Supply.barley, r) +
-              n.alfalfa /
-                  Balance.alfalfaBaleKg *
-                  Provisions.unitPrice(Supply.alfalfa, r))
-          .round(),
-    );
+    return Riyal(Provisions.feedCost(n, p.farm.region).round());
   }
 
   @override
@@ -284,6 +277,15 @@ class HealthSystem implements DailySystem {
             return (o, seasonWeights(o, month), seasonFactor(o, month));
           }(),
       ];
+      // the days the herd can go without water: looked up once, and only for
+      // a farm that has gone without (worked out for every camel every day,
+      // the pasture's random draw made a winter day at 10,000 head twice as
+      // long, the review)
+      int? limit;
+      int thirstLimit() => Balance.thirstDays(
+        month,
+        green: Pasture.green(sim.world.seed, p.farm.region, sim.today),
+      );
       for (final c in herd) {
         final rng = sim.rng(['health', c.id.value]);
         switch (c.health) {
@@ -340,12 +342,9 @@ class HealthSystem implements DailySystem {
             if (sim.today >= c.recoversOn!) _recover(sim, c);
         }
         if (!c.isAlive) continue;
-        final pastThirst =
-            p.farm.dryDays -
-            Balance.thirstDays(
-              sim.today.month,
-              green: Pasture.green(sim.world.seed, p.farm.region, sim.today),
-            );
+        final pastThirst = p.farm.dryDays > 0
+            ? p.farm.dryDays - (limit ??= thirstLimit())
+            : 0;
         if (pastThirst > 0 &&
             rng.chance(Balance.thirstDeathPerDay * pastThirst)) {
           _die(sim, c, DeathCause.thirst);

@@ -4,7 +4,9 @@
 // in the middle of the screen, the scene dimmed behind: it is taller than the landscape screen, so it is slid up and
 // down by the finger; a tap outside it makes it small again. Its screens are the approved design's (design/ui/
 // phone.html: home, bank, market, auction, a talk with a buyer, weather and grazing), unchanged; what they show is
-// example content until the game's engine feeds them. The other apps on the home screen are not built yet.
+// example content until the game's engine feeds them. الوايت and العلف (approved 12 Nov: design/ui/phone_supplies.html)
+// and the home screen's date, balance and badges show the game itself, from the rules engine (setGame), and send the
+// player's orders to it (setEngine). The other apps on the home screen are not built yet.
 // Light: plain DOM in a shadow root (its styles and the page's cannot touch each other), no canvas, no blur; while it
 // is enlarged the page stops drawing the 3D scene (farm.html).
 const SMALL = 0.4, SMALL_ROOM = 105;      // the small phone's scale at most, and the height left clear above it (the top row of buttons), px
@@ -259,6 +261,62 @@ const CSS = `
   .phone[data-state="big"] .days svg { grid-column: 2; grid-row: 1; justify-self: center; }
   .phone[data-state="big"] .days em { grid-column: 2; grid-row: 2; text-align: center; }
   .phone[data-state="big"] .days b { grid-column: 3; grid-row: 1 / 3; text-align: end; }
+  /* ---------- الوايت and العلف (approved 12 Nov 2026: design/ui/phone_supplies.html) ---------- */
+  .body > * { flex-shrink: 0; }
+  .tank { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .tank small { font-size: 12px; color: var(--ink2); font-weight: 500; }
+  .tank .v { font: 700 30px/1.1 "Alexandria", sans-serif; letter-spacing: -.01em; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; }
+  .tank .v span { font-size: 14px; font-weight: 600; color: var(--ink2); }
+  .tank .ln { font-size: 12px; font-weight: 500; }
+  .bar { height: 8px; border-radius: 4px; background: #e8eef3; overflow: hidden; margin-block: 4px 2px; white-space: nowrap; }
+  .bar i { display: inline-block; vertical-align: top; height: 100%; background: linear-gradient(90deg, #2f7fcf, #5aa8ea); }
+  .bar.feed i { background: linear-gradient(90deg, #c58a2b, #e2b25c); }
+  .bar.low i { background: var(--red); }
+  .bar .in, .bar.feed .in { background: #ecd9b4; }
+  .kind { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 6px; font-size: 12.5px; font-weight: 600; margin-top: 6px; }
+  .kind .d { color: var(--ink2); font-weight: 500; }
+  .kind .d.bad { color: var(--red); font-weight: 700; }
+  .warn { display: grid; grid-template-columns: 36px 1fr; column-gap: 11px; align-items: center; padding: 10px 12px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1.5px #f3c2bd; }
+  .warn .lead { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #fde6e4; color: var(--red); grid-row: span 2; align-self: start; }
+  .warn b { font-size: 13.5px; } .warn small { font-size: 11.5px; color: var(--ink2); }
+  .row .act { grid-row: span 2; }
+  .row .act .btn { height: 36px; border-radius: 11px; font-size: 13px; padding-inline: 14px; }
+  .btn[disabled] { background: #eeeef1; color: #a5a5ab; cursor: default; }
+  .btn.two { height: auto; min-height: 44px; flex-direction: column; gap: 0; padding-block: 6px; line-height: 1.25; }
+  .stp { display: flex; align-items: center; gap: 4px; }
+  .stp button { width: 32px; height: 32px; border-radius: 10px; background: var(--acc-soft); color: var(--acc); display: grid; place-items: center; }
+  .stp button[disabled] { background: #eeeef1; color: #b8b8bd; cursor: default; }
+  .stp button svg { width: 16px; height: 16px; stroke-width: 2.6; }
+  .stp .n { min-width: 54px; text-align: center; font-weight: 700; font-size: 13px; }
+  .stp .n b { font: 700 15px/1 "Alexandria", sans-serif; }
+  .row.ord .lead { grid-column: 1; grid-row: 1 / span 2; }
+  .row.ord b { grid-column: 2; grid-row: 1; }
+  .row.ord small { grid-column: 2; grid-row: 2; }
+  .row.ord .stp { grid-column: 3; grid-row: 1 / span 2; }
+  .order { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; background: var(--card); border-radius: 16px; padding: 10px 12px; }
+  .order > span > small { font-size: 11.5px; color: var(--ink2); display: block; }
+  .order .t { font: 700 18px/1.1 "Alexandria", sans-serif; }
+  .order .t small { font-size: 11.5px; color: var(--ink2); }
+  .order .btn { padding-inline: 26px; }
+  .note { font-size: 11.5px; color: var(--ink2); padding-inline: 4px; margin-top: -6px; }
+  .way .row { grid-template-columns: 36px 1fr; }
+  .way .lead { background: #e6eef8; color: #2f7fcf; }
+  .row .tag { font-size: 11px; font-weight: 700; color: var(--amber); }
+  .cmp { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; font-size: 11px; color: var(--ink2); margin-top: -4px; }
+  .cmp b { display: block; font: 700 12px/1.3 "Alexandria", sans-serif; color: var(--ink); }
+  .seg span { cursor: pointer; }
+  .hs .datebar { align-self: center; font-size: 12px; font-weight: 700; color: #2b2116; background: rgba(255,255,255,.7); border-radius: 12px; padding: 4px 12px; text-align: center; }
+  .datebar span { white-space: nowrap; }
+  .phone[data-state="big"] .datebar { align-self: stretch; }
+  .phone[data-state="big"] .datebar span { display: block; }
+  .phone[data-state="big"] .datebar .sep { display: none; }
+  .phone[data-state="big"] .row .act { grid-row: auto; grid-column: 2; justify-self: start; margin-top: 6px; }
+  .phone[data-state="big"] .row.ord .lead { grid-row: 1 / span 2; }
+  .phone[data-state="big"] .row.ord .stp { grid-column: 1 / -1; grid-row: 3; justify-self: stretch; margin-top: 8px; }
+  .phone[data-state="big"] .stp .n { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; line-height: 1.15; font-size: 11px; }
+  .phone[data-state="big"] .order { grid-template-columns: 1fr; }
+  .phone[data-state="big"] .order .btn { width: 100%; }
+  .phone[data-state="big"] .tank { padding: 12px; }
 `;
 
 const I = {
@@ -285,28 +343,159 @@ const I = {
     clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
     camel: '<path d="M3 8.5c0-1 .8-1.6 1.7-1.6h.9c.9 0 1.5.7 1.4 1.6l-.2 1.2c-.1.8.2 1.5.8 2 .5.4 1.1.4 1.6 0 .5-.5.9-1 1.1-1.6.9-1.7 2.5-2.8 4.4-2.7 1.1.1 2.1.8 2.7 1.8.5.8 1.1 1.3 2 1.6 1.1.4 1.9 1.5 1.9 2.8V15c0 .6-.4 1.2-.9 1.5V20"/><path d="M6.4 12.2V20M9.5 15.5V20M15 15.5V20"/>',
     leaf: '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/>',
+    minus: '<path d="M5 12h14"/>',
+    alert: '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>',
   };
 const svg = (k) => `<svg class="i" viewBox="0 0 24 24">${I[k]}</svg>`;
 const sbar = `<div class="sbar"><span>3:20</span><span class="r"><svg width="16" height="11" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35"/></svg><span class="bat"></span></span></div>`;
 const nav = (end = '') => `<div class="nav"><button class="back">${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
 const ok = (t) => `<span class="badge">${svg('check')}${t}</span>`;
-const APP_GO = { gavel: 'auction', bank: 'bank', tag: 'haraj', chat: 'chat', cloud: 'weather' };      // the apps that open a screen (the rest are not built yet)
-const badgeSaid = (extra) => { const m = extra.match(/class="bd">(\d+)</); return /class="live"/.test(extra) ? '، مباشر' : m ? `، ${m[1]} جديدة` : ''; };
-const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge: in the dock the name is hidden, and the badge alone was read)
+const APP_GO = { gavel: 'auction', bank: 'bank', tag: 'haraj', chat: 'chat', cloud: 'weather', water: 'water', feed: 'feed' };      // the apps that open a screen (the rest are not built yet)
+const badgeSaid = (extra, k) => { const m = extra.match(/class="bd">(\d+)</); return /class="live"/.test(extra) ? '، مباشر' : m ? `، ${m[1]} ${k === 'water' || k === 'feed' ? 'تخلص' : 'جديدة'}` : ''; };
+const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra, k)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge: in the dock the name is hidden, and the badge alone was read)
+
+
+// ---------------------------------------------------------------- the game's own numbers (the rules engine, engine.js)
+// G: the engine's latest view of the game (marah_runtime's SnapshotJson); null until it has started. ORD: the feed order
+// being made up (bags and bales), set to three weeks' need when العلف opens.
+let G = null;
+const ORD = { barley: null, alfalfa: null };
+const n0 = (v) => Math.round(v).toLocaleString('en-US');
+// the GDD's counting rule (8): one and two by the word, 3 to 10 the plural, 11 and up the singular
+const count = (n, one, two, few, many = one) => n === 1 ? `${one} واحد` : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`;
+const days = (n) => n === 1 ? 'يوم واحد' : n === 2 ? 'يومين' : n >= 3 && n <= 10 ? `${n} أيام` : `${n} يوم`;
+// a stepper's word under its number (the number is shown, so one and two take the singular)
+const unitWord = (n, sing, plural) => n >= 3 && n <= 10 ? plural : sing;
+const WEEKDAY = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const MONTH = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+// the seasons of the Najdi calendar, by their start (month, day): الوسم from about 16 October for 52 days, المربعانية 40
+// days from 7 December, الشبط from 15 January, العقارب from 10 February (research section 7); the rest of the year by
+// its plain season (the folk dates there vary by source and year)
+const SEASONS = [[1, 15, 'الشبط'], [2, 10, 'العقارب'], [3, 21, 'الربيع'], [6, 1, 'القيظ'], [8, 24, 'سهيل'], [10, 16, 'الوسم'], [12, 7, 'المربعانية']];
+function season(d) {
+  const m = d.getUTCMonth() + 1, day = d.getUTCDate();
+  let name = 'المربعانية';
+  for (const [sm, sd, n] of SEASONS) if (m > sm || (m === sm && day >= sd)) name = n;
+  return name;
+}
+function dateLine() {
+  if (!G) return '';
+  const d = new Date(G.date + 'T00:00:00Z');
+  const first = `${WEEKDAY[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`;
+  const second = [season(d), G.breedingSeason ? 'وقت الضراب' : null].filter(Boolean).join(' · ');
+  return `<div class="datebar"><span>${first}</span><span class="sep"> · </span><span>${second}</span></div>`;
+}
+const sup = (k) => G.farm.supplies.find((x) => x.supply === k);
+// the red badges: the supplies that will not last three days (or did not cover the day)
+const lowCount = (keys) => !G ? 0 : keys.filter((k) => { const x = sup(k); return x.short || (x.daysLeft != null && x.daysLeft <= 3); }).length;
+const badge = (n) => n ? `<span class="bd">${n}</span>` : '';
+const waiting = () => `<div class="note" style="margin-top:6px">يجهّز…</div>`;
+const alertCard = (title, line) => `<div class="warn"><span class="lead">${svg('alert')}</span><b>${title}</b><small>${line}</small></div>`;
+const stepper = (k, n, unit, canUp) => `<span class="stp"><button data-act="step" data-s="${k}" data-d="-1" aria-label="أقل" ${n ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button data-act="step" data-s="${k}" data-d="1" aria-label="أكثر" ${canUp ? '' : 'disabled'}>${svg('plus')}</button></span>`;
+
+function waterScreen() {
+  if (!G) return `<div class="body">${nav()}<div class="title">الوايت</div>${waiting()}</div>`;
+  const f = G.farm, w = sup('water'), need = w.need, have = w.amount, coming = w.onTheWayAmount;
+  const lasts = need > 0 ? Math.floor(have / need) : null;
+  const pct = Math.max(0, Math.min(100, have / f.tankL * 100));
+  let warn = '';
+  if (f.dryDays > 0) {
+    const left = f.thirstDays - f.dryDays;
+    warn = alertCard(`الحلال عطشان من ${days(f.dryDays)}`, `${left > 0 ? `باقي ${days(left)} ويبدأ يموت` : 'بدأ يموت من العطش'}، وحالته تنزل كل يوم. اطلب اليوم يوصل بكرة.`);
+  } else if (lasts != null && lasts <= 3) {
+    warn = alertCard(lasts <= 1 ? 'الماء يخلص بكرة' : `الماء يخلص بعد ${days(lasts)}`, 'اطلب اليوم يوصل بكرة.');
+  }
+  const row = (t) => {
+    const tonnes = Math.round(t.litres / 1000), name = `وايت ${tonnes} طن`;
+    let line;
+    if (t.room > 0) line = `${n0(t.price)} ريال · ${need > 0 ? `يكفي ${days(Math.floor(t.litres / need))}` : 'يوصل بكرة'}`;
+    else {
+      const under = f.tankL - t.litres, wait = need > 0 ? Math.ceil((have + coming - under) / need) : null;
+      line = `الخزان ما يشيله لين ينزل تحت ${n0(under)} لتر${wait ? `، بعد ${days(wait)} تقريبًا` : ''}`;
+    }
+    const can = t.room > 0 && G.cash >= t.price;
+    return `<div class="row"><span class="lead">${svg('water')}</span><b>${name}</b><span class="act"><button class="btn ${can ? 'pri' : ''}" data-act="tanker" data-t="${t.tanker}" ${can ? '' : 'disabled'}>اطلب</button></span><small>${line}</small></div>`;
+  };
+  return `<div class="body">${nav()}<div class="title">الوايت</div>${warn}
+    <div class="tank"><small>خزان العزبة · ${n0(f.tankL)} لتر</small><div class="v"><b class="fit">${n0(have)}</b><span>لتر</span></div>
+      <div class="bar${f.dryDays > 0 ? ' low' : ''}"><i style="width:${pct.toFixed(1)}%"></i></div>
+      <div class="ln">${lasts != null ? `يكفي ${days(lasts)} · ` : ''}يشربون ${n0(need)} لتر باليوم</div></div>
+    <div class="sec">اطلب وايت</div>
+    <div class="group">${f.tankers.map(row).join('')}</div>
+    <div class="note">${coming ? `بالطريق: ${n0(coming)} لتر، يوصل بكرة.` : 'بالطريق: ما فيه وايت.'}</div></div>`;
+}
+
+// three weeks' need of a feed, less what is in store and on its way, in whole units
+const suggest = (x, weeks = 3) => Math.max(0, Math.ceil((x.need * 7 * weeks - x.amount - x.onTheWayAmount) / x.unitSize));
+function feedScreen() {
+  if (!G) return `<div class="body">${nav()}<div class="title">العلف</div>${waiting()}</div>`;
+  const f = G.farm, b = sup('barley'), a = sup('alfalfa');
+  if (ORD.barley == null) { ORD.barley = suggest(b); ORD.alfalfa = suggest(a); }
+  const lastsOf = (x) => x.need > 0 ? Math.floor(x.amount / x.need) : null;
+  const lb = lastsOf(b), la = lastsOf(a);
+  const out = (x, l) => x.short || l === 0;
+  let warn = '';
+  const lowB = b.short || (lb != null && lb <= 3), lowA = a.short || (la != null && la <= 3);
+  if (lowB || lowA) {
+    const soonest = Math.min(lowB ? lb ?? 0 : 99, lowA ? la ?? 0 : 99);
+    const what = lowB && lowA ? 'الشعير والبرسيم' : lowB ? 'الشعير' : 'البرسيم';
+    const verb = lowB && lowA ? (soonest === 0 ? 'خلصوا' : 'يخلصون') : (soonest === 0 ? 'خلص' : 'يخلص');
+    const when = soonest === 0 ? '' : soonest <= 1 ? ' بكرة' : ` بعد ${days(soonest)}`;
+    warn = alertCard(`${what} ${verb}${when}`, soonest === 0 ? 'الحلال ما شبع اليوم وحالته تنزل. اطلب اليوم يوصل بكرة.' : 'اطلب اليوم يوصل بكرة قبل العلفة.');
+  }
+  const line = (name, x, l) => {
+    const withOrder = x.need > 0 && x.onTheWayAmount ? Math.floor((x.amount + x.onTheWayAmount) / x.need) : null;
+    const full = 21, now = Math.min(100, (l ?? full) / full * 100), all = Math.min(100, (withOrder ?? 0) / full * 100);
+    const bad = !withOrder && (out(x, l) || (l != null && l <= 3));
+    const tail = l == null ? '' : withOrder != null ? `${days(l)}، و${days(withOrder)} لما يوصل` : days(l);
+    return `<div class="kind"><span>${name} ${n0(x.amount)} كجم</span><span class="d${bad ? ' bad' : ''}">${tail}</span></div><div class="bar feed${bad ? ' low' : ''}"><i style="width:${now.toFixed(1)}%"></i>${withOrder != null ? `<i class="in" style="width:${Math.max(0, all - now).toFixed(1)}%"></i>` : ''}</div>`;
+  };
+  const plans = { economy: 'خفيفة', standard: 'عادية', premium: 'قوية' };
+  const R = f.rations, cur = R.find((r) => r.plan === f.feedPlan);
+  const asFed = (r) => (r.dryMatterKg * r.barleyShare / 0.88 + r.dryMatterKg * (1 - r.barleyShare) / 0.89).toFixed(1);
+  const ration = `<div class="sec">العليقة</div>
+    <div class="seg">${R.map((r) => `<span data-act="plan" data-p="${r.plan}" role="button" tabindex="0" ${r.plan === f.feedPlan ? 'class="on"' : ''}>${plans[r.plan]}</span>`).join('')}</div>
+    <div class="cmp">${R.map((r) => `<span><b>${n0(r.costPerDay)} ريال</b>باليوم<br>حالة لين ${r.conditionTarget}</span>`).join('')}</div>
+    <div class="note">${plans[cur.plan]} ${asFed(cur)} كجم علف للراس الكبير باليوم (${cur.dryMatterKg} كجم مادة جافة)، <span class="ltr">${Math.round(cur.barleyShare * 100)}%</span> منها شعير. الحالة توصل لين حدها مع رعاية زينة.</div>`;
+  const roomKg = f.storeKg - (b.amount + a.amount + b.onTheWayAmount + a.onTheWayAmount);
+  const usedKg = ORD.barley * b.unitSize + ORD.alfalfa * a.unitSize;
+  const total = ORD.barley * b.unitPrice + ORD.alfalfa * a.unitPrice;
+  const rows = `<div class="group">
+      <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stepper('barley', ORD.barley, unitWord(ORD.barley, 'كيس', 'أكياس'), usedKg + b.unitSize <= roomKg)}<small>الكيس ${b.unitSize} كجم بـ ${n0(b.unitPrice)} ريال</small></div>
+      <div class="row ord"><span class="lead">${svg('leaf')}</span><b>برسيم</b>${stepper('alfalfa', ORD.alfalfa, unitWord(ORD.alfalfa, 'بالة', 'بالات'), usedKg + a.unitSize <= roomKg)}<small>البالة ${a.unitSize} كجم بـ ${n0(a.unitPrice)} ريال</small></div></div>`;
+  let orderPart;
+  if (total > G.cash) {
+    const wb = suggest(b, 1), wa = suggest(a, 1), wt = wb * b.unitPrice + wa * a.unitPrice;
+    orderPart = alertCard('رصيدك ما يكفي الطلب', `عندك ${n0(G.cash)} ريال.${wt > 0 && wt <= G.cash ? ` يكفي لأسبوع: ${count(wb, 'كيس', 'كيسين', 'أكياس')} و${count(wa, 'بالة', 'بالتين', 'بالات', 'بالة')}.` : ''} أو بع ناقة من الحراج.`)
+      + (wt > 0 && wt <= G.cash ? `<button class="btn ghost two" data-act="week"><span>اطلب لأسبوع</span><span>${n0(wt)} ريال</span></button>` : '')
+      + rows + `<div class="order"><span><small>المجموع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div>`;
+  } else if (total > 0) {
+    orderPart = rows + `<div class="order"><span><small>المجموع · يوصل بكرة للمستودع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>`;
+  } else {
+    orderPart = rows + `<div class="note">زد الكمية ويطلع لك المجموع وزر الطلب.</div>`;
+  }
+  const way = (b.onTheWayAmount || a.onTheWayAmount) ? `<div class="sec">بالطريق</div><div class="group way">${[[b, 'شعير', 'كيس', 'كيسين', 'أكياس'], [a, 'برسيم', 'بالة', 'بالتين', 'بالات']].filter(([x]) => x.onTheWayAmount).map(([x, nm, o, t, fw]) => `<div class="row"><span class="lead">${svg('truck')}</span><b>${nm} · ${count(x.onTheWay, o, t, fw)}</b><small>${n0(x.onTheWayAmount)} كجم · يوصل بكرة</small></div>`).join('')}</div>` : '';
+  const ordered = b.onTheWayAmount || a.onTheWayAmount;
+  return `<div class="body">${nav()}<div class="title">العلف</div>${warn}
+    <div class="tank"><small>مستودع العلف · ${n0(f.storeKg)} كجم</small>${line('شعير', b, lb)}${line('برسيم', a, la)}
+      <div class="ln">ياكلون باليوم ${n0(b.need)} كجم شعير و${n0(a.need)} كجم برسيم</div></div>
+    ${ration}${way}
+    <div class="sec">${ordered ? 'اطلب زيادة' : 'اطلب لـ 3 أسابيع'}</div>${orderPart}</div>`;
+}
 
 const S = {
-    home: () => `<div class="body"><div class="hs">
+    home: () => `<div class="body"><div class="hs">${dateLine()}
       <div class="widgets">
         <div class="wg"><small>أبانات</small><div class="big">27°</div><div class="ln">مشمس</div><div class="ln rain" style="margin-top:2px">مطر الخميس <span class="ltr">60%</span></div></div>
-        <div class="wg"><small>الرصيد</small><div class="big2"><b class="fit">486,300</b></div><div class="ln ink2">ريال</div><div class="ln"><span class="pos ltr">+4,875</span> اليوم</div></div>
+        <div class="wg"><small>الرصيد</small><div class="big2"><b class="fit">${G ? n0(G.cash) : '486,300'}</b></div><div class="ln ink2">ريال</div><div class="ln${G && !G.todayNet ? ' ink2' : ''}">${!G ? '<span class="pos ltr">+4,875</span> اليوم' : G.todayNet > 0 ? `<span class="pos">دخل اليوم ${n0(G.todayNet)}</span>` : G.todayNet < 0 ? `صرفت اليوم ${n0(-G.todayNet)}` : 'ما فيه حركة اليوم'}</div></div>
       </div>
       <div class="apps">
         ${app('gavel', 'المزاد', '<span class="live">مباشر</span>')}
         ${app('people', 'الرعاة')}
         ${app('truck', 'النقل')}
         ${app('vet', 'البيطري')}
-        ${app('water', 'الوايت')}
-        ${app('feed', 'العلف')}
+        ${app('water', 'الوايت', badge(lowCount(['water'])))}
+        ${app('feed', 'العلف', badge(lowCount(['barley', 'alfalfa'])))}
         ${app('cup', 'المزاين')}
         ${app('doc', 'الأوراق')}
       </div></div>
@@ -381,6 +570,8 @@ const S = {
         <div class="row"><span class="lead">${svg('leaf')}</span><b>جنوب أبان الأسمر</b><span class="green"><i class="on"></i><i class="on"></i><i></i><i></i></span><small>عشب خفيف · 9 كم</small></div>
         <div class="row"><span class="lead">${svg('leaf')}</span><b>عقلة الصقور</b><span class="green"><i class="on"></i><i></i><i></i><i></i></span><small>مطر 8 ملم · 72 كم · <span class="move" style="white-space:nowrap">يبي نقلة</span></small></div>
       </div></div>`,
+    water: waterScreen,
+    feed: feedScreen,
   };
 
 export function createPhone({ host }) {
@@ -394,6 +585,7 @@ export function createPhone({ host }) {
   const turned = () => document.body.classList.contains('rot');      // (farm.html: a phone held upright, the game turned a quarter)
   const endPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
   function show(v) {
+    if (v === 'feed' && st.screen !== 'feed') ORD.barley = ORD.alfalfa = null;      // (opened afresh: the order starts at three weeks' need)
     st.screen = v; scr.classList.toggle('home', v === 'home');
     scr.innerHTML = `<span class="pill"></span>${sbar}${S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0')}<div class="hb"></div>`;      // (a number kept on the line of the word after it: enlarged, «3,900 | ريال» and «9 | كم» split)
     fitNumbers();
@@ -404,7 +596,7 @@ export function createPhone({ host }) {
     for (const e of scr.querySelectorAll('.fit')) {
       e.style.fontSize = '';
       if (st.state !== 'big') continue;
-      const card = e.closest('.balance, .lot, .lim, .wg, .chat');      // (the box that holds it: the chat's limit has its own column beside the camel's picture)
+      const card = e.closest('.balance, .lot, .lim, .wg, .chat, .tank');      // (the box that holds it: the chat's limit has its own column beside the camel's picture)
       let pad = 0;
       for (let q = e.parentElement; q; q = q.parentElement) { const c = getComputedStyle(q); pad += parseFloat(c.paddingLeft) + parseFloat(c.paddingRight); if (q === card) break; }
       const across = (q) => { const r = q.getBoundingClientRect(); return turned() ? r.height : r.width; };      // (along the phone's width on the screen: turned, the screen's height)
@@ -520,7 +712,45 @@ export function createPhone({ host }) {
   dev.addEventListener('pointerup', endDrag); dev.addEventListener('pointercancel', endDrag); dev.addEventListener('pointerleave', endDrag);
   dim.addEventListener('mousedown', (e) => e.preventDefault());      // (the mouse events after a long press by touch land on the dim and took the focus out of the phone)
   dim.addEventListener('click', () => { if (lastDown > bigAt) set('small'); });      // (not the lift of the very finger whose long press enlarged it: its click lands on the dim, now on top)
+  // the screens the game's numbers fill are drawn again when they change, the scroll kept
+  const live = () => st.state !== 'closed' && (st.screen === 'home' || st.screen === 'water' || st.screen === 'feed');
+  function redraw() {
+    const sc = scr.querySelector('.hs') || scr.querySelector('.body'), top = sc ? sc.scrollTop : 0;
+    show(st.screen);
+    const again = scr.querySelector('.hs') || scr.querySelector('.body');
+    if (again) again.scrollTop = top;
+  }
+  // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen)
+  let engine = null, busy = false;
+  async function act(t) {
+    const kind = t.dataset.act;
+    if (kind === 'step') {
+      const k = t.dataset.s; ORD[k] = Math.max(0, (ORD[k] ?? 0) + Number(t.dataset.d)); redraw(); return;
+    }
+    if (!engine || !G || busy) return;
+    busy = true;
+    try {
+      if (kind === 'plan' && t.dataset.p !== G.farm.feedPlan) await engine.dispatch({ type: 'setFeedPlan', plan: t.dataset.p });
+      else if (kind === 'tanker') await engine.dispatch({ type: 'orderSupply', supply: 'water', units: 1, tanker: t.dataset.t });
+      else if (kind === 'feed' || kind === 'week') {
+        const b = sup('barley'), a = sup('alfalfa');
+        const nb = kind === 'week' ? suggest(b, 1) : ORD.barley, na = kind === 'week' ? suggest(a, 1) : ORD.alfalfa;
+        // the whole order's total checked first (the engine takes the two feeds as two orders)
+        if (nb * b.unitPrice + na * a.unitPrice > G.cash) return;
+        if (nb > 0) await engine.dispatch({ type: 'orderSupply', supply: 'barley', units: nb });
+        if (na > 0) await engine.dispatch({ type: 'orderSupply', supply: 'alfalfa', units: na });
+        ORD.barley = ORD.alfalfa = 0;
+      }
+    } catch (err) {
+      console.warn('phone:', err);
+    } finally {
+      busy = false;
+      if (live()) redraw();
+    }
+  }
   scr.addEventListener('keydown', (e) => {
+    const a = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-act]');
+    if (a) { e.preventDefault(); act(a); return; }
     const t = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-go], .liveban');
     if (!t) return;
     e.preventDefault(); show(t.dataset.go || 'auction');
@@ -529,6 +759,8 @@ export function createPhone({ host }) {
   scr.addEventListener('click', (e) => {
     if (e.detail !== 0 && (slid || stopTap)) { slid = stopTap = false; return; }      // (the finger slid the phone or stopped a fling: not a tap; a keyboard's or assistive technology's click is never one of those)
     stopTap = false;
+    const a = e.target.closest('[data-act]');
+    if (a) { if (!a.disabled) act(a); return; }
     const t = e.target.closest('[data-go], .back, .liveban');
     if (!t) return;
     show(t.dataset.go || (t.classList.contains('liveban') ? 'auction' : 'home'));
@@ -548,6 +780,9 @@ export function createPhone({ host }) {
     enlarge: () => { if (st.state !== 'closed') { bigAt = performance.now(); set('big'); } }, shrink: () => { if (st.state === 'big') set('small'); },
     setPlay: (on) => { st.play = on; if (st.state !== 'closed') layout(); },
     onChange: (f) => listeners.add(f),
+    /** The engine's newest view of the game (engine.js), and the engine to send the player's orders to. */
+    setGame: (snapshot) => { G = snapshot; if (live()) redraw(); },
+    setEngine: (e) => { engine = e; },
     get state() { return st.state; }, get big() { return st.state === 'big'; },
   };
 }

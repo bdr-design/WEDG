@@ -366,6 +366,23 @@ void main() {
       expect(Provisions.unitPrice(Supply.water, Region.qassim), 200);
     });
 
+    test("today's money: the day's entries, not the opening balance", () {
+      final g = newGame(4);
+      final v = GameView(g.state, g.me.id);
+      expect(v.todayNet.value, 0);
+      g.dispatch(OrderSupply(g.me.id, Supply.barley, 2));
+      expect(v.todayNet.value, -2 * v.unitPrice(Supply.barley).value);
+      // the next day starts again from its own entries
+      g.advanceDays(1);
+      final next = GameView(g.state, g.me.id);
+      expect(
+        next.todayNet.value,
+        g.me.ledger
+            .where((e) => e.day == next.today)
+            .fold(0, (n, e) => n + e.amount.value),
+      );
+    });
+
     test('a small tanker tops up a tank the large one does not fit', () {
       final g = newGame(4);
       final f = g.me.farm;
@@ -436,24 +453,24 @@ void main() {
     test(
       'unfed and dry, the herd is warned, thins and in time dies of thirst',
       () {
-        // November, on dry feed (the pasture greens in December at the
-        // earliest): 10 days without water in winter
+        // the stores run out at the start of November, on dry feed (the
+        // pasture greens in December at the earliest): 10 days without water
         final g = newGame(6);
-        final events = g.advanceDays(45);
+        final events = g.advanceDays(40);
         final low = events.whereType<SupplyLow>().toList();
         expect(low.where((e) => e.days == 3).length, 3);
         expect(low.where((e) => e.days == 0).length, 3);
         expect(g.me.farm.fedShare, 0);
-        expect(g.me.farm.dryDays, greaterThan(5));
+        expect(g.me.farm.dryDays, 10);
         final herd = g.state.world.aliveOwnedBy(g.me.id);
+        expect(herd, isNotEmpty, reason: 'none dies within the 10 days');
         for (final c in herd) {
-          expect(c.condition, lessThan(55));
+          expect(c.condition, lessThan(60));
         }
-        final more = g.advanceDays(120);
-        final thirst = [
-          ...events,
-          ...more,
-        ].whereType<Died>().where((d) => d.cause == DeathCause.thirst);
+        final more = g.advanceDays(30);
+        final thirst = more.whereType<Died>().where(
+          (d) => d.cause == DeathCause.thirst,
+        );
         expect(thirst, isNotEmpty);
         // none before the herd has gone 10 days dry
         final firstDry = events.whereType<SupplyLow>().firstWhere(

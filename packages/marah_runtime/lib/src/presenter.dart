@@ -142,6 +142,14 @@ class Presenter {
             onTheWay: v.onTheWay
                 .where((d) => d.supply == s)
                 .fold(0, (n, d) => n + d.units),
+            onTheWayAmount: v.onTheWay
+                .where((d) => d.supply == s)
+                .fold(0, (n, d) => n + d.units * d.size),
+            need: switch (s) {
+              Supply.barley => needs.barley,
+              Supply.alfalfa => needs.alfalfa,
+              Supply.water => needs.water,
+            },
             short: me.farm.short.contains(s),
           ),
       ],
@@ -159,6 +167,16 @@ class Presenter {
       ],
       pastureGreen: v.pastureGreen,
       thirstDays: v.thirstDays,
+      rations: [
+        for (final r in FeedPlan.values)
+          RationSummary(
+            plan: r,
+            dryMatterKg: r.dryMatterKg,
+            barleyShare: r.barleyShare,
+            costPerDay: v.dailyFeedFor(r).value,
+            conditionTarget: r.conditionTarget,
+          ),
+      ],
     );
     final summary = _summary(herdViews, v);
     final top = _sorted(
@@ -220,6 +238,7 @@ class Presenter {
       playerName: me.name,
       cash: me.cash.value,
       herdValue: v.herdValue.value,
+      todayNet: v.todayNet.value,
       farm: farm,
       herd: summary,
       herdTop: top,

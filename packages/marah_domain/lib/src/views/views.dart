@@ -263,6 +263,22 @@ class GameView {
     return r < 0 ? 0 : r;
   }
 
+  /// What the herd's feed would cost a day under [plan].
+  Riyal dailyFeedFor(FeedPlan plan) => Riyal(
+    Provisions.feedCost(
+      Provisions.needs(_w.aliveOwnedBy(viewer), plan, today),
+      me.farm.region,
+    ).round(),
+  );
+
+  /// The money in and out today (the ledger's entries of the day, the
+  /// opening balance not among them).
+  Riyal get todayNet => Riyal(
+    me.ledger
+        .where((e) => e.day == today && e.category != LedgerCategory.opening)
+        .fold(0, (n, e) => n + e.amount.value),
+  );
+
   /// What a [tanker] of water costs.
   Riyal tankerPrice(Tanker tanker) =>
       Riyal(Provisions.tankerPrice(tanker).round());

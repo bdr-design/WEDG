@@ -1204,6 +1204,7 @@ $('cam-view').addEventListener('click', () => view(viewKind === 'near' ? 'drone'
 // the phone (phone.js): the map's third button opens it small and closes it; a place's card and the phone do not
 // stand open together (they share the right side)
 const phone = createPhone({ host: root });
+window.__phone = phone;      // (the browser tests open it)
 $('phone-btn').addEventListener('click', () => { if (phone.state === 'closed') closePop(); phone.toggle(); });
 phone.onChange((state) => { $('phone-btn').setAttribute('aria-pressed', String(state !== 'closed')); document.body.classList.toggle('phone-open', state === 'small'); });
 
@@ -1299,8 +1300,9 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   $('status').hidden = true;
   refreshLabels();
   // the game's rules engine, in its worker (docs/plan-gameplay.md, G2), started once the yard is up so it never competes
-  // with the loading; nothing on screen uses it yet (G3). Without its file (not built) the yard goes on without it.
-  import('./engine.js').then(({ startEngine }) => startEngine()).then((e) => { window.marahEngine = e; }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); });      // (imported here, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
+  // with the loading; the phone's الوايت and العلف and its home screen show the game from it and send it the player's
+  // orders (G3). Without its file (not built) the yard goes on without it.
+  import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => phone.setGame(snap) })).then((e) => { window.marahEngine = e; phone.setEngine(e); if (e.snapshot) phone.setGame(e.snapshot); }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); });      // (imported here, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
 }).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
 
 // ------------------------------------------------------------ vehicles built from the owner's photos

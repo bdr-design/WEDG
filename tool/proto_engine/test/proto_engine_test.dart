@@ -382,6 +382,17 @@ void main() {
       expect(f['tankL'], farm.tankL);
       expect(f['dryDays'], farm.dryDays);
       expect(f['feedPlan'], 'premium');
+      final root = jsonDecode(
+        jsonEncode(SnapshotJson.snapshot(snap)),
+      ) as Map<String, Object?>;
+      expect(root['todayNet'], v.todayNet.value);
+      final rations = (f['rations']! as List).cast<Map<String, Object?>>();
+      expect(rations.map((r) => r['plan']), ['economy', 'standard', 'premium']);
+      for (final r in rations) {
+        final plan = FeedPlan.values.byName(r['plan']! as String);
+        expect(r['costPerDay'], v.dailyFeedFor(plan).value);
+        expect(r['conditionTarget'], plan.conditionTarget);
+      }
       expect(f['pastureGreen'], v.pastureGreen);
       expect(f['thirstDays'], v.thirstDays);
       final tankers = (f['tankers']! as List).cast<Map<String, Object?>>();
@@ -403,6 +414,21 @@ void main() {
         expect(j['unitPrice'], v.unitPrice(s).value, reason: s.name);
         expect(j['unitSize'], Provisions.unitSize(s), reason: s.name);
         expect(j['onTheWay'], s == Supply.alfalfa ? 2 : 0, reason: s.name);
+        expect(
+          j['onTheWayAmount'],
+          s == Supply.alfalfa ? 50 : 0,
+          reason: s.name,
+        );
+        final n = v.dailyNeeds;
+        expect(
+          j['need'],
+          closeTo(switch (s) {
+            Supply.barley => n.barley,
+            Supply.alfalfa => n.alfalfa,
+            Supply.water => n.water,
+          }, 1e-9),
+          reason: s.name,
+        );
         expect(j['short'], farm.short.contains(s), reason: s.name);
       }
       // a richer ration empties the stores sooner

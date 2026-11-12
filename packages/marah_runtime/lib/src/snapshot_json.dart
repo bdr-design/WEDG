@@ -17,6 +17,7 @@ class SnapshotJson {
     'playerName': s.playerName,
     'cash': s.cash,
     'herdValue': s.herdValue,
+    'todayNet': s.todayNet,
     'farm': farm(s.farm),
     'herd': herd(s.herd),
     'herdTop': [for (final c in s.herdTop) camel(c)],
@@ -62,6 +63,16 @@ class SnapshotJson {
     ],
     'pastureGreen': f.pastureGreen,
     'thirstDays': f.thirstDays,
+    'rations': [
+      for (final r in f.rations)
+        {
+          'plan': r.plan.name,
+          'dryMatterKg': r.dryMatterKg,
+          'barleyShare': r.barleyShare,
+          'costPerDay': r.costPerDay,
+          'conditionTarget': r.conditionTarget,
+        },
+    ],
     'supplies': [
       for (final x in f.supplies)
         {
@@ -72,6 +83,8 @@ class SnapshotJson {
           'unitPrice': x.unitPrice,
           'unitSize': x.unitSize,
           'onTheWay': x.onTheWay,
+          'onTheWayAmount': x.onTheWayAmount,
+          'need': x.need,
           'short': x.short,
         },
     ],

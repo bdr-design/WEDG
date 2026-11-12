@@ -16,9 +16,12 @@ class Rng {
 
   int _state;
 
-  /// FNV-1a over the seed and the key's text, 32-bit.
+  /// FNV-1a over the seed's four bytes and the key's text, 32-bit. (It began
+  /// from the seed XORed into the offset basis, and the seed's first byte,
+  /// added next, cancelled its own low byte: seeds 1, 2 and 200 drew the same
+  /// streams for every key without an id, the review of 57ab698.)
   static int hashKey(int seed, List<Object> key) {
-    var h = 0x811C9DC5 ^ (seed & 0xFFFFFFFF);
+    var h = 0x811C9DC5;
     void add(int byte) {
       h ^= byte & 0xFF;
       h = _imul(h, 0x01000193);

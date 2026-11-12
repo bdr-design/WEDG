@@ -263,7 +263,9 @@ class SaveCodec {
   /// beside the large): an order on its way keeps the size of its units, so
   /// each one in a save is given the size its supply's unit had in v5 (a 50 kg
   /// bag, a 25 kg bale, a 20,000 L tanker; written here so the step never
-  /// depends on today's classes).
+  /// depends on today's classes). The builds of 12 Nov between 22:16 and
+  /// 22:57 already sold 19,000 L tankers in v5: a tanker then on its way, a
+  /// day's orders at most, arrives 1,000 L fuller.
   static Map<String, Object?> _v5ToV6(Map<String, Object?> input) {
     final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
     const v5Unit = {'barley': 50, 'alfalfa': 25, 'water': 20000};
