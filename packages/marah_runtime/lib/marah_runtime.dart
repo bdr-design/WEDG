@@ -5,4 +5,5 @@ library;
 export 'src/engine_client.dart';
 export 'src/engine_core.dart';
 export 'src/protocol.dart';
+export 'src/snapshot_json.dart';
 export 'src/view_models.dart';

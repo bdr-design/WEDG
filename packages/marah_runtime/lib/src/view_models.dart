@@ -287,6 +287,64 @@ class FestivalCard {
   ]);
 }
 
+/// One supply in the farm's store or tank (GDD 4.3: feed and water run out
+/// and are ordered).
+class SupplySummary {
+  const SupplySummary({
+    required this.supply,
+    required this.amount,
+    required this.daysLeft,
+    required this.room,
+    required this.unitPrice,
+    required this.unitSize,
+    required this.onTheWay,
+    required this.short,
+  });
+
+  final Supply supply;
+
+  /// Kilograms or litres in store now.
+  final int amount;
+
+  /// Whole days it lasts at today's needs (null when nothing is needed).
+  final int? daysLeft;
+
+  /// Units that still fit, orders on the way counted.
+  final int room;
+  final int unitPrice;
+  final int unitSize;
+
+  /// Units ordered and not yet delivered.
+  final int onTheWay;
+
+  /// It did not cover the day's need.
+  final bool short;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SupplySummary &&
+      other.supply == supply &&
+      other.amount == amount &&
+      other.daysLeft == daysLeft &&
+      other.room == room &&
+      other.unitPrice == unitPrice &&
+      other.unitSize == unitSize &&
+      other.onTheWay == onTheWay &&
+      other.short == short;
+
+  @override
+  int get hashCode => Object.hash(
+    supply,
+    amount,
+    daysLeft,
+    room,
+    unitPrice,
+    unitSize,
+    onTheWay,
+    short,
+  );
+}
+
 class FarmSummary {
   const FarmSummary({
     required this.name,
@@ -298,6 +356,10 @@ class FarmSummary {
     required this.dailyFeed,
     required this.monthlyWages,
     required this.expansionCost,
+    this.supplies = const [],
+    this.storeKg = 0,
+    this.tankL = 0,
+    this.dryDays = 0,
   });
 
   final String name;
@@ -310,6 +372,14 @@ class FarmSummary {
   final int monthlyWages;
   final int expansionCost;
 
+  /// Barley, alfalfa and water, in that order.
+  final List<SupplySummary> supplies;
+  final int storeKg;
+  final int tankL;
+
+  /// Days in a row the herd has gone without enough water.
+  final int dryDays;
+
   @override
   bool operator ==(Object other) =>
       other is FarmSummary &&
@@ -321,7 +391,11 @@ class FarmSummary {
       other.feedPlan == feedPlan &&
       other.dailyFeed == dailyFeed &&
       other.monthlyWages == monthlyWages &&
-      other.expansionCost == expansionCost;
+      other.expansionCost == expansionCost &&
+      _sameList(other.supplies, supplies) &&
+      other.storeKg == storeKg &&
+      other.tankL == tankL &&
+      other.dryDays == dryDays;
 
   @override
   int get hashCode => Object.hashAll([
@@ -334,7 +408,19 @@ class FarmSummary {
     dailyFeed,
     monthlyWages,
     expansionCost,
+    ...supplies,
+    storeKg,
+    tankL,
+    dryDays,
   ]);
+}
+
+bool _sameList<T>(List<T> a, List<T> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 /// Everything the main screens show, sent after every change.

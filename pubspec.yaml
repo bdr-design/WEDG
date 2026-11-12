@@ -11,3 +11,4 @@ workspace:
   - packages/marah_data
   - packages/marah_runtime
   - packages/marah_store
+  - tool/proto_engine

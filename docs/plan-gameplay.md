@@ -41,6 +41,16 @@ committed as done, and every fix is reviewed again (CLAUDE.md).
 - **The 3D prototype** (`design/prototype3d`) is the world the owner plays in
   on his iPhone. Its phone apps and place cards show fixed sample data.
 
+**Progress (12 Nov 2026):** G1 parts 1 to 3 are built and reviewed: the six
+colour families and the approved ages (save v2); judging by the approved
+weights, the (field) numbers to their sources and the illnesses (saves v3,
+v4); feed and water as stores that run out and are ordered (save v5).
+G2 has begun: the engine runs compiled to JavaScript (`tool/proto_engine`,
+its worker 246 KB, 76 KB gzipped), takes every command as JSON and sends the
+screens' view models as JSON; two years of the scripted bot from one seed
+give the same state, hashed every four weeks, on the Dart VM and in node.
+Still to come: the page's side, saves through the app, the measurements.
+
 ## Steps
 
 ### G1. The rules engine to the approved GDD (no screens)
@@ -109,7 +119,9 @@ and cheating (parts 4 and 5) are built; the auctions (part 6) come with G5.
 - CI compiles the domain to JavaScript and runs its tests there too
   (`dart test -p node`), and checks that a fixed seed plays the same on the
   native build and in JavaScript. Doubles are written to JSON differently by
-  the two ("72" and "72.0"), so a save never moves between them.
+  the two ("72" and "72.0"), so the check hashes a canonical form of the
+  whole state, not the save's text; and the save JavaScript wrote is read on
+  the Dart VM and must give the same state.
 - The Flutter game app keeps the native engine and SQLite store
   (ARCHITECTURE.md). This is only how the prototype gets the real rules.
 - Measured: the worker's cost per game day, the bridge's message sizes, and

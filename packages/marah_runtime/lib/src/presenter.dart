@@ -129,6 +129,24 @@ class Presenter {
       dailyFeed: v.dailyFeed.value,
       monthlyWages: v.monthlyWages.value,
       expansionCost: v.expansionCost.value,
+      supplies: [
+        for (final s in Supply.values)
+          SupplySummary(
+            supply: s,
+            amount: v.inStore(s).floor(),
+            daysLeft: v.daysLeft(s),
+            room: v.roomFor(s),
+            unitPrice: v.unitPrice(s).value,
+            unitSize: Provisions.unitSize(s),
+            onTheWay: v.onTheWay
+                .where((d) => d.supply == s)
+                .fold(0, (n, d) => n + d.units),
+            short: me.farm.short.contains(s),
+          ),
+      ],
+      storeKg: me.farm.storeKg,
+      tankL: me.farm.tankL,
+      dryDays: me.farm.dryDays,
     );
     final summary = _summary(herdViews, v);
     final top = _sorted(

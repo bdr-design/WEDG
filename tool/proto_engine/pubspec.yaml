@@ -1,0 +1,15 @@
+name: marah_proto_engine
+description: The rules engine compiled to JavaScript for the 3D design prototype, run in a Web Worker (docs/plan-gameplay.md, G2). Not the game app.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  marah_data: any
+  marah_domain: any
+  marah_runtime: any
+
+dev_dependencies:
+  test: ^1.25.0
