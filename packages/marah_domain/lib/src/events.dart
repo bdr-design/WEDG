@@ -6,7 +6,9 @@ import 'model/contest.dart';
 import 'model/player.dart';
 
 /// Why a camel died.
-enum DeathCause { illness, age }
+/// Why a camel died: an illness, old age, or a young calf's death in its first
+/// year (the real first-year loss, Balance.calfDeathFirstYear).
+enum DeathCause { illness, age, young }
 
 /// Everything that can happen in the world, as typed, immutable values.
 /// Events carry no display text: the app turns each type into words with an

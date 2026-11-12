@@ -4,6 +4,7 @@ import '../commands.dart';
 import '../common/ids.dart';
 import '../common/money.dart';
 import '../common/result.dart';
+import '../common/rng.dart';
 import '../events.dart';
 import '../model/camel.dart';
 import '../model/contest.dart';
@@ -319,11 +320,7 @@ Result _mate(
     sireGenes: Map.of(bull.genes),
     matedOn: sim.today,
     checkOn: sim.today + Balance.pregnancyCheckDays,
-    dueOn:
-        sim.today +
-        (Balance.gestationDays + rng.normal(sd: Balance.gestationSd))
-            .round()
-            .clamp(Balance.gestationMinDays, Balance.gestationMaxDays),
+    dueOn: sim.today + _gestation(rng),
     conceived: rng.chance(chance),
   );
   bull.lastServiceOn = sim.today;
@@ -462,4 +459,17 @@ Result _withdraw(Sim sim, PlayerState p, WithdrawEntry cmd) {
     Withdrawn(sim.today, owner: p.id, camel: cmd.camel, festival: f.name),
   );
   return _ok(sim);
+}
+
+/// Days of a pregnancy: about the real average, inside the real range, drawn
+/// again when outside it (held at the ends instead, 2% landed on 356 itself).
+int _gestation(Rng rng) {
+  for (var i = 0; i < 20; i++) {
+    final d = (Balance.gestationDays + rng.normal(sd: Balance.gestationSd))
+        .round();
+    if (d >= Balance.gestationMinDays && d <= Balance.gestationMaxDays) {
+      return d;
+    }
+  }
+  return Balance.gestationDays;
 }

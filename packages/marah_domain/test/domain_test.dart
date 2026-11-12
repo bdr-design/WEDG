@@ -6,6 +6,7 @@ import 'package:marah_domain/src/rules/genetics.dart';
 import 'package:marah_domain/src/rules/judging.dart';
 import 'package:marah_domain/src/rules/valuation.dart';
 import 'package:marah_domain/src/sim.dart';
+import 'package:marah_domain/src/systems/systems.dart';
 import 'package:marah_domain/src/world_gen.dart';
 import 'package:marah_domain/testing.dart';
 import 'package:test/test.dart';
@@ -181,11 +182,39 @@ void main() {
       expect(days.reduce((a, b) => a + b) / days.length, closeTo(377, 3));
     });
 
-    test('a female is first mated at 3.3 years, a bull from 5', () {
-      expect(Balance.femaleMinBreedingDays, 1209);
-      expect(Balance.maleMinBreedingYears, 5);
-      expect(Balance.shepherdMonthlyWage, 1500);
-    });
+    test(
+      'a female is first mated at 3.3 years (1,209 days), a bull from 5',
+      () {
+        final g = newGame(13)..advanceDays(45); // in the breeding season
+        final sim = Sim(g.state), gen = WorldGen(sim);
+        Camel make(Sex sex, int age, String k) => gen.makeCamel(
+          sim.rng(['age-limit', k]),
+          owner: g.me.id,
+          mean: 60,
+          category: ColorCategory.homr,
+          sex: sex,
+          ageDays: age,
+        )..condition = 75;
+        final bull = make(Sex.male, 9 * 365, 'bull');
+        final under = make(Sex.female, 1208, 'under');
+        final at = make(Sex.female, 1209, 'at');
+        final r =
+            g.dispatch(MateWithOwnBull(g.me.id, under.id, bull.id)) as Err;
+        expect(r.error.code, ErrorCode.tooYoungToBreed);
+        expect(r.error.params['days'], 1209);
+        g.advanceDays(Balance.studRestDays + 1);
+        final bull2 = make(Sex.male, 5 * 365 + 1, 'bull5');
+        expect(
+          g.dispatch(MateWithOwnBull(g.me.id, at.id, bull2.id)).ok,
+          isTrue,
+        );
+        final colt = make(Sex.male, 5 * 365 - 1, 'colt');
+        final dam = make(Sex.female, 6 * 365, 'dam');
+        final r2 = g.dispatch(MateWithOwnBull(g.me.id, dam.id, colt.id)) as Err;
+        expect(r2.error.code, ErrorCode.tooYoungToBreed);
+        expect(r2.error.params['days'], 5 * 365);
+      },
+    );
 
     test('Tabuk\'s festival is in June', () {
       final tabuk = WorldGen.seasonPlan(2026)
@@ -193,12 +222,47 @@ void main() {
       expect((tabuk.$4 - 1) % 12 + 1, 6);
     });
 
+    test('camels fall ill more often in winter and summer than in spring', () {
+      final adult = [
+        for (final i in Illness.values)
+          if (!i.youngOnly && !i.femaleOnly) i,
+      ];
+      double mean(int month) {
+        final w = HealthSystem.seasonWeights(adult, month);
+        return w.reduce((a, b) => a + b) / w.length;
+      }
+
+      expect(mean(5), 1.0);
+      expect(mean(1), greaterThan(1.0));
+      expect(mean(8), greaterThan(1.0));
+    });
+
+    test('a contagious illness other than mange spreads through a herd', () {
+      final g = newGame(9);
+      final herd = g.state.world.aliveOwnedBy(g.me.id).toList();
+      herd.first
+        ..health = HealthStatus.sick
+        ..illness = Illness.camelpox
+        ..sickSince = g.today;
+      final caught = <Illness>[];
+      for (var d = 0; d < 400 && caught.length < 6; d++) {
+        herd.first
+          ..health = HealthStatus.sick
+          ..illness = Illness.camelpox
+          ..sickSince = g.today; // kept sick, untreated
+        for (final e in g.advanceDays(1)) {
+          if (e is FellSick && e.camel != herd.first.id) caught.add(e.illness);
+        }
+      }
+      expect(caught, contains(Illness.camelpox));
+    });
+
     test('camelpox is commonest in summer, mange in winter', () {
       expect(Illness.camelpox.peakMonths, {7, 8, 9});
       expect(Illness.mange.peakMonths.contains(1), isTrue);
       expect(
         Illness.values.map((i) => i.label),
-        containsAll(['جرب', 'القراع', 'الجدري', 'البروسيلا']),
+        containsAll(['جرب', 'القراع', 'الجدري']),
       );
     });
   });

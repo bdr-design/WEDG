@@ -34,10 +34,13 @@ class Balance {
   /// (section 6).
   static const maleMinBreedingYears = 5;
 
-  /// (balance) Rest after calving before mating again. The real calving
-  /// interval is 22.6 to 23.5 months, down to about 15 when the camel is
-  /// mated within 3 months of calving (section 6); 60 days lies inside that.
-  static const postCalvingRestDays = 60;
+  /// (field) Rest after calving before mating again: with the 377-day
+  /// gestation and a mating or two, it gives the real calving interval of 22.6
+  /// to 23.5 months (section 6). Mated within 3 months of calving the interval
+  /// falls to about 15 months; that is to be the owner's choice, with its cost,
+  /// when breeding gets its screens (plan G5), not every camel's (a 60-day
+  /// rest made 40% more calves, the review).
+  static const postCalvingRestDays = 300;
 
   /// (balance) Days a bull rests between coverings.
   static const studRestDays = 2;
@@ -49,6 +52,15 @@ class Balance {
   /// (balance) Newborn loss chance; higher when the dam is thin.
   static const calfLossBase = 0.03;
   static const calfLossThinDam = 0.05;
+
+  /// (field) About 17% of calves die before their first year (the Qassim
+  /// survey, section 6), the losses at birth included. The rest of it is a
+  /// daily chance through the first year, a thin calf's doubled (balance),
+  /// with the calves' illnesses on top: 0.00033 a day gives a first-year loss
+  /// of about 18% on the scripted player's farms (24 farms, 10 years, the
+  /// calves sold young counted only while on the farm; measured 12 Nov 2026).
+  static const calfDeathFirstYear = 0.17;
+  static const calfDailyDeath = 0.00033;
 
   // ------------------------------------------------------------ care
   /// (balance) Daily share of the gap to the feed plan's target condition.

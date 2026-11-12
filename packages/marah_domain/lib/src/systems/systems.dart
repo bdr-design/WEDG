@@ -144,6 +144,11 @@ class CareSystem implements DailySystem {
 class HealthSystem implements DailySystem {
   const HealthSystem();
 
+  /// Each illness's weight in [month]: three in its peak months (balance).
+  static List<double> seasonWeights(List<Illness> options, int month) => [
+    for (final i in options) i.peakMonths.contains(month) ? 3.0 : 1.0,
+  ];
+
   static List<Illness> possibleIllnesses(Camel c, Sim sim) => [
     for (final i in Illness.values)
       if ((!i.youngOnly || c.ageDays(sim.today) < 365) &&
@@ -174,17 +179,22 @@ class HealthSystem implements DailySystem {
               chance *= Balance.sickChanceCalfFactor;
             }
             if (contagious) chance *= 2;
+            // an illness is three times likelier in its peak months (balance),
+            // and so camels fall ill more often then: the chance scales with
+            // the illnesses' mean weight that month (GDD 5.5: more disease in
+            // the winter's crowding and the summer)
+            final options = possibleIllnesses(c, sim);
+            final weights = seasonWeights(options, sim.today.month);
+            chance *= weights.fold(0.0, (a, b) => a + b) / weights.length;
             if (rng.chance(chance)) {
-              final options = possibleIllnesses(c, sim);
-              // one going round is caught half the time; otherwise any, three
-              // times likelier in its peak months (balance)
-              final month = sim.today.month;
-              final illness = (contagious && rng.chance(0.5))
-                  ? rng.pick(going)
-                  : rng.weighted(options, [
-                      for (final i in options)
-                        i.peakMonths.contains(month) ? 3.0 : 1.0,
-                    ]);
+              // one going round, that this camel can catch, half the time
+              final catching = [
+                for (final i in going)
+                  if (options.contains(i)) i,
+              ];
+              final illness = (catching.isNotEmpty && rng.chance(0.5))
+                  ? rng.pick(catching)
+                  : rng.weighted(options, weights);
               c
                 ..health = HealthStatus.sick
                 ..illness = illness
@@ -216,6 +226,11 @@ class HealthSystem implements DailySystem {
             if (sim.today >= c.recoversOn!) _recover(sim, c);
         }
         if (!c.isAlive) continue;
+        if (c.ageDays(sim.today) < 365 &&
+            rng.chance(Balance.calfDailyDeath * (c.condition < 50 ? 2 : 1))) {
+          _die(sim, c, DeathCause.young);
+          continue;
+        }
         final years = c.ageYears(sim.today);
         if (years >= Balance.maxAgeYears ||
             (years >= Balance.oldAgeFromYears &&

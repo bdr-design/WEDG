@@ -158,6 +158,8 @@ enum JudgedRegion {
 /// restrict who gets it; [peakMonths] are when it is commonest (real: mange
 /// and ringworm with the winter's crowding, camelpox from July to September).
 /// Treatment costs and days are game choices (vet costs have no source).
+/// Brucellosis (البروسيلا) is left out until the vet's tests can find it and
+/// the owner can cull: it spreads, causes abortion and is not cured (plan G5).
 enum Illness {
   mange(
     'جرب',
@@ -182,13 +184,6 @@ enum Illness {
     treatMax: 900,
     recoverDays: 21,
     peakMonths: {7, 8, 9},
-  ),
-  brucellosis(
-    'البروسيلا',
-    femaleOnly: true,
-    treatMin: 1500,
-    treatMax: 3000,
-    recoverDays: 60,
   ),
   mineralDeficiency(
     'نقص السيلينيوم والنحاس',

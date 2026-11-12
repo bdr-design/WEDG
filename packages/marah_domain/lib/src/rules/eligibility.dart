@@ -57,7 +57,7 @@ class Eligibility {
     if (m.sex != Sex.male) return const DomainError(ErrorCode.notMale);
     if (m.ageYears(today) < Balance.maleMinBreedingYears) {
       return const DomainError(ErrorCode.tooYoungToBreed, {
-        'years': Balance.maleMinBreedingYears,
+        'days': Balance.maleMinBreedingYears * 365,
       });
     }
     if (m.health != HealthStatus.healthy) {

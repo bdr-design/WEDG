@@ -137,8 +137,12 @@ and cheating (parts 4 and 5) are built; the auctions (part 6) come with G5.
 
 ### G5. The rest of the approved GDD
 
-- Breeding with own bulls and studs.
-- The vet by visit or contract.
+- Breeding with own bulls and studs; mating within 3 months of calving (a
+  15-month interval, real) as the owner's choice with its cost, not every
+  camel's (G1 part 2 review).
+- The vet by visit or contract, with tests: brucellosis (البروسيلا) comes in
+  with them, as it really is: spread by abortions and milk, causing abortion,
+  not cured, the infected camels culled.
 - Shepherds and the shepherd-to-herd ratio's effect on conception (real).
 - More farms and facilities.
 - The auctions' screens.
