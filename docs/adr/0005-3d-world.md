@@ -78,14 +78,15 @@ The counts below are taken at each draw call instead.
 - The yard's fixed objects are merged by material.
 - Footprints are one instanced mesh.
 - Vehicles are 12k triangles with 1K textures.
-- PCF shadows on a 1536 map, a render scale of 1.5, anisotropy 4, and
-  standard (not physical) materials.
+- PCF shadows on a 1536 map, a render scale of 1.5 (2x since 12 Nov, the
+  owner's choice, below), anisotropy 4, and standard (not physical) materials.
 - **Shadows:**
   - Each camel's shadow comes from the next lighter mesh: 8k up close,
     1.5k further out, so far camels now have one.
   - Objects smaller than 30 cm cast none.
   - The shadow area follows the view in 4 m steps, and the map is redrawn
-    every other frame.
+    every other frame (every frame while the player's car moves, since 12 Nov,
+    below).
 
 **Shadows only for the camels?** The owner asked. We measured it in the room
 view:
@@ -106,7 +107,8 @@ view:
 - At most 80 MiB of textures, compressed (KTX2 with ASTC or ETC2).
 - At most 16 skinned camels near the camera, and no allocations per frame.
 - Live shadows from camels only; static shadows cached (see above).
-- Render scale at most 1.5.
+- Render scale 2x (the owner's choice for a sharper picture, 12 Nov; it was
+  at most 1.5). What it costs on his phone is measured below.
 
 **The herd in three tiers:**
 - **Under about 25 m:** skinned camels with blended clips, at most about
@@ -418,9 +420,8 @@ Past 48 m a camel's place still moves in its animation's steps (every 2nd or
 
 **The render scale stays at 1.5x** (the owner, 12 Nov: "نخليها"). *Later the same
 day, of the blur and the washed-out colours ("التغبيش وبهتان الالوان"), after
-pictures of each:* the render scale is 2x (on his 3x screen 1.5x drew half of
-its pixels; 2x is 78% more pixels than 1.5x, and his phone drew 1.5x and 70% in
-the same time, so the pixels were not its limit), and the tone mapping is
+pictures of each:* the render scale is 2x (on his 3x screen 1.5x drew a quarter of
+its pixels, 2x draws 44%: 78% more than 1.5x), and the tone mapping is
 Khronos PBR Neutral in place of AgX (AgX left the sand 40% less saturated and
 the contrast a quarter lower: mean saturation 0.34 to 0.56, contrast 48 to 63
 on the sand). Both his choices.
@@ -502,7 +503,10 @@ upscaler such as FSR1 would help. If not, it would not.
 three minutes of play, with Low Power Mode off: 30 frames a second, the
 slowest 1% 38 ms, one stutter. Full scale (1.5x) and 70% gave the same frame
 times, 33.0 and 33.0 ms (slowest 1% 44 and 43). The pixels are not the limit,
-so FSR1 would not help, and the test is taken out. He had 60 frames a second
+so FSR1 would not help, and the test is taken out. (A review later pointed
+out that 33.0 ms is every second refresh at 60 Hz: something else held the
+frame to 30 a second, and two settings that both fit under it say nothing of
+what more pixels cost. The 2x figures below are from his phone itself.) He had 60 frames a second
 on an earlier build. A profile here then put the frame's CPU work at 0.5 ms
 for the game itself and 9.9 ms for three.js issuing the drawing. The scene
 had 4,992 objects, 3,876 of them camel bones:
@@ -522,9 +526,11 @@ more. The meter now shows both parts on the phone, as averages per frame
 (WebKit's clock is in whole milliseconds; an average over many frames is
 still exact).
 
-A sharper picture than 1.5x (the budget above) is the owner's trade-off: 3x
-is four times the pixels and, at his screen, about 100-125 MB more for the
-drawing buffers, with more heat over a long session.
+A sharper picture than 1.5x is the owner's trade-off: 3x is four times the
+pixels and, at his screen, about 100-125 MB more for the drawing buffers,
+with more heat over a long session. At the 2x he chose, the buffers (4x MSAA,
+about 44 bytes a pixel) take about 71 MiB at his 956 x 440 screen, 31 MiB
+more than at 1.5x; Chromium's GPU process here grew by 29 to 50 MiB.
 
 **Garbage per frame, again.** In Chromium the game code makes 50 KB a frame on
 the map and 75 KB in play. 40 to 62 KB of it comes from three.js's

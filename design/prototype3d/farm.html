@@ -283,7 +283,7 @@ const R = (a, b) => a + (b - a) * rand();
 
 // ------------------------------------------------------------ renderer, sky, light
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));     // 2x (the owner, 12 Nov, of the blur: at 1.5x on his 3x screen the picture was drawn at half its pixels; 2x is 78% more pixels than 1.5x, and his phone drew 1.5x and 70% in the same time, ADR 0005)
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));     // 2x (the owner, 12 Nov, of the blur: at 1.5x on his 3x screen the picture was drawn at a quarter of its pixels, at 2x 44%, 78% more than 1.5x; ADR 0005)
 renderer.setSize(stage.clientWidth, stage.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;      // Khronos PBR Neutral (the owner's choice, 12 Nov, of the washed-out colours: AgX left the sand's colour 40% less saturated and the contrast a quarter lower)
@@ -1365,8 +1365,8 @@ let shadowFrame = 0;
 const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0 } : null;
 if (meter) meter.el.hidden = false;
 // The resolution test on the owner's phone (12 Nov) alternated 1.5x and 70% of it: the same frame times (33.0 and 33.0
-// ms, the slowest 1% 44 and 43), so the pixels are not what limits the frame and an upscaler such as FSR1 would not
-// help; it is done and taken out (the picture switched size every 4 s while it ran). What the frame's own work takes on
+// ms, the slowest 1% 44 and 43: every second refresh, so something else held the frame to 30 a second, and an upscaler
+// such as FSR1 would not have helped; what more pixels cost it does not say); it is done and taken out (the picture switched size every 4 s while it ran). What the frame's own work takes on
 // the phone instead: the game's computing (camels, the car and its physics, the grass, the labels' places) and three.js
 // issuing the drawing (the scene walked, the draws sent), each as its average per frame (WebKit gives the clock in whole
 // milliseconds without cross-origin isolation; an average over many frames is still exact) and its slowest 1% in whole
