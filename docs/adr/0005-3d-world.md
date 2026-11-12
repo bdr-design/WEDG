@@ -424,7 +424,12 @@ pictures of each:* the render scale is 2x (on his 3x screen 1.5x drew a quarter 
 its pixels, 2x draws 44%: 78% more than 1.5x), and the tone mapping is
 Khronos PBR Neutral in place of AgX (AgX left the sand 40% less saturated and
 the contrast a quarter lower: mean saturation 0.34 to 0.56, contrast 48 to 63
-on the sand). Both his choices.
+on the sand). Both his choices. A review then measured what Neutral does to
+the dark parts: from the driver's seat 28% of the picture is under luma 32 (8%
+under AgX), the dashboard and the cluster near black. Shown the two side by
+side, he kept it as it is (12 Nov). The tent's Sadu and rugs drawn finer (the
+diamonds' steps up close, his picture) take 4.35 MiB more texture memory with
+their mipmaps, 5.2 MiB in all; asked, he kept them (12 Nov).
 
 Still over, for a moment: **on foot with the driver's door open, 422k** (166
 draws) for the 1.2 to 1.55 s the door swings as the player gets in or out.
@@ -540,6 +545,34 @@ WebKit (JavaScriptCore) keeps doubles unboxed, so this garbage, and the minor
 collections it brings, are most likely Chromium's alone (not yet confirmed on
 the phone; the meter's stutter count will show it). The drawing itself makes
 68 to 81 KB a frame in three.js's uniform uploads and sorting.
+
+**The herd on the owner's phone (12 Nov).** His meter at 2x: 60 frames a
+second everywhere but by the herd, where it fell to 52 (the slowest 1%
+27 ms, 4 stutters in 3 minutes). The game's own work took 1.3 ms a frame and
+three.js issuing the drawing 1.6 ms, so the rest was WebKit's and the GPU's.
+Measured here (no GPU: counted where it can be, the software renderer's time
+as a guide only):
+- **Not the calls.** By the herd the frame makes fewer WebGL calls than in the
+  yard or on the sand (450 to 680 against 820 to 1,030).
+- **The pasture's grass.** It is the thickest in the game: 42% of the 42,000
+  tufts are round the camp. Standing in it, 13,000 to 15,500 tufts are drawn,
+  and the GPU shaded 1.1 to 3.5 grass fragments for every pixel of the screen
+  (up to 66 deep). 86 to 88% of them were thrown away by the alpha test,
+  since the blades fill 16% of their card. In the yard and on the sand, next
+  to none. Hiding the grass took a third off the software renderer's time
+  there.
+- **Cut to the blades** (world.js, fitCard: the smallest four-cornered card
+  holding every texel the alpha test can keep, with a one-texel margin), a
+  grass card is 63% of its square for the same two triangles. By the herd
+  that is 37 to 38% fewer grass fragments, with every fragment that was kept
+  still kept. The bushes' cards (and their shadow pass) and the tamarisks'
+  are cut the same way. The pictures: 0.2 to 0.6% of pixels differ by more
+  than 8 levels in 255, specks on the blades' edges where the card's two
+  triangles now meet differently; none in the yard.
+- **The first camel to come near** sent its full and middle meshes to the GPU
+  then (1.85 MB over the next frames) and readied their shaders. That is now
+  done under the loading screen, once for each coat.
+- What it does on his phone is for his meter to say.
 
 ## Spike (must pass before this is accepted)
 

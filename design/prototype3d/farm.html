@@ -1284,6 +1284,17 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   inPen({ name: 'مزنة', coat: 'majaheem', age: 'ثنية', x: c(LAYOUT.pens.sick)[0], z: c(LAYOUT.pens.sick)[1], heading: 2.4, pen: LAYOUT.pens.sick, note: 'جرب · تحت العلاج باقي 12 يوم', tag: 'جرب', warn: true, sick: true, value: 16000 });
   for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, male: true, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى', tag: 'ينتظر أمه' });
   for (let i = 0; i < 4; i++) inPen({ name: ['ريم', 'غزيل', 'نوف', 'جود'][i], coat: i === 2 ? 'shaqh' : 'wodh', age: 'مفرودة', x: R(1, 15), z: R(-42, -28), heading: R(0, 6.28), scale: 0.82, pen: LAYOUT.pens.young, note: 'مفاريد هالسنة' });
+  // the full and middle detail levels and their shadow stand-ins sent to the GPU now, under the loading screen, once for
+  // each coat: drawn first when a camel came near, their meshes (about 2.5 MB) went up and their shaders were made mid-play
+  // (counted by the herd, where the owner's phone stuttered, 12 Nov). Their meshes are shared, so one camel a coat does it.
+  const warm = [], coatsSeen = new Set();
+  for (const cm of camels) {
+    if (coatsSeen.has(cm.coat)) continue; coatsSeen.add(cm.coat);
+    for (const li of [0, 1]) for (const m of [...cm.lods[li].meshes, ...cm.shadowFor[li]]) { warm.push([m, m.visible, m.frustumCulled]); m.visible = true; m.frustumCulled = false; }
+  }
+  renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
+  for (const [m, v, f] of warm) { m.visible = v; m.frustumCulled = f; }
+  renderer.shadowMap.needsUpdate = true;
   $('status').hidden = true;
   refreshLabels();
 }).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
@@ -1468,7 +1479,7 @@ function tick(now) {
   // and every frame while the player's car moves (its shadow, drawn since 12 Nov, sat a frame behind it every other frame:
   // 0.3 m at 30 km/h, 0.9 m at 100 km/h at 30 fps, its edge flickering at 15-30 Hz in the chase view, the review); the
   // heaviest frame is the same, only the average rises while driving
-  const carMoving = playing && Math.abs(play.debug.carState.v) > 0.3;
+  const carMoving = playing && play.debug.state.mode === 'drive' && Math.abs(play.debug.carState.v) > 0.3;      // (driven: the speed left on the car after play stopped redrew the map every frame on foot, the review)
   if (shadowMoved || carMoving || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
   if (!playing) { controls.dampingFactor = 1 - Math.exp(-dt * 3.1); controls.update(); placeLabels(); }      // (OrbitControls eases by the frame: 0.05 a frame at 60 fps, the same in seconds at any rate)
   const tDraw = cpu ? performance.now() : 0;

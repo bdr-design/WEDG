@@ -24,11 +24,19 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const UP = V(0, 1, 0);
 
 
-// three crossed alpha cards: how real-time games draw grass, bushes and foliage
-function cardCluster(w, h, n = 3, upNormals = true) {
+// three crossed alpha cards: how real-time games draw grass, bushes and foliage. With `shape` (corners as (u, v), v up,
+// anticlockwise: fitCard) each card is cut to it, the same two triangles, its texture where it was.
+function cardCluster(w, h, n = 3, upNormals = true, shape = null) {
   const pos = [], uv = [], nor = [], idx = []; let off = 0;
   for (let i = 0; i < n; i++) {
-    const g = new THREE.PlaneGeometry(w, h); g.translate(0, h / 2, 0); g.rotateY(i * Math.PI / n);
+    let g;
+    if (shape) {
+      g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(shape.flatMap(([u, v]) => [(u - 0.5) * w, v * h, 0]), 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(shape.flat(), 2));
+      const fan = []; for (let k = 1; k < shape.length - 1; k++) fan.push(0, k, k + 1); g.setIndex(fan);
+    } else { g = new THREE.PlaneGeometry(w, h); g.translate(0, h / 2, 0); }
+    g.rotateY(i * Math.PI / n);
     pos.push(...g.attributes.position.array); uv.push(...g.attributes.uv.array);
     const c = g.attributes.position.count;
     for (let k = 0; k < c; k++) nor.push(...(upNormals ? [0, 1, 0] : [Math.sin(i * Math.PI / n), 0.6, Math.cos(i * Math.PI / n)]));
@@ -38,6 +46,51 @@ function cardCluster(w, h, n = 3, upNormals = true) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setIndex(idx);
   return g;
+}
+// The smallest four-cornered card holding every texel of an alpha card that its alpha test can keep, with a margin of a
+// few texels for the texture's filtering and its smaller mip levels: its corners as (u, v), v up, anticlockwise.
+// (The grass's blades fill 16% of their square: by the herd, where the pasture's grass is thickest, the GPU shaded 2.3
+// to 2.9 grass fragments for every pixel of the screen, 86% of them thrown away by the alpha test, and the owner's phone
+// fell from 60 frames a second to 52 there and nowhere else, 12 Nov. Cut to the blades, a grass card is 63% of the square
+// for the same two triangles, and by the herd the GPU shades 37-38% fewer grass fragments, every one it kept still kept.) The hull of the kept texels is cut from the square by every choice of up to four of its
+// edges, and the smallest result with at most four corners is kept.
+function fitCard(canvas, cut, margin = Math.max(1, Math.round(canvas.width / 128))) {
+  const W = canvas.width, H = canvas.height, a = canvas.getContext('2d').getImageData(0, 0, W, H).data, lim = cut * 255, pts = [];
+  for (let y = 0; y < H; y++) {
+    let lo = -1, hi = -1;
+    for (let x = 0; x < W; x++) if (a[(y * W + x) * 4 + 3] >= lim) { if (lo < 0) lo = x; hi = x; }
+    if (lo >= 0) pts.push([lo - margin, y - margin], [lo - margin, y + 1 + margin], [hi + 1 + margin, y - margin], [hi + 1 + margin, y + 1 + margin]);
+  }
+  if (!pts.length) return null;
+  pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+  const cross = (o, p, q) => (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0]), lower = [], upper = [];
+  for (const p of pts) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); }
+  for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); }
+  const hull = lower.slice(0, -1).concat(upper.slice(0, -1));
+  const cx = hull.reduce((t, p) => t + p[0], 0) / hull.length, cy = hull.reduce((t, p) => t + p[1], 0) / hull.length;
+  const planes = hull.map((p, i) => { const q = hull[(i + 1) % hull.length]; let nx = q[1] - p[1], ny = p[0] - q[0], c = nx * p[0] + ny * p[1]; if (nx * cx + ny * cy > c) { nx = -nx; ny = -ny; c = -c; } return [nx, ny, c]; });
+  const clip = (poly, [nx, ny, c]) => {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i], q = poly[(i + 1) % poly.length], fp = nx * p[0] + ny * p[1] - c, fq = nx * q[0] + ny * q[1] - c;
+      if (fp <= 1e-9) out.push(p);
+      if ((fp < 0) !== (fq < 0) && Math.abs(fp - fq) > 1e-12) { const t = fp / (fp - fq); out.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])]); }
+    }
+    return out.filter((p, i) => { const q = out[(i + 1) % out.length]; return Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) > 1e-6; });
+  };
+  const area = (poly) => { let s2 = 0; for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; s2 += p[0] * q[1] - q[0] * p[1]; } return Math.abs(s2) / 2; };
+  let best = [[0, 0], [W, 0], [W, H], [0, H]], bestA = W * H;
+  const search = (from, poly, depth) => {
+    for (let i = from; i < planes.length; i++) {
+      const q = clip(poly, planes[i]); if (q.length < 3) continue;
+      const A = area(q); if (q.length <= 4 && A < bestA) { best = q; bestA = A; }
+      if (depth < 3) search(i + 1, q, depth + 1);
+    }
+  };
+  search(0, best, 0);
+  const uv = best.map(([x, y]) => [x / W, 1 - y / H]);
+  let turn = 0; for (let i = 0; i < uv.length; i++) { const p = uv[i], q = uv[(i + 1) % uv.length]; turn += p[0] * q[1] - q[0] * p[1]; }
+  return turn < 0 ? uv.reverse() : uv;      // (anticlockwise, facing the way the square card faced: wound the other way, its lit side was its back and the grass drew as if lit from below)
 }
 const grassTexture = () => canvasTex(128, 128, (g, w, h) => {
   g.clearRect(0, 0, w, h);
@@ -428,18 +481,22 @@ export function buildWorld(scene, renderer, sandTex) {
     const sadu = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 18, w, 10); c.fillRect(0, h - 28, w, 10); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } c.fillStyle = '#efe6d6'; for (let x = 12; x < w; x += 24) { c.beginPath(); c.moveTo(x - 5, 64); c.lineTo(x, 54); c.lineTo(x + 5, 64); c.lineTo(x, 74); c.fill(); } }, true, 3);
     sadu.name = 'sadu';
     const rug = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.4).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: sadu, roughness: 1 })); rug.position.set(-12, 0.04, 2.6); rug.receiveShadow = true; scene.add(rug);
-    // the fire pit's ring: rounded stones of different sizes, turned every way and sat into the sand (twelve-faced ones
-    // read as blocks, the owner's picture, 12 Nov)
+    // the fire pit's ring: rounded stones of different sizes, lying flat (turned about the upright, a little tilted) and
+    // sat into the sand (twelve-faced ones read as blocks, the owner's picture, 12 Nov; turned every way, some stood on
+    // end like eggs, the review). They cast no shadow: under 30 cm, like the rest of the yard's small things (in the
+    // baked shadow map's 9 cm texels they drew square blocks on the sand).
     const stones = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.15, 1), new THREE.MeshStandardMaterial({ color: '#a39684', roughness: 0.95 }), 12);      // (a pale sandstone: the old colour went black in their own shade)
     const sq = new THREE.Quaternion(), se = new THREE.Euler(), sv = new THREE.Vector3(), ss = new THREE.Vector3();
     for (let i = 0; i < 12; i++) {
       const a = i / 12 * 6.283 + R(-0.12, 0.12), k = R(0.7, 1.15);
-      sq.setFromEuler(se.set(R(0, 6.28), R(0, 6.28), R(0, 6.28))); ss.set(k * R(0.9, 1.3), k * R(0.55, 0.8), k * R(0.85, 1.15));
+      sq.setFromEuler(se.set(R(-0.2, 0.2), R(0, 6.28), R(-0.2, 0.2))); ss.set(k * R(0.9, 1.3), k * R(0.55, 0.8), k * R(0.85, 1.15));
       stones.setMatrixAt(i, M4().compose(sv.set(-12 + Math.cos(a) * 0.56, 0.15 * ss.y * 0.55, 0.6 + Math.sin(a) * 0.56), sq, ss));
     }
-    stones.castShadow = stones.receiveShadow = true; scene.add(stones);
+    stones.receiveShadow = true; scene.add(stones);
     const ash = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: 1 })); ash.position.set(-12, 0.05, 0.6); scene.add(ash);
-    const ropes = []; for (const sx of [-1, -0.5, 0, 0.5, 1]) ropes.push(-12 + sx * L / 2, H, 7, -12 + sx * L / 2 * 1.05, 0, 7 + D / 2 + 2.4);
+    // the guy ropes (الأطناب) from the roof's edge at the back out to their pegs (from the ridge they ran through the back
+    // wall at 1.07 m, under its 1.35 m edge, and showed inside, the review)
+    const ropes = []; for (const sx of [-1, -0.5, 0, 0.5, 1]) ropes.push(-12 + sx * L / 2, E, 7 + D / 2, -12 + sx * L / 2 * 1.05, 0, 7 + D / 2 + 2.4);
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(ropes, 3)); scene.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: '#cbb994' })));
   }
 
@@ -470,9 +527,11 @@ export function buildWorld(scene, renderer, sandTex) {
     // the Sadu curtain (القاطع) closing the far end
     const saduCurtain = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#8f2a22'; c.fillRect(0, 0, w, h); c.fillStyle = '#efe6d6'; c.fillRect(0, 20, w, 9); c.fillRect(0, h - 29, w, 9); c.fillStyle = '#1d1a17'; for (let x = 0; x < w; x += 24) { c.beginPath(); c.moveTo(x, 86); c.lineTo(x + 12, 42); c.lineTo(x + 24, 86); c.fill(); } }, true, 3);
     saduCurtain.name = 'curtain';
-    // cut to the roof's slopes, 3 cm under them (a 1.9 m panel stood through the roof where it comes down to 1.35 m at the
-    // front and the back: the owner's picture, 12 Nov)
-    const qa = (D - 0.4) / 2, roofAt = (z) => H - (H - E) * Math.abs(z) / (D / 2) - 0.03, qs = new THREE.Shape();
+    // cut to the roof's slopes, 3 cm under them, wall to wall (a 1.9 m panel stood through the roof where it comes down to
+    // 1.35 m at the front and the back: the owner's picture, 12 Nov). Above 1.9 m the weave starts again, as a second strip
+    // sewn on (held at its top row, the gable was plain red, the review).
+    saduCurtain.wrapT = THREE.RepeatWrapping;
+    const qa = D / 2, roofAt = (z) => H - (H - E) * Math.abs(z) / (D / 2) - 0.03, qs = new THREE.Shape();
     qs.moveTo(-qa, 0); qs.lineTo(-qa, roofAt(qa)); qs.lineTo(0, roofAt(0)); qs.lineTo(qa, roofAt(qa)); qs.lineTo(qa, 0); qs.closePath();
     const qg = new THREE.ShapeGeometry(qs), quv = qg.attributes.uv, qp = qg.attributes.position;
     for (let i = 0; i < qp.count; i++) quv.setXY(i, (qp.getX(i) + qa) / (2 * qa), qp.getY(i) / 1.9);      // (the weave at the scale it had)
@@ -563,15 +622,14 @@ export function buildWorld(scene, renderer, sandTex) {
     const tm = new THREE.InstancedMesh(tg, new THREE.MeshStandardMaterial({ color: '#5c4d3f', roughness: 1 }), trunks.length);
     trunks.forEach(([a, b, r], i) => { const d = b.clone().sub(a); tm.setMatrixAt(i, M4().compose(a, new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize()), V(r, d.length(), r))); });
     tm.castShadow = true; scene.add(tm);
-    const cg = cardCluster(2.6, 2.4, 3, false); cg.translate(0, -1.2, 0);
-    const cm = new THREE.InstancedMesh(cg, new THREE.MeshStandardMaterial({ map: tamariskTexture(), alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1 }), clumps.length * 2), col = new THREE.Color();
+    const tt = tamariskTexture(), cg = cardCluster(2.6, 2.4, 3, false, fitCard(tt.image, 0.35)); cg.translate(0, -1.2, 0);
+    const cm = new THREE.InstancedMesh(cg, new THREE.MeshStandardMaterial({ map: tt, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1 }), clumps.length * 2), col = new THREE.Color();
     let ci = 0;
     clumps.forEach(([c, s]) => { for (let r = 0; r < 2; r++) { cm.setMatrixAt(ci, M4().compose(c.clone().add(V(R(-0.3, 0.3), R(-0.2, 0.3), R(-0.3, 0.3))), new THREE.Quaternion().setFromEuler(new THREE.Euler(R(-0.15, 0.15), R(0, 6.28), R(-0.15, 0.15))), V(s * 1.15, s * 1.1, s * 1.15))); cm.setColorAt(ci++, col.setHSL(0.24 + R(-0.03, 0.03), 0.12, 0.62 + R(-0.06, 0.06))); } });
     cm.castShadow = cm.receiveShadow = true; scene.add(cm);
   }
   // ---------- grass after the Wasm rain, shrubs, stones
   {
-    const tuft = cardCluster(0.66, 0.5, 3, true);
     const n = 42000, items = [];
     let k = 0, tries = 0;
     while (k < n && tries < 700000) {
@@ -585,11 +643,11 @@ export function buildWorld(scene, renderer, sandTex) {
       k++;
     }
     // every tuft up close, a thinning sample further out, none past 260 m (the sand texture carries the colour)
-    scene.add(scatterCells(tuft, new THREE.MeshStandardMaterial({ map: grassTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
+    const gt = grassTexture(), tuft = cardCluster(0.66, 0.5, 3, true, fitCard(gt.image, 0.4));      // (the texture drawn where it was among the random numbers: the grass stands where it stood)
+    scene.add(scatterCells(tuft, new THREE.MeshStandardMaterial({ map: gt, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
       { cell: GRASS_CELL, bands: [[45, 1], [90, 0.45], [160, 0.2], [260, 0.08]] }));
   }
   {
-    const g = cardCluster(1.2, 1.0, 3, true);
     const n = 1500, items = [];
     let k = 0;
     while (k < n) {
@@ -600,7 +658,8 @@ export function buildWorld(scene, renderer, sandTex) {
         c: new THREE.Color().setHSL(0.12 + R(-0.02, 0.04), 0.1, 0.82 + R(-0.1, 0.1)) });
       k++;
     }
-    scene.add(scatterCells(g, new THREE.MeshStandardMaterial({ map: bushTexture(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
+    const bt = bushTexture(), g = cardCluster(1.2, 1.0, 3, true, fitCard(bt.image, 0.4));
+    scene.add(scatterCells(g, new THREE.MeshStandardMaterial({ map: bt, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
       { cell: BUSH_CELL, cast: true, bands: [[120, 1], [260, 0.5], [450, 0.25]] }));
     // stones: 8 triangles each (they are a few centimetres across), only near the camera
     const sg = new THREE.OctahedronGeometry(0.12, 0); sg.scale(1, 0.5, 1.25);

@@ -441,10 +441,17 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; viewBtn.hidden = true; pedal.gas = pedal.brake = 0; pad.reset();
     animate(model.doors.FL, -1.05, 0.45, () => animate(model.doors.FL, 0, 0.4, () => { if (leaving && state.on) stepOut(); leaving = false; }), 0.35);
   }
+  // the car brought to rest where it stands: settled on its wheels, its slide, turn and sway gone, the brake lamps out.
+  // On getting out, and on leaving play from the driver's seat (back from the map, the stopped car slid 0.31 m and
+  // turned 3 degrees on the sway it was left with, and on the map it stood rolled 3.3 degrees with its brake lamps lit,
+  // the review).
+  function park() {
+    for (const m of tailMats) m.emissiveIntensity = 0.6;      // (the driving that sets them no longer runs: they stayed lit on the empty car)
+    carState.v = 0; job = null; parked = true;
+    if (rigged) { phys.s.v = 0; phys.s.slide = 0; POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
+  }
   function stepOut() {
-    for (const m of tailMats) m.emissiveIntensity = 0.6;      // (the brake lamps out: the driving that sets them no longer runs once he is out, and they stayed lit on the empty car)
-    state.mode = 'walk'; carState.v = 0; job = null; parked = true;
-    if (rigged) { POSE.x = carState.pos.x; POSE.z = carState.pos.z; POSE.yaw = carState.yaw; phys.settle(POSE, env); carState.pos.y = phys.originY(); car.position.y = carState.pos.y; car.rotation.set(phys.s.roll, carState.yaw, phys.s.pitch, 'YZX'); for (const w of phys.wheels) { const c = model.corners[w.k]; if (c) c.position.y = cornerRest[w.k]; } }
+    park(); state.mode = 'walk';
     driverDoor(man.pos); pushCircle(man.pos, 0.3); carFwd(carState.yaw, fwd); right.crossVectors(fwd, UP); man.heading = Math.atan2(-right.x, -right.z); input.yaw = man.heading; input.pitch = 0.18; man.way = undefined;      // (the look level again: a drag in the car moved it, and the walker stepped out looking at his feet)
     viewBtn.hidden = true; state.snap = true; if (phone) phoneBtn.hidden = false;
     steerPad.hidden = pedalsEl.hidden = carRow.hidden = true; pedal.gas = pedal.brake = 0; pad.reset();
@@ -762,7 +769,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   }
   function stop() {
     resumeDrive = state.on && state.mode === 'drive';      // (getting out, mid-swing, counts as still in the car: the door is shut below)
-    if (resumeDrive) { carState.v = 0; parked = true; }
+    if (resumeDrive) park();
+    for (const p of puffs) p.s.visible = false;      // (their fading runs only in play: on the map they hung in the air)
     leaving = false;
     for (let i = tween.length - 1; i >= 0; i--) if (tween[i].obj === model.doors.FL) tween.splice(i, 1);      // (back to the map mid-swing: the door shut at once, or it stood open on foot when play began again)
     if (model.doors.FL) model.doors.FL.rotation.y = 0;
