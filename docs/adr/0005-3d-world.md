@@ -257,64 +257,112 @@ what it can see of it. Measured the same way, at 844 × 390:
 
 **The cameras, after the owner's phone (12 Nov).** The chase camera sat too
 close and turned with the car; the map was hard to hold. The chase camera is
-now 8 m behind the car's middle and 2.7 m up (it was 5.6 and 2.05), its
+now 8 m behind the car's middle and 2.7 m up (it was 5.6 and 2.05), and its
 heading follows the car's at 2/s (it was 4/s, so about half a second behind in
-a turn), and a finger dragged across the screen turns it round the car,
-easing back behind 2 s after the finger lifts, at most 70 degrees a second.
-(It also tilted up and down at first. The review found it came down through
-the porch's roof and onto the room, put out by its nearest side 2 m in a
-frame, so it keeps its own height.) It never comes nearer the car's middle
-than 2.9 m while it is as low as the car's roof and a little more (the car's
-corners are 2.7 m out): let go by a wall as the turn swung back, it once went
-through the car. Over a building's top it stays over it until it is off it
-(it came down onto the room and was put out by its nearest side, 2.1 m in a
-frame). With the car under a roof it comes in in front of a building rather
-than rise over it (held over the room, the porch's roof hid the car 2 s). Its
-height rises no faster than the car climbs plus 5 m/s, and it moves back out
-no faster than 4 m/s (backing out from under the car shade it stepped 47 cm a
-frame). Over the review's sweeps (standing by every wall, building, roof and
-corner with the camera swung right round at 143 degrees a second, and driving
-by them with it turned): no frame inside a wall, a building or the car, no
-frame in the porch's roof. With no finger the camera is as before: no frame
-inside anything and the same few frames of the car hidden. The view split's
-chase eyes moved with it (8 and 9.2 m back, 1.4 to 5 m up, 50 degrees either
-side): 150 views across that range show at most 2 px missing. Turned further
-round by the finger, the game draws all of the car, as by a wall. Measured the
-same way:
+a turn). A finger dragged across the screen turns it round the car (290
+degrees for the screen's width); the camera follows the finger smoothed over
+about 70 ms and at most 3 rad/s, and eases back behind 2 s after the finger
+lifts, at most 70 degrees a second. Two reviews found what the turn did near
+the yard's buildings, and the rules below came from them:
+- it does not tilt (tilted, it came down through the porch's roof and onto
+  the room, put out by its nearest side 2 m in a frame);
+- it never comes nearer the car's middle than 2.9 m while it is less than a
+  metre over the car's roof (the car's corners are 2.7 m out; let go by a wall
+  as the turn swung back it once went through the car, and swept round under
+  the porch it flew over the roof 0.8 m up);
+- over a building's top or a roof it stays over it until it is off it (it
+  came down onto the room and was put out by its nearest side, 2.1 m in a
+  frame; held over the room it came down through the porch's roof);
+- with the car under a roof it comes in in front of a building rather than
+  rise over it (held over the room, the porch's roof hid the car 2 s);
+- its height rises no faster than the car climbs plus 5 m/s (let out from
+  under a roof it rose a metre a frame), and it is never less than 0.6 m over
+  the sand (swung round beside a steep slope it went 2 m under);
+- it moves back out no faster than 4 m/s (backing out from under the car
+  shade it stepped 47 cm a frame).
+
+Over the reviews' sweeps (standing by every wall, building, roof and corner
+with the camera swung right round at 2.5 and 8 rad/s, held at eight angles and
+let go, and driving by them with it turned), at 30 and 60 fps: no frame
+inside a wall, a building, the car or the porch's roof; the largest step
+beyond the camera's own turn 0.45 m at 30 fps; the largest turn of the view
+16 degrees a frame at 30 fps (8 at 60). With no finger the camera is as
+before: no frame inside anything, and the same eight frames of the car hidden
+(the tamarisk at (-4, 11), which no obstacle list holds, and frames the
+reviews' sight test, with boxes 0.3 m larger than the walls, counted though
+the picture shows the car). Two things remain: parked under the porch with
+its back to the room, the camera turned away by the finger stays where it was
+left (the place behind the car is inside the room's box) until the car moves
+off; and swept behind a building, the car can be hidden for a moment until the
+camera comes in. The view split's chase eyes moved with it (8 and 9.2 m back,
+1.4 to 5 m up, 50 degrees either side): 952 views across that range show at
+most 4 px missing. Turned further round by the finger, the game draws all of
+the car, as by a wall.
+
+**Driving through the yard toward the pens** took in the pens, the room and
+many camels near: 193 to 205 draws and up to 431k triangles, with the old
+camera as with the new. Two changes, neither visible:
+- **The camels' full detail level only within 8 m** (40k triangles; the 8k
+  level to 48 m, the 1.5k beyond). It was used to 16 m. At 8 to 16 m (a camel
+  a fifth to a third of the screen's height) the 8k level differs in 2% of the
+  camel's pixels in shape and light, measured with the camel alone at 6 to 30
+  m. The camel whose card is open keeps the full level to 16 m (its close view
+  is at 14 m). Each bound is 3% further going out than coming in, so a camel
+  at a bound does not flicker.
+- **The ground cover in 50 m cells** (35 m before): one draw per cell, 10 to
+  19 draws fewer in every view for 2k to 7k triangles more. The phone's frame
+  is bound by its CPU issuing the draws, so the draws count for more.
+
+Measured the same way, at 844 x 390:
 
 | View | Before | Now |
 |---|---|---|
-| In the car, from behind | 187 / 385k | 190 / 373k |
-| Every other view of the table above | | the same, within a draw |
+| Map, drone view | 183 / 252k | 164 / 259k |
+| Map, close view | 67 / 213k | 60 / 221k |
+| On foot, by the car | 167 / 379k | 145 / 381k |
+| In the car, from the seat | 144 / 340k | 134 / 350k |
+| In the car, from behind (under the car shade) | 187 / 385k | 180 / 397k |
+| In the car, out on the sand | 83 / 228k | 84 / 233k |
+| West across the yard | 205 / 402k | 186 / 405k |
+| West, nearer the pens | 193 / 431k | 179 / 398k |
+| North across the yard | 186 / 407k | 177 / 406-412k |
 
-Not in the table, and over before this change too: driving through the yard
-toward its pens, the view takes in the pens, the room and many camels near.
-West across the yard is 205 draws and 402k (the old camera: 203 and 402k);
-west nearer the pens 193 and 431k (old: 193 and 433k); north across the yard
-186 and 407k (old: 180 and 399k; there the camera stands outside the split's
-fan, so all of the car is drawn). The car is 64 draws and 145k of that, the
-camels 74k in these runs and 95 to 132k in the review's, as the herd stands
-elsewhere at that moment. Open.
+The draws are under the budget everywhere; the triangles are at it in the
+yard's heavy directions (397k to 412k). The view from behind at the start is
+higher than before because under the car shade the camera now comes in under
+the cloth instead of rising, which puts it outside the split's fan, so all of
+the car is drawn there (8k more). The camels move between runs, so a yard view
+varies by about 10 draws and 20k triangles. What remains heavy: the player's
+car at the chase camera's 8 m (64 draws, 145k triangles, a third of the
+picture) and the terrain (3 draws, 73k).
 
-The map's camera is held like a phone's map. One finger drags the ground
-with the point under the finger staying under it, and glides on a little when
-let go moving (OrbitControls' own pan moved the ground a quarter to three
-quarters of the finger's way up or down the screen). Two fingers pinch about
-the ground between them, and the wheel about the ground under the pointer:
-the camera and the point it turns about are drawn toward that ground by the
-same factor, so it stays under the fingers (within 3 px; OrbitControls' own
-zoom to the pointer turned the camera back to its old point whenever the view
-was low, and the ground under an off-centre pinch went 960 px off); a twist turns the map from 12 degrees, and both
-fingers moved the same way up or down tilt it from 10 px, the whole tilt over
-two thirds of the screen's height; until one of those starts they only pinch
-(a pinch that was not straight tilted it 37 degrees). The point turned about
-keeps to the ground once dragged; from the hill view, whose point is in the
-air, it first moves along the line of sight to the ground, the picture
-unchanged. A drag stops following a camel or the herd and the card's button
-reads «تابعها» again; a pinch does not stop it. The place pins take no touch
-of their own: a finger that came down on a pin did not drag the map, and a
-second finger landing on one did not pinch it. A tap is tried against the
-pins first, in the game's coordinates (held upright, the screen is turned).
+The map's camera is held like a phone's map. One finger drags the ground,
+the point under the finger staying under it (to 0 px once the drag ends, on
+the sand itself: a plane at the point turned about, 1.1 m over the sand, slid
+the sand a quarter of the finger's way in a low view; OrbitControls' own pan
+moved the ground a quarter to three quarters of the finger's way up or down
+the screen). Let go moving, it glides on a little; a finger put down again
+stops it (the ground slid on under a still finger), and the glide and the
+controls' easing run in seconds, not frames. Two fingers pinch about the
+ground between them, and the wheel about the ground under the pointer: the
+camera and the point it turns about are drawn toward that ground by the same
+factor, so it stays under the fingers (within 3 px on the yard's ground;
+OrbitControls' own zoom to the pointer turned the camera back to its old point
+whenever the view was low, and the ground under an off-centre pinch went
+960 px off). A twist turns the map from 12 degrees, about the ground between
+the fingers and with them (through OrbitControls' damping a 40 degree twist
+had turned 11 by the lift and 27 a moment later); both fingers moved the same
+way up or down tilt it from 10 px, the whole tilt over two thirds of the
+screen's height; until one of those starts they only pinch (a pinch that was
+not straight tilted it 37 degrees). The point turned about keeps to the
+ground once dragged; from the hill view, whose point is in the air, it first
+moves along the line of sight to the ground, the picture unchanged. A drag
+stops following a camel or the herd and the card's button reads «تابعها»
+again; a pinch does not stop it. The place pins take no touch of their own: a
+finger that came down on a pin did not drag the map, and a second finger
+landing on one did not pinch it. A tap is tried against the pins first, in
+the game's coordinates (held upright, the screen is turned). A drag that
+starts near the horizon still falls back to OrbitControls' own pan.
 
 **The camels drawn a frame late (found by the review of the bones change).**
 three.js counts its frames before the shadow pass, so a skeleton the shadow

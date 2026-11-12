@@ -80,8 +80,10 @@ const tamariskTexture = () => canvasTex(256, 256, (g, w, h) => {
 // the viewer is drawn whole (below), so larger cells also mean more grass drawn. 35 m grass and stone cells and 160 m
 // bush cells: the ground cover's draws in the drone view fall from 124 to 58, and the grass drawn grows by 20-46%
 // (the drone view 7.0k triangles to 8.7k, from the seat 5.0k to 7.3k; 50 m cells drew 17.4k): about 2k triangles of the
-// 400k budget, the price of nothing thinning near the viewer (the review measured it).
-const GRASS_CELL = 35, BUSH_CELL = 160, STONE_CELL = 35;
+// 400k budget, the price of nothing thinning near the viewer (the review measured it). 50 m since 12 Nov 2026: the
+// phone's frame was bound by its CPU issuing the draws (ADR 0005), and driving through the yard toward the pens took
+// 205 draws; 50 m cells take 10 to 19 draws fewer in every view for 2k to 7k triangles more.
+const GRASS_CELL = 50, BUSH_CELL = 160, STONE_CELL = 50;
 export const DRAPE = [];
 // ground cover is cut into cells; each cell draws all, part or none of its instances by distance
 export const SCATTER = [];

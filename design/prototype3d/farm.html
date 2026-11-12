@@ -526,7 +526,12 @@ const COATS = {
 const GRAZE = LAYOUT.graze;
 const camels = [];
 const SPEED = 1.15;            // the walk clip plants each foot and moves it back at this speed (1.67 m strides)
-const LOD_D = [16, 48];
+// the camel's detail levels by its distance from the camera: the full one (40k triangles) within 8 m, 8k to 48 m, 1.5k
+// beyond. The full one was used to 16 m; at 8 to 16 m (a camel a fifth to a third of the screen's height) the 8k one
+// differs in 2% of its pixels in shape and light (1-2 px of edge) and saved up to 64k triangles in the yard's heaviest
+// view. The camel whose card is open keeps the full one to 16 m (its close view is at 14 m). Each bound is 3% further
+// going out and 3% nearer coming in, so a camel at the bound does not flicker between two.
+const LOD_D = [8, 48], LOD_NEAR_OPEN = 16;
 
 async function loadLod(file) {
   const { glb } = await (await fetch(file)).json();
@@ -674,7 +679,8 @@ class Camel {
     const h = this.root.rotation.y;
     pos.x += Math.sin(h) * this.speed * dt; pos.z += Math.cos(h) * this.speed * dt;
     const d = camPos.distanceTo(pos);
-    this.setLod(d < LOD_D[0] ? 0 : d < LOD_D[1] ? 1 : 2);
+    const b0 = (this === selected ? LOD_NEAR_OPEN : LOD_D[0]) * (this.li > 0 ? 0.97 : 1.03), b1 = LOD_D[1] * (this.li > 1 ? 0.97 : 1.03);
+    this.setLod(d < b0 ? 0 : d < b1 ? 1 : 2);
     if (this.clip === 'walk') this.acts.walk.timeScale = Math.max(0.25, this.speed / SPEED);
     // full rate up close, every 2nd frame past 48 m, every 4th past 150 m (the time adds up, so the pace is unchanged)
     this.animDt += dt; this.frame++;
@@ -1059,21 +1065,22 @@ const TWIST_ON = 12 * Math.PI / 180, TILT_ON = 10, TILT_SPAN = 0.66, GLIDE_S = 0
 let groundAt = null, onGround = false, twoG = null, panFrom = null;
 const panPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0)), panRay = new THREE.Raycaster(), panNdc = new THREE.Vector2();
 const panA = new THREE.Vector3(), panB = new THREE.Vector3(), panV = new THREE.Vector3(), panT = { t: 0, last: 0 };
-// the point of the ground plane (at the height of the point turned about) under (x, y) in the game's own coordinates;
+const twoV = new THREE.Vector3(), twoS = new THREE.Spherical();
+// the point of the ground plane (at the sand under the point turned about) under (x, y) in the game's own coordinates;
 // null where the line of sight misses it or meets it very far off (near the horizon)
 function groundUnder(x, y, out) {
   const r = rectOf(renderer.domElement);
   panNdc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   panRay.setFromCamera(panNdc, camera);
   if (panRay.ray.direction.y > -0.03) return null;
-  panPlane.constant = -controls.target.y;
+  panPlane.constant = -(groundAt ? groundAt(controls.target.x, controls.target.z) : controls.target.y);      // (the sand itself: a plane at the point turned about, 1.1 m over it, slid the sand a quarter of the finger's way in a low view)
   if (!panRay.ray.intersectPlane(panPlane, out)) return null;
   return out.distanceTo(camera.position) < 6 * camera.position.distanceTo(controls.target) + 50 ? out : null;
 }
 // a drag begins: the point turned about onto the ground (along the line of sight, so the picture does not move) if it
 // stands well off it, as in the hill view
 function dragBegins(x, y) {
-  panFrom = [x, y]; panV.set(0, 0, 0); panT.last = 0;
+  panFrom = [x, y]; panV.set(0, 0, 0); panT.last = panT.t = 0; controls._panOffset.set(0, 0, 0);      // (a finger down stops a glide: the ground slid on under a finger held still)
   if (!groundAt || onGround) return;
   onGround = true;
   const t = controls.target;
@@ -1095,7 +1102,7 @@ function dragGround(self, x1, y1, t) {
   const a = groundUnder(self._panStart.x, self._panStart.y, panA), b = a && groundUnder(x1, y1, panB);
   if (!b) return false;
   a.sub(b); controls.target.add(a); camera.position.add(a);
-  const dt = panT.last ? Math.max(1, t - panT.last) / 1000 : 0; panT.last = t;
+  const dt = panT.t ? Math.max(1, t - panT.t) / 1000 : 0; panT.t = t; panT.last = performance.now();      // (its speed by the events' own times; how recent, by when they were handled: a busy frame held them back)
   if (dt) panV.lerp(a.multiplyScalar(1 / dt), 0.5);
   if (panFrom && Math.hypot(x1 - panFrom[0], y1 - panFrom[1]) > 8) { panFrom = null; dragOffFollow(); }
   self._panStart.set(x1, y1);
@@ -1107,7 +1114,7 @@ if (['_handleTouchMovePan', '_handleMouseMovePan', '_handleTouchStartPan', '_han
   controls._handleMouseDownPan = function (e) { OC._handleMouseDownPan.call(this, e); dragBegins(e.clientX, e.clientY); };
   controls._handleTouchMovePan = function (e) { if (this._pointers.length !== 1 || !dragGround(this, e.pageX, e.pageY, e.timeStamp)) OC._handleTouchMovePan.call(this, e); };
   controls._handleMouseMovePan = function (e) { if (!dragGround(this, e.clientX, e.clientY, e.timeStamp)) OC._handleMouseMovePan.call(this, e); };
-  controls._handleTouchStartDollyRotate = function (e) { twoG = null; OC._handleTouchStartDollyRotate.call(this, e); };
+  controls._handleTouchStartDollyRotate = function (e) { twoG = null; this._panOffset.set(0, 0, 0); OC._handleTouchStartDollyRotate.call(this, e); };
   controls._handleTouchMoveRotate = function (e) {
     if (this._pointers.length !== 2) return OC._handleTouchMoveRotate.call(this, e);
     const q = this._getSecondPointerPosition(e), first = e.pointerId === this._pointers[0];
@@ -1122,8 +1129,17 @@ if (['_handleTouchMovePan', '_handleMouseMovePan', '_handleTouchStartPan', '_han
       else if (dya * dyb > 0 && Math.min(Math.abs(dya), Math.abs(dyb)) > TILT_ON && Math.abs(dya + dyb) > 2 * Math.abs(dx) && Math.abs(Math.hypot(bx - ax, by - ay) / g.d0 - 1) < 0.15) g.mode = 'tilt';
       else return;
     }
-    if (g.mode === 'twist') this._rotateLeft(-turn);      // (the map turns with the fingers)
-    else this._rotateUp((84 * Math.PI / 180) * lift / (TILT_SPAN * this.domElement.clientHeight));      // (up together: toward the horizon)
+    // turned or tilted straight away, not through OrbitControls' damping (a 40 degree twist had turned 11 by the lift and
+    // 27 a moment later); a twist turns about the ground between the fingers (following, about the point in the middle)
+    if (g.mode === 'twist') {
+      const c = !follow && !followHerd && groundUnder((ax + bx) / 2, (ay + by) / 2, panA) || controls.target;
+      camera.position.sub(c).applyAxisAngle(UPV, turn).add(c);      // (the map turns with the fingers)
+      if (c !== controls.target) controls.target.sub(c).applyAxisAngle(UPV, turn).add(c);
+    } else {
+      twoS.setFromVector3(twoV.copy(camera.position).sub(controls.target));
+      twoS.phi = THREE.MathUtils.clamp(twoS.phi - (84 * Math.PI / 180) * lift / (TILT_SPAN * this.domElement.clientHeight), Math.max(1e-3, controls.minPolarAngle), controls.maxPolarAngle);      // (up together: toward the horizon)
+      camera.position.copy(controls.target).add(twoV.setFromSpherical(twoS));
+    }
   };
   // a pinch or the wheel zooms about the ground under the fingers' middle or the pointer: the camera and the point turned
   // about drawn toward it (or away) by the same factor, so that point stays where it is on the screen (OrbitControls'
@@ -1428,7 +1444,7 @@ function tick(now) {
   const shadowMoved = !sunFocus.equals(sun.target.position);
   if (shadowMoved) { sun.position.copy(sunFocus).addScaledVector(sunDir, 160); sun.target.position.copy(sunFocus); }
   if (shadowMoved || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
-  if (!playing) { controls.update(); placeLabels(); }
+  if (!playing) { controls.dampingFactor = 1 - Math.exp(-dt * 3.1); controls.update(); placeLabels(); }      // (OrbitControls eases by the frame: 0.05 a frame at 60 fps, the same in seconds at any rate)
   const tDraw = cpu ? performance.now() : 0;
   if (!phone.big) renderer.render(scene, camera);      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
   if (cpu && meter.ready && now >= meter.ready && !phone.big) { const g = tDraw - tGame, d = performance.now() - tDraw; cpu.game[Math.min(399, Math.round(g * 4))]++; cpu.draw[Math.min(399, Math.round(d * 4))]++; cpu.sg += g; cpu.sd += d; cpu.n++; }      // (not while the enlarged phone stops the drawing)
