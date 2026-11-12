@@ -28,7 +28,7 @@ Game reload(Game g) =>
 Camel camelFor(Game g, Festival f, ContestRound r, {double mean = 70}) {
   final sim = Sim(g.state);
   // 150 days into the round's age class on judging day.
-  final ageToday = r.age.minYears * 365 + 150 - f.judgedOn.daysSince(g.today);
+  final ageToday = r.age.minDays + 150 - f.judgedOn.daysSince(g.today);
   final c = WorldGen(sim).makeCamel(
     sim.rng(['test-camel', r.id.value]),
     owner: g.me.id,
@@ -99,12 +99,43 @@ void main() {
     });
   });
 
+  group('Colour families', () {
+    test('the festival\'s six, مغاتير covering the five light ones', () {
+      expect(ColorCategory.values.map((c) => c.label).toList(), [
+        'مجاهيم',
+        'وضح',
+        'شقح',
+        'شعل',
+        'صفر',
+        'حمر',
+      ]);
+      expect(ColorCategory.values.where((c) => c.isMaghateer).length, 5);
+      expect(ColorCategory.majaheem.isMaghateer, isFalse);
+    });
+  });
+
   group('Age classes', () {
     test('map completed years to Gulf names', () {
       expect(AgeClass.fromDays(100), AgeClass.hwar);
-      expect(AgeClass.fromDays(365 * 3 + 10), AgeClass.haq);
+      expect(AgeClass.fromDays(200), AgeClass.makhlool);
+      expect(AgeClass.fromDays(365 + 10), AgeClass.mafrood);
+      expect(
+        AgeClass.fromDays(365 * 2 + 10),
+        AgeClass.haq,
+      ); // حق before لقي (the owner, 12 Nov 2026)
+      expect(AgeClass.fromDays(365 * 3 + 10), AgeClass.laqi);
       expect(AgeClass.fromDays(365 * 4 + 10).labelFor(Sex.female), 'جذعة');
-      expect(AgeClass.fromDays(365 * 12), AgeClass.mature);
+      expect(AgeClass.fromDays(365 * 9), AgeClass.fater);
+      expect(AgeClass.fromDays(365 * 12).labelFor(Sex.male), 'عود');
+      expect(AgeClass.fromDays(365 * 12).labelFor(Sex.female), 'ناب');
+      expect(AgeClass.fromDays(365 * 21), AgeClass.harish);
+      // every day falls in exactly one class, in order
+      var last = AgeClass.hwar;
+      for (var d = 0; d < 365 * 25; d++) {
+        final a = AgeClass.fromDays(d);
+        expect(a.index >= last.index && a.index <= last.index + 1, isTrue);
+        last = a;
+      }
     });
   });
 

@@ -100,11 +100,12 @@ A monitoring committee rates the judges (confirmed [27][25]). Results are final,
 - **Checks:** every camel gets a clinical exam, plus ultrasound, X-ray, thermal imaging, lab, bacterial and hormone tests. Botox is the most common cheat, followed by fillers (silicone oil, hyaluronic acid) and numbing agents (confirmed [33]).
 - **Fines per camel:**
   - Filler, Botox or hormones: up to SAR 100,000
-  - Stretching the lip: up to SAR 50,000
+  - Stretching the lip: up to SAR 100,000 since the 6th edition (December 2021), doubled from SAR 50,000 after 52 cases were found (confirmed [95])
   - Filing teeth, cutting the tail or dyeing: up to SAR 30,000
 
   (confirmed [33])
-- **Bans:** cheaters are excluded from the current edition and at least 5 future editions (confirmed [27]).
+- **Bans:** cheaters are excluded from the current edition and at least 5 future editions (confirmed [27]). The Camel Club's violations committee has barred an owner and all his camels for five years, the camels even if sold on, after studying his violations (the offence is not stated) (confirmed [102]). At the Hail festival in 2024 tampering is reported to have brought disqualification, fines, a five-year ban and referral to the authorities (uncertain: from a search summary that did not pin its page). Penalties are applied in line with the GCC animal welfare law, royal decree M/44 (confirmed [99]). Rulings have varied: two owners, from Kuwait and the UAE, were barred from a festival and the three editions after it for Botox (uncertain: from a search summary that did not name its page).
+- **Since then:** in December 2023, 62 tampering cases were each fined SAR 100,000 (SAR 6.2 million in all), the camels disqualified and the owners suspended (confirmed [97]).
 - **Past cases:** in 2021 there were 147 tampering cases and 43 camels were disqualified (confirmed [34]). In 2018, 12 were disqualified for Botox (confirmed [35]).
 
 ## 4. Festival calendar and structure
@@ -193,7 +194,7 @@ A monitoring committee rates the judges (confirmed [27][25]). Results are final,
   - Daily feed cost per head: not found (uncertain).
 - **Water:** a nursing camel needs about 37–46 L a day. A camel can drink 107 L in 10 minutes and can go about 17 days without water in winter but about 7 in summer (confirmed [73]).
 - **Labour:**
-  - Shepherd wage SAR 1,500 a month (Sharurah owners). Moving camp costs about SAR 4,000 (confirmed [74]).
+  - Shepherd wage SAR 1,500 a month (Sharurah owners). Moving camp, fences and tents between sites costs those owners about SAR 4,000, after their market closed; it is not a move to spring pasture (confirmed [74]).
   - Recruitment ads offer SAR 1,000–1,400 plus housing and food (confirmed [75]).
   - Camels per herder: not found (uncertain).
 - **Diseases:**
@@ -208,6 +209,8 @@ A monitoring committee rates the judges (confirmed [27][25]). Results are final,
 
 ## 7. More of the real camel world (searched 12 Nov 2026)
 
+Checked against search results; most news hosts cannot be opened from here, so a claim is marked confirmed when the search's own summary of the page states it.
+
 - **Milk:**
   - A 2024 genome study of 61 مجاهيم females (Al-Jouf) counted 10 L or more a day as high yield and 5 L or less as low (confirmed [82]).
   - In a 2023 study of four Saudi breeds, the وضح gave 27.1 kg a week in winter (about 4 kg a day), less than مجاهيم and حمر; the صفر gave the least in summer, 30.7 kg a week (confirmed [83]).
@@ -217,7 +220,7 @@ A monitoring committee rates the judges (confirmed [27][25]). Results are final,
 - **Embryo transfer and artificial insemination:** practised in camels. Embryos are flushed non-surgically on day 6 and put into recipient females, to multiply elite lines for milk, racing and beauty contests (confirmed [86][87]). Cost in the Kingdom: not found (uncertain).
 - **Cloning:** the first cloned camel, Injaz, was born in Dubai in April 2009. Dubai's centre clones beauty-contest and racing champions for owners (confirmed [88][89]). Whether Saudi festivals admit clones: not found (uncertain).
 - **Zakat on camels:** ZATCA collects zakat on livestock (بهيمة الأنعام) through an online service that sends a pre-filled form and the amount due; its guide says zakat on camels is due from five camels (confirmed [90][91]). The fiqh conditions (سائمة, grazing most of the year) are a scholarly matter (confirmed [92]).
-- **Cosmetic procedures:** reported as banned for camels in general in the Kingdom, not only at festivals; the 2018 festival terms barred hybrid or imported camels from every class (uncertain: from a search summary of [93]; the page could not be opened from here to check).
+- **Cosmetic procedures:** banned for camels in general in the Kingdom, not only at festivals, after a vet was found shrinking ears and enlarging faces (confirmed [96][98]). In August 2018 MEWA fined five people SAR 67,000 in all for animal-welfare violations, among them Botox injections and tightened lips on camels (confirmed [100]); a vet was later fined SAR 30,000 for using human cosmetics on animals (confirmed [101]). MEWA banned outright, under the GCC animal welfare law (royal decree M/44), injecting human cosmetic substances into animals, camels above all, dyeing animals and giving race stimulants (confirmed [99]). The 2018 festival terms also barred hybrid or imported camels from every class (uncertain: search summary of [93]).
 - **Camel passports:** a passport project was launched in February 2026 to record each camel's data, ownership and breed (confirmed [94]).
 
 ---
@@ -309,7 +312,7 @@ A monitoring committee rates the judges (confirmed [27][25]). Results are final,
 84. https://www.aleqt.com/2025/08/07/article_2765009.html
 85. https://hawamer.com/vb/hawamer2943393
 86. https://acsad.org/wp-content/uploads/2024/09/التلقيح-الاصطناعي-عند-الإبل-صفاء-عبد-الرحمن.pdf
-87. https://www.kfu.edu.sa/en/Centers/Camels/Documents/أسس  نقل  الاجنة في الإنسان والإبل.pdf
+87. https://www.kfu.edu.sa/en/Centers/Camels/Documents/%D8%A3%D8%B3%D8%B3%20%20%D9%86%D9%82%D9%84%20%20%D8%A7%D9%84%D8%A7%D8%AC%D9%86%D8%A9%20%D9%81%D9%8A%20%D8%A7%D9%84%D8%A5%D9%86%D8%B3%D8%A7%D9%86%20%D9%88%D8%A7%D9%84%D8%A5%D8%A8%D9%84.pdf
 88. https://www.natureasia.com/en/nmiddleeast/article/10.1038/nmiddleeast.2010.166
 89. https://khaleejtimes.com/article/camel-cloning-inside-dubais-frozen-zoo
 90. https://zatca.gov.sa/ar/eServices/Pages/eServices_258.aspx
@@ -317,3 +320,11 @@ A monitoring committee rates the judges (confirmed [27][25]). Results are final,
 92. https://usul.ai/fr/t/zakat-in-islam-in-the-light-of-the-quran-and-sunnah/71
 93. https://www.alyaum.com/ampArticle/6069056
 94. https://www.intellinews.com/saudi-arabia-introduces-camel-passports-to-regulate-13bn-market-424339/
+95. https://gulfnews.com/world/gulf/saudi/saudi-arabia-doubles-penalty-for-tampering-with-camel-lips-1.84306531
+96. https://www.aljazeera.net/misc/2021/10/13/%D8%B1%D9%81%D8%B6-%D8%B4%D8%B9%D8%A8%D9%8A-%D9%88%D8%AA%D8%B4%D8%B1%D9%8A%D8%B9%D8%A7%D8%AA-%D8%B1%D8%A7%D8%AF%D8%B9%D8%A9-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9
+97. https://www.okaz.com.sa/news/local/2150916
+98. https://www.eremnews.com/entertainment/1427475
+99. https://mewa.gov.sa/en/MediaCenter/News/Pages/News-23-7-2018.aspx
+100. https://www.arabnews.com/node/1349071
+101. https://gulfbusiness.com/?p=131841
+102. https://ajel.sa/local/w4pqf6

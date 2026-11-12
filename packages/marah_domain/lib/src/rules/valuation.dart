@@ -17,15 +17,15 @@ class Valuation {
   /// (field) Price of an average-looking camel by age class.
   static int basePrice(AgeClass a, Sex s) {
     final female = switch (a) {
-      AgeClass.hwar => 7000,
+      AgeClass.hwar || AgeClass.makhlool => 7000,
       AgeClass.mafrood => 10000,
-      AgeClass.laqi => 13000,
-      AgeClass.haq => 16000,
+      AgeClass.haq => 13000,
+      AgeClass.laqi => 16000,
       AgeClass.jatha => 19000,
       AgeClass.thani => 21000,
       AgeClass.rubaa => 22000,
       AgeClass.sedees => 22000,
-      AgeClass.mature => 20000,
+      AgeClass.fater || AgeClass.naab || AgeClass.harish => 20000,
     };
     return s == Sex.female ? female : (female * 0.9).round();
   }

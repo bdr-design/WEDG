@@ -24,7 +24,6 @@ class WorldGen {
   /// (balance) How common each colour family is on the market.
   static const categoryWeights = {
     ColorCategory.majaheem: 1.3,
-    ColorCategory.maghateer: 0.9,
     ColorCategory.wodh: 1.0,
     ColorCategory.sofr: 1.0,
     ColorCategory.homr: 0.9,
@@ -232,23 +231,23 @@ class WorldGen {
     final ages = switch (tier) {
       FestivalTier.grand => const [
         AgeClass.mafrood,
-        AgeClass.laqi,
         AgeClass.haq,
+        AgeClass.laqi,
         AgeClass.jatha,
         AgeClass.thani,
-        AgeClass.mature,
+        AgeClass.fater,
       ],
       FestivalTier.regional => const [
-        AgeClass.laqi,
         AgeClass.haq,
+        AgeClass.laqi,
         AgeClass.jatha,
         AgeClass.thani,
-        AgeClass.mature,
+        AgeClass.fater,
       ],
       FestivalTier.local => const [
-        AgeClass.haq,
+        AgeClass.laqi,
         AgeClass.jatha,
-        AgeClass.mature,
+        AgeClass.fater,
       ],
     };
     final rounds = <ContestRound>[];
@@ -270,7 +269,7 @@ class WorldGen {
             id: sim.world.ids.round(),
             category: cat,
             sex: Sex.male,
-            age: AgeClass.mature,
+            age: AgeClass.fater,
             rivals: _fieldSize(rng, tier) ~/ 2,
           ),
         );

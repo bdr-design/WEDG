@@ -17,6 +17,11 @@ docs/                    this file, ADRs, game design, realism sources
 tool/                    benchmarks and CI helpers
 ```
 
+The 3D design prototype (`design/prototype3d`) runs the same domain compiled to
+JavaScript in a Web Worker, only so the owner can play the real rules in it
+(docs/plan-gameplay.md, G2); its timings say nothing about this app, which
+runs the native engine through `marah_runtime`.
+
 Dependencies point down only: app → runtime → store → data → domain. The domain package does
 not import Flutter, so the same rules can run in a worker isolate today and
 in a Dart service on a server later.

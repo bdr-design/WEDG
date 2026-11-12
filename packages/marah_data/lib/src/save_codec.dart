@@ -19,12 +19,37 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 1;
+  static const currentVersion = 2;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
   static final Map<int, Map<String, Object?> Function(Map<String, Object?>)>
-  migrations = {};
+  migrations = {1: _v1ToV2};
+
+  /// v1 to v2 (the owner's decisions of 12 Nov 2026):
+  /// - the colour family مغاتير is gone (it is only the umbrella name of the
+  ///   light colours): its pure-white camels, rounds and a player's favourite
+  ///   become وضح;
+  /// - the age classes حق and لقي swap places (حق is now 2 to 3 years, لقي 3
+  ///   to 4), so a round or an event for the old 2-to-3 class keeps its ages
+  ///   under its new name; the open-ended "mature" (8 years and up) becomes
+  ///   فاطر.
+  static Map<String, Object?> _v1ToV2(Map<String, Object?> data) {
+    const ages = {'laqi': 'haq', 'haq': 'laqi', 'mature': 'fater'};
+    Object? walk(Object? v) => switch (v) {
+      final Map<String, Object?> m => {
+        for (final MapEntry(:key, :value) in m.entries)
+          key: switch ((key, value)) {
+            ('cat' || 'favourite', 'maghateer') => 'wodh',
+            ('age', final String a) => ages[a] ?? a,
+            _ => walk(value),
+          },
+      },
+      final List<Object?> l => [for (final x in l) walk(x)],
+      _ => v,
+    };
+    return walk(data)! as Map<String, Object?>;
+  }
 
   String encode(GameState state, {DateTime? savedAt}) => jsonEncode({
     'format': format,

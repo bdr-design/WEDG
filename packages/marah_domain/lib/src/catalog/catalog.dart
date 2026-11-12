@@ -7,61 +7,70 @@ enum Sex {
   final String label;
 }
 
-/// Colour families (الفئات) that mazayen contests are split by.
+/// Colour families (الفئات): the festival's six (GDD 2 and 5.1, research-realism
+/// section 1). مغاتير is the umbrella name for the five light ones, not a class
+/// of its own (the owner, 12 Nov 2026): [isMaghateer].
 ///
-/// [baseDemand] scales market prices for the family.
+/// [baseDemand] (balance) scales market prices for the family. وضح takes the
+/// 1.10 the old pure-white "مغاتير" family had: it is the most prized of the
+/// light colours (research section 1).
 enum ColorCategory {
   majaheem(
     'مجاهيم',
-    'سود داكنة اللون، أكبرها حجمًا، وهي إبل الجنوب والوسط',
+    'سود بدرجات، والغرابي أفخرها. إطار كبير وعظم ثقيل',
     baseDemand: 1.15,
   ),
-  maghateer('مغاتير', 'بيض ناصعة، الوبر أبيض والجلد فاتح', baseDemand: 1.10),
-  wodh(
-    'وضح',
-    'بيض اللون مع سواد في الجلد والعين وأطراف الخشم',
-    baseDemand: 1.05,
-  ),
-  sofr('صفر', 'صفرة ذهبية فاتحة في الوبر', baseDemand: 1.00),
-  homr('حمر', 'حمرة بنية مائلة للبرتقالي', baseDemand: 0.95),
-  shoal('شعل', 'بني محمرّ داكن، أطراف الوبر أغمق', baseDemand: 0.95),
-  shoqh('شقح', 'لون فاتح بين البياض والحمرة، رمادي محمرّ', baseDemand: 0.90);
+  wodh('وضح', 'أبيض ناصع، أرقى المغاتير', baseDemand: 1.10),
+  shoqh('شقح', 'أبيض أقل من الوضح، بين الوضح والشعل', baseDemand: 0.90),
+  shoal('شعل', 'خليط أحمر وأشقر', baseDemand: 0.95),
+  sofr('صفر', 'لون الرمل أو الدبس، وبر كثيف', baseDemand: 1.00),
+  homr('حمر', 'محمرّة، متوسطة الحجم', baseDemand: 0.95);
 
   const ColorCategory(this.label, this.description, {required this.baseDemand});
 
   final String label;
   final String description;
   final double baseDemand;
+
+  /// One of the five light colours the name مغاتير covers.
+  bool get isMaghateer => this != majaheem;
 }
 
-/// Age classes by completed years, with the Gulf names used in contest
-/// rounds (أشواط). [minYears] is inclusive, [maxYears] exclusive.
+/// Age classes (الأسنان) with their Gulf names (GDD 5.2, research-realism
+/// section 2; the owner chose حق before لقي, 12 Nov 2026). [minMonths] is
+/// inclusive, [maxMonths] exclusive. Names the sources give for one sex only
+/// are used for both (game choice): مخلول, فاطر, and ناب for a female past 20.
 enum AgeClass {
-  hwar('حوار', 'حوار', 0, 1),
-  mafrood('مفرود', 'مفرودة', 1, 2),
-  laqi('لقي', 'لقية', 2, 3),
-  haq('حق', 'حقة', 3, 4),
-  jatha('جذع', 'جذعة', 4, 5),
-  thani('ثني', 'ثنية', 5, 6),
-  rubaa('رباع', 'رباعية', 6, 7),
-  sedees('سديس', 'سديسة', 7, 8),
-  mature('فاطر', 'فاطر', 8, 99);
+  hwar('حوار', 'حوارة', 0, 6),
+  makhlool('مخلول', 'مخلول', 6, 12),
+  mafrood('مفرود', 'مفرودة', 12, 24),
+  haq('حق', 'حقة', 24, 36),
+  laqi('لقي', 'لقية', 36, 48),
+  jatha('جذع', 'جذعة', 48, 60),
+  thani('ثني', 'ثنية', 60, 72),
+  rubaa('رباع', 'رباعية', 72, 84),
+  sedees('سديس', 'سديسة', 84, 96),
+  fater('فاطر', 'فاطر', 96, 120),
+  naab('عود', 'ناب', 120, 240),
+  harish('هرش', 'ناب', 240, 1 << 20);
 
-  const AgeClass(this.male, this.female, this.minYears, this.maxYears);
+  const AgeClass(this.male, this.female, this.minMonths, this.maxMonths);
 
   final String male;
   final String female;
-  final int minYears;
-  final int maxYears;
+  final int minMonths;
+  final int maxMonths;
+
+  /// The first day of the class (days are counted as 365 a year).
+  int get minDays => (minMonths * 365 + 11) ~/ 12;
 
   String labelFor(Sex sex) => sex == Sex.female ? female : male;
 
   static AgeClass fromDays(int ageDays) {
-    final years = ageDays ~/ 365;
-    return AgeClass.values.firstWhere(
-      (a) => years >= a.minYears && years < a.maxYears,
-      orElse: () => AgeClass.mature,
-    );
+    for (var i = values.length - 1; i > 0; i--) {
+      if (ageDays >= values[i].minDays) return values[i];
+    }
+    return hwar;
   }
 }
 

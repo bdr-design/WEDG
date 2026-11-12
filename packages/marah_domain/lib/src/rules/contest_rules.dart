@@ -15,8 +15,8 @@ class ContestRules {
       FestivalTier.local => 40000,
     };
     final ageFactor = switch (age) {
-      AgeClass.mafrood || AgeClass.laqi => 0.6,
-      AgeClass.haq || AgeClass.jatha => 0.8,
+      AgeClass.mafrood || AgeClass.haq => 0.6,
+      AgeClass.laqi || AgeClass.jatha => 0.8,
       _ => 1.0,
     };
     const shares = [1.0, 0.6, 0.42, 0.3, 0.22, 0.16, 0.12, 0.09, 0.07, 0.05];
