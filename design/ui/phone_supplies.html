@@ -194,6 +194,7 @@
   .row .act { grid-row: span 2; }
   .row .act .btn { height: 36px; border-radius: 11px; font-size: 13px; padding-inline: 14px; }
   .btn[disabled] { background: #eeeef1; color: #a5a5ab; }
+  .btn.two { height: auto; min-height: 44px; flex-direction: column; gap: 0; padding-block: 6px; line-height: 1.25; }
   .stp { grid-row: span 2; display: flex; align-items: center; gap: 4px; }
   .stp button { width: 32px; height: 32px; border-radius: 10px; background: var(--acc-soft); color: var(--acc); display: grid; place-items: center; }
   .stp button svg { width: 16px; height: 16px; stroke-width: 2.6; }
@@ -438,7 +439,7 @@
       <div class="note">زد الكمية ويطلع لك المجموع وزر الطلب.</div></div>`,
     feedBroke: () => `<div class="body">${nav()}<div class="title">العلف</div>
       <div class="warn"><span class="lead">${svg('alert')}</span><b>رصيدك ما يكفي لـ 3 أسابيع</b><small>عندك 1,200 ريال. يكفي لأسبوع: 3 أكياس و14 بالة، أو بع ناقة من الحراج.</small></div>
-      <button class="btn ghost">اطلب لأسبوع · 570 ريال</button>
+      <button class="btn ghost two"><span>اطلب لأسبوع</span><span>570 ريال</span></button>
       <div class="tank"><small>مستودع العلف · 20,000 كجم</small>
         <div class="kind"><span>شعير 29 كجم</span><span class="d bad">يوم واحد</span></div><div class="bar feed low"><i style="width:5%"></i></div>
         <div class="kind"><span>برسيم 58 كجم</span><span class="d bad">يوم واحد</span></div><div class="bar feed low"><i style="width:5%"></i></div></div>
@@ -461,7 +462,8 @@
   const v = new URLSearchParams(location.search).get('v') || 'home';
   const scr = document.getElementById('scr');
   if (v === 'home') scr.classList.add('home');
-  scr.innerHTML = `<span class="pill"></span>${sbar}${S[v]()}<div class="hb"></div>`;
+  // as phone.js does: a number kept on the line of the word after it
+  scr.innerHTML = `<span class="pill"></span>${sbar}${S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0')}<div class="hb"></div>`;
 </script>
 </body>
 </html>
