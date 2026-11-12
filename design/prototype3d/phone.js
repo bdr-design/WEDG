@@ -412,6 +412,19 @@ export function createPhone({ host }) {
       if (ew > room) e.style.fontSize = (parseFloat(getComputedStyle(e).fontSize) * room / ew * 0.97).toFixed(1) + 'px';
     }
   }
+  // a button the keyboard brings the focus to is scrolled into sight, clear of the top bar that stays and of the sell
+  // button over the market's list (focused without the browser's own scrolling, which moved the page; enlarged, most of
+  // the action buttons sit below the fold). Along the phone: turned, the screen's x the other way
+  function reveal(el) {
+    const sc = st.state === 'big' && el.closest && el.closest('.hs, .body');
+    if (!sc || sc.scrollHeight <= sc.clientHeight + 1 || el.closest('.nav, .dock, .sell')) return;      // (the top bar, the dock and the sell button do not scroll: moved for them, the content stepped 52 pt a Tab)
+    const span = (q) => { const r = q.getBoundingClientRect(); return turned() ? [innerWidth - r.right, innerWidth - r.left] : [r.top, r.bottom]; };
+    const [s0, s1] = span(sc), k = sc.clientHeight / Math.max(1, s1 - s0), [e0, e1] = span(el);
+    const nav = sc.querySelector(':scope > .nav'), sell = scr.querySelector('.sell');
+    const top = (nav ? span(nav)[1] : s0) + 8, bottom = (sell ? span(sell)[0] : s1) - 8;
+    if (e0 < top) sc.scrollTop -= (top - e0) * k; else if (e1 > bottom) sc.scrollTop += (e1 - bottom) * k;
+  }
+  const focusIn = (el) => { el.focus({ preventScroll: true }); reveal(el); };
   // the small phone's size and place: by the screen's height (it leaves the top row of buttons clear), at the right
   // edge on the map, and left of the door's buttons and the pedals in play
   function layout() {
@@ -511,7 +524,7 @@ export function createPhone({ host }) {
     const t = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-go], .liveban');
     if (!t) return;
     e.preventDefault(); show(t.dataset.go || 'auction');
-    (scr.querySelector('.back, [data-go], button') || dev).focus({ preventScroll: true });      // (the screen is rebuilt: the focus stays in the phone, not dropped to the page)
+    focusIn(scr.querySelector('.back, [data-go], button') || dev);      // (the screen is rebuilt: the focus stays in the phone, not dropped to the page)
   });
   scr.addEventListener('click', (e) => {
     if (e.detail !== 0 && (slid || stopTap)) { slid = stopTap = false; return; }      // (the finger slid the phone or stopped a fling: not a tap; a keyboard's or assistive technology's click is never one of those)
@@ -519,7 +532,7 @@ export function createPhone({ host }) {
     const t = e.target.closest('[data-go], .back, .liveban');
     if (!t) return;
     show(t.dataset.go || (t.classList.contains('liveban') ? 'auction' : 'home'));
-    if (e.detail === 0) (scr.querySelector('.back, [data-go], button') || dev).focus({ preventScroll: true });      // (from the keyboard, Enter on the back button: the focus stays in the rebuilt screen)
+    if (e.detail === 0) focusIn(scr.querySelector('.back, [data-go], button') || dev);      // (from the keyboard, Enter on the back button: the focus stays in the rebuilt screen)
   });
   addEventListener('resize', () => { if (st.state !== 'closed') { layout(); fitNumbers(); box.classList.toggle('turned', turned()); } });
   document.fonts?.addEventListener?.('loadingdone', () => fitNumbers());      // (a figure measured before its font came in: the phone's faces load only as it first shows, after fonts.ready has long resolved)
@@ -528,7 +541,7 @@ export function createPhone({ host }) {
     if (st.state !== 'big' || e.key !== 'Tab') return;
     const all = [...scr.querySelectorAll('[tabindex="0"], button')], at = all.indexOf(root.activeElement);
     if (!all.length) return;
-    e.preventDefault(); all[(at + (e.shiftKey ? -1 : 1) + all.length + (at < 0 && e.shiftKey ? 1 : 0)) % all.length].focus({ preventScroll: true });
+    e.preventDefault(); focusIn(all[(at + (e.shiftKey ? -1 : 1) + all.length + (at < 0 && e.shiftKey ? 1 : 0)) % all.length]);
   }, true);
   return {
     toggle: () => set(st.state === 'closed' ? 'small' : 'closed'), close: () => set('closed'), hit,

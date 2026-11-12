@@ -250,9 +250,9 @@ what it can see of it. Measured the same way, at 844 × 390:
 | View | Before | Now |
 |---|---|---|
 | Map, drone view | 183 / 273k | 183 / 252k |
-| On foot, by the car | 167 / 394k | 168 / 379k |
-| In the car, from the seat | 145 / 361k | 143 / 339k |
-| In the car, from behind | 189 / 404k | 185 / 385k |
+| On foot, by the car | 167 / 394k | 167 / 379k |
+| In the car, from the seat | 145 / 361k | 144 / 340k |
+| In the car, from behind | 189 / 404k | 187 / 385k |
 | In the car, out on the sand | 84 / 226k | 83 / 228k |
 
 Still over, for a moment: **on foot with the driver's door open, 422k** (166
@@ -275,7 +275,7 @@ shadow copies below.
   over a wall from where the line to the car enters it, not from its own
   height (it shook 5-7 cm three times a second by the yard's wall). It climbs
   at most 5 m/s (it rose 74 cm in one frame as the room came between), and
-  comes in rather than rise more than 5 m over the car. It never enters a wall
+  comes in (at most 6 m/s) rather than rise more than 5 m over the car. It never enters a wall
   or a building below its top: it is put back out by the side it came in by,
   so it slides along that face, and lets go at most 4 m/s. (Held at the face
   along its line, it jumped up to 3 m toward the car as the line swung onto a

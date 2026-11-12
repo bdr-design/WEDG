@@ -88,7 +88,7 @@ DOOR_Z = (0.43, 1.22, 1.79)
 DOOR_A = ((0.94, 1.22), (0.11, 1.765))
 HINGE = (0.94, 0.92, 0.85)
 APIL_GLASS = 0.03                       # the door's glass cut clean this far past the A pillar's line and taken to there (it runs 2-4 cm under the pillar's trim)
-SASH = (-0.027, -0.003, 0.012)          # the front sash member: from 2.7 cm to 3 mm forward of the line (along the pane's front edge), 1.2 cm inside the glass
+SASH = (-0.027, -0.003, 0.012)          # the front sash member: 2.4 cm wide from the pane's front edge (2.7 cm forward of the line at most), 1.2 cm inside the glass
 MIRROR = ((0.50, 0.82), (0.76, 1.10), (1.24, 1.50))      # the door-mounted mirror's box: it goes with the door whole
 
 
@@ -165,10 +165,18 @@ def sash_line(body):
     out = []
     for i in range(21):
         t = i / 20; p = Vector((ax + (bx - ax) * t, 0, az + (bz - az) * t))
-        row = []
-        for off in (SASH[0], SASH[1]):
+        # the pane's front edge at this height: the first glass met stepping back from SASH[0] forward of the line (near
+        # the top corner it recedes behind the line: with fixed places, half the heights found no glass and the member
+        # stopped 10 cm short of the frame's top)
+        row = [None, None]
+        off = SASH[0]
+        while off < 0.08:
             q = p + back * off; h = bvh.ray_cast(Vector((q.x, 1.5, q.z)), Vector((0, -1, 0)), 1.2)
-            row.append(Vector((q.x, h[0].y - SASH[2], q.z)) if h[0] else None)
+            if h[0]:
+                q2 = p + back * (off + SASH[1] - SASH[0]); h2 = bvh.ray_cast(Vector((q2.x, 1.5, q2.z)), Vector((0, -1, 0)), 1.2)
+                row = [Vector((q.x, h[0].y - SASH[2], q.z)), Vector((q2.x, (h2[0] or h[0]).y - SASH[2], q2.z))]
+                break
+            off += 0.003
         out.append(row)
     bm.free()
     return [r for r in out if r[0] and r[1]]

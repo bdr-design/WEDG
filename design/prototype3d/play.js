@@ -578,7 +578,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
   }
   const CHASE_BACK = 5.6, CHASE_UP = 2.05, CHASE_TURN = 4;      // m behind and above the car's middle; 1/s: how fast the camera's heading follows the car's (game choice)
-  const CHASE_CAP = 5.0, CHASE_NEAR = 2.6, CHASE_CLIMB = 5, CHASE_LETGO = 4;      // m over the car the camera rises at most to see over a wall, then it comes in; m from the car's middle at the nearest; m/s its climb over a wall at most; m/s it moves back out at most once a wall lets it go (game choices)
+  const CHASE_CAP = 5.0, CHASE_NEAR = 2.6, CHASE_CLIMB = 5, CHASE_LETGO = 4, CHASE_IN = 6;      // m over the car the camera rises at most to see over a wall, then it comes in; m from the car's middle at the nearest; m/s its climb over a wall at most; m/s it moves back out at most once a wall lets it go; m/s it comes in at most (game choices)
   let camYaw = 0, camY = null, camVy = 0, camPrevY = 0, camBack = null, camLift = 0, camPullX = 0, camPullZ = 0, camHad = false;
   const camPrev = new THREE.Vector3();
   // where along the segment (x0, z0) to (x1, z1) it enters the box b, from 0 to 1, or 1 if it does not (the slab test;
@@ -636,7 +636,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
           if (h > cap) wantBack = Math.min(wantBack, at * (cap - lookY) / top);
         }
         wantBack = Math.max(CHASE_NEAR, wantBack);
-        camBack = camBack === null || state.snap ? wantBack : camBack + (wantBack - camBack) * Math.min(1, dt * (wantBack < camBack ? 12 : 4));      // (in quickly, out slowly)
+        camBack = camBack === null || state.snap ? wantBack : camBack + Math.max(-CHASE_IN * dt, (wantBack - camBack) * Math.min(1, dt * (wantBack < camBack ? 12 : 4)));      // (in quickly, out slowly; in no faster than CHASE_IN: at 30 fps it stepped 0.85 m in a frame)
         const rawX = carState.pos.x + bx * camBack, rawZ = carState.pos.z + bz * camBack;
         // never into a wall or a building below its top (0.3 m clear of it): put back out by the side it came in by, from
         // where it was the frame before, so it slides along that face; let go, the push eases off over half a second.
