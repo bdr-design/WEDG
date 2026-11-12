@@ -83,6 +83,14 @@ final class SetFeedPlan extends Command {
   final FeedPlan plan;
 }
 
+/// Orders [units] of a supply: bags of barley, bales of alfalfa or tanker
+/// loads of water. It is paid on ordering and arrives a day later.
+final class OrderSupply extends Command {
+  const OrderSupply(super.actor, this.supply, this.units);
+  final Supply supply;
+  final int units;
+}
+
 final class SetShepherds extends Command {
   const SetShepherds(super.actor, this.count);
   final int count;

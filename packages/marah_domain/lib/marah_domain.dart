@@ -24,4 +24,5 @@ export 'src/model/market.dart' show Offer;
 export 'src/model/player.dart';
 export 'src/rules/balance.dart';
 export 'src/rules/contest_rules.dart';
+export 'src/rules/provisions.dart';
 export 'src/views/views.dart';

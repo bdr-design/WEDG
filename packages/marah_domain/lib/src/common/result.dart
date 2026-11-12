@@ -37,6 +37,10 @@ enum ErrorCode {
   roundOwnerLimit,
   notEntered,
 
+  /// An order would overfill the feed store or the water tank ({'room'}: units
+  /// that still fit).
+  storeFull,
+
   /// The engine hit a bug; the game was restored from the last save.
   internalError,
 }

@@ -31,6 +31,7 @@ const fixtures = {
   2: 'test/fixtures/save_v2.json',
   3: 'test/fixtures/save_v3.json',
   4: 'test/fixtures/save_v4.json',
+  5: 'test/fixtures/save_v5.json',
 };
 
 void main() {
@@ -155,7 +156,9 @@ void main() {
       }
       // decoded by today's classes after the later steps too
       final state = GameState.fromJson(
-        SaveCodec.migrations[3]!(SaveCodec.migrations[2]!(after)),
+        SaveCodec.migrations[4]!(
+          SaveCodec.migrations[3]!(SaveCodec.migrations[2]!(after)),
+        ),
       );
       expect(checkInvariants(state), isEmpty);
     },
@@ -316,7 +319,11 @@ void main() {
     final text = jsonEncode(after);
     expect(text.contains('"legs"'), isFalse);
     expect(
-      checkInvariants(GameState.fromJson(SaveCodec.migrations[3]!(after))),
+      checkInvariants(
+        GameState.fromJson(
+          SaveCodec.migrations[4]!(SaveCodec.migrations[3]!(after)),
+        ),
+      ),
       isEmpty,
     );
   });
@@ -350,7 +357,28 @@ void main() {
     expect(c['sickSince'], isNull);
     expect(((out['inboxes']! as Map).values.first as List).length, n - 1);
     expect(jsonEncode(out).contains('brucellosis'), isFalse);
-    expect(checkInvariants(GameState.fromJson(out)), isEmpty);
+    expect(
+      checkInvariants(GameState.fromJson(SaveCodec.migrations[4]!(out))),
+      isEmpty,
+    );
+  });
+
+  test('v4 to v5: every farm gets a store and a tank with a month in them', () {
+    final raw = jsonDecode(
+      File(fixtures[4]!).readAsStringSync(),
+    ) as Map<String, Object?>;
+    final out = SaveCodec.migrations[4]!(raw['data']! as Map<String, Object?>);
+    final farm = ((out['players']! as List).first as Map)['farm']! as Map;
+    expect(farm['storeKg'], greaterThanOrEqualTo(20000));
+    expect(farm['tankL'], greaterThanOrEqualTo(40000));
+    expect(farm['barleyKg'] as num, greaterThan(0));
+    expect(farm['waterL'] as num, greaterThan(0));
+    expect(farm['deliveries'], isEmpty);
+    final state = GameState.fromJson(out);
+    expect(checkInvariants(state), isEmpty);
+    // it plays a month with the stores it was given
+    final g = Game(state)..advanceDays(30);
+    expect(checkInvariants(g.state), isEmpty);
   });
 
   group('rejects without losing anything', () {

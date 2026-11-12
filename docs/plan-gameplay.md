@@ -71,7 +71,8 @@ and cheating (parts 4 and 5) are built; the auctions (part 6) come with G5.
      choice).
    - A shortage lowers body condition and raises illness, and body condition
      shows on judging day.
-   - `SetFeedPlan` goes.
+   - The feed plan stays as the ration (how much each camel is fed a day),
+     drawn from the stores instead of paid by the day.
 4. **The Saudi round system:**
    - Round types and who may enter each, from research section 2.
    - Registration rules from GDD 7: one فردي and one جمل entry per owner; no

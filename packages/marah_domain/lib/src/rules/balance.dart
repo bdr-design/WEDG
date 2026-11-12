@@ -96,10 +96,64 @@ class Balance {
   /// (balance) Starting money.
   static const startingCash = 600000;
 
-  /// (balance) Feed for one adult on the standard plan, riyals per day
-  /// (≈ 10–12 kg mix of alfalfa, barley and straw; to be replaced by the feed
-  /// stocks of G1 part 3).
-  static const feedPerAdultPerDay = 26.0;
+  // ------------------------------------------------------------ provisions
+  /// (field) A bag of imported barley: 50 kg, SAR 67.9 (GASTAT's average
+  /// prices, February 2026; section 7). Prices scale by the region's feed
+  /// factor (balance).
+  static const barleyBagKg = 50;
+  static const barleyBagPrice = 67.9;
+
+  /// (field) A bale of alfalfa: SAR 28.81 (GASTAT, October 2025; section 7).
+  /// (balance) Its weight, 25 kg: small square bales run about 18 to 27 kg
+  /// (a weak source).
+  static const alfalfaBaleKg = 25;
+  static const alfalfaBalePrice = 28.81;
+
+  /// (balance) A water tanker's load (الوايت) and its price: no source found.
+  static const waterLoadL = 20000;
+  static const waterLoadPrice = 450.0;
+
+  /// (balance) Each head of room built adds a month of an adult's standard
+  /// ration to the feed store (30 x 11 kg) and of summer water to the tank
+  /// (30 x 30 L).
+  static const storeKgPerHead = 330;
+  static const tankLPerHead = 900;
+
+  /// (balance) Days an order takes to arrive.
+  static const deliveryDays = 1;
+
+  /// (balance) The feed store's and the water tank's sizes on a new farm, and
+  /// what a new farm starts with (30 days of the herd's needs).
+  static const startingStoreKg = 20000;
+  static const startingTankL = 40000;
+  static const startingStockDays = 30;
+
+  /// Water a day (litres). (field) A nursing camel drinks 37 to 46 L
+  /// (section 6): 42. (balance) The others by the season: camels go about 17
+  /// days without water in winter and 7 in summer (section 6), so they drink
+  /// less in winter.
+  static const nursingWaterL = 42.0;
+  static double waterL(int month) => switch (month) {
+    5 || 6 || 7 || 8 || 9 => 30.0,
+    11 || 12 || 1 || 2 || 3 => 15.0,
+    _ => 22.0,
+  };
+
+  /// (field) Days a camel can go without water: about 17 in winter, 7 in
+  /// summer (section 6); (balance) 12 in between.
+  static int thirstDays(int month) => switch (month) {
+    5 || 6 || 7 || 8 || 9 => 7,
+    11 || 12 || 1 || 2 || 3 => 17,
+    _ => 12,
+  };
+
+  /// (balance) Without enough water: body condition held this much lower,
+  /// and past the days a camel can go without, this daily chance of death.
+  static const thirstPenalty = 20.0;
+  static const thirstDeathChance = 0.03;
+
+  /// (balance) A warning when a store holds this many days or fewer.
+  static const lowStockDays = 3;
 
   static double feedAgeFactor(int ageDays) {
     if (ageDays < 180) return 0.2; // suckling

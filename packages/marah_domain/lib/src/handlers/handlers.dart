@@ -12,6 +12,7 @@ import '../model/market.dart';
 import '../model/player.dart';
 import '../rules/balance.dart';
 import '../rules/eligibility.dart';
+import '../rules/provisions.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
 import '../systems/systems.dart';
@@ -35,6 +36,7 @@ Result handle(Sim sim, Command cmd) {
     Treat() => _treat(sim, p, cmd),
     RenameCamel() => _rename(sim, p, cmd),
     SetFeedPlan() => _feedPlan(sim, p, cmd),
+    OrderSupply() => _order(sim, p, cmd),
     SetShepherds() => _shepherds(sim, p, cmd),
     ExpandFarm() => _expand(sim, p),
     EnterRound() => _enter(sim, p, cmd),
@@ -395,6 +397,41 @@ Result _feedPlan(Sim sim, PlayerState p, SetFeedPlan cmd) {
   return _ok(sim);
 }
 
+Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
+  if (cmd.units < 1) return _err(sim, ErrorCode.invalidAmount);
+  final size = Provisions.unitSize(cmd.supply);
+  final fits = (Provisions.room(p.farm, cmd.supply) / size).floor();
+  if (cmd.units > fits) {
+    return _err(sim, ErrorCode.storeFull, {'room': fits < 0 ? 0 : fits});
+  }
+  final cost = Riyal(
+    (Provisions.unitPrice(cmd.supply, p.farm.region) * cmd.units).round(),
+  );
+  if (p.cash < cost) {
+    return _err(sim, ErrorCode.insufficientFunds, {'needed': cost.value});
+  }
+  sim.pay(
+    p,
+    -cost,
+    cmd.supply == Supply.water ? LedgerCategory.water : LedgerCategory.feed,
+  );
+  final arrives = sim.today + Balance.deliveryDays;
+  p.farm.deliveries.add(
+    Delivery(supply: cmd.supply, units: cmd.units, arrivesOn: arrives),
+  );
+  sim.emit(
+    SupplyOrdered(
+      sim.today,
+      owner: p.id,
+      supply: cmd.supply,
+      units: cmd.units,
+      cost: cost.value,
+      arrivesOn: arrives,
+    ),
+  );
+  return _ok(sim);
+}
+
 Result _shepherds(Sim sim, PlayerState p, SetShepherds cmd) {
   if (cmd.count < 1 || cmd.count > Balance.maxShepherds) {
     return _err(sim, ErrorCode.invalidAmount);
@@ -413,7 +450,10 @@ Result _expand(Sim sim, PlayerState p) {
     return _err(sim, ErrorCode.insufficientFunds, {'needed': cost.value});
   }
   sim.pay(p, -cost, LedgerCategory.construction);
-  p.farm.capacity += Balance.expansionStep;
+  p.farm
+    ..capacity += Balance.expansionStep
+    ..storeKg += Balance.expansionStep * Balance.storeKgPerHead
+    ..tankL += Balance.expansionStep * Balance.tankLPerHead;
   sim.emit(
     FarmExpanded(
       sim.today,

@@ -14,6 +14,7 @@ import '../model/player.dart';
 import '../rules/balance.dart';
 import '../rules/eligibility.dart';
 import '../rules/judging.dart';
+import '../rules/provisions.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
 import '../systems/systems.dart';
@@ -227,6 +228,36 @@ class GameView {
   // ------------------------------------------------------------- money
 
   Riyal get dailyFeed => UpkeepSystem.dailyFeed(_sim, me);
+
+  // ------------------------------------------------------------ provisions
+
+  /// The herd's needs a day under the current ration.
+  ({double barley, double alfalfa, double water}) get dailyNeeds =>
+      Provisions.needs(_w.aliveOwnedBy(viewer), me.farm.feedPlan, today);
+
+  /// What is in store now (kg or L), not counting orders on the way.
+  double inStore(Supply s) => Provisions.stocked(me.farm, s, withOrders: false);
+
+  /// Whole days a store lasts at today's needs (null when nothing is needed).
+  int? daysLeft(Supply s) {
+    final n = dailyNeeds;
+    return Provisions.daysLeft(inStore(s), switch (s) {
+      Supply.barley => n.barley,
+      Supply.alfalfa => n.alfalfa,
+      Supply.water => n.water,
+    });
+  }
+
+  /// Units of [s] that fit in the store or tank, orders on the way counted.
+  int roomFor(Supply s) {
+    final r = (Provisions.room(me.farm, s) / Provisions.unitSize(s)).floor();
+    return r < 0 ? 0 : r;
+  }
+
+  Riyal unitPrice(Supply s) =>
+      Riyal(Provisions.unitPrice(s, me.farm.region).round());
+  List<Delivery> get onTheWay => List.unmodifiable(me.farm.deliveries);
+  int get dryDays => me.farm.dryDays;
   Riyal get monthlyWages =>
       Riyal(me.farm.shepherds * Balance.shepherdMonthlyWage);
   int get shepherdsNeeded => CareSystem.shepherdsNeeded(herd.length);

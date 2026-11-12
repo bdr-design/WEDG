@@ -7,6 +7,8 @@ import '../events.dart';
 import '../game.dart';
 import '../invariants.dart';
 import '../model/camel.dart';
+import '../model/player.dart';
+import '../rules/provisions.dart';
 import '../views/views.dart';
 
 /// A scripted player that uses every feature, for long-run simulations and
@@ -39,6 +41,25 @@ class Bot {
 
     for (final c in v.herd) {
       if (c.health == HealthStatus.sick) _do(Treat(me, c.id));
+    }
+
+    // Feed and water: topped up to three weeks when under ten days, as far as
+    // the store and the tank hold.
+    for (final s in Supply.values) {
+      final left = v.daysLeft(s);
+      if (left == null || left >= 10) continue;
+      final n = v.dailyNeeds;
+      final need = switch (s) {
+        Supply.barley => n.barley,
+        Supply.alfalfa => n.alfalfa,
+        Supply.water => n.water,
+      };
+      final want =
+          ((need * 21 - Provisions.stocked(v.me.farm, s)) /
+                  Provisions.unitSize(s))
+              .ceil();
+      final units = want < v.roomFor(s) ? want : v.roomFor(s);
+      if (units > 0) _do(OrderSupply(me, s, units));
     }
 
     final needed = v.shepherdsNeeded;

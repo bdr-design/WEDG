@@ -4,12 +4,14 @@ import 'commands.dart';
 import 'common/ids.dart';
 import 'common/money.dart';
 import 'common/result.dart';
+import 'common/rng.dart';
 import 'common/time.dart';
 import 'events.dart';
 import 'handlers/handlers.dart' as handlers;
 import 'model/game_state.dart';
 import 'model/player.dart';
 import 'rules/balance.dart';
+import 'rules/provisions.dart';
 import 'rules/valuation.dart';
 import 'sim.dart';
 import 'systems/systems.dart';
@@ -60,6 +62,8 @@ class Game {
         capacity: Balance.startingCapacity,
         shepherds: 1,
         feedPlan: FeedPlan.standard,
+        storeKg: Balance.startingStoreKg,
+        tankL: Balance.startingTankL,
       ),
     );
     final state = GameState(
@@ -93,6 +97,18 @@ class Game {
         ..acquiredOn = start - 200
         ..lastPlayerOwner = playerId
         ..purchasePrice = Valuation.value(c, start).value;
+    }
+    // a month of the starter herd's needs in store (balance)
+    {
+      final n = Provisions.needs(
+        sim.herdOf(playerId),
+        player.farm.feedPlan,
+        start,
+      );
+      player.farm
+        ..barleyKg = q2(n.barley * Balance.startingStockDays)
+        ..alfalfaKg = q2(n.alfalfa * Balance.startingStockDays)
+        ..waterL = q2(n.water * Balance.startingStockDays);
     }
     for (var i = 0; i < 34; i++) {
       gen.addMarketListing(rng);

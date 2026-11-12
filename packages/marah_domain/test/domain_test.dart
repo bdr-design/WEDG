@@ -52,6 +52,18 @@ Camel camelFor(
 
 void expectClean(Game g) => expect(checkInvariants(g.state), isEmpty);
 
+/// The farm's stores filled for a long run: for tests about other things than
+/// feed and water, which would otherwise run out.
+Game stocked(Game g) {
+  g.me.farm
+    ..storeKg = 1 << 30
+    ..tankL = 1 << 30
+    ..barleyKg = 1e8
+    ..alfalfaKg = 1e8
+    ..waterL = 1e9;
+  return g;
+}
+
 void main() {
   group('Rng', () {
     test('same seed, same stream; resumable', () {
@@ -245,7 +257,7 @@ void main() {
       'about 11% of calves die young in their first year besides illness',
       () {
         // the daily chance alone, for calves in condition: 1 - (1 - h)^365
-        final g = newGame(17);
+        final g = stocked(newGame(17));
         final sim = Sim(g.state), gen = WorldGen(sim);
         final calves = [
           for (var i = 0; i < 600; i++)
@@ -306,6 +318,90 @@ void main() {
         containsAll(['جرب', 'القراع', 'الجدري']),
       );
     });
+  });
+
+  group('Provisions (GDD 4.3, the owner 12 Nov 2026)', () {
+    test('a new farm starts with a month of feed and water', () {
+      final g = newGame(3);
+      final v = GameView(g.state, g.me.id);
+      for (final s in Supply.values) {
+        expect(v.daysLeft(s), inInclusiveRange(29, 30), reason: s.name);
+      }
+    });
+
+    test('an order is paid at the real price and arrives the next day', () {
+      final g = newGame(4);
+      final cash = g.me.cash.value;
+      final r = g.dispatch(OrderSupply(g.me.id, Supply.barley, 10));
+      expect(r.ok, isTrue);
+      final price = (Balance.barleyBagPrice * g.me.farm.region.feed * 10)
+          .round();
+      expect(cash - g.me.cash.value, price);
+      final before = g.me.farm.barleyKg;
+      final events = g.advanceDays(1);
+      expect(events.whereType<SupplyDelivered>().single.units, 10);
+      // ten bags in, a day's ration out
+      expect(g.me.farm.barleyKg, greaterThan(before + 400));
+    });
+
+    test('an order that does not fit, or is not paid for, is refused', () {
+      final g = newGame(4);
+      final room = GameView(g.state, g.me.id).roomFor(Supply.water);
+      final r = g.dispatch(OrderSupply(g.me.id, Supply.water, room + 1)) as Err;
+      expect(r.error.code, ErrorCode.storeFull);
+      expect(r.error.params['room'], room);
+      expect(
+        (g.dispatch(OrderSupply(g.me.id, Supply.alfalfa, 0)) as Err).error.code,
+        ErrorCode.invalidAmount,
+      );
+      g.me.cash = const Riyal(10);
+      expect(
+        (g.dispatch(OrderSupply(g.me.id, Supply.barley, 1)) as Err).error.code,
+        ErrorCode.insufficientFunds,
+      );
+    });
+
+    test(
+      'unfed and dry, the herd is warned, thins and in time dies of thirst',
+      () {
+        final g = newGame(6);
+        final events = g.advanceDays(60);
+        final low = events.whereType<SupplyLow>().toList();
+        expect(low.where((e) => e.days == 3).length, 3);
+        expect(low.where((e) => e.days == 0).length, 3);
+        expect(g.me.farm.fedShare, 0);
+        expect(g.me.farm.dryDays, greaterThan(5));
+        final herd = g.state.world.aliveOwnedBy(g.me.id);
+        for (final c in herd) {
+          expect(c.condition, lessThan(45));
+        }
+        final more = g.advanceDays(120);
+        expect(
+          more.whereType<Died>().where((d) => d.cause == DeathCause.thirst),
+          isNotEmpty,
+        );
+      },
+    );
+
+    test(
+      'a nursing camel drinks 42 L; room built adds to the store and tank',
+      () {
+        final g = newGame(7);
+        final dam = g.state.world.aliveOwnedBy(g.me.id).first
+          ..lastCalvedOn = g.today - 30;
+        expect(Provisions.waterFor(dam, g.today), 42);
+        final store = g.me.farm.storeKg, tank = g.me.farm.tankL;
+        expect(g.dispatch(ExpandFarm(g.me.id)).ok, isTrue);
+        expect(
+          g.me.farm.storeKg - store,
+          Balance.expansionStep * Balance.storeKgPerHead,
+        );
+        expect(
+          g.me.farm.tankL - tank,
+          Balance.expansionStep * Balance.tankLPerHead,
+        );
+      },
+    );
   });
 
   group('Colour families', () {
@@ -562,7 +658,7 @@ void main() {
     test(
       'mating charges fee and transport, then a calf about 13 months on',
       () {
-        final g = newGame(11)..advanceDays(45); // mid-November
+        final g = stocked(newGame(11))..advanceDays(45); // mid-November
         final dam = g.state.world.camels.values.firstWhere(
           (c) => c.ownerId == g.me.id && c.ageYears(g.today) >= 6,
         );
@@ -816,8 +912,8 @@ void main() {
     });
 
     test('a better feed plan raises body condition over weeks', () {
-      final cheap = newGame(8);
-      final rich = newGame(8);
+      final cheap = stocked(newGame(8));
+      final rich = stocked(newGame(8));
       cheap.dispatch(SetFeedPlan(cheap.me.id, FeedPlan.economy));
       rich.dispatch(SetFeedPlan(rich.me.id, FeedPlan.premium));
       cheap.advanceDays(90);

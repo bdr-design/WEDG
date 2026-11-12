@@ -12,6 +12,7 @@ import '../rules/contest_rules.dart';
 import '../rules/genetics.dart';
 import '../rules/judging.dart';
 import '../rules/names.dart';
+import '../rules/provisions.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
 import '../world_gen.dart';
@@ -57,23 +58,25 @@ class CalendarSystem implements DailySystem {
 class UpkeepSystem implements DailySystem {
   const UpkeepSystem();
 
+  /// What a day of the ration costs at today's prices (for the player's
+  /// reckoning: feed is paid for when ordered).
   static Riyal dailyFeed(Sim sim, PlayerState p) {
-    var total = 0.0;
-    for (final c in sim.herdOf(p.id)) {
-      total +=
-          Balance.feedPerAdultPerDay *
-          Balance.feedAgeFactor(c.ageDays(sim.today));
-    }
+    final n = Provisions.needs(sim.herdOf(p.id), p.farm.feedPlan, sim.today);
+    final r = p.farm.region;
     return Riyal(
-      (total * p.farm.feedPlan.costFactor * p.farm.region.feed).round(),
+      (n.barley / Balance.barleyBagKg * Provisions.unitPrice(Supply.barley, r) +
+              n.alfalfa /
+                  Balance.alfalfaBaleKg *
+                  Provisions.unitPrice(Supply.alfalfa, r))
+          .round(),
     );
   }
 
   @override
   void run(Sim sim) {
     for (final p in sim.state.players.values) {
-      final feed = dailyFeed(sim, p);
-      sim.bill(p, -feed, LedgerCategory.feed);
+      _deliver(sim, p);
+      _consume(sim, p);
       if (sim.today.date.day == 1) {
         final wages = Riyal(p.farm.shepherds * Balance.shepherdMonthlyWage);
         sim.bill(p, -wages, LedgerCategory.wages);
@@ -89,6 +92,67 @@ class UpkeepSystem implements DailySystem {
           sim.emit(CashNegative(sim.today, owner: p.id, cash: p.cash.value));
         }
       }
+    }
+  }
+
+  static void _deliver(Sim sim, PlayerState p) {
+    final f = p.farm;
+    for (final d in f.deliveries.where((d) => d.arrivesOn <= sim.today)) {
+      final amount = (d.units * Provisions.unitSize(d.supply)).toDouble();
+      switch (d.supply) {
+        case Supply.barley:
+          f.barleyKg += amount;
+        case Supply.alfalfa:
+          f.alfalfaKg += amount;
+        case Supply.water:
+          f.waterL += amount;
+      }
+      sim.emit(
+        SupplyDelivered(
+          sim.today,
+          owner: p.id,
+          supply: d.supply,
+          units: d.units,
+        ),
+      );
+    }
+    f.deliveries.removeWhere((d) => d.arrivesOn <= sim.today);
+  }
+
+  /// The day's ration and water from the stores, as far as they go; a
+  /// warning when a store is down to a few days, or out.
+  static void _consume(Sim sim, PlayerState p) {
+    final f = p.farm;
+    final n = Provisions.needs(sim.herdOf(p.id), f.feedPlan, sim.today);
+    void warn(Supply s, double before, double after, double need) {
+      final b = Provisions.daysLeft(before, need),
+          a = Provisions.daysLeft(after, need);
+      if (b == null || a == null) return;
+      if ((a <= Balance.lowStockDays && b > Balance.lowStockDays) ||
+          (a == 0 && b > 0)) {
+        sim.emit(SupplyLow(sim.today, owner: p.id, supply: s, days: a));
+      }
+    }
+
+    final barley = n.barley < f.barleyKg ? n.barley : f.barleyKg;
+    final alfalfa = n.alfalfa < f.alfalfaKg ? n.alfalfa : f.alfalfaKg;
+    warn(Supply.barley, f.barleyKg, f.barleyKg - barley, n.barley);
+    warn(Supply.alfalfa, f.alfalfaKg, f.alfalfaKg - alfalfa, n.alfalfa);
+    f
+      ..barleyKg = q2(f.barleyKg - barley)
+      ..alfalfaKg = q2(f.alfalfaKg - alfalfa);
+    final need = n.barley + n.alfalfa;
+    f.fedShare = need <= 0 ? 1 : q2((barley + alfalfa) / need);
+    if (f.waterL >= n.water) {
+      warn(Supply.water, f.waterL, f.waterL - n.water, n.water);
+      f
+        ..waterL = q2(f.waterL - n.water)
+        ..dryDays = 0;
+    } else {
+      warn(Supply.water, f.waterL, 0, n.water);
+      f
+        ..waterL = 0
+        ..dryDays += 1;
     }
   }
 }
@@ -110,7 +174,11 @@ class CareSystem implements DailySystem {
       final short = p.farm.shepherds < needed;
       final crowded = herd.length > p.farm.capacity;
       for (final c in herd) {
-        var target = p.farm.feedPlan.conditionTarget.toDouble();
+        // the ration's condition for the share of it the herd got (unfed, a
+        // camel drifts to 35: balance), and lower again without water
+        final fed = p.farm.fedShare;
+        var target = 35 + (p.farm.feedPlan.conditionTarget - 35) * fed;
+        if (p.farm.dryDays > 0) target -= Balance.thirstPenalty;
         if (short) {
           target -=
               Balance.understaffedPenalty *
@@ -253,6 +321,11 @@ class HealthSystem implements DailySystem {
             if (sim.today >= c.recoversOn!) _recover(sim, c);
         }
         if (!c.isAlive) continue;
+        if (p.farm.dryDays > Balance.thirstDays(sim.today.month) &&
+            rng.chance(Balance.thirstDeathChance)) {
+          _die(sim, c, DeathCause.thirst);
+          continue;
+        }
         if (c.ageDays(sim.today) < 365 &&
             rng.chance(Balance.calfDailyDeath * (c.condition < 50 ? 2 : 1))) {
           _die(sim, c, DeathCause.young);

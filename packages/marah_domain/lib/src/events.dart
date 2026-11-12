@@ -6,9 +6,9 @@ import 'model/contest.dart';
 import 'model/player.dart';
 
 /// Why a camel died.
-/// Why a camel died: an illness, old age, or a young calf's death in its first
-/// year (the real first-year loss, Balance.calfDeathFirstYear).
-enum DeathCause { illness, age, young }
+/// Why a camel died: an illness, old age, a young calf's death in its first
+/// year (the real first-year loss, Balance.calfDeathFirstYear), or thirst.
+enum DeathCause { illness, age, young, thirst }
 
 /// Everything that can happen in the world, as typed, immutable values.
 /// Events carry no display text: the app turns each type into words with an
@@ -123,6 +123,26 @@ sealed class DomainEvent {
         owner: owner,
         camel: camel,
         count: j['count']! as int,
+      ),
+      'supplyOrdered' => SupplyOrdered(
+        day,
+        owner: owner,
+        supply: Supply.values.byName(j['supply']! as String),
+        units: j['units']! as int,
+        cost: j['cost']! as int,
+        arrivesOn: GameDay(j['arrivesOn']! as int),
+      ),
+      'supplyDelivered' => SupplyDelivered(
+        day,
+        owner: owner,
+        supply: Supply.values.byName(j['supply']! as String),
+        units: j['units']! as int,
+      ),
+      'supplyLow' => SupplyLow(
+        day,
+        owner: owner,
+        supply: Supply.values.byName(j['supply']! as String),
+        days: j['days']! as int,
       ),
       'feedPlanChanged' => FeedPlanChanged(
         day,
@@ -493,6 +513,67 @@ final class ShepherdsChanged extends DomainEvent {
   String get type => 'shepherdsChanged';
   @override
   Map<String, Object?> fieldsToJson() => {'count': count};
+}
+
+final class SupplyOrdered extends DomainEvent {
+  const SupplyOrdered(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.supply,
+    required this.units,
+    required this.cost,
+    required this.arrivesOn,
+  });
+  final Supply supply;
+  final int units;
+  final int cost;
+  final GameDay arrivesOn;
+  @override
+  String get type => 'supplyOrdered';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'supply': supply.name,
+    'units': units,
+    'cost': cost,
+    'arrivesOn': arrivesOn.value,
+  };
+}
+
+final class SupplyDelivered extends DomainEvent {
+  const SupplyDelivered(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.supply,
+    required this.units,
+  });
+  final Supply supply;
+  final int units;
+  @override
+  String get type => 'supplyDelivered';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'supply': supply.name,
+    'units': units,
+  };
+}
+
+/// A store holds [days] or fewer days of the herd's needs (0: it ran out).
+final class SupplyLow extends DomainEvent {
+  const SupplyLow(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.supply,
+    required this.days,
+  });
+  final Supply supply;
+  final int days;
+  @override
+  String get type => 'supplyLow';
+  @override
+  Map<String, Object?> fieldsToJson() => {'supply': supply.name, 'days': days};
 }
 
 final class FeedPlanChanged extends DomainEvent {
