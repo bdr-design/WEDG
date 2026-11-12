@@ -27,27 +27,39 @@ enum FeedPlan {
 /// alfalfa in bales, water by the tanker load (الوايت).
 enum Supply { barley, alfalfa, water }
 
+/// The water tankers a farm orders (الوايت): litres and price in Balance.
+/// The large is the supply's unit; the small tops up a tank the large one
+/// does not fit (the owner, 12 Nov 2026).
+enum Tanker { large, small }
+
 /// An order on its way to the farm.
 class Delivery {
   const Delivery({
     required this.supply,
     required this.units,
     required this.arrivesOn,
+    required this.size,
   });
   final Supply supply;
   final int units;
   final GameDay arrivesOn;
 
+  /// Kilograms or litres in each unit (a small tanker's load is not the
+  /// supply's own unit).
+  final int size;
+
   Map<String, Object?> toJson() => {
     'supply': supply.name,
     'units': units,
     'arrivesOn': arrivesOn.value,
+    'size': size,
   };
 
   static Delivery fromJson(Map<String, Object?> j) => Delivery(
     supply: Supply.values.byName(j['supply']! as String),
     units: j['units']! as int,
     arrivesOn: GameDay(j['arrivesOn']! as int),
+    size: j['size']! as int,
   );
 }
 

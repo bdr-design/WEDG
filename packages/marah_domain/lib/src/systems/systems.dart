@@ -12,6 +12,7 @@ import '../rules/contest_rules.dart';
 import '../rules/genetics.dart';
 import '../rules/judging.dart';
 import '../rules/names.dart';
+import '../rules/pasture.dart';
 import '../rules/provisions.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
@@ -98,7 +99,7 @@ class UpkeepSystem implements DailySystem {
   static void _deliver(Sim sim, PlayerState p) {
     final f = p.farm;
     for (final d in f.deliveries.where((d) => d.arrivesOn <= sim.today)) {
-      final amount = (d.units * Provisions.unitSize(d.supply)).toDouble();
+      final amount = (d.units * d.size).toDouble();
       switch (d.supply) {
         case Supply.barley:
           f.barleyKg += amount;
@@ -113,6 +114,7 @@ class UpkeepSystem implements DailySystem {
           owner: p.id,
           supply: d.supply,
           units: d.units,
+          size: d.size,
         ),
       );
     }
@@ -338,7 +340,12 @@ class HealthSystem implements DailySystem {
             if (sim.today >= c.recoversOn!) _recover(sim, c);
         }
         if (!c.isAlive) continue;
-        final pastThirst = p.farm.dryDays - Balance.thirstDays(sim.today.month);
+        final pastThirst =
+            p.farm.dryDays -
+            Balance.thirstDays(
+              sim.today.month,
+              green: Pasture.green(sim.world.seed, p.farm.region, sim.today),
+            );
         if (pastThirst > 0 &&
             rng.chance(Balance.thirstDeathPerDay * pastThirst)) {
           _die(sim, c, DeathCause.thirst);

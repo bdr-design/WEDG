@@ -113,9 +113,13 @@ class Balance {
   /// National Water Company's 19 t tanker SAR 114 to 135 and its 30 t SAR 225
   /// in town, private 6 t tankers SAR 100 to 150 in Riyadh's adverts (search
   /// summaries of bayut.sa and opensooq.com, 12 Nov 2026; research section 7).
-  /// (balance) A 19 t load (19,000 L) to a farm out of town: SAR 200.
+  /// (balance) A 19 t load (19,000 L) to a farm out of town: SAR 200; and a
+  /// 6 t one, to top up a tank the large one does not fit (the owner, 12 Nov
+  /// 2026): SAR 120, inside the adverts' range.
   static const waterLoadL = 19000;
   static const waterLoadPrice = 200.0;
+  static const smallWaterLoadL = 6000;
+  static const smallWaterLoadPrice = 120.0;
 
   /// (field) The share of barley grain and of alfalfa hay that is dry matter:
   /// barley 87 to 90% (Feedipedia's average 87.1%; extension tables 87 to
@@ -152,15 +156,24 @@ class Balance {
     _ => 22.0,
   };
 
-  /// (field) Days a camel can go without water: about 17 in winter, 7 in
-  /// summer (section 6), camels that graze, as the game's herd does each day
-  /// with its shepherd (GDD 8); on straw and concentrates alone FAO gives up
-  /// to ten (section 7). (balance) 12 in between.
-  static int thirstDays(int month) => switch (month) {
+  /// Days a camel can go without water (the owner's choice of 12 Nov 2026:
+  /// on dry feed, longer on green pasture). (field) About 17 in winter on
+  /// grazing and 7 in summer (section 6); on straw and concentrates alone FAO
+  /// gives up to ten (section 7), and the game's herd eats barley and alfalfa
+  /// hay. So in winter 10, or 17 while the pasture is green; (balance) 8, or
+  /// 12 while green, in spring and autumn.
+  static int thirstDays(int month, {required bool green}) => switch (month) {
     5 || 6 || 7 || 8 || 9 => 7,
-    11 || 12 || 1 || 2 || 3 => 17,
-    _ => 12,
+    11 || 12 || 1 || 2 || 3 => green ? 17 : 10,
+    _ => green ? 12 : 8,
   };
+
+  /// (field) The rains begin with الوسم about 16 October (section 7) and green
+  /// the ground through the winter into spring. (balance) Green from December
+  /// to April in a wet season, a season wet with this chance for each region:
+  /// Najd's rains vary much from year to year.
+  static const greenMonths = {12, 1, 2, 3, 4};
+  static const wetSeasonChance = 0.6;
 
   /// (balance) Without enough water (a day the herd gets under half of it):
   /// body condition held this much lower, and past the days a camel can go

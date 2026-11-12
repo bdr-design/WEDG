@@ -51,6 +51,17 @@ class SnapshotJson {
     'storeKg': f.storeKg,
     'tankL': f.tankL,
     'dryDays': f.dryDays,
+    'tankers': [
+      for (final t in f.tankers)
+        {
+          'tanker': t.tanker.name,
+          'litres': t.litres,
+          'price': t.price,
+          'room': t.room,
+        },
+    ],
+    'pastureGreen': f.pastureGreen,
+    'thirstDays': f.thirstDays,
     'supplies': [
       for (final x in f.supplies)
         {

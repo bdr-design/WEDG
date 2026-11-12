@@ -9,6 +9,9 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         me,
         Supply.values.byName(_str(j['supply'])),
         _int(j['units']),
+        tanker: j['tanker'] == null
+            ? Tanker.large
+            : Tanker.values.byName(_str(j['tanker'])),
       ),
       'setFeedPlan' => SetFeedPlan(me, FeedPlan.values.byName(_str(j['plan']))),
       'buyListing' => BuyListing(me, ListingId(_str(j['listing']))),
@@ -80,10 +83,11 @@ String _str(Object? v) => v! as String;
 /// sealed [Command], so a new command does not compile until it is given a
 /// JSON form here and in [commandFromJson] (the round-trip test checks both).
 Map<String, Object?> commandToJson(Command c) => switch (c) {
-  OrderSupply(:final supply, :final units) => {
+  OrderSupply(:final supply, :final units, :final tanker) => {
     'type': 'orderSupply',
     'supply': supply.name,
     'units': units,
+    if (supply == Supply.water) 'tanker': tanker.name,
   },
   SetFeedPlan(:final plan) => {'type': 'setFeedPlan', 'plan': plan.name},
   BuyListing(:final listing) => {

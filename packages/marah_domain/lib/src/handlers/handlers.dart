@@ -399,14 +399,18 @@ Result _feedPlan(Sim sim, PlayerState p, SetFeedPlan cmd) {
 
 Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
   if (cmd.units < 1) return _err(sim, ErrorCode.invalidAmount);
-  final size = Provisions.unitSize(cmd.supply);
+  final water = cmd.supply == Supply.water;
+  final size = water
+      ? Provisions.tankerSize(cmd.tanker)
+      : Provisions.unitSize(cmd.supply);
   final fits = (Provisions.room(p.farm, cmd.supply) / size).floor();
   if (cmd.units > fits) {
     return _err(sim, ErrorCode.storeFull, {'room': fits < 0 ? 0 : fits});
   }
-  final cost = Riyal(
-    (Provisions.unitPrice(cmd.supply, p.farm.region) * cmd.units).round(),
-  );
+  final unit = water
+      ? Provisions.tankerPrice(cmd.tanker)
+      : Provisions.unitPrice(cmd.supply, p.farm.region);
+  final cost = Riyal((unit * cmd.units).round());
   if (p.cash < cost) {
     return _err(sim, ErrorCode.insufficientFunds, {'needed': cost.value});
   }
@@ -417,7 +421,12 @@ Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
   );
   final arrives = sim.today + Balance.deliveryDays;
   p.farm.deliveries.add(
-    Delivery(supply: cmd.supply, units: cmd.units, arrivesOn: arrives),
+    Delivery(
+      supply: cmd.supply,
+      units: cmd.units,
+      arrivesOn: arrives,
+      size: size,
+    ),
   );
   sim.emit(
     SupplyOrdered(
@@ -425,6 +434,7 @@ Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
       owner: p.id,
       supply: cmd.supply,
       units: cmd.units,
+      size: size,
       cost: cost.value,
       arrivesOn: arrives,
     ),

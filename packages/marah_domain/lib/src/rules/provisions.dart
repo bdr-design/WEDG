@@ -17,6 +17,18 @@ class Provisions {
     Supply.water => Balance.waterLoadL,
   };
 
+  /// Litres a [tanker] carries, and what it costs (the large is the water's
+  /// unit; Balance).
+  static int tankerSize(Tanker tanker) => switch (tanker) {
+    Tanker.large => Balance.waterLoadL,
+    Tanker.small => Balance.smallWaterLoadL,
+  };
+
+  static double tankerPrice(Tanker tanker) => switch (tanker) {
+    Tanker.large => Balance.waterLoadPrice,
+    Tanker.small => Balance.smallWaterLoadPrice,
+  };
+
   /// What one unit costs delivered to a farm in [region] (feed by the
   /// region's feed factor; water the same everywhere), in whole riyals as a
   /// supplier asks: the price the player sees times the units is the charge.
@@ -66,7 +78,7 @@ class Provisions {
     };
     if (withOrders) {
       for (final d in f.deliveries) {
-        if (d.supply == s) v += d.units * unitSize(s);
+        if (d.supply == s) v += d.units * d.size;
       }
     }
     return v;

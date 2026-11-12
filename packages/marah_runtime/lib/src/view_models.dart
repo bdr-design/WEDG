@@ -345,6 +345,35 @@ class SupplySummary {
   );
 }
 
+/// A water tanker the farm can order (the owner, 12 Nov 2026: a 19 t and a
+/// 6 t), and how many fit in the tank now.
+class TankerSummary {
+  const TankerSummary({
+    required this.tanker,
+    required this.litres,
+    required this.price,
+    required this.room,
+  });
+
+  final Tanker tanker;
+  final int litres;
+  final int price;
+
+  /// Loads that fit, orders on the way counted.
+  final int room;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TankerSummary &&
+      other.tanker == tanker &&
+      other.litres == litres &&
+      other.price == price &&
+      other.room == room;
+
+  @override
+  int get hashCode => Object.hash(tanker, litres, price, room);
+}
+
 class FarmSummary {
   const FarmSummary({
     required this.name,
@@ -360,6 +389,9 @@ class FarmSummary {
     required this.storeKg,
     required this.tankL,
     required this.dryDays,
+    required this.tankers,
+    required this.pastureGreen,
+    required this.thirstDays,
   });
 
   final String name;
@@ -380,6 +412,14 @@ class FarmSummary {
   /// Days in a row the herd has gone without enough water.
   final int dryDays;
 
+  /// The tankers, large first.
+  final List<TankerSummary> tankers;
+
+  /// Whether the farm's grazing is green, and the days the herd can go
+  /// without water now (10 on dry feed in winter, 17 on green pasture).
+  final bool pastureGreen;
+  final int thirstDays;
+
   @override
   bool operator ==(Object other) =>
       other is FarmSummary &&
@@ -395,7 +435,10 @@ class FarmSummary {
       _listEquals(other.supplies, supplies) &&
       other.storeKg == storeKg &&
       other.tankL == tankL &&
-      other.dryDays == dryDays;
+      other.dryDays == dryDays &&
+      _listEquals(other.tankers, tankers) &&
+      other.pastureGreen == pastureGreen &&
+      other.thirstDays == thirstDays;
 
   @override
   int get hashCode => Object.hashAll([
@@ -412,6 +455,9 @@ class FarmSummary {
     storeKg,
     tankL,
     dryDays,
+    ...tankers,
+    pastureGreen,
+    thirstDays,
   ]);
 }
 

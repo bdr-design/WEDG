@@ -14,6 +14,7 @@ import '../model/player.dart';
 import '../rules/balance.dart';
 import '../rules/eligibility.dart';
 import '../rules/judging.dart';
+import '../rules/pasture.dart';
 import '../rules/provisions.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
@@ -252,11 +253,24 @@ class GameView {
     });
   }
 
-  /// Units of [s] that fit in the store or tank, orders on the way counted.
-  int roomFor(Supply s) {
-    final r = (Provisions.room(me.farm, s) / Provisions.unitSize(s)).floor();
+  /// Units of [s] that fit in the store or tank, orders on the way counted
+  /// (water by the [tanker]'s load).
+  int roomFor(Supply s, {Tanker tanker = Tanker.large}) {
+    final size = s == Supply.water
+        ? Provisions.tankerSize(tanker)
+        : Provisions.unitSize(s);
+    final r = (Provisions.room(me.farm, s) / size).floor();
     return r < 0 ? 0 : r;
   }
+
+  /// What a [tanker] of water costs.
+  Riyal tankerPrice(Tanker tanker) =>
+      Riyal(Provisions.tankerPrice(tanker).round());
+
+  /// Whether the farm's grazing is green, and so the days the herd can go
+  /// without water now.
+  bool get pastureGreen => Pasture.green(_w.seed, me.farm.region, today);
+  int get thirstDays => Balance.thirstDays(today.month, green: pastureGreen);
 
   Riyal unitPrice(Supply s) =>
       Riyal(Provisions.unitPrice(s, me.farm.region).round());

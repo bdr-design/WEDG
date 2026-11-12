@@ -129,6 +129,7 @@ sealed class DomainEvent {
         owner: owner,
         supply: Supply.values.byName(j['supply']! as String),
         units: j['units']! as int,
+        size: j['size'] as int?,
         cost: j['cost']! as int,
         arrivesOn: GameDay(j['arrivesOn']! as int),
       ),
@@ -137,6 +138,7 @@ sealed class DomainEvent {
         owner: owner,
         supply: Supply.values.byName(j['supply']! as String),
         units: j['units']! as int,
+        size: j['size'] as int?,
       ),
       'supplyLow' => SupplyLow(
         day,
@@ -522,11 +524,15 @@ final class SupplyOrdered extends DomainEvent {
     super.camel,
     required this.supply,
     required this.units,
+    this.size,
     required this.cost,
     required this.arrivesOn,
   });
   final Supply supply;
   final int units;
+
+  /// Kilograms or litres in each unit (null in events kept before v6).
+  final int? size;
   final int cost;
   final GameDay arrivesOn;
   @override
@@ -535,6 +541,7 @@ final class SupplyOrdered extends DomainEvent {
   Map<String, Object?> fieldsToJson() => {
     'supply': supply.name,
     'units': units,
+    'size': size,
     'cost': cost,
     'arrivesOn': arrivesOn.value,
   };
@@ -547,15 +554,20 @@ final class SupplyDelivered extends DomainEvent {
     super.camel,
     required this.supply,
     required this.units,
+    this.size,
   });
   final Supply supply;
   final int units;
+
+  /// Kilograms or litres in each unit (null in events kept before v6).
+  final int? size;
   @override
   String get type => 'supplyDelivered';
   @override
   Map<String, Object?> fieldsToJson() => {
     'supply': supply.name,
     'units': units,
+    'size': size,
   };
 }
 

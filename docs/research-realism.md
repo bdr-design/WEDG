@@ -225,6 +225,7 @@ Checked against search results; most news hosts cannot be opened from here, so a
 - **Camel passports:** a passport project was launched in February 2026 to record each camel's data, ownership and breed (confirmed [94]).
 - **Water tankers (الوايت):** sold by the tonne. The National Water Company's 19 t tanker costs SAR 114–135 and its 30 t SAR 225, VAT on top (confirmed [107], undated); private 6 t tankers in Riyadh are advertised at SAR 100–150 (uncertain: classified adverts [108]); a 19 t tanker is advertised in Jeddah (confirmed [109]). A delivery to a farm out of town: not found (uncertain).
 - **Dry matter of feeds:** barley grain 82.8–91.6% as fed, 87.1% on average (confirmed [110]); extension tables give 87–90.4% for barley and 88–90% for alfalfa hay by its cut (confirmed [111]). A ration's dry matter is divided by these to get the feed's delivered weight.
+- **الوسم:** the season of the first rains (الوسمي) begins about 16 October and lasts 52 days, to about 6 December; its rains green the ground and bring up grass and truffles (confirmed [114][115]).
 - **Camels' water a day:** FAO gives about 4.5 L a day on autumn browse, 13 L in spring and 30 L on salty pasture, and up to ten days without water on straw and concentrates (confirmed [112]); penned camels with free water in Oman drank 17.0–30.4 L a day, 24.1 on average (confirmed [113], not a winter study).
 
 ---
@@ -343,3 +344,5 @@ Checked against search results; most news hosts cannot be opened from here, so a
 111. https://www.ccof.org/wp-content/uploads/2024/04/Feed-Type-DMI-Table-3.pdf
 112. https://www.fao.org/4/X6528E/X6528E08.htm
 113. https://mdpi.com/2076-2615/11/5/1342
+114. https://www.raya.com/2026/10/15/موسم-الوسم-يبدأ-غدا-52-يوما-تبشر-باعتدال-الأجواء-وفرص-الأمطار
+115. https://www.alraimedia.com/article/281043/محليات/الوسم-يبدأ-الأحد-ويستمر-52-يوما-واللبس-الشتوي-26-نوفمبر-المقبل

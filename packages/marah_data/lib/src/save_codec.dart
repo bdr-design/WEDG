@@ -19,12 +19,12 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 5;
+  static const currentVersion = 6;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
   static final Map<int, Map<String, Object?> Function(Map<String, Object?>)>
-  migrations = {1: _v1ToV2, 2: _v2ToV3, 3: _v3ToV4, 4: _v4ToV5};
+  migrations = {1: _v1ToV2, 2: _v2ToV3, 3: _v3ToV4, 4: _v4ToV5, 5: _v5ToV6};
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
   /// - the colour family مغاتير is gone (it is only the umbrella name of the
@@ -255,6 +255,25 @@ class SaveCodec {
         ..['fedShare'] = 1.0
         ..['short'] = <Object?>[]
         ..['deliveries'] = <Object?>[];
+    }
+    return data;
+  }
+
+  /// v5 to v6 (the owner's decision of 12 Nov 2026: a small water tanker
+  /// beside the large): an order on its way keeps the size of its units, so
+  /// each one in a save is given the size its supply's unit had in v5 (a 50 kg
+  /// bag, a 25 kg bale, a 20,000 L tanker; written here so the step never
+  /// depends on today's classes).
+  static Map<String, Object?> _v5ToV6(Map<String, Object?> input) {
+    final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
+    const v5Unit = {'barley': 50, 'alfalfa': 25, 'water': 20000};
+    for (final pl in (data['players'] as List<Object?>?) ?? const []) {
+      final farm =
+          (pl! as Map<String, Object?>)['farm']! as Map<String, Object?>;
+      for (final d in (farm['deliveries'] as List<Object?>?) ?? const []) {
+        final order = d! as Map<String, Object?>;
+        order['size'] = v5Unit[order['supply']];
+      }
     }
     return data;
   }

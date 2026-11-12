@@ -168,7 +168,7 @@ void main() {
 
   group('Field numbers (research section 6)', () {
     test('gestation stays within 356 to 410 days, near 377 on average', () {
-      final g = newGame(13)..advanceDays(45); // in the breeding season
+      final g = stocked(newGame(13))..advanceDays(45); // in the breeding season
       final sim = Sim(g.state), gen = WorldGen(sim);
       final days = <int>[];
       for (var i = 0; i < 120; i++) {
@@ -198,7 +198,8 @@ void main() {
     test(
       'a female is first mated at 3.3 years (1,209 days), a bull from 5',
       () {
-        final g = newGame(13)..advanceDays(45); // in the breeding season
+        final g = stocked(newGame(13))
+          ..advanceDays(45); // in the breeding season
         final sim = Sim(g.state), gen = WorldGen(sim);
         Camel make(Sex sex, int age, String k) => gen.makeCamel(
           sim.rng(['age-limit', k]),
@@ -365,6 +366,56 @@ void main() {
       expect(Provisions.unitPrice(Supply.water, Region.qassim), 200);
     });
 
+    test('a small tanker tops up a tank the large one does not fit', () {
+      final g = newGame(4);
+      final f = g.me.farm;
+      // the tank 30,000 L full of 40,000: no room for 19 t, room for 6 t
+      f.waterL = f.tankL - 10000;
+      final v = GameView(g.state, g.me.id);
+      expect(v.roomFor(Supply.water), 0);
+      expect(v.roomFor(Supply.water, tanker: Tanker.small), 1);
+      expect(
+        (g.dispatch(OrderSupply(g.me.id, Supply.water, 1)) as Err).error.code,
+        ErrorCode.storeFull,
+      );
+      final cash = g.me.cash.value;
+      final r = g.dispatch(
+        OrderSupply(g.me.id, Supply.water, 1, tanker: Tanker.small),
+      );
+      expect(r.ok, isTrue);
+      expect(cash - g.me.cash.value, 120);
+      final ordered = r.events.whereType<SupplyOrdered>().single;
+      expect(ordered.size, 6000);
+      final before = f.waterL;
+      final events = g.advanceDays(1);
+      expect(events.whereType<SupplyDelivered>().single.size, 6000);
+      // six tonnes in, a day's drinking out
+      expect(f.waterL, greaterThan(before + 6000 - 500));
+      expect(f.waterL, lessThanOrEqualTo(before + 6000));
+    });
+
+    test('the pasture greens in a wet season, and the herd lasts longer', () {
+      // winter on dry feed 10 days, on green pasture 17; summer 7 either way
+      expect(Balance.thirstDays(1, green: false), 10);
+      expect(Balance.thirstDays(1, green: true), 17);
+      expect(Balance.thirstDays(7, green: true), 7);
+      // green only from December to April, the same each time for a seed,
+      // and some seasons wet, some dry
+      var greenDays = 0, seasons = <bool>{};
+      for (var d = 0; d < 365 * 6; d++) {
+        final day = GameDay.ofDate(DateTime.utc(2026, 10)) + d;
+        final g = Pasture.green(7, Region.qassim, day);
+        expect(g, Pasture.green(7, Region.qassim, day));
+        if (g) {
+          greenDays++;
+          expect(Balance.greenMonths, contains(day.month));
+        }
+        if (day.month == 1) seasons.add(g);
+      }
+      expect(greenDays, greaterThan(0));
+      expect(seasons, {true, false});
+    });
+
     test('an order that does not fit, or is not paid for, is refused', () {
       final g = newGame(4);
       final room = GameView(g.state, g.me.id).roomFor(Supply.water);
@@ -385,7 +436,9 @@ void main() {
     test(
       'unfed and dry, the herd is warned, thins and in time dies of thirst',
       () {
-        final g = newGame(6); // November: 17 days without water in winter
+        // November, on dry feed (the pasture greens in December at the
+        // earliest): 10 days without water in winter
+        final g = newGame(6);
         final events = g.advanceDays(45);
         final low = events.whereType<SupplyLow>().toList();
         expect(low.where((e) => e.days == 3).length, 3);
@@ -397,9 +450,18 @@ void main() {
           expect(c.condition, lessThan(55));
         }
         final more = g.advanceDays(120);
+        final thirst = [
+          ...events,
+          ...more,
+        ].whereType<Died>().where((d) => d.cause == DeathCause.thirst);
+        expect(thirst, isNotEmpty);
+        // none before the herd has gone 10 days dry
+        final firstDry = events.whereType<SupplyLow>().firstWhere(
+          (e) => e.supply == Supply.water && e.days == 0,
+        );
         expect(
-          more.whereType<Died>().where((d) => d.cause == DeathCause.thirst),
-          isNotEmpty,
+          thirst.first.day.daysSince(firstDry.day),
+          greaterThanOrEqualTo(10),
         );
       },
     );
@@ -712,7 +774,7 @@ void main() {
     });
 
     test('a stud that is not on offer cannot be used', () {
-      final g = newGame()..advanceDays(45);
+      final g = stocked(newGame())..advanceDays(45);
       final f = GameView(
         g.state,
         g.me.id,
@@ -1010,7 +1072,7 @@ void main() {
 
   group('Own bull and withdrawal', () {
     test('mating with your own bull costs nothing but needs a mature bull', () {
-      final g = newGame(13)..advanceDays(45);
+      final g = stocked(newGame(13))..advanceDays(45);
       final sim = Sim(g.state);
       final bull = WorldGen(sim).makeCamel(
         sim.rng(['own-bull']),
@@ -1089,7 +1151,7 @@ void main() {
     });
 
     test('a mating is only known to the owner until it is confirmed', () {
-      final g = newGame(13)..advanceDays(45);
+      final g = stocked(newGame(13))..advanceDays(45);
       final dam = g.state.world.camels.values.firstWhere(
         (c) =>
             c.ownerId == g.me.id &&
@@ -1118,7 +1180,7 @@ void main() {
         'dam',
         'crossbred',
       };
-      final g = newGame(13)..advanceDays(45);
+      final g = stocked(newGame(13))..advanceDays(45);
       final c = g.state.world.camels.values.firstWhere(
         (c) => c.ownerId == g.me.id && c.sex == Sex.female,
       );

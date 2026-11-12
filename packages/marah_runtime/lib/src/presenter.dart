@@ -148,6 +148,17 @@ class Presenter {
       storeKg: me.farm.storeKg,
       tankL: me.farm.tankL,
       dryDays: me.farm.dryDays,
+      tankers: [
+        for (final t in Tanker.values)
+          TankerSummary(
+            tanker: t,
+            litres: Provisions.tankerSize(t),
+            price: v.tankerPrice(t).value,
+            room: v.roomFor(Supply.water, tanker: t),
+          ),
+      ],
+      pastureGreen: v.pastureGreen,
+      thirstDays: v.thirstDays,
     );
     final summary = _summary(herdViews, v);
     final top = _sorted(

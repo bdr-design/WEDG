@@ -29,7 +29,8 @@ void main() {
     // sealed Command, so a new one cannot be missing from here unnoticed for
     // long: add it to this list when the compiler asks for it there).
     final every = <Map<String, Object?>>[
-      {'type': 'orderSupply', 'supply': 'water', 'units': 2},
+      {'type': 'orderSupply', 'supply': 'water', 'units': 2, 'tanker': 'small'},
+      {'type': 'orderSupply', 'supply': 'barley', 'units': 3},
       {'type': 'setFeedPlan', 'plan': 'premium'},
       {'type': 'buyListing', 'listing': 'l1'},
       {'type': 'bargain', 'listing': 'l1', 'amount': 41000},
@@ -56,7 +57,7 @@ void main() {
         expect(commandToJson(c), j);
       }
       final types = {for (final j in every) j['type']};
-      expect(types, hasLength(every.length));
+      expect(types, hasLength(17)); // every kind of command
     });
 
     test('the actor is always the player, whatever the JSON says', () {
@@ -73,6 +74,12 @@ void main() {
         {},
         {'type': 'giveMeMoney'},
         {'type': 'orderSupply', 'supply': 'petrol', 'units': 1},
+        {
+          'type': 'orderSupply',
+          'supply': 'water',
+          'units': 1,
+          'tanker': 'huge',
+        },
         {'type': 'orderSupply', 'supply': 'water'},
         {'type': 'orderSupply', 'supply': 'water', 'units': '2'},
         {'type': 'orderSupply', 'supply': 'water', 'units': 2.5},
@@ -375,6 +382,17 @@ void main() {
       expect(f['tankL'], farm.tankL);
       expect(f['dryDays'], farm.dryDays);
       expect(f['feedPlan'], 'premium');
+      expect(f['pastureGreen'], v.pastureGreen);
+      expect(f['thirstDays'], v.thirstDays);
+      final tankers = (f['tankers']! as List).cast<Map<String, Object?>>();
+      expect(tankers.map((t) => t['tanker']), ['large', 'small']);
+      expect(tankers.map((t) => t['litres']), [19000, 6000]);
+      expect(tankers.map((t) => t['price']), [200, 120]);
+      expect(tankers.first['room'], v.roomFor(Supply.water));
+      expect(
+        tankers.last['room'],
+        v.roomFor(Supply.water, tanker: Tanker.small),
+      );
       final supplies = (f['supplies']! as List).cast<Map<String, Object?>>();
       for (final (i, s) in Supply.values.indexed) {
         final j = supplies[i];

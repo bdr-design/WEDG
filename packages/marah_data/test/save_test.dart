@@ -19,6 +19,10 @@ Game sampleGame() {
   for (var i = 0; i < 8; i++) {
     bot.week();
   }
+  // orders on their way, a small tanker's among them (sizes kept since v6)
+  g.me.farm.waterL = g.me.farm.tankL - 7000;
+  g.dispatch(OrderSupply(g.me.id, Supply.water, 1, tanker: Tanker.small));
+  g.dispatch(OrderSupply(g.me.id, Supply.barley, 2));
   return g;
 }
 
@@ -32,6 +36,7 @@ const fixtures = {
   3: 'test/fixtures/save_v3.json',
   4: 'test/fixtures/save_v4.json',
   5: 'test/fixtures/save_v5.json',
+  6: 'test/fixtures/save_v6.json',
 };
 
 void main() {
@@ -388,6 +393,29 @@ void main() {
     // it plays a month with the stores it was given
     final g = Game(state)..advanceDays(30);
     expect(checkInvariants(g.state), isEmpty);
+  });
+
+  test('v5 to v6: an order on its way keeps the size its units had', () {
+    final raw = jsonDecode(
+      File(fixtures[5]!).readAsStringSync(),
+    ) as Map<String, Object?>;
+    final data = raw['data']! as Map<String, Object?>;
+    final farm = ((data['players']! as List).first as Map)['farm']! as Map;
+    // one order of each kind on its way, as v5 kept them
+    farm['deliveries'] = [
+      {'supply': 'water', 'units': 1, 'arrivesOn': 999},
+      {'supply': 'barley', 'units': 4, 'arrivesOn': 999},
+      {'supply': 'alfalfa', 'units': 6, 'arrivesOn': 999},
+    ];
+    final out = SaveCodec.migrations[5]!(data);
+    final orders =
+        (((out['players']! as List).first as Map)['farm']!
+                as Map)['deliveries']!
+            as List;
+    expect([for (final o in orders) (o as Map)['size']], [20000, 50, 25]);
+    final state = GameState.fromJson(out);
+    expect(checkInvariants(state), isEmpty);
+    expect(state.players.values.first.farm.deliveries.first.size, 20000);
   });
 
   group('rejects without losing anything', () {
