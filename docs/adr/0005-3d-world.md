@@ -556,9 +556,9 @@ as a guide only):
   yard or on the sand (450 to 680 against 820 to 1,030).
 - **The pasture's grass.** It is the thickest in the game: about half (52%)
   of the 42,000 tufts are round the camp. Standing in it, 13,000 to 15,500
-  tufts are drawn, and the GPU shaded 1.0 to 3.5 grass fragments for every
-  pixel of the screen (up to 69 deep). 85 to 88% of them were thrown away by
-  the alpha test,
+  tufts are drawn, and at the owner's 2x resolution the GPU shaded 1.0 to
+  3.5 grass fragments for every pixel of the screen (up to 69 deep). 85 to
+  86% of them were thrown away by the alpha test (86 to 88% at 1x),
   since the blades fill 16% of their card. In the yard and on the sand, next
   to none. Hiding the grass took a third off the software renderer's time
   there.
@@ -569,8 +569,9 @@ as a guide only):
   but 0.002% (and, with 4x MSAA, all but 0.02 to 0.16% of the samples at
   far-off cards' edges) are still kept; none of it shows. The bushes' cards
   (and their shadow pass) and the tamarisks' are cut the same way. The
-  pictures: 0.17 to 0.58% of pixels differ by more than 8 levels in 255,
-  specks on the blades' edges and a few strips along bushes' shadow edges,
+  pictures at 2x: 0.17 to 0.46% of pixels differ by more than 8 levels in
+  255 in the pasture, 0.07 to 0.19% from the air and by the tamarisks (0.18
+  to 0.57% at 1x), specks on the blades' edges and a few strips along bushes' shadow edges,
   where the card's two triangles now meet differently; none in the yard.
 - **The first camel to come near** sent its full and middle meshes to the GPU
   then (about 1.5 MB) and readied a shader (743 ms in the software renderer

@@ -50,7 +50,7 @@ function cardCluster(w, h, n = 3, upNormals = true, shape = null) {
 // The smallest four-cornered card holding every texel of an alpha card that its alpha test can keep, with a margin of a
 // few texels for the texture's filtering and its smaller mip levels: its corners as (u, v), v up, anticlockwise.
 // (The grass's blades fill 16% of their square: by the herd, where the pasture's grass is thickest, the GPU shaded 1.0
-// to 3.5 grass fragments for every pixel of the screen, 85-88% of them thrown away by the alpha test, and the owner's phone
+// to 3.5 grass fragments for every pixel of the screen at 2x, 85-86% of them thrown away by the alpha test, and the owner's phone
 // fell from 60 frames a second to 52 there and nowhere else, 12 Nov. Cut to the blades, a grass card is 63% of the square
 // for the same two triangles, and by the herd the GPU shades 37-38% fewer grass fragments; of those it kept, all but a
 // few thousandths of a percent at the cards' edges are kept still, none of it to be seen: the review.) The hull of the kept texels is cut from the square by every choice of up to four of its
