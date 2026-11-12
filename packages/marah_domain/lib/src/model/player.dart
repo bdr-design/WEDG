@@ -133,7 +133,7 @@ class Farm {
     dryDays: j['dryDays']! as int,
     fedShare: (j['fedShare']! as num).toDouble(),
     short: {
-      for (final s in j['short']! as List<Object?>)
+      for (final s in (j['short'] as List<Object?>?) ?? const [])
         Supply.values.byName(s! as String),
     },
     deliveries: [

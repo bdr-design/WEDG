@@ -163,11 +163,13 @@ class UpkeepSystem implements DailySystem {
         ..waterL = q2(f.waterL - n.water)
         ..dryDays = 0;
     } else {
-      // what is left is drunk; under half the herd's water is a dry day
+      // what is left is drunk; under half the herd's water is a dry day, half
+      // or more holds the count where it is (only a full day ends it: a 60%
+      // day had set it back to nothing, the review)
       final half = f.waterL >= n.water / 2;
       f
         ..waterL = 0
-        ..dryDays = half ? 0 : f.dryDays + 1;
+        ..dryDays = half ? f.dryDays : f.dryDays + 1;
     }
   }
 }

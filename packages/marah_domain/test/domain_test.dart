@@ -398,6 +398,22 @@ void main() {
       expect(g.advanceDays(3).whereType<SupplyLow>(), isEmpty); // once
     });
 
+    test('a day on half the water holds the dry count, a full day ends it', () {
+      final g = stocked(newGame(5));
+      final v = GameView(g.state, g.me.id);
+      for (var d = 0; d < 4; d++) {
+        g.me.farm.waterL = 0;
+        g.advanceDays(1);
+      }
+      expect(g.me.farm.dryDays, 4);
+      g.me.farm.waterL = v.dailyNeeds.water * 0.6;
+      g.advanceDays(1);
+      expect(g.me.farm.dryDays, 4);
+      g.me.farm.waterL = v.dailyNeeds.water * 2;
+      g.advanceDays(1);
+      expect(g.me.farm.dryDays, 0);
+    });
+
     test('in summer a herd without water dies within days of its limit', () {
       final g = stocked(newGame(5));
       g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 6, 1)));
