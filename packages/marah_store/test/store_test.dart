@@ -365,7 +365,12 @@ void main() {
       big = newGame(11);
       big.me.farm
         ..capacity = 10010
-        ..shepherds = 400;
+        ..shepherds = 400
+        ..storeKg = 1 << 30
+        ..tankL = 1 << 30
+        ..barleyKg = 1e8
+        ..alfalfaKg = 1e8
+        ..waterL = 1e9;
       final sim = Sim(big.state);
       final gen = WorldGen(sim);
       for (var i = 0; i < 9997; i++) {

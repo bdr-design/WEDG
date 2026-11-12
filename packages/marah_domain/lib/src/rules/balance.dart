@@ -147,10 +147,13 @@ class Balance {
     _ => 12,
   };
 
-  /// (balance) Without enough water: body condition held this much lower,
-  /// and past the days a camel can go without, this daily chance of death.
+  /// (balance) Without enough water (a day the herd gets under half of it):
+  /// body condition held this much lower, and past the days a camel can go
+  /// without, a chance of death that climbs by this much each further day
+  /// (at 3% a day flat, camels lived 60 and 100 dry days through the summer,
+  /// the review).
   static const thirstPenalty = 20.0;
-  static const thirstDeathChance = 0.03;
+  static const thirstDeathPerDay = 0.15;
 
   /// (balance) A warning when a store holds this many days or fewer.
   static const lowStockDays = 3;

@@ -218,7 +218,8 @@ class SaveCodec {
 
   /// v4 to v5 (the owner's decision of 12 Nov 2026: feed and water run out
   /// and are ordered): every farm gets a feed store and a water tank, sized
-  /// as a new farm's or a month of its herd's needs if more, and filled with a
+  /// as a new farm's of its capacity or a month of its herd's needs if more,
+  /// and filled with a
   /// month of them (an adult on the standard ration: 3.3 kg barley, 7.7 kg
   /// alfalfa and 30 L of water a day; v5's numbers, written here so the step
   /// never depends on today's classes).
@@ -237,15 +238,22 @@ class SaveCodec {
           .length;
       final barley = head * 3.3 * 30, alfalfa = head * 7.7 * 30;
       final water = head * 30.0 * 30;
-      final store = (barley + alfalfa).ceil();
+      // a new farm's store and tank for the farm's capacity (20,000 kg and
+      // 40,000 L at 20 head, 330 kg and 900 L more a head), or a month of the
+      // herd's needs if more
+      final room = (farm['capacity']! as int) - 20;
+      final store = 20000 + (room > 0 ? room * 330 : 0);
+      final tank = 40000 + (room > 0 ? room * 900 : 0);
+      final month = (barley + alfalfa).ceil();
       farm
-        ..['storeKg'] = store > 20000 ? store : 20000
-        ..['tankL'] = water.ceil() > 40000 ? water.ceil() : 40000
+        ..['storeKg'] = month > store ? month : store
+        ..['tankL'] = water.ceil() > tank ? water.ceil() : tank
         ..['barleyKg'] = barley
         ..['alfalfaKg'] = alfalfa
         ..['waterL'] = water
         ..['dryDays'] = 0
         ..['fedShare'] = 1.0
+        ..['short'] = <Object?>[]
         ..['deliveries'] = <Object?>[];
     }
     return data;

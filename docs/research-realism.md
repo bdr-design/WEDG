@@ -221,6 +221,7 @@ Checked against search results; most news hosts cannot be opened from here, so a
 - **Cloning:** the first cloned camel, Injaz, was born in Dubai in April 2009. Dubai's centre clones beauty-contest and racing champions for owners (confirmed [88][89]). Whether Saudi festivals admit clones: not found (uncertain).
 - **Zakat on camels:** ZATCA collects zakat on livestock (بهيمة الأنعام) through an online service that sends a pre-filled form and the amount due; its guide says zakat on camels is due from five camels (confirmed [90][91]). The fiqh conditions (سائمة, grazing most of the year) are a scholarly matter (confirmed [92]).
 - **Cosmetic procedures:** banned for camels in general in the Kingdom, not only at festivals, after a vet was found shrinking ears and enlarging faces (confirmed [96][98]). In August 2018 MEWA fined five people SAR 67,000 in all for animal-welfare violations, among them Botox injections and tightened lips on camels (confirmed [100]); a vet was later fined SAR 30,000 for using human cosmetics on animals (confirmed [101]). MEWA banned outright, under the GCC animal welfare law (royal decree M/44), injecting human cosmetic substances into animals, camels above all, dyeing animals and giving race stimulants (confirmed [99]). The 2018 festival terms also barred hybrid or imported camels from every class (uncertain: search summary of [93]).
+- **Feed prices (GASTAT's average prices of goods and services):** a bale of alfalfa SAR 28.81 in October 2025, against 23.60 a year before (confirmed [105]); a 50 kg bag of imported barley SAR 67.9 in February 2026, against 67.5 in January (confirmed [106]). The bale's weight is not given (uncertain).
 - **Camel passports:** a passport project was launched in February 2026 to record each camel's data, ownership and breed (confirmed [94]).
 
 ---
@@ -330,3 +331,5 @@ Checked against search results; most news hosts cannot be opened from here, so a
 102. https://ajel.sa/local/w4pqf6
 103. https://arabiclexicon.hawramani.com/%d8%a7%d9%84%d9%86%d9%91%d9%8e%d8%a7%d8%a8/
 104. https://arabiclexicon.hawramani.com/%d8%b9%d9%88%d8%af/?book=50
+105. https://www.argaam.com/ar/article/articledetail/id/1859304
+106. https://bshaer.net/2026/03/18/dimn-3/

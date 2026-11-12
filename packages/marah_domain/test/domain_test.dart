@@ -291,7 +291,7 @@ void main() {
     );
 
     test('a contagious illness other than mange spreads through a herd', () {
-      final g = newGame(9);
+      final g = stocked(newGame(9));
       final herd = g.state.world.aliveOwnedBy(g.me.id).toList();
       herd.first
         ..health = HealthStatus.sick
@@ -364,8 +364,8 @@ void main() {
     test(
       'unfed and dry, the herd is warned, thins and in time dies of thirst',
       () {
-        final g = newGame(6);
-        final events = g.advanceDays(60);
+        final g = newGame(6); // November: 17 days without water in winter
+        final events = g.advanceDays(45);
         final low = events.whereType<SupplyLow>().toList();
         expect(low.where((e) => e.days == 3).length, 3);
         expect(low.where((e) => e.days == 0).length, 3);
@@ -373,7 +373,7 @@ void main() {
         expect(g.me.farm.dryDays, greaterThan(5));
         final herd = g.state.world.aliveOwnedBy(g.me.id);
         for (final c in herd) {
-          expect(c.condition, lessThan(45));
+          expect(c.condition, lessThan(55));
         }
         final more = g.advanceDays(120);
         expect(
@@ -382,6 +382,36 @@ void main() {
         );
       },
     );
+
+    test('going short warns even when the need jumps past a low stock', () {
+      final g = newGame(5);
+      final v = GameView(g.state, g.me.id);
+      g.me.farm.waterL = v.dailyNeeds.water * 0.4; // under half a day
+      final events = g.advanceDays(1);
+      expect(
+        events.whereType<SupplyLow>().where(
+          (e) => e.supply == Supply.water && e.days == 0,
+        ),
+        hasLength(1),
+      );
+      expect(g.me.farm.dryDays, 1);
+      expect(g.advanceDays(3).whereType<SupplyLow>(), isEmpty); // once
+    });
+
+    test('in summer a herd without water dies within days of its limit', () {
+      final g = stocked(newGame(5));
+      g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 6, 1)));
+      stocked(g).me.farm.waterL = 0;
+      g.me.farm.tankL = 1 << 30;
+      final alive = g.state.world.aliveOwnedBy(g.me.id).length;
+      expect(alive, greaterThan(0));
+      // the tank kept empty: 7 days a camel can go in summer, then deaths
+      for (var d = 0; d < 20; d++) {
+        g.me.farm.waterL = 0;
+        g.advanceDays(1);
+      }
+      expect(g.state.world.aliveOwnedBy(g.me.id), isEmpty);
+    });
 
     test(
       'a nursing camel drinks 42 L; room built adds to the store and tank',

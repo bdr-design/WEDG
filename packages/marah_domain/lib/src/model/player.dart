@@ -67,7 +67,9 @@ class Farm {
     this.dryDays = 0,
     this.fedShare = 1,
     List<Delivery>? deliveries,
-  }) : deliveries = deliveries ?? [];
+    Set<Supply>? short,
+  }) : deliveries = deliveries ?? [],
+       short = short ?? {};
 
   String name;
   Region region;
@@ -91,6 +93,10 @@ class Farm {
 
   /// The share of the ration the herd got today (1: all of it).
   double fedShare;
+
+  /// The supplies that did not cover the day's need (each warned of once,
+  /// the day it went short, until it covers the need again).
+  final Set<Supply> short;
   final List<Delivery> deliveries;
 
   Map<String, Object?> toJson() => {
@@ -106,6 +112,10 @@ class Farm {
     'waterL': waterL,
     'dryDays': dryDays,
     'fedShare': fedShare,
+    'short': [
+      for (final s in Supply.values)
+        if (short.contains(s)) s.name,
+    ],
     'deliveries': [for (final d in deliveries) d.toJson()],
   };
 
@@ -122,6 +132,10 @@ class Farm {
     waterL: (j['waterL']! as num).toDouble(),
     dryDays: j['dryDays']! as int,
     fedShare: (j['fedShare']! as num).toDouble(),
+    short: {
+      for (final s in j['short']! as List<Object?>)
+        Supply.values.byName(s! as String),
+    },
     deliveries: [
       for (final d in j['deliveries']! as List<Object?>)
         Delivery.fromJson(d! as Map<String, Object?>),

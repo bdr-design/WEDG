@@ -27,6 +27,14 @@ Game bigFarm() {
   for (var i = 0; i < 9997; i++) {
     gen.makeCamel(sim.rng(['bulk', i]), owner: g.me.id, mean: 55);
   }
+  // a store and a tank for 10,000 head, filled for the run (empty, the herd
+  // starved and died of thirst and the budgets measured a shrinking farm)
+  g.me.farm
+    ..storeKg = 1 << 30
+    ..tankL = 1 << 30
+    ..barleyKg = 1e8
+    ..alfalfaKg = 1e8
+    ..waterL = 1e9;
   g.advanceDays(30); // warm up
   return g;
 }
@@ -44,7 +52,10 @@ void main() {
   setUpAll(() => g = bigFarm());
 
   test('one game day stays under 150 ms at 10,000 head', () {
+    expect(g.state.world.aliveOwnedBy(g.me.id).length, greaterThan(9800));
     expect(avgMs(() => g.advanceDays(1), 10), lessThan(150));
+    expect(g.me.farm.dryDays, 0);
+    expect(g.me.farm.fedShare, 1);
   });
 
   test('a command stays under 2 ms (measured < 0.1 ms)', () {

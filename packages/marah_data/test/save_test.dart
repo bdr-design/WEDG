@@ -371,6 +371,15 @@ void main() {
     final farm = ((out['players']! as List).first as Map)['farm']! as Map;
     expect(farm['storeKg'], greaterThanOrEqualTo(20000));
     expect(farm['tankL'], greaterThanOrEqualTo(40000));
+    // sized for the farm's capacity, as a new farm of that size
+    final big = jsonDecode(jsonEncode(raw['data'])) as Map<String, Object?>;
+    (((big['players']! as List).first as Map)['farm'] as Map)['capacity'] = 100;
+    final bigFarm =
+        ((SaveCodec.migrations[4]!(big)['players']! as List).first
+                as Map)['farm']!
+            as Map;
+    expect(bigFarm['storeKg'], 20000 + 80 * 330);
+    expect(bigFarm['tankL'], 40000 + 80 * 900);
     expect(farm['barleyKg'] as num, greaterThan(0));
     expect(farm['waterL'] as num, greaterThan(0));
     expect(farm['deliveries'], isEmpty);

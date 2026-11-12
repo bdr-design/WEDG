@@ -124,13 +124,24 @@ class UpkeepSystem implements DailySystem {
   static void _consume(Sim sim, PlayerState p) {
     final f = p.farm;
     final n = Provisions.needs(sim.herdOf(p.id), f.feedPlan, sim.today);
+    // a warning when a store comes down to a few days
     void warn(Supply s, double before, double after, double need) {
       final b = Provisions.daysLeft(before, need),
           a = Provisions.daysLeft(after, need);
       if (b == null || a == null) return;
-      if ((a <= Balance.lowStockDays && b > Balance.lowStockDays) ||
-          (a == 0 && b > 0)) {
+      if (a <= Balance.lowStockDays && a > 0 && b > Balance.lowStockDays) {
         sim.emit(SupplyLow(sim.today, owner: p.id, supply: s, days: a));
+      }
+    }
+
+    // and when it goes short of the day's need, once until it covers it again
+    // (a warning by the days left skipped it when the need jumped past a low
+    // stock overnight: camels bought, a calving, the season's water)
+    void cover(Supply s, bool enough) {
+      if (enough) {
+        f.short.remove(s);
+      } else if (f.short.add(s)) {
+        sim.emit(SupplyLow(sim.today, owner: p.id, supply: s, days: 0));
       }
     }
 
@@ -138,21 +149,25 @@ class UpkeepSystem implements DailySystem {
     final alfalfa = n.alfalfa < f.alfalfaKg ? n.alfalfa : f.alfalfaKg;
     warn(Supply.barley, f.barleyKg, f.barleyKg - barley, n.barley);
     warn(Supply.alfalfa, f.alfalfaKg, f.alfalfaKg - alfalfa, n.alfalfa);
+    cover(Supply.barley, barley >= n.barley);
+    cover(Supply.alfalfa, alfalfa >= n.alfalfa);
     f
       ..barleyKg = q2(f.barleyKg - barley)
       ..alfalfaKg = q2(f.alfalfaKg - alfalfa);
     final need = n.barley + n.alfalfa;
     f.fedShare = need <= 0 ? 1 : q2((barley + alfalfa) / need);
+    cover(Supply.water, f.waterL >= n.water);
     if (f.waterL >= n.water) {
       warn(Supply.water, f.waterL, f.waterL - n.water, n.water);
       f
         ..waterL = q2(f.waterL - n.water)
         ..dryDays = 0;
     } else {
-      warn(Supply.water, f.waterL, 0, n.water);
+      // what is left is drunk; under half the herd's water is a dry day
+      final half = f.waterL >= n.water / 2;
       f
         ..waterL = 0
-        ..dryDays += 1;
+        ..dryDays = half ? 0 : f.dryDays + 1;
     }
   }
 }
@@ -321,8 +336,9 @@ class HealthSystem implements DailySystem {
             if (sim.today >= c.recoversOn!) _recover(sim, c);
         }
         if (!c.isAlive) continue;
-        if (p.farm.dryDays > Balance.thirstDays(sim.today.month) &&
-            rng.chance(Balance.thirstDeathChance)) {
+        final pastThirst = p.farm.dryDays - Balance.thirstDays(sim.today.month);
+        if (pastThirst > 0 &&
+            rng.chance(Balance.thirstDeathPerDay * pastThirst)) {
           _die(sim, c, DeathCause.thirst);
           continue;
         }
