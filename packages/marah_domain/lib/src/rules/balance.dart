@@ -109,14 +109,25 @@ class Balance {
   static const alfalfaBaleKg = 25;
   static const alfalfaBalePrice = 28.81;
 
-  /// (balance) A water tanker's load (الوايت) and its price: no source found.
-  static const waterLoadL = 20000;
-  static const waterLoadPrice = 450.0;
+  /// A water tanker (الوايت). (field) They are sold by the tonne: the
+  /// National Water Company's 19 t tanker SAR 114 to 135 and its 30 t SAR 225
+  /// in town, private 6 t tankers SAR 100 to 150 in Riyadh's adverts (search
+  /// summaries of bayut.sa and opensooq.com, 12 Nov 2026; research section 7).
+  /// (balance) A 19 t load (19,000 L) to a farm out of town: SAR 200.
+  static const waterLoadL = 19000;
+  static const waterLoadPrice = 200.0;
+
+  /// (field) The share of barley grain and of alfalfa hay that is dry matter:
+  /// barley 87 to 90% (Feedipedia's average 87.1%; extension tables 87 to
+  /// 90.4%), alfalfa hay 88 to 90% by its cut (research section 7). A ration
+  /// is reckoned in dry matter and ordered by the weight delivered.
+  static const barleyDryMatter = 0.88;
+  static const alfalfaDryMatter = 0.89;
 
   /// (balance) Each head of room built adds a month of an adult's standard
-  /// ration to the feed store (30 x 11 kg) and of summer water to the tank
-  /// (30 x 30 L).
-  static const storeKgPerHead = 330;
+  /// ration as delivered to the feed store (30 x 11 kg of dry matter, 12.4 kg
+  /// of feed) and of summer water to the tank (30 x 30 L).
+  static const storeKgPerHead = 375;
   static const tankLPerHead = 900;
 
   /// (balance) Days an order takes to arrive.
@@ -131,7 +142,9 @@ class Balance {
   /// Water a day (litres). (field) A nursing camel drinks 37 to 46 L
   /// (section 6): 42. (balance) The others by the season: camels go about 17
   /// days without water in winter and 7 in summer (section 6), so they drink
-  /// less in winter.
+  /// less in winter. (field, for the range) FAO gives 4.5 L a day on autumn
+  /// browse to 13 in spring and 30 on salty pasture; penned camels on dry
+  /// feed in Oman drank 17 to 30 L, 24 on average (research section 7).
   static const nursingWaterL = 42.0;
   static double waterL(int month) => switch (month) {
     5 || 6 || 7 || 8 || 9 => 30.0,

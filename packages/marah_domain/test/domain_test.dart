@@ -334,14 +334,35 @@ void main() {
       final cash = g.me.cash.value;
       final r = g.dispatch(OrderSupply(g.me.id, Supply.barley, 10));
       expect(r.ok, isTrue);
-      final price = (Balance.barleyBagPrice * g.me.farm.region.feed * 10)
-          .round();
-      expect(cash - g.me.cash.value, price);
+      // the bag's price in whole riyals, as the player sees it, times ten
+      final bag = (Balance.barleyBagPrice * g.me.farm.region.feed).round();
+      expect(cash - g.me.cash.value, bag * 10);
+      expect(
+        GameView(g.state, g.me.id).unitPrice(Supply.barley).value * 10,
+        cash - g.me.cash.value,
+      );
       final before = g.me.farm.barleyKg;
       final events = g.advanceDays(1);
       expect(events.whereType<SupplyDelivered>().single.units, 10);
       // ten bags in, a day's ration out
       expect(g.me.farm.barleyKg, greaterThan(before + 400));
+    });
+
+    test('the ration is dry matter, ordered by the weight delivered', () {
+      final g = newGame(4);
+      final adult = g.state.world
+          .aliveOwnedBy(g.me.id)
+          .firstWhere((c) => c.ageDays(g.today) > 6 * 365);
+      final n = Provisions.needs([adult], FeedPlan.standard, g.today);
+      // 11 kg of dry matter, 30% of it barley (88% dry), the rest alfalfa (89%)
+      expect(n.barley, closeTo(11 * 0.3 / 0.88, 1e-9));
+      expect(n.alfalfa, closeTo(11 * 0.7 / 0.89, 1e-9));
+      expect(n.barley * 0.88 + n.alfalfa * 0.89, closeTo(11, 1e-9));
+    });
+
+    test('a water tanker is 19 tonnes', () {
+      expect(Provisions.unitSize(Supply.water), 19000);
+      expect(Provisions.unitPrice(Supply.water, Region.qassim), 200);
     });
 
     test('an order that does not fit, or is not paid for, is refused', () {

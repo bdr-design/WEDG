@@ -223,6 +223,9 @@ Checked against search results; most news hosts cannot be opened from here, so a
 - **Cosmetic procedures:** banned for camels in general in the Kingdom, not only at festivals, after a vet was found shrinking ears and enlarging faces (confirmed [96][98]). In August 2018 MEWA fined five people SAR 67,000 in all for animal-welfare violations, among them Botox injections and tightened lips on camels (confirmed [100]); a vet was later fined SAR 30,000 for using human cosmetics on animals (confirmed [101]). MEWA banned outright, under the GCC animal welfare law (royal decree M/44), injecting human cosmetic substances into animals, camels above all, dyeing animals and giving race stimulants (confirmed [99]). The 2018 festival terms also barred hybrid or imported camels from every class (uncertain: search summary of [93]).
 - **Feed prices (GASTAT's average prices of goods and services):** a bale of alfalfa SAR 28.81 in October 2025, against 23.60 a year before (confirmed [105]); a 50 kg bag of imported barley SAR 67.9 in February 2026, against 67.5 in January (confirmed [106]). The bale's weight is not given (uncertain).
 - **Camel passports:** a passport project was launched in February 2026 to record each camel's data, ownership and breed (confirmed [94]).
+- **Water tankers (الوايت):** sold by the tonne. The National Water Company's 19 t tanker costs SAR 114–135 and its 30 t SAR 225, VAT on top (confirmed [107], undated); private 6 t tankers in Riyadh are advertised at SAR 100–150 (uncertain: classified adverts [108]); a 19 t tanker is advertised in Jeddah (confirmed [109]). A delivery to a farm out of town: not found (uncertain).
+- **Dry matter of feeds:** barley grain 82.8–91.6% as fed, 87.1% on average (confirmed [110]); extension tables give 87–90.4% for barley and 88–90% for alfalfa hay by its cut (confirmed [111]). A ration's dry matter is divided by these to get the feed's delivered weight.
+- **Camels' water a day:** FAO gives about 4.5 L a day on autumn browse, 13 L in spring and 30 L on salty pasture, and up to ten days without water on straw and concentrates (confirmed [112]); penned camels with free water in Oman drank 17.0–30.4 L a day, 24.1 on average (confirmed [113], not a winter study).
 
 ---
 
@@ -333,3 +336,10 @@ Checked against search results; most news hosts cannot be opened from here, so a
 104. https://arabiclexicon.hawramani.com/%d8%b9%d9%88%d8%af/?book=50
 105. https://www.argaam.com/ar/article/articledetail/id/1859304
 106. https://bshaer.net/2026/03/18/dimn-3/
+107. https://www.bayut.sa/blog/نصائح/طلب-وايت-مياه/
+108. https://sa.opensooq.com/ar/%D8%A7%D9%84%D8%AE%D8%AF%D9%85%D8%A7%D8%AA/%D8%AE%D8%AF%D9%85%D8%A7%D8%AA-%D9%86%D9%82%D9%84-%D8%A7%D9%84%D9%85%D9%8A%D8%A7%D9%87
+109. https://www.mstaml.com/en/sa/product/saudi-arabia/mecca/jeddah/juices-cold-beverages/%D9%88%D8%A7%D9%8A%D8%AA-%D9%85%D9%8A%D8%A7%D9%87-%D8%AC%D8%AF%D9%87-19-%D8%B7%D9%86-%D9%81%D9%8A-%D8%AC%D8%AF%D8%A9
+110. https://feedipedia.org/node/11705
+111. https://www.ccof.org/wp-content/uploads/2024/04/Feed-Type-DMI-Table-3.pdf
+112. https://www.fao.org/4/X6528E/X6528E08.htm
+113. https://mdpi.com/2076-2615/11/5/1342

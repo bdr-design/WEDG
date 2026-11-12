@@ -18,12 +18,13 @@ class Provisions {
   };
 
   /// What one unit costs delivered to a farm in [region] (feed by the
-  /// region's feed factor; water the same everywhere).
+  /// region's feed factor; water the same everywhere), in whole riyals as a
+  /// supplier asks: the price the player sees times the units is the charge.
   static double unitPrice(Supply s, Region region) => switch (s) {
     Supply.barley => Balance.barleyBagPrice * region.feed,
     Supply.alfalfa => Balance.alfalfaBalePrice * region.feed,
     Supply.water => Balance.waterLoadPrice,
-  };
+  }.roundToDouble();
 
   /// A camel's water a day: a nursing camel 42 L; others by the season, a
   /// calf by its age (a suckling calf drinks its dam's milk).
@@ -37,7 +38,8 @@ class Provisions {
         Balance.feedAgeFactor(c.ageDays(today));
   }
 
-  /// The herd's needs a day under [plan]: barley kg, alfalfa kg, water L.
+  /// The herd's needs a day under [plan]: barley and alfalfa in kilograms as
+  /// delivered (the ration's dry matter over each feed's dry share), water L.
   static ({double barley, double alfalfa, double water}) needs(
     Iterable<Camel> herd,
     FeedPlan plan,
@@ -49,8 +51,8 @@ class Provisions {
       water += waterFor(c, today);
     }
     return (
-      barley: dryMatter * plan.barleyShare,
-      alfalfa: dryMatter * (1 - plan.barleyShare),
+      barley: dryMatter * plan.barleyShare / Balance.barleyDryMatter,
+      alfalfa: dryMatter * (1 - plan.barleyShare) / Balance.alfalfaDryMatter,
       water: water,
     );
   }
