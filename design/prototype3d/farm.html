@@ -130,7 +130,7 @@
   .pop .seg { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; height: 12px; }
   .pop .seg i { background: var(--hair-2); }
   .pop .seg i.on { background: var(--wool); }
-  @container (max-width: 330px) { .pop .row.tight { height: auto; min-height: 48px; padding-block: 4px; } .pop .row.tight .nm b, .pop .row .nm .m { white-space: normal; } .pop .stat { padding-inline: 7px; } .pop .stat b { font-size: 17px; line-height: 21px; } .pop .stat b em { display: block; margin: 1px 0 0; line-height: 14px; } .pop .stat small { font-size: 11px; } }      /* a small phone's narrow card: the three numbers still fit (after the rules it overrides) */
+  @container (max-width: 330px) { .pop .row.tight { height: auto; min-height: 48px; padding-block: 4px; } .pop .row.tight .nm b, .pop .row.tight .nm .m { white-space: normal; } .pop .stat { padding-inline: 7px; } .pop .stat b { font-size: 17px; line-height: 21px; } .pop .stat b em { display: block; margin: 1px 0 0; line-height: 14px; } .pop .stat small { font-size: 11px; } }      /* a small phone's narrow card: the three numbers still fit (after the rules it overrides) */
 
   /* ---------- pins over the world: an icon in a drop, no words (the place's name is its card's title) */
   #labels { position: fixed; inset: 0; pointer-events: none; }
@@ -744,7 +744,7 @@ const PLACES = [
   { key: 'market', name: 'حراج الإبل · بريدة', icon: 'market', p: toward(107, -57), edge: true, cls: 'place', text: () => 'حراج الإبل · بريدة 122 كم',
     open() { const L = [['حقة وضحاء', 'بريدة', 5000, 'wodh'], ['لقية حمراء مقانية', 'الرس', 18000, 'homr'], ['جذعة شقحاء مقانية', 'حائل', 33500, 'shaqh'], ['ثنية مجهمية فردية مميزة', 'الخرج', 85000, 'majaheem']];
       const range = (a, b) => `<bdi dir="ltr">${a}–${b}</bdi>`;
-      return { sub: '122 كم طيران · شرق\u00a0شمال\u00a0شرق', stats: [['ذبائح وحقايق', range(3, 6), 'آلاف'], ['مقاني', range(10, 40), 'ألف'], ['فرديات مميزة', range(60, 100), 'ألف']],
+      return { sub: '122\u00a0كم\u00a0طيران · شرق\u00a0شمال\u00a0شرق', stats: [['ذبائح وحقايق', range(3, 6), 'آلاف'], ['مقاني', range(10, 40), 'ألف'], ['فرديات مميزة', range(60, 100), 'ألف']],
         html: '<div class="sec">أمثلة من المعروض<i></i><em>بالريال</em></div><div class="list">' +
           L.map(([t, w, pr, coat]) => `<div class="row tight"><span class="sw" style="background:${COAT_HEX[coat]}"></span><span class="nm"><b>${t}</b><span class="m">${w}</span></span><span class="price">${pr.toLocaleString('en-US')}</span></div>`).join('') +
           '</div><p class="hint">أمثلة لشكل العرض. الأسعار الحقيقية يحسبها محرك اللعبة.</p>' }; } },
@@ -909,7 +909,7 @@ document.documentElement.style.setProperty('--sadu-band', saduUrl(SADU, 2));
 document.documentElement.style.setProperty('--sadu-edge', saduUrl(SADU.slice(-3), 2));      // the selvedge: the band's last three rows
 // a camel's numbers: its age from its stage (GDD §5, the stage's first year), and a value inside the GDD §6 band of its kind
 // (the young, to a حقة: 3-6k; breeding stock: 10-40k; game choice, steady per name) unless it has its own
-const AGE_YEARS = { 'مفرودة': 1, 'حقة': 2, 'لقية': 3, 'جذعة': 4, 'ثنية': 5, 'رباعية': 6, 'سديسة': 7, 'فحل سديس': 7, 'فاطر': 8 };
+const AGE_YEARS = { 'مفرودة': 1, 'حقة': 2, 'لقية': 3, 'جذعة': 4, 'ثنية': 5, 'رباعية': 6, 'سديسة': 7, 'فحل\u00a0سديس': 7, 'فاطر': 8 };      // (the bull's stage is written with a no-break space, so it never splits across a line)
 const ageStat = (c) => (c.age in AGE_YEARS ? ['العمر', ...years(AGE_YEARS[c.age])] : ['العمر', '<bdi dir="ltr">0–6</bdi>', 'أشهر']);     // a حوار: up to 6 months
 const valueOf = (c) => {
   if (c.value) return c.value;
@@ -1113,7 +1113,7 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   const big = LAYOUT.pens.main, c = (p) => [(p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2];
   inPen({ name: 'الهيفاء', coat: 'wodh', age: 'سديسة', x: -20, z: -34, heading: 1.2, pen: big, note: 'قريبة ولادة، بقت بالشبك', tag: 'قريبة ولادة', warn: true, due: 10, value: 28000 });
   inPen({ name: 'ظبية', coat: 'homr', age: 'فاطر', x: -10, z: -38, heading: -2, pen: big, note: 'كبيرة بالسن', value: 14000 });
-  inPen({ name: 'مزعل', male: true, coat: 'wodh', age: 'فحل سديس', x: c(LAYOUT.pens.bull)[0], z: c(LAYOUT.pens.bull)[1], heading: 0.6, scale: 1.08, pen: LAYOUT.pens.bull, note: 'فحل العزبة · موسم الضراب', tag: 'موسم الضراب', value: 40000 });
+  inPen({ name: 'مزعل', male: true, coat: 'wodh', age: 'فحل\u00a0سديس', x: c(LAYOUT.pens.bull)[0], z: c(LAYOUT.pens.bull)[1], heading: 0.6, scale: 1.08, pen: LAYOUT.pens.bull, note: 'فحل العزبة · موسم الضراب', tag: 'موسم الضراب', value: 40000 });
   inPen({ name: 'مزنة', coat: 'majaheem', age: 'ثنية', x: c(LAYOUT.pens.sick)[0], z: c(LAYOUT.pens.sick)[1], heading: 2.4, pen: LAYOUT.pens.sick, note: 'جرب · تحت العلاج باقي 12 يوم', tag: 'جرب', warn: true, sick: true, value: 16000 });
   for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, male: true, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى', tag: 'ينتظر أمه' });
   for (let i = 0; i < 4; i++) inPen({ name: ['ريم', 'غزيل', 'نوف', 'جود'][i], coat: i === 2 ? 'shaqh' : 'wodh', age: 'مفرودة', x: R(1, 15), z: R(-42, -28), heading: R(0, 6.28), scale: 0.82, pen: LAYOUT.pens.young, note: 'مفاريد هالسنة' });
