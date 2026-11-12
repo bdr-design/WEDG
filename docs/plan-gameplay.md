@@ -8,7 +8,7 @@ committed as done, and every fix is reviewed again (CLAUDE.md).
 
 ## Where things stand
 
-- **The rules engine** (`packages/marah_domain`, pure Dart, 39 tests passing)
+- **The rules engine** (`packages/marah_domain`, pure Dart, all tests passing)
   has camels with hidden genetics and judged traits, a market with listings,
   offers and quick sales, mating with own bulls and studs, illness and
   treatment, shepherds, farm expansion, contest rounds and judging, a daily
@@ -17,7 +17,7 @@ committed as done, and every fix is reviewed again (CLAUDE.md).
   - Seven colour families, with مغاتير as a family. The GDD says six, and
     مغاتير is only an umbrella name.
   - Age classes put لقي before حق, have no مخلول, and stop at فاطر. The GDD
-    says حق then لقي, then ناب/عود; research section 2 adds هرش past 20.
+    says حق then لقي, then ناب/عود and هرش. (Done: G1 part 1.)
   - Rounds are colour × sex × age year: the UAE/Qatar format. The GDD says
     the Saudi system: فردي دق/جل by colour, مفاريد, دق, الفحل وإنتاجه, الجمل,
     المنقية, الهجيج, الطبع, البداوة, with registration rules and six check
@@ -47,7 +47,7 @@ committed as done, and every fix is reviewed again (CLAUDE.md).
 
 Each part comes with its tests and a save migration. Parts 1 to 3 come
 first, then G2 and G3, so the owner has something to play before the rounds
-and cheating (parts 4 and 5) are built.
+and cheating (parts 4 and 5) are built; the auctions (part 6) come with G5.
 
 1. **Catalog:**
    - Six colour families, with `isMaghateer` for the five light ones; the
