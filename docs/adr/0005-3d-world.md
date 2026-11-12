@@ -255,6 +255,15 @@ runs a 24 s test on the owner's phone, alternating the full render scale and
 upscaler such as FSR1 would help. If not, it would not. FSR1 waits on that
 number from his phone.
 
+**Garbage per frame, again.** In Chromium the game code makes 50 KB a frame on
+the map and 75 KB in play. 40 to 62 KB of it comes from three.js's
+`Interpolant.evaluate`, called by the camels' animation mixers. V8 boxes the
+doubles of that shared, polymorphic function as heap numbers. The iPhone's
+WebKit (JavaScriptCore) keeps doubles unboxed, so this garbage, and the minor
+collections it brings, are most likely Chromium's alone (not yet confirmed on
+the phone; the meter's stutter count will show it). The drawing itself makes
+68 to 81 KB a frame in three.js's uniform uploads and sorting.
+
 ## Spike (must pass before this is accepted)
 
 The spike is a throwaway app, outside the repo. It must show:
