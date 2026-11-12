@@ -316,8 +316,35 @@ partly the meter's own. It now keeps a histogram. After its warm-up it also
 runs a 24 s test on the owner's phone, alternating the full render scale and
 70% every 4 s, and shows the typical and slowest-1% frame times for each. If
 70% is much quicker, the GPU is the limit and a lower render scale with an
-upscaler such as FSR1 would help. If not, it would not. FSR1 waits on that
-number from his phone.
+upscaler such as FSR1 would help. If not, it would not.
+
+**His phone's answer (12 Nov): no FSR1; the frame was CPU-bound.** After
+three minutes of play, with Low Power Mode off: 30 frames a second, the
+slowest 1% 38 ms, one stutter. Full scale (1.5x) and 70% gave the same frame
+times, 33.0 and 33.0 ms (slowest 1% 44 and 43). The pixels are not the limit,
+so FSR1 would not help, and the test is taken out. He had 60 frames a second
+on an earlier build. A profile here then put the frame's CPU work at 0.5 ms
+for the game itself and 9.9 ms for three.js issuing the drawing. The scene
+had 4,992 objects, 3,876 of them camel bones:
+- each camel's two lighter detail levels kept their own 38 bones, driving
+  nothing;
+- the main skeleton's bones were walked by the renderer although never drawn;
+- every bone was recomputed every frame, even far off where the animation
+  steps every 2nd or 4th frame;
+- every camel's bone texture was re-sent every frame.
+Now the dead bones are gone, the bones are out of the renderer's walk, and
+each camel updates its own matrices and skeleton only on the frames its
+animation steps. The objects went from 4,992 to 2,408 (594 walked when
+drawing, from 4,470), and the frame's CPU work here from 9.9 to 5.2 ms. The
+pictures are the same (0.01 to 0.04% of pixels, the animation's phase). WebKit
+passes each WebGL call to its GPU process, so on the phone this side weighs
+more. The meter now shows both parts on the phone, as averages per frame
+(WebKit's clock is in whole milliseconds; an average over many frames is
+still exact).
+
+A sharper picture than 1.5x (the budget above) is the owner's trade-off: 3x
+is four times the pixels and, at his screen, about 100-125 MB more for the
+drawing buffers, with more heat over a long session.
 
 **Garbage per frame, again.** In Chromium the game code makes 50 KB a frame on
 the map and 75 KB in play. 40 to 62 KB of it comes from three.js's
