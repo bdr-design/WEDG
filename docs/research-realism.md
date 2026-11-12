@@ -206,6 +206,20 @@ A monitoring committee rates the judges (confirmed [27][25]). Results are final,
   - Vet costs: not found (uncertain).
 - **Lifespan:** about 40 years (weak source [81]). Names run to هرش after 20 years (confirmed [11]).
 
+## 7. More of the real camel world (searched 12 Nov 2026)
+
+- **Milk:**
+  - A 2024 genome study of 61 مجاهيم females (Al-Jouf) counted 10 L or more a day as high yield and 5 L or less as low (confirmed [82]).
+  - In a 2023 study of four Saudi breeds, the وضح gave 27.1 kg a week in winter (about 4 kg a day), less than مجاهيم and حمر; the صفر gave the least in summer, 30.7 kg a week (confirmed [83]).
+  - A UAE study of about 1,400 dromedaries found about 6 kg a day on average (confirmed [83]).
+  - Commercial camel dairies exist in the Kingdom: one opened in August 2025 with about 500,000 L a month of capacity (confirmed [84]).
+  - Retail price per litre: not found; a forum comment says 10–15 riyals from local sources (uncertain, weak source [85]).
+- **Embryo transfer and artificial insemination:** practised in camels. Embryos are flushed non-surgically on day 6 and put into recipient females, to multiply elite lines for milk, racing and beauty contests (confirmed [86][87]). Cost in the Kingdom: not found (uncertain).
+- **Cloning:** the first cloned camel, Injaz, was born in Dubai in April 2009. Dubai's centre clones beauty-contest and racing champions for owners (confirmed [88][89]). Whether Saudi festivals admit clones: not found (uncertain).
+- **Zakat on camels:** ZATCA collects zakat on livestock (بهيمة الأنعام) through an online service that sends a pre-filled form and the amount due; its guide says zakat on camels is due from five camels (confirmed [90][91]). The fiqh conditions (سائمة, grazing most of the year) are a scholarly matter (confirmed [92]).
+- **Cosmetic procedures:** reported as banned for camels in general in the Kingdom, not only at festivals; the 2018 festival terms barred hybrid or imported camels from every class (uncertain: from a search summary of [93]; the page could not be opened from here to check).
+- **Camel passports:** a passport project was launched in February 2026 to record each camel's data, ownership and breed (confirmed [94]).
+
 ---
 
 ## Sources
@@ -290,3 +304,16 @@ A monitoring committee rates the judges (confirmed [27][25]). Results are final,
 79. https://mail.meddocsonline.org/journal-of-veterinary-medicine-and-animal-sciences/Prevalence-and-control-of-brucellosis-in-saudi-camel-herds.pdf
 80. https://www.frontiersin.org/articles/10.3389/fvets.2022.915475
 81. https://ultimateungulate.com/Artiodactyla/Camelus_dromedarius.html
+82. https://doi.org/10.1155/2024/7452228
+83. https://www.mdpi.com/2413-4155/5/1/2
+84. https://www.aleqt.com/2025/08/07/article_2765009.html
+85. https://hawamer.com/vb/hawamer2943393
+86. https://acsad.org/wp-content/uploads/2024/09/التلقيح-الاصطناعي-عند-الإبل-صفاء-عبد-الرحمن.pdf
+87. https://www.kfu.edu.sa/en/Centers/Camels/Documents/أسس  نقل  الاجنة في الإنسان والإبل.pdf
+88. https://www.natureasia.com/en/nmiddleeast/article/10.1038/nmiddleeast.2010.166
+89. https://khaleejtimes.com/article/camel-cloning-inside-dubais-frozen-zoo
+90. https://zatca.gov.sa/ar/eServices/Pages/eServices_258.aspx
+91. https://zatca.gov.sa/ar/eServices/Documents/eServices_Manual_258.pdf
+92. https://usul.ai/fr/t/zakat-in-islam-in-the-light-of-the-quran-and-sunnah/71
+93. https://www.alyaum.com/ampArticle/6069056
+94. https://www.intellinews.com/saudi-arabia-introduces-camel-passports-to-regulate-13bn-market-424339/
