@@ -136,7 +136,7 @@
   #labels { position: fixed; inset: 0; pointer-events: none; }
   .lbl { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; height: 44px; padding: 0 0 9px; box-sizing: border-box; isolation: isolate; will-change: transform; color: var(--ink); pointer-events: none; }
   .lbl::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 0; width: 35px; height: 35px; margin-left: -17.5px; box-sizing: border-box; border-radius: 50% 50% 0 50%; transform: rotate(45deg); background: rgba(15, 18, 25, 0.8); border: 1px solid var(--line); }
-  .lbl:hover::before, .lbl.on::before { background: var(--najdi); border-color: transparent; }
+  .lbl:hover::before, .lbl[data-hover]::before, .lbl.on::before { background: var(--najdi); border-color: transparent; }
   .lbl.warn::before { background: var(--warn); border-color: transparent; }
   .lbl.place::before { border-color: rgba(52, 188, 170, 0.7); }
   .lbl .arr { display: none; width: 14px; height: 14px; flex: none; }
@@ -209,7 +209,7 @@
 </style>
 
 <div id="root">
-<div id="stage" aria-label="عزبة الصفوة ثلاثية الأبعاد: الحلال يسرح في المرعى جنب الشبوك. اسحب للف الكاميرا، وقرّب بإصبعين، واضغط على ناقة لتختارها."></div>
+<div id="stage" aria-label="عزبة الصفوة ثلاثية الأبعاد: الحلال يسرح في المرعى جنب الشبوك. اسحب بإصبع لتحريك الخريطة، وقرّب أو بعّد بإصبعين، ولفها بلفّ الإصبعين، واضغط على ناقة لتختارها."></div>
 <div id="labels" dir="rtl" lang="ar" role="group" aria-label="أماكن العزبة على الخريطة"></div>
 
 <div class="side" dir="ltr" role="group" aria-label="أزرار الخريطة">
@@ -1040,34 +1040,104 @@ function glideTo(pl, dist) {
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.minDistance = 4; controls.maxDistance = 9000;
 controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
-// held like a phone's map (the owner: hard to control, one finger turned it round): one finger drags the ground along,
-// two pinch it nearer or further, twist it round and, moved up or down together, tilt it; with a mouse the left button
-// drags, the right turns and tilts, the wheel zooms. The ground is dragged along itself, not the screen's plane, and the
-// point turned about keeps to the ground as it is dragged over a rise (a hill's foot was left under it, turned about
-// from inside the hill). (OrbitControls' two-finger turn by the fingers moved sideways together is taken out: a pinch
-// that drifted turned the map.)
+// held like a phone's map (the owner: hard to control, one finger turned it round):
+// - one finger drags the ground along, the point under the finger staying under it (OrbitControls' own pan moved the
+//   ground a quarter to three quarters of the finger's way up or down the screen, and all of it sideways); let go
+//   while moving, it glides on a little;
+// - two fingers pinch it nearer or further about the point between them, twist it round, or, moved up or down
+//   together, tilt it. A twist counts from 12 degrees and a tilt from 10 px of both fingers the same way: until one
+//   of them starts, the two fingers only pinch (a pinch that was not straight tilted it 37 degrees and turned it 17).
+//   The whole tilt takes two thirds of the screen's height (it took 91 px);
+// - with a mouse the left button drags, the right turns and tilts, the wheel zooms toward the pointer.
+// The point turned about keeps to the ground once dragged (a hill's foot was left under it, turned about from inside
+// the hill); dragged from a view that looks at a point in the air, the point first moves along the line of sight to
+// the ground, the picture unchanged. A drag off a followed camel or the herd stops the follow (a pinch does not).
 controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
 controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
-controls.screenSpacePanning = false;
-let groundAt = null, onGround = false, twistA = null;
-const twoTurn = controls._handleTouchMoveRotate;
-if (typeof twoTurn === 'function' && typeof controls._getSecondPointerPosition === 'function' && typeof controls._rotateLeft === 'function') {
-  controls._handleTouchMoveRotate = function (e) {
-    if (this._pointers.length !== 2) { twistA = null; return twoTurn.call(this, e); }
-    const q = this._getSecondPointerPosition(e), first = e.pointerId === this._pointers[0];
-    const a = first ? Math.atan2(q.y - e.pageY, q.x - e.pageX) : Math.atan2(e.pageY - q.y, e.pageX - q.x);      // (the same way round whichever finger moved)
-    if (twistA !== null) this._rotateLeft(-Math.atan2(Math.sin(a - twistA), Math.cos(a - twistA)));      // (the map turns with the fingers)
-    twistA = a;
-    this._rotateEnd.set(this._rotateStart.x, 0.5 * (e.pageY + q.y));      // (up or down together: tilt; sideways: nothing)
-    this._rotateDelta.subVectors(this._rotateEnd, this._rotateStart).multiplyScalar(this.rotateSpeed);
-    this._rotateUp(2 * Math.PI * this._rotateDelta.y / this.domElement.clientHeight);
-    this._rotateStart.copy(this._rotateEnd);
-  };
+controls.screenSpacePanning = false;      // (along the ground)
+controls.zoomToCursor = true;
+const TWIST_ON = 12 * Math.PI / 180, TILT_ON = 10, TILT_SPAN = 0.66, GLIDE_S = 0.3;      // (game choices)
+let groundAt = null, onGround = false, twoG = null, panFrom = null;
+const panPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0)), panRay = new THREE.Raycaster(), panNdc = new THREE.Vector2();
+const panA = new THREE.Vector3(), panB = new THREE.Vector3(), panV = new THREE.Vector3(), panT = { t: 0, last: 0 };
+// the point of the ground plane (at the height of the point turned about) under (x, y) in the game's own coordinates;
+// null where the line of sight misses it or meets it very far off (near the horizon)
+function groundUnder(x, y, out) {
+  const r = rectOf(renderer.domElement);
+  panNdc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  panRay.setFromCamera(panNdc, camera);
+  if (panRay.ray.direction.y > -0.03) return null;
+  panPlane.constant = -controls.target.y;
+  if (!panRay.ray.intersectPlane(panPlane, out)) return null;
+  return out.distanceTo(camera.position) < 6 * camera.position.distanceTo(controls.target) + 50 ? out : null;
 }
-controls.addEventListener('start', () => {
-  twistA = null;
-  if (controls.state === 2 || controls.state === 4) { onGround = true; if (follow || followHerd) { follow = null; followHerd = false; } }      // (PAN, TOUCH_PAN: dragged away from a camel it followed, it stops following; the card and the ring stay)
-});
+// a drag begins: the point turned about onto the ground (along the line of sight, so the picture does not move) if it
+// stands well off it, as in the hill view
+function dragBegins(x, y) {
+  panFrom = [x, y]; panV.set(0, 0, 0); panT.last = 0;
+  if (!groundAt || onGround) return;
+  onGround = true;
+  const t = controls.target;
+  if (Math.abs(t.y - groundAt(t.x, t.z) - 1.1) < 3) return;
+  const d = tmpTo.copy(t).sub(camera.position), len = d.length(); d.multiplyScalar(1 / len);
+  const step = Math.max(1, len / 300);
+  for (let s = step; s < 3 * len; s += step) {
+    const px = camera.position.x + d.x * s, py = camera.position.y + d.y * s, pz = camera.position.z + d.z * s;
+    if (py <= groundAt(px, pz) + 1.1) { t.set(px, py, pz); return; }
+  }
+}
+function dragOffFollow() {
+  if (!follow && !followHerd) return;
+  const herd = followHerd; follow = null; followHerd = false;
+  if (pop && pop.camel) renderCard(); else if (herd && pop && pop.place) openPlace(pop.place, true);      // (its button reads «تابعها» again)
+}
+// one finger (or the mouse's left button) moves from (x0, y0) to (x1, y1): the ground under the one moved under the other
+function dragGround(self, x1, y1, t) {
+  const a = groundUnder(self._panStart.x, self._panStart.y, panA), b = a && groundUnder(x1, y1, panB);
+  if (!b) return false;
+  a.sub(b); controls.target.add(a); camera.position.add(a);
+  const dt = panT.last ? Math.max(1, t - panT.last) / 1000 : 0; panT.last = t;
+  if (dt) panV.lerp(a.multiplyScalar(1 / dt), 0.5);
+  if (panFrom && Math.hypot(x1 - panFrom[0], y1 - panFrom[1]) > 8) { panFrom = null; dragOffFollow(); }
+  self._panStart.set(x1, y1);
+  return true;
+}
+const OC = OrbitControls.prototype;
+if (['_handleTouchMovePan', '_handleMouseMovePan', '_handleTouchStartPan', '_handleMouseDownPan', '_handleTouchMoveRotate', '_handleTouchStartDollyRotate', '_getSecondPointerPosition', '_rotateLeft', '_rotateUp'].every((k) => typeof OC[k] === 'function')) {
+  controls._handleTouchStartPan = function (e) { OC._handleTouchStartPan.call(this, e); if (this._pointers.length === 1) dragBegins(this._panStart.x, this._panStart.y); };
+  controls._handleMouseDownPan = function (e) { OC._handleMouseDownPan.call(this, e); dragBegins(e.clientX, e.clientY); };
+  controls._handleTouchMovePan = function (e) { if (this._pointers.length !== 1 || !dragGround(this, e.pageX, e.pageY, e.timeStamp)) OC._handleTouchMovePan.call(this, e); };
+  controls._handleMouseMovePan = function (e) { if (!dragGround(this, e.clientX, e.clientY, e.timeStamp)) OC._handleMouseMovePan.call(this, e); };
+  controls._handleTouchStartDollyRotate = function (e) { twoG = null; OC._handleTouchStartDollyRotate.call(this, e); };
+  controls._handleTouchMoveRotate = function (e) {
+    if (this._pointers.length !== 2) return OC._handleTouchMoveRotate.call(this, e);
+    const q = this._getSecondPointerPosition(e), first = e.pointerId === this._pointers[0];
+    const ax = first ? e.pageX : q.x, ay = first ? e.pageY : q.y, bx = first ? q.x : e.pageX, by = first ? q.y : e.pageY;      // (the same finger first, whichever moved)
+    const ang = Math.atan2(by - ay, bx - ax), mid = (ay + by) / 2;
+    const g = twoG || (twoG = { ax, ay, bx, by, ang0: ang, ang, mid, d0: Math.max(1, Math.hypot(bx - ax, by - ay)), mode: null });
+    const turn = Math.atan2(Math.sin(ang - g.ang), Math.cos(ang - g.ang)), lift = mid - g.mid;
+    g.ang = ang; g.mid = mid;
+    if (!g.mode) {
+      const dya = ay - g.ay, dyb = by - g.by, dx = (ax - g.ax) + (bx - g.bx);
+      if (Math.abs(Math.atan2(Math.sin(ang - g.ang0), Math.cos(ang - g.ang0))) > TWIST_ON) g.mode = 'twist';
+      else if (dya * dyb > 0 && Math.min(Math.abs(dya), Math.abs(dyb)) > TILT_ON && Math.abs(dya + dyb) > 2 * Math.abs(dx) && Math.abs(Math.hypot(bx - ax, by - ay) / g.d0 - 1) < 0.15) g.mode = 'tilt';
+      else return;
+    }
+    if (g.mode === 'twist') this._rotateLeft(-turn);      // (the map turns with the fingers)
+    else this._rotateUp((84 * Math.PI / 180) * lift / (TILT_SPAN * this.domElement.clientHeight));      // (up together: toward the horizon)
+  };
+  if (typeof OC._updateZoomParameters === 'function') controls._updateZoomParameters = function (x, y) {      // (the pinch's or the pointer's point in the game's coordinates, as theirs are: held upright, the screen's were turned)
+    if (!this.zoomToCursor) return;
+    this._performCursorZoom = true;
+    const r = rectOf(this.domElement);
+    this._mouse.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    this._dollyDirection.set(this._mouse.x, this._mouse.y, 1).unproject(this.object).sub(this.object.position).normalize();
+  };
+  controls.addEventListener('end', () => {      // (let go while dragging: it glides on, GLIDE_S worth of its speed)
+    if (panT.last && performance.now() - panT.last < 80 && panV.lengthSq() > 0.01) controls._panOffset.copy(panV).multiplyScalar(GLIDE_S);
+    panT.last = 0; panV.set(0, 0, 0); panFrom = null;
+  });
+}
 let follow = null, followHerd = false;
 const herdC = new THREE.Vector3();
 function herdCenter() { herdC.set(0, 0, 0); let n = 0; for (const k of camels) if (k.home === 'graze') { herdC.add(k.root.position); n++; } return herdC.multiplyScalar(1 / Math.max(1, n)); }
@@ -1130,13 +1200,23 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const pin = pinAt(e.clientX, e.clientY);
   if (pin) openPlace(pin); else if (!tapWorld(e.clientX, e.clientY)) closePop();
 });
+// a mouse over a pin: its hover colour and the hand (the pins take no pointer of their own)
+let hoverPin = null;
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  const l = e.buttons || (play && play.on) ? null : pinAt(e.clientX, e.clientY);
+  if (l === hoverPin) return;
+  if (hoverPin) delete hoverPin.el.dataset.hover;
+  if (l) l.el.dataset.hover = '';
+  hoverPin = l; renderer.domElement.style.cursor = l ? 'pointer' : '';
+});
 // the pin under (x, y), the first by its order on the map. The pins take no touch of their own (a finger that came down
 // on a pin did not drag the map, and a second finger landing on one did not pinch it: the map felt hard to hold); a tap
 // on the map is tried against them first. (Kept as buttons, so a key still opens them.)
 function pinAt(x, y) {
   for (const l of order) {
     if (!l.vis) continue;
-    const r = l.el.getBoundingClientRect();
+    const r = rectOf(l.el);      // (in the game's coordinates, as the tap's are: held upright, the screen's were turned)
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return l;
   }
   return null;
@@ -1282,7 +1362,8 @@ function tick(now) {
   const dt = Math.min(clock.getDelta(), 0.05);
   for (const c of camels) c.update(dt, camera.position);
   const playing = play ? play.update(dt) : false;
-  { const on = !playing && !phone.big; if (controls.enabled !== on) controls.enabled = on; }      // (the map's controls off in play, and under the enlarged phone, where the scene is not drawn: left on, a thumb on the walk stick or a pedal swung the camera with it)
+  { const on = !playing && !phone.big; if (controls.enabled !== on) controls.enabled = on; }
+  controls.zoomToCursor = !follow && !followHerd;      // (following, it zooms about the camel it keeps in the middle)      // (the map's controls off in play, and under the enlarged phone, where the scene is not drawn: left on, a thumb on the walk stick or a pedal swung the camera with it)
   // follow without stealing the viewer's control of the angle
   const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
   if (tgt && !playing) { const delta = tmpTo.copy(tgt).setY(1.1).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }

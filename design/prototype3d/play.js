@@ -344,7 +344,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     } else if (e.pointerId === lookId) {
       const dx = e.clientX - l0.x, dy = e.clientY - l0.y;
       if (state.mode === 'walk') { input.yaw -= dx * 0.006; input.pitch = THREE.MathUtils.clamp(input.pitch + dy * 0.004, -0.5, 1.0); }
-      else if (state.view === 3) { orbYaw -= dx * 0.006; orbEl = THREE.MathUtils.clamp(orbEl + dy * 0.004, ORBIT_LOW, ORBIT_HIGH); orbIdle = 0; }      // (in the car, from behind: the camera round the car, a finger across the screen about half a turn)
+      else if (state.view === 3) { orbYaw -= dx * 0.006; orbIdle = 0; }      // (in the car, from behind: the camera round the car, a finger across the screen about half a turn; it does not tilt)
       l0.x = e.clientX; l0.y = e.clientY;
     }
   });
@@ -580,10 +580,10 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     }
   }
   const CHASE_BACK = 8.0, CHASE_UP = 2.7, CHASE_TURN = 2;      // m behind and above the car's middle; 1/s: how fast the camera's heading follows the car's (game choices; the owner: at 5.6 m and 4/s it sat very close and turned with the car)
-  const ORBIT_BACK = 2, ORBIT_EASE = 2, ORBIT_LOW = -0.15, ORBIT_HIGH = 0.85;      // s after the finger lets go before the camera turned round the car eases back behind it; 1/s how fast it does; rad it tilts down and up from its own height at most (game choices)
-  const CHASE_CAP = 5.0, CHASE_NEAR = 2.6, CHASE_CLIMB = 5, CHASE_LETGO = 4, CHASE_IN = 6;      // m over the car the camera rises at most to see over a wall, then it comes in; m from the car's middle at the nearest; m/s its climb over a wall at most; m/s it moves back out at most once a wall lets it go; m/s it comes in at most (game choices)
+  const ORBIT_BACK = 2, ORBIT_EASE = 2, ORBIT_TURN = 1.2;      // s after the finger lets go before the camera turned round the car eases back behind it; 1/s how fast it does, and rad/s at most (game choices: from half a turn round it swung back at 218 degrees a second)
+  const CHASE_CAP = 5.0, CHASE_NEAR = 2.9, CHASE_CLIMB = 5, CHASE_LETGO = 4, CHASE_IN = 6;      // m over the car the camera rises at most to see over a wall, then it comes in; m from the car's middle at the nearest (its corners are 2.7 m out); m/s its climb over a wall at most; m/s it moves back out at most once a wall lets it go; m/s it comes in at most (game choices)
   let camYaw = 0, camY = null, camVy = 0, camPrevY = 0, camBack = null, camLift = 0, camPullX = 0, camPullZ = 0, camHad = false;
-  let orbYaw = 0, orbEl = 0, orbIdle = 0;      // the player's own turn of the camera round the car (a finger dragged on the screen): its heading and its rise, rad
+  let orbYaw = 0, orbIdle = 0;      // the player's own turn of the camera round the car (a finger dragged on the screen), rad
   const camPrev = new THREE.Vector3();
   // where along the segment (x0, z0) to (x1, z1) it enters the box b, from 0 to 1, or 1 if it does not (the slab test;
   // no array made per call)
@@ -619,15 +619,18 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         // (it swings round in a turn, half a second behind), its height easing over bumps. (It used to ease its whole place
         // toward a point behind the car, so it fell back by the speed over the easing rate: 8 m more at 100 km/h, the owner:
         // far away and loose while moving.) 8 m from the middle is about 5.5 m behind the bumper (game choice). A finger
-        // dragged across the screen turns it round the car and tilts it up or down, about the point it looks at; ORBIT_BACK
-        // s after it lets go it eases back behind.
-        if (state.snap) { camYaw = carState.yaw; camY = null; orbYaw = orbEl = 0; }
+        // dragged across the screen turns it round the car; ORBIT_BACK s after it lets go it eases back behind. (It also
+        // tilted up and down: over the porch and the room it then came down through the porch's roof and onto the room,
+        // put out by its nearest side 2 m in a frame; its height is the camera's own again.)
+        if (state.snap) { camYaw = carState.yaw; camY = null; orbYaw = 0; }
         const dy = Math.atan2(Math.sin(carState.yaw - camYaw), Math.cos(carState.yaw - camYaw));
         camYaw += dy * Math.min(1, dt * CHASE_TURN);
         orbYaw = Math.atan2(Math.sin(orbYaw), Math.cos(orbYaw));      // (back the short way round)
-        if (lookId === null && (orbIdle += dt) > ORBIT_BACK) { const k = Math.exp(-dt * ORBIT_EASE * Math.min(1, (orbIdle - ORBIT_BACK) / 0.5)); orbYaw *= k; orbEl *= k; }      // (its rate rising over half a second: set off at full rate, it lurched)
-        const d0 = CHASE_BACK + Math.min(1.2, Math.abs(carState.v) * 0.03), rise = CHASE_UP - 1.05, reach = Math.hypot(d0, rise), el = Math.atan2(rise, d0) + orbEl;
-        const back = reach * Math.cos(el), up = 1.05 + reach * Math.sin(el), bx = -Math.cos(camYaw + orbYaw), bz = Math.sin(camYaw + orbYaw);      // (behind: the car's forward is (cos yaw, 0, -sin yaw))
+        if (lookId === null && (orbIdle += dt) > ORBIT_BACK) {
+          const ramp = Math.min(1, (orbIdle - ORBIT_BACK) / 0.5), step = orbYaw * (1 - Math.exp(-dt * ORBIT_EASE * ramp));      // (its rate rising over half a second: set off at full rate, it lurched)
+          orbYaw -= Math.sign(step) * Math.min(Math.abs(step), ORBIT_TURN * ramp * dt);
+        }
+        const back = CHASE_BACK + Math.min(1.2, Math.abs(carState.v) * 0.03), up = CHASE_UP, bx = -Math.cos(camYaw + orbYaw), bz = Math.sin(camYaw + orbYaw);      // (behind: the car's forward is (cos yaw, 0, -sin yaw))
         // a wall or a building between the car and the camera: up until the line from the car to the camera clears its
         // top by 0.3 m where it enters it, worked from where it enters, not from the camera's own height (worked from that
         // it rose, cleared, fell and rose again by the yard's wall, a shake of 5-7 cm three times a second; and the fixed
@@ -654,6 +657,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         if (state.snap || camY === null) { camPullX = camPullZ = 0; camHad = false; }
         const pull = Math.hypot(camPullX, camPullZ), ease = pull > 0 ? Math.max(Math.exp(-dt * 4), 1 - CHASE_LETGO * dt / pull) : 1;      // (let go no faster than CHASE_LETGO: after a slide along the tent it swooped back 30 cm a frame)
         camPos.set(rawX + camPullX * ease, 0, rawZ + camPullZ * ease);
+        { const ox = camPos.x - carState.pos.x, oz = camPos.z - carState.pos.z, r = Math.hypot(ox, oz);      // (never nearer the car's middle than CHASE_NEAR: let go along a straight line as the finger's turn swung it back, it went through the car)
+          if (r < CHASE_NEAR) { const k = r > 1e-3 ? CHASE_NEAR / r : 0; camPos.x = carState.pos.x + (k ? ox * k : bx * CHASE_NEAR); camPos.z = carState.pos.z + (k ? oz * k : bz * CHASE_NEAR); } }
         for (let pass = 0; pass < 2; pass++) for (const b of rects) {
           if (!b.h || nowY >= b.h + 0.3) continue;
           const x0 = b.x0 - 0.3, x1 = b.x1 + 0.3, z0 = b.z0 - 0.3, z1 = b.z1 + 0.3;
@@ -680,7 +685,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         if (camY === null) { camVy = 0; camPrevY = carState.pos.y; }
         if (dt > 0) { camVy += ((carState.pos.y - camPrevY) / dt - camVy) * Math.min(1, dt * 4); camPrevY = carState.pos.y; }
         const want = Math.min(ceil, Math.max(carState.pos.y + up + Math.max(-2, Math.min(2, camVy / 6)), ground(camPos.x, camPos.z) + 1.0));
-        camY = camY === null ? want : camY + (want - camY) * Math.min(1, dt * 6);
+        camY = camY === null ? want : camY + Math.min((want - camY) * Math.min(1, dt * 6), (Math.max(0, camVy) + CHASE_CLIMB) * dt);      // (up no faster than the car climbs and CHASE_CLIMB more: let out from under a roof it rose a metre a frame)
         // the lift over the wall eases on top of that, no faster than CHASE_CLIMB (at 14/s it rose 74 cm in one frame as
         // the room came between, 1.5 m at 30 fps)
         const lift = Math.max(0, need - camY), dl = (lift - camLift) * Math.min(1, dt * 8), down = camY + camLift > ceil ? 10 : CHASE_CLIMB;      // (above a roof's limit it comes down faster)
@@ -727,5 +732,5 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     return true;
   }
   if (rigged) setTimeout(loadCabin, 4000);
-  return { start, stop, update, model, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbEl = el; orbIdle = hold ? -Infinity : 0; } } };
+  return { start, stop, update, model, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; } } };
 }

@@ -259,8 +259,14 @@ what it can see of it. Measured the same way, at 844 × 390:
 close and turned with the car; the map was hard to hold. The chase camera is
 now 8 m behind the car's middle and 2.7 m up (it was 5.6 and 2.05), its
 heading follows the car's at 2/s (it was 4/s, so about half a second behind in
-a turn), and a finger dragged across the screen turns it round the car and
-tilts it, easing back behind 2 s after the finger lifts. The view split's
+a turn), and a finger dragged across the screen turns it round the car,
+easing back behind 2 s after the finger lifts, at most 70 degrees a second.
+(It also tilted up and down at first. The review found it came down through
+the porch's roof and onto the room, put out by its nearest side 2 m in a
+frame, so it keeps its own height.) It never comes nearer the car's middle
+than 2.9 m (the car's corners are 2.7 m out): let go by a wall as the turn
+swung back, it once went through the car. Its height rises no faster than the
+car climbs plus 5 m/s. The view split's
 chase eyes moved with it (8 and 9.2 m back, 1.4 to 5 m up, 50 degrees either
 side): 150 views across that range show at most 2 px missing. Turned further
 round by the finger, the game draws all of the car, as by a wall. Measured the
@@ -277,12 +283,21 @@ West across the yard is 205 draws and 402k (the old camera: 203 and 402k);
 west nearer the pens 193 and 431k (old: 193 and 433k). The car is 64 draws
 and 145k of that, the camels up to 74k. Open.
 
-The map's camera is held like a phone's map: one finger drags the ground
-along (along the ground, not the screen), two pinch, twist to turn and move
-up or down together to tilt; the point turned about keeps to the ground.
-The place pins take no touch of their own: a finger that came down on a pin
-did not drag the map, and a second finger landing on one did not pinch it. A
-tap is tried against the pins first.
+The map's camera is held like a phone's map. One finger drags the ground
+with the point under the finger staying under it, and glides on a little when
+let go moving (OrbitControls' own pan moved the ground a quarter to three
+quarters of the finger's way up or down the screen). Two fingers pinch about
+the point between them; a twist turns the map from 12 degrees, and both
+fingers moved the same way up or down tilt it from 10 px, the whole tilt over
+two thirds of the screen's height; until one of those starts they only pinch
+(a pinch that was not straight tilted it 37 degrees). The point turned about
+keeps to the ground once dragged; from the hill view, whose point is in the
+air, it first moves along the line of sight to the ground, the picture
+unchanged. A drag stops following a camel or the herd and the card's button
+reads «تابعها» again; a pinch does not stop it. The place pins take no touch
+of their own: a finger that came down on a pin did not drag the map, and a
+second finger landing on one did not pinch it. A tap is tried against the
+pins first, in the game's coordinates (held upright, the screen is turned).
 
 **The camels drawn a frame late (found by the review of the bones change).**
 three.js counts its frames before the shadow pass, so a skeleton the shadow
