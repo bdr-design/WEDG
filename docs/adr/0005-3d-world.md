@@ -264,9 +264,19 @@ easing back behind 2 s after the finger lifts, at most 70 degrees a second.
 (It also tilted up and down at first. The review found it came down through
 the porch's roof and onto the room, put out by its nearest side 2 m in a
 frame, so it keeps its own height.) It never comes nearer the car's middle
-than 2.9 m (the car's corners are 2.7 m out): let go by a wall as the turn
-swung back, it once went through the car. Its height rises no faster than the
-car climbs plus 5 m/s. The view split's
+than 2.9 m while it is as low as the car's roof and a little more (the car's
+corners are 2.7 m out): let go by a wall as the turn swung back, it once went
+through the car. Over a building's top it stays over it until it is off it
+(it came down onto the room and was put out by its nearest side, 2.1 m in a
+frame). With the car under a roof it comes in in front of a building rather
+than rise over it (held over the room, the porch's roof hid the car 2 s). Its
+height rises no faster than the car climbs plus 5 m/s, and it moves back out
+no faster than 4 m/s (backing out from under the car shade it stepped 47 cm a
+frame). Over the review's sweeps (standing by every wall, building, roof and
+corner with the camera swung right round at 143 degrees a second, and driving
+by them with it turned): no frame inside a wall, a building or the car, no
+frame in the porch's roof. With no finger the camera is as before: no frame
+inside anything and the same few frames of the car hidden. The view split's
 chase eyes moved with it (8 and 9.2 m back, 1.4 to 5 m up, 50 degrees either
 side): 150 views across that range show at most 2 px missing. Turned further
 round by the finger, the game draws all of the car, as by a wall. Measured the

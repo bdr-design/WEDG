@@ -662,8 +662,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
         if (state.snap || camY === null) { camPullX = camPullZ = 0; camHad = false; }
         const pull = Math.hypot(camPullX, camPullZ), ease = pull > 0 ? Math.max(Math.exp(-dt * 4), 1 - CHASE_LETGO * dt / pull) : 1;      // (let go no faster than CHASE_LETGO: after a slide along the tent it swooped back 30 cm a frame)
         camPos.set(rawX + camPullX * ease, 0, rawZ + camPullZ * ease);
-        { const ox = camPos.x - carState.pos.x, oz = camPos.z - carState.pos.z, r = Math.hypot(ox, oz);      // (never nearer the car's middle than CHASE_NEAR: let go along a straight line as the finger's turn swung it back, it went through the car)
-          if (r < CHASE_NEAR) { const k = r > 1e-3 ? CHASE_NEAR / r : 0; camPos.x = carState.pos.x + (k ? ox * k : bx * CHASE_NEAR); camPos.z = carState.pos.z + (k ? oz * k : bz * CHASE_NEAR); } }
+        { const ox = camPos.x - carState.pos.x, oz = camPos.z - carState.pos.z, r = Math.hypot(ox, oz);      // (never nearer the car's middle than CHASE_NEAR while as low as the car's roof and a little more: let go along a straight line as the finger's turn swung it back, it went through the car; higher up it may pass over the car, or it was thrown 1.1 m as it rose clear of the room beside the car)
+          if (r < CHASE_NEAR && nowY < carState.pos.y + 2.5) { const k = r > 1e-3 ? CHASE_NEAR / r : 0; camPos.x = carState.pos.x + (k ? ox * k : bx * CHASE_NEAR); camPos.z = carState.pos.z + (k ? oz * k : bz * CHASE_NEAR); } }
         for (let pass = 0; pass < 2; pass++) for (const b of rects) {
           if (!b.h || nowY >= b.h + 0.3) continue;
           const x0 = b.x0 - 0.3, x1 = b.x1 + 0.3, z0 = b.z0 - 0.3, z1 = b.z1 + 0.3;
