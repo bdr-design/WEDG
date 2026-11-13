@@ -102,9 +102,17 @@ Result _buyAt(Sim sim, PlayerState p, Listing l, Riyal price) {
   return _ok(sim);
 }
 
-/// Pays a selling player (price minus the broker's commission).
-void _payout(Sim sim, PlayerState seller, Camel c, Riyal price) {
+/// Pays a selling player: the price, less the broker's commission on a
+/// sale he brokered (none when he buys the camel himself: [_quickSale]).
+void _payout(
+  Sim sim,
+  PlayerState seller,
+  Camel c,
+  Riyal price, {
+  bool commission = true,
+}) {
   sim.pay(seller, price, LedgerCategory.sale, ref: c.id.value);
+  if (!commission) return;
   sim.pay(
     seller,
     -price.times(Balance.brokerCommission),
@@ -155,7 +163,9 @@ Result _list(Sim sim, PlayerState p, ListForSale cmd) {
   final c = sim.world.camels[cmd.camel];
   final problem = Eligibility.canSell(sim.world, c, p.id);
   if (problem != null) return Err(problem, sim.drain());
-  if (cmd.askPrice < 1000) return _err(sim, ErrorCode.invalidAmount);
+  if (cmd.askPrice < Balance.minAskPrice) {
+    return _err(sim, ErrorCode.invalidAmount);
+  }
   final l = Listing(
     id: sim.world.ids.listing(),
     camelId: c!.id,
@@ -214,8 +224,28 @@ Result _decline(Sim sim, PlayerState p, DeclineOffer cmd) {
   return _ok(sim);
 }
 
-Riyal quickSalePrice(Camel c, Sim sim) =>
-    marketRound(Valuation.value(c, sim.today).value * Balance.quickSaleFactor);
+/// What the broker pays for [c] now: less than the market
+/// ([Balance.quickSaleFactor]), by his own eye, which is off the true value
+/// by a few percent and the same all week (his price is the one the player
+/// is shown and the one paid; the exact value cannot be read back from it,
+/// as from the appraisals: views.dart).
+Riyal quickSalePrice(Camel c, Sim sim) {
+  final eye = Rng.keyed(sim.world.seed, [
+    'broker',
+    c.id.value,
+    sim.today.value ~/ 7,
+  ]).normal(sd: Balance.brokerEyeSd);
+  return marketRound(
+    Valuation.value(c, sim.today).value *
+        Balance.quickSaleFactor *
+        (1 +
+            clampDouble(
+              eye,
+              -2.5 * Balance.brokerEyeSd,
+              2.5 * Balance.brokerEyeSd,
+            )),
+  );
+}
 
 Result _quickSale(Sim sim, PlayerState p, QuickSale cmd) {
   final c = sim.world.camels[cmd.camel];
@@ -223,7 +253,17 @@ Result _quickSale(Sim sim, PlayerState p, QuickSale cmd) {
   if (problem != null) return Err(problem, sim.drain());
   final rng = sim.rng(['broker', c!.id.value]);
   final broker = WorldGen(sim).randomOwner(rng, region: p.farm.region);
-  _sellTo(sim, p, c, quickSalePrice(c, sim), broker.id, broker.name);
+  // he buys it himself, so takes no commission (السعي is the fee for
+  // finding a buyer); his lower price is his margin
+  _sellTo(
+    sim,
+    p,
+    c,
+    quickSalePrice(c, sim),
+    broker.id,
+    broker.name,
+    commission: false,
+  );
   return _ok(sim);
 }
 
@@ -233,13 +273,14 @@ void _sellTo(
   Camel c,
   Riyal price,
   OwnerId buyerId,
-  String buyerName,
-) {
-  _payout(sim, seller, c, price);
+  String buyerName, {
+  bool commission = true,
+}) {
+  _payout(sim, seller, c, price, commission: commission);
   releaseCamel(sim, c);
   final profit =
       price.value -
-      (price.value * Balance.brokerCommission).round() -
+      (commission ? price.times(Balance.brokerCommission).value : 0) -
       c.purchasePrice;
   c
     ..ownerId = buyerId

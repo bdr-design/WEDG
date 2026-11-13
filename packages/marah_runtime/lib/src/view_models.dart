@@ -28,6 +28,8 @@ class CamelCard {
     required this.entered,
     required this.bestRank,
     required this.crossbred,
+    this.onTheWay = false,
+    this.quickSale,
   });
 
   final CamelId id;
@@ -52,6 +54,13 @@ class CamelCard {
   final int? bestRank;
   final bool crossbred;
 
+  /// The player's, bought today: the truck brings it tomorrow.
+  final bool onTheWay;
+
+  /// What the broker pays for it now (the player's own camel, free to sell),
+  /// else null.
+  final int? quickSale;
+
   @override
   bool operator ==(Object other) =>
       other is CamelCard &&
@@ -73,7 +82,9 @@ class CamelCard {
       other.listed == listed &&
       other.entered == entered &&
       other.bestRank == bestRank &&
-      other.crossbred == crossbred;
+      other.crossbred == crossbred &&
+      other.onTheWay == onTheWay &&
+      other.quickSale == quickSale;
 
   @override
   int get hashCode => Object.hashAll([
@@ -96,6 +107,8 @@ class CamelCard {
     entered,
     bestRank,
     crossbred,
+    onTheWay,
+    quickSale,
   ]);
 }
 

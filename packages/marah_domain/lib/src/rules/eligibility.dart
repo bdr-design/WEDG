@@ -23,6 +23,7 @@ class Eligibility {
 
   static DomainError? femaleCanBreed(Camel f, GameDay today) {
     if (f.sex != Sex.female) return const DomainError(ErrorCode.notFemale);
+    if (onTheWay(f, today)) return const DomainError(ErrorCode.onTheWay);
     if (f.ageDays(today) < Balance.femaleMinBreedingDays) {
       return const DomainError(ErrorCode.tooYoungToBreed, {
         'days': Balance.femaleMinBreedingDays,
@@ -55,6 +56,7 @@ class Eligibility {
   static DomainError? bullCanServe(Camel m, GameDay today) {
     if (!m.isAlive) return const DomainError(ErrorCode.notFound);
     if (m.sex != Sex.male) return const DomainError(ErrorCode.notMale);
+    if (onTheWay(m, today)) return const DomainError(ErrorCode.onTheWay);
     if (m.ageYears(today) < Balance.maleMinBreedingYears) {
       return const DomainError(ErrorCode.tooYoungToBreed, {
         'days': Balance.maleMinBreedingYears * 365,
@@ -70,6 +72,11 @@ class Eligibility {
     return null;
   }
 
+  /// Bought in the market and still on the truck to the farm
+  /// ([Balance.camelTruckDays]): the player's, but not there yet.
+  static bool onTheWay(Camel c, GameDay today) =>
+      !c.homeBred && today.daysSince(c.acquiredOn) < Balance.camelTruckDays;
+
   static bool isListed(WorldState w, CamelId id) =>
       w.listings.values.any((l) => l.camelId == id);
 
@@ -81,7 +88,8 @@ class Eligibility {
   static DomainError? canSell(WorldState w, Camel? c, OwnerId actor) {
     final own = owned(c, actor);
     if (own != null) return own;
-    if (isListed(w, c!.id)) return const DomainError(ErrorCode.alreadyListed);
+    if (onTheWay(c!, w.day)) return const DomainError(ErrorCode.onTheWay);
+    if (isListed(w, c.id)) return const DomainError(ErrorCode.alreadyListed);
     if (isEntered(w, c.id))
       return const DomainError(ErrorCode.enteredInContest);
     return null;

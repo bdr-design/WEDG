@@ -49,6 +49,10 @@ enum ErrorCode {
   /// needs the caravan).
   needsFacility,
 
+  /// A camel bought today, still on the truck to the farm (it comes
+  /// tomorrow: Balance.camelTruckDays).
+  onTheWay,
+
   /// The engine hit a bug; the game was restored from the last save.
   internalError,
 }

@@ -58,6 +58,9 @@ class CamelView {
 
   /// The day it came to its owner's farm (its birth for one born there).
   GameDay get acquiredOn => _c.acquiredOn;
+
+  /// Bought today and on the truck: the farm has it tomorrow.
+  bool get onTheWay => isMine && Eligibility.onTheWay(_c, _today);
   int get ageDays => _c.ageDays(_today);
   AgeClass get ageClass => _c.ageClass(_today);
   String get chip => _c.chip;

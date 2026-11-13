@@ -261,8 +261,23 @@ class Balance {
   /// custom in the real market (section 5); 2.5% is the game's.
   static const brokerCommission = 0.025;
 
-  /// (balance) Selling straight to the broker fetches less than value.
+  /// (balance) Selling straight to the broker fetches less than value: he
+  /// buys it himself, so takes no commission, his margin in the price.
   static const quickSaleFactor = 0.78;
+
+  /// (balance) How far the broker's eye is off a camel's true value (one
+  /// standard deviation, kept within 2.5 of them): his price, unlike the
+  /// market's appraisals (views.dart), is a single figure, so without it the
+  /// value would be his price over [quickSaleFactor] exactly.
+  static const brokerEyeSd = 0.05;
+
+  /// (balance) A camel bought in the market comes on the truck the next day,
+  /// from anywhere in the kingdom: a game choice (the 1,356 km from Tabuk to
+  /// Riyadh is about 17 hours at a lorry's 80 km/h, but the longest road,
+  /// Jouf to Najran at 1,804 km, would take longer). Until then it is the
+  /// player's but not on the farm: not in the yard, not milked, not for sale
+  /// or for breeding.
+  static const camelTruckDays = 1;
 
   /// (balance) Bargaining.
   static const maxBargainsPerBuyer = 3;
@@ -271,6 +286,9 @@ class Balance {
 
   /// (balance) Player listings.
   static const playerListingDays = 45;
+
+  /// (balance) The lowest asking price a player may list at.
+  static const minAskPrice = 1000;
   static const maxOffersPerListing = 3;
   static const offerValidDays = 3;
   static const buyerInterest = 0.32;

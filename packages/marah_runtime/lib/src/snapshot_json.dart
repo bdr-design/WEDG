@@ -36,6 +36,14 @@ class SnapshotJson {
     'studs': [for (final x in s.studs) stud(x)],
     'festivals': [for (final f in s.festivals) festival(f)],
     'openOffers': s.openOffers,
+    // الحراج's rules the screens say (Balance): the broker's commission on a
+    // sale he brokers, how long a listing stays, how long an offer holds
+    'haraj': {
+      'commission': Balance.brokerCommission,
+      'listingDays': Balance.playerListingDays,
+      'offerDays': Balance.offerValidDays,
+      'minAsk': Balance.minAskPrice,
+    },
     'breedingSeason': s.breedingSeason,
     'recentEvents': [for (final e in s.recentEvents) e.toJson()],
   };
@@ -160,6 +168,8 @@ class SnapshotJson {
     'entered': c.entered,
     'bestRank': c.bestRank,
     'crossbred': c.crossbred,
+    'onTheWay': c.onTheWay,
+    'quickSale': c.quickSale,
   };
 
   static Map<String, Object?> listing(ListingCard l) => {

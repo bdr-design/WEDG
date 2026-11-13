@@ -65,8 +65,10 @@ on canvas. Everything that repeats is instanced.
 compiled to `engine_worker.js` by `python3 tool/proto_engine/build_worker.py`;
 built, not committed) in a Web Worker once the yard has loaded. The in-game
 phone (`phone.js`) shows the player's own game from it: the home screen (the
-date and season, the balance, the herd), الوايت and العلف, whose orders go
-to the engine. The design's other phone screens come in as each works on the
+date and season, the balance, the herd), الوايت and العلف, الحليب, العزبة
+(building) and الحراج (buying, haggling, selling and the offers on one's
+listings), whose orders go to the engine. A camel bought comes on the truck
+the next day and joins the yard then. The design's other phone screens come in as each works on the
 engine (G3 in `docs/plan-gameplay.md`); until then they are not shown. The
 frame meter (`#fps`) is one short line in the top right corner (frames a
 second and the slowest 1%); a tap opens its details, with the engine's cost

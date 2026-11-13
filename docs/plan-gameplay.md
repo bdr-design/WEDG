@@ -167,7 +167,11 @@ and cheating (parts 4 and 5) are built; the auctions (part 6) come with G5.
   ordered from the phone's الوايت and العلف apps. The water truck drives in
   to the tank.
 - **الحراج and the bank:** the engine's listings, buying with the
-  commission, selling, and the balance and ledger.
+  commission, selling, and the balance and ledger. الحراج is built (approved
+  13 Nov: design/ui/phone_haraj.jpg): the listings, a camel's page (buy or
+  haggle), selling at one's price or to the broker, and one's listings with
+  their offers; a camel bought comes the next day. Still to come: the truck
+  driving in to the yard, selling from a camel's own card, the bank.
 - **Time:** a real day is a game week (approved). The date and season are
   shown in the phone.
 

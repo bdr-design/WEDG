@@ -18,6 +18,7 @@ class Presenter {
   CamelCard card(CamelView c, GameView v) {
     final (lo, hi) = c.estimate;
     final placings = c.placings;
+    final sell = c.isMine ? v.canSell(c.id) : null;
     return CamelCard(
       id: c.id,
       name: c.name,
@@ -35,11 +36,15 @@ class Presenter {
       dueOn: c.dueOn,
       awaitingCheck: c.isMine && c.awaitingCheck,
       listed: v.listingOf(c.id) != null,
-      entered: c.isMine && v.canSell(c.id)?.code == ErrorCode.enteredInContest,
+      entered: c.isMine && sell?.code == ErrorCode.enteredInContest,
       bestRank: placings.isEmpty
           ? null
           : placings.map((p) => p.rank).reduce((a, b) => a < b ? a : b),
       crossbred: c.crossbred,
+      onTheWay: c.onTheWay,
+      quickSale: c.isMine && sell == null
+          ? v.quickSalePrice(c.id)?.value
+          : null,
     );
   }
 
@@ -230,6 +235,7 @@ class Presenter {
 
     final first = <CamelView>[];
     for (final c in herdViews) {
+      if (c.onTheWay) continue; // (on the truck: on the farm tomorrow)
       if (first.length == yardCount && came(c, first.last) >= 0) continue;
       var i = first.length;
       while (i > 0 && came(c, first[i - 1]) < 0) {

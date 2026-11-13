@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/persistence.dart';
+import 'package:marah_domain/src/handlers/handlers.dart' as handlers;
+import 'package:marah_domain/src/rules/eligibility.dart';
 import 'package:marah_domain/src/rules/genetics.dart';
 import 'package:marah_domain/src/rules/judging.dart';
 import 'package:marah_domain/src/rules/milk.dart';
@@ -1028,8 +1030,77 @@ void main() {
       final price = v.quickSalePrice(c.id)!;
       final value = Valuation.value(g.state.world.camels[c.id]!, g.today);
       expect(price.value, lessThan(value.value));
+      final cash = g.me.cash.value;
       expect(g.dispatch(QuickSale(g.me.id, c.id)).ok, isTrue);
+      // the price shown is the price paid: the broker buys it himself and
+      // takes no commission
+      expect(g.me.cash.value - cash, price.value);
       expect(GameView(g.state, g.me.id).herd, hasLength(1));
+      expectClean(g);
+    });
+
+    test('the broker\'s price is his own eye, not the value read back', () {
+      // over the market's camels, his price over the factor is off the true
+      // value by a few percent, differently for each, and steady in a week
+      final g = newGame();
+      final sim = Sim(g.state);
+      final offs = <double>[];
+      for (final l in g.state.world.listings.values) {
+        final c = g.state.world.camels[l.camelId]!;
+        final value = Valuation.value(c, g.today).value;
+        final price = handlers.quickSalePrice(c, sim).value;
+        offs.add(price / Balance.quickSaleFactor / value - 1);
+        expect(price, lessThan(value));
+      }
+      expect(offs.where((o) => o.abs() > 0.02), isNotEmpty);
+      expect(
+        offs.every((o) => o.abs() <= 2.5 * Balance.brokerEyeSd + 0.02),
+        isTrue,
+      );
+      final c =
+          g.state.world.camels[g.state.world.listings.values.first.camelId]!;
+      final d0 = g.today.value;
+      final week = d0 - d0 % 7;
+      int on(int day) {
+        final was = g.state.world.day;
+        g.state.world.day = GameDay(day);
+        final eye =
+            handlers.quickSalePrice(c, Sim(g.state)).value /
+            Valuation.value(c, GameDay(day)).value;
+        g.state.world.day = was;
+        return (eye * 1000).round();
+      }
+
+      expect(on(week), on(week + 6));
+    });
+
+    test('a bought camel comes on the truck the next day', () {
+      final g = newGame();
+      Sim(g.state).pay(g.me, const Riyal(400000), LedgerCategory.sale);
+      final l = GameView(g.state, g.me.id).market.firstWhere(
+        (l) => l.askPrice.value < 150000 && l.camel.sex == Sex.female,
+      );
+      expect(g.dispatch(BuyListing(g.me.id, l.id)).ok, isTrue);
+      var c = GameView(g.state, g.me.id).camel(l.camel.id)!;
+      expect(c.isMine, isTrue);
+      expect(c.onTheWay, isTrue);
+      // not for sale or breeding while on the truck, and not milked today
+      final sell = g.dispatch(QuickSale(g.me.id, c.id)) as Err;
+      expect(sell.error.code, ErrorCode.onTheWay);
+      final list = g.dispatch(ListForSale(g.me.id, c.id, 50000)) as Err;
+      expect(list.error.code, ErrorCode.onTheWay);
+      expect(
+        Eligibility.femaleCanBreed(g.state.world.camels[c.id]!, g.today)?.code,
+        ErrorCode.onTheWay,
+      );
+      expect(
+        GameView(g.state, g.me.id).milk.where((m) => m.camel.id == c.id),
+        isEmpty,
+      );
+      g.advanceDays(1);
+      c = GameView(g.state, g.me.id).camel(c.id)!;
+      expect(c.onTheWay, isFalse);
+      expect(GameView(g.state, g.me.id).canSell(c.id), isNull);
       expectClean(g);
     });
   });

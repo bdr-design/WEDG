@@ -6,6 +6,7 @@ import '../model/camel.dart';
 import '../model/game_state.dart';
 import '../model/player.dart';
 import 'balance.dart';
+import 'eligibility.dart';
 
 /// A nursing camel's milk (GDD 12.1; the owner's decisions of 13 Nov 2026):
 /// what she gives a day, what her calf keeps, and what is sold to the buyer
@@ -72,7 +73,8 @@ abstract final class Milk {
   }
 
   /// The day's milk on [owner]'s farm: each nursing camel's litres, what
-  /// her calf keeps and what is sold.
+  /// her calf keeps and what is sold (one bought today is milked from
+  /// tomorrow, when the truck brings her).
   static List<MilkToday> today(
     WorldState w,
     OwnerId owner,
@@ -83,20 +85,21 @@ abstract final class Milk {
     final byDam = calves(herd, today);
     return [
       for (final c in herd)
-        if (inMilkDays(c, today) case final d?)
-          () {
-            final l = litres(c, farm, today, w.seed);
-            final calf = byDam[c.id];
-            final own = calf != null && calf.born == c.lastCalvedOn;
-            final kept = own ? l * farm.calfShare.part : 0.0;
-            return MilkToday(
-              camel: c,
-              days: d,
-              calf: own ? calf : null,
-              litres: l,
-              sold: l - kept,
-            );
-          }(),
+        if (!Eligibility.onTheWay(c, today))
+          if (inMilkDays(c, today) case final d?)
+            () {
+              final l = litres(c, farm, today, w.seed);
+              final calf = byDam[c.id];
+              final own = calf != null && calf.born == c.lastCalvedOn;
+              final kept = own ? l * farm.calfShare.part : 0.0;
+              return MilkToday(
+                camel: c,
+                days: d,
+                calf: own ? calf : null,
+                litres: l,
+                sold: l - kept,
+              );
+            }(),
     ];
   }
 }

@@ -358,7 +358,12 @@ void main() {
         'crossbred',
         // the age's name as the camel's sex has it (ageClass and sex, read)
         'ageName',
+        // الحراج: bought today and on the truck, and the broker's price for
+        // one's own camel (his own eye: not the value read back)
+        'onTheWay', 'quickSale',
       });
+      expect(card['onTheWay'], isFalse);
+      expect(card['quickSale'], isA<int>());
       // the 3D farm's camels (the start's camel and her calf), and the milk
       // to a tenth of a litre
       expect((j['yard']! as List).length, 2);
