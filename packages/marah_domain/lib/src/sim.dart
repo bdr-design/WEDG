@@ -44,14 +44,12 @@ class Sim {
     );
   }
 
-  /// Money in pays the merchant's account first; it is clear once the money
-  /// is back above zero (Account).
+  /// Money in pays the merchant's account first (Account); as the account
+  /// is never more than the money is below zero (an invariant), it is clear
+  /// by the time the money is back above zero.
   static void _settle(PlayerState p, Riyal amount) {
-    if (p.onAccount == 0) return;
-    if (amount.value > 0) {
-      p.onAccount = p.onAccount > amount.value ? p.onAccount - amount.value : 0;
-    }
-    if (!p.cash.isNegative) p.onAccount = 0;
+    if (p.onAccount == 0 || amount.value <= 0) return;
+    p.onAccount = p.onAccount > amount.value ? p.onAccount - amount.value : 0;
   }
 
   /// Records a recurring cost into this month's single row for [cat].
