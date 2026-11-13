@@ -11,7 +11,9 @@ import '../model/contest.dart';
 import '../model/game_state.dart';
 import '../model/market.dart';
 import '../model/player.dart';
+import '../model/tampering.dart';
 import '../rules/balance.dart';
+import '../rules/contest_rules.dart';
 import '../rules/eligibility.dart';
 import '../rules/judging.dart';
 import '../rules/milk.dart';
@@ -242,9 +244,38 @@ class GameView {
         ),
   ];
 
-  List<Festival> get festivals =>
-      _w.festivals.values.toList()
-        ..sort((a, b) => a.judgedOn.value - b.judgedOn.value);
+  /// The festivals as this player may see them (FestivalView): never
+  /// another owner's entries, their marks, or places not yet announced.
+  List<FestivalView> get festivals => [
+    for (final f
+        in _w.festivals.values.toList()
+          ..sort((a, b) => a.startsOn.value - b.startsOn.value))
+      FestivalView._(f, this),
+  ];
+
+  FestivalView? festival(FestivalId id) {
+    final f = _w.festivals[id];
+    return f == null ? null : FestivalView._(f, this);
+  }
+
+  /// The last season the player is barred from festivals through (GDD 7.1),
+  /// or null.
+  int? get bannedThrough => _w.bans[viewer];
+
+  /// الصيت in each family (GDD 8), 0 to 100.
+  Map<ColorCategory, double> get reputation => {
+    for (final c in ColorCategory.values) c: me.reputationIn(c),
+  };
+
+  /// The player's own secret treatments showing now, with their risk.
+  List<TamperingView> get tamperings => [
+    for (final t in me.tamperings)
+      if (t.activeOn(today) && _w.camels[t.camelId] != null)
+        TamperingView._(t, _view(_w.camels[t.camelId]!)),
+  ];
+
+  DomainError? canTamper(CamelId camel, TamperKind kind, int strength) =>
+      handlers.cannotTamper(_sim, me, _w.camels[camel], kind, strength);
 
   // ------------------------------------------------------------- checks
 
@@ -271,13 +302,39 @@ class GameView {
   DomainError? canSell(CamelId id) =>
       Eligibility.canSell(_w, _w.camels[id], viewer);
 
-  DomainError? canEnter(FestivalId f, RoundId r, CamelId c) {
+  DomainError? canEnter(FestivalId f, RoundId r, List<CamelId> camels) {
     final fest = _w.festivals[f];
-    final round = fest?.rounds.where((x) => x.id == r).firstOrNull;
+    final round = fest?.round(r);
     if (fest == null || round == null) {
       return const DomainError(ErrorCode.notFound);
     }
-    return Eligibility.canEnter(_w, fest, round, _w.camels[c], viewer, today);
+    return Eligibility.canEnter(
+      _w,
+      fest,
+      round,
+      [for (final c in camels) _w.camels[c]],
+      viewer,
+      today,
+    );
+  }
+
+  /// Why the player may not enter [r] today whatever camels he brings (the
+  /// owner's own checks of [canEnter]), or null.
+  DomainError? mayEnter(FestivalId f, RoundId r) {
+    final fest = _w.festivals[f];
+    final round = fest?.round(r);
+    if (fest == null || round == null) {
+      return const DomainError(ErrorCode.notFound);
+    }
+    return Eligibility.ownerMayEnter(_w, fest, round, viewer, today);
+  }
+
+  /// What entering [head] camels today costs in fees (a late entry's).
+  int entryFee(FestivalId f, int head) {
+    final fest = _w.festivals[f];
+    return fest != null && Eligibility.isLate(fest, today)
+        ? Balance.lateEntryFee * head
+        : 0;
   }
 
   // ------------------------------------------------------------- money
@@ -404,4 +461,125 @@ class GameView {
   Riyal get herdValue => marketRound(
     CamelView.appraiseAll(_w.aliveOwnedBy(viewer), today, viewer, _w.seed),
   );
+}
+
+/// A festival as one player sees it.
+class FestivalView {
+  FestivalView._(this._f, GameView v)
+    : rounds = [for (final r in _f.rounds) RoundView._(r, _f, v)],
+      late = Eligibility.isLate(_f, v.today),
+      bannedThrough = Eligibility.ownerBan(v._w, v.viewer, _f),
+      distanceKm = v.me.farm.region.roadKmTo(_f.region);
+
+  final Festival _f;
+  FestivalId get id => _f.id;
+  String get name => _f.name;
+  Region get region => _f.region;
+  FestivalTier get tier => _f.tier;
+  int get season => _f.season;
+  GameDay get opensOn => _f.opensOn;
+  GameDay get closesOn => _f.closesOn;
+  GameDay get startsOn => _f.startsOn;
+  GameDay get endsOn => _f.endsOn;
+  bool get done => _f.done;
+  bool registrationOpen(GameDay today) => _f.registrationOpen(today);
+  final List<RoundView> rounds;
+
+  /// Past the closing: an entry now is late, with its fee.
+  final bool late;
+
+  /// The player is barred from this festival, through this season.
+  final int? bannedThrough;
+  final int distanceKm;
+}
+
+/// A round as one player sees it: his own entries, the field's story by
+/// stage, and the places once announced (other owners' rows without their
+/// per-trait marks).
+class RoundView {
+  RoundView._(ContestRound r, Festival f, GameView v)
+    : id = r.id,
+      kind = r.kind,
+      category = r.category,
+      sex = r.sex,
+      size = r.size,
+      day = r.day,
+      legacyAge = r.legacyAge,
+      lastEntryDay = Eligibility.lastEntryDay(r),
+      rivals = r.rivals,
+      prizes = ContestRules.prizes(f.tier, r.kind, r.size),
+      myEntries = [
+        for (final e in r.entries)
+          if (e.ownerId == v.viewer) e,
+      ],
+      judged = r.judged,
+      announced = r.judged && r.paid,
+      announceOn = r.announceOn,
+      field = r.field,
+      caught = r.caught,
+      results = !(r.judged && r.paid)
+          ? (r.judged
+                // judged, the places to come: only the owner's removals
+                ? [
+                    for (final row in r.results!)
+                      if (row.ownerId == v.viewer && row.rank == null) row,
+                  ]
+                : null)
+          : [
+              for (final row in r.results!)
+                if (row.ownerId == v.viewer)
+                  row
+                else
+                  ResultRow(
+                    rank: row.rank,
+                    camelName: row.camelName,
+                    ownerId: row.ownerId,
+                    score: row.score,
+                    prize: row.prize,
+                    head: row.head,
+                    removedAt: row.removedAt,
+                    reason: row.reason,
+                  ),
+            ];
+
+  final RoundId id;
+  final RoundKind kind;
+  final ColorCategory? category;
+  final Sex? sex;
+  final int size;
+  final GameDay day;
+  final AgeClass? legacyAge;
+  final GameDay lastEntryDay;
+  final int rivals;
+  final List<int> prizes;
+  final List<Entry> myEntries;
+  final bool judged;
+
+  /// The places announced (الفحل وإنتاجه's after the DNA tests).
+  final bool announced;
+  final GameDay? announceOn;
+  final List<int>? field;
+  final int caught;
+
+  /// The rows the player may see: all places once announced (others'
+  /// without marks), and his own entries' removals.
+  final List<ResultRow>? results;
+
+  /// A player may enter it now (the group rounds come later).
+  bool get enterable => kind.enterable;
+}
+
+/// One of the player's own secret treatments and its risk: the chance a
+/// festival finds it (both stages), and outside one in a month.
+class TamperingView {
+  TamperingView._(this._t, this.camel);
+  final Tampering _t;
+  final CamelView camel;
+  TamperKind get kind => _t.kind;
+  int get strength => _t.strength;
+  GameDay get until => _t.until;
+  double get festivalCatch =>
+      ContestRules.festivalCatchChance(_t.kind, _t.strength);
+  double get monthlyOutside => ContestRules.monthlyOutsideChance(_t.strength);
+  int get fineIfFound => Balance.tamperFine(_t.kind, _t.strength);
 }

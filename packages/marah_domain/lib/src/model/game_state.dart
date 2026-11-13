@@ -20,7 +20,8 @@ class WorldState {
     required this.studs,
     required this.festivals,
     required this.plannedUntil,
-  });
+    Map<OwnerId, int>? bans,
+  }) : bans = bans ?? {};
 
   /// Seed for every keyed random stream in this world.
   final int seed;
@@ -39,6 +40,12 @@ class WorldState {
 
   /// Contest seasons are planned up to this day.
   GameDay plannedUntil;
+
+  /// Owners barred from festivals, through the season given (the year its
+  /// autumn falls in): a treatment found on one of their camels, this
+  /// season's edition and five more (GDD 7.1). Players and the world's other
+  /// owners alike.
+  final Map<OwnerId, int> bans;
 
   Iterable<Camel> aliveOwnedBy(OwnerId owner) =>
       camels.values.where((c) => c.isAlive && c.ownerId == owner);
@@ -75,6 +82,8 @@ class WorldState {
     if (!skip.contains('festivals'))
       'festivals': [for (final f in festivals.values) f.toJson()],
     if (!skip.contains('plannedUntil')) 'plannedUntil': plannedUntil.value,
+    if (!skip.contains('bans'))
+      'bans': {for (final e in bans.entries) e.key.value: e.value},
   };
 
   Map<String, Object?> toJson() => toJsonWithout(const {});
@@ -99,6 +108,10 @@ class WorldState {
         for (final f in list('festivals').map(Festival.fromJson)) f.id: f,
       },
       plannedUntil: GameDay(j['plannedUntil']! as int),
+      bans: {
+        for (final e in (j['bans']! as Map<String, Object?>).entries)
+          OwnerId(e.key): e.value! as int,
+      },
     );
   }
 }

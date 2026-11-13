@@ -9,6 +9,7 @@ import '../invariants.dart';
 import '../model/camel.dart';
 import '../model/contest.dart';
 import '../model/player.dart';
+import '../model/tampering.dart';
 import '../rules/provisions.dart';
 import '../sim.dart';
 import '../views/views.dart';
@@ -114,16 +115,40 @@ class Bot {
       }
     }
 
-    // Enter every camel that fits an open round, when the trucking to the
-    // festivals is affordable.
+    // Enter camels that fit open rounds (its one فردي camel among them),
+    // when the trucking to the festivals is affordable; a bull with his
+    // offspring in الفحل وإنتاجه. Now and then its فردي camel is secretly
+    // treated first (GDD 7.1), so the checks and the fines run too.
     final festivals = v.me.cash.value > 60000
         ? v.festivals.where((f) => f.registrationOpen(v.today))
-        : const <Festival>[];
+        : const <FestivalView>[];
     for (final f in festivals) {
-      for (final c in view.herd) {
+      // (the better camels only: the preliminary judging cuts half the
+      // field, and the trucking is paid either way)
+      for (final c in view.herd.where((c) => c.quality >= 60)) {
         for (final r in f.rounds) {
-          if (view.canEnter(f.id, r.id, c.id) == null) {
-            _do(EnterRound(me, f.id, r.id, c.id));
+          if (!r.kind.single) continue;
+          if (view.canEnter(f.id, r.id, [c.id]) != null) continue;
+          if (r.kind.roundClass == RoundClass.fardi &&
+              commands % 4 == 0 &&
+              view.canTamper(c.id, TamperKind.dye, 1) == null) {
+            _do(Tamper(me, c.id, TamperKind.dye, 1));
+          }
+          _do(EnterRound(me, f.id, r.id, [c.id]));
+          break;
+        }
+      }
+      final fahal = f.rounds.where((r) => r.kind == RoundKind.fahal);
+      for (final r in fahal) {
+        for (final bull in view.herd.where((c) => c.sex == Sex.male)) {
+          final kids = [
+            for (final c in view.herd)
+              if (c.sire?.id == bull.id) c.id,
+          ];
+          if (kids.length < r.size - 1) continue;
+          final group = [bull.id, ...kids.take(r.size - 1)];
+          if (view.canEnter(f.id, r.id, group) == null) {
+            _do(EnterRound(me, f.id, r.id, group));
             break;
           }
         }

@@ -58,13 +58,19 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         me,
         FestivalId(_str(j['festival'])),
         RoundId(_str(j['round'])),
-        CamelId(_str(j['camel'])),
+        [for (final c in j['camels']! as List<Object?>) CamelId(_str(c))],
       ),
       'withdrawEntry' => WithdrawEntry(
         me,
         FestivalId(_str(j['festival'])),
         RoundId(_str(j['round'])),
         CamelId(_str(j['camel'])),
+      ),
+      'tamper' => Tamper(
+        me,
+        CamelId(_str(j['camel'])),
+        TamperKind.values.byName(_str(j['kind'])),
+        _int(j['strength']),
       ),
       _ => null,
     };
@@ -140,16 +146,22 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'facility': facility.name,
   },
   SetCalfShare(:final share) => {'type': 'setCalfShare', 'share': share.name},
-  EnterRound(:final festival, :final round, :final camel) => {
+  EnterRound(:final festival, :final round, :final camels) => {
     'type': 'enterRound',
     'festival': festival.value,
     'round': round.value,
-    'camel': camel.value,
+    'camels': [for (final c in camels) c.value],
   },
   WithdrawEntry(:final festival, :final round, :final camel) => {
     'type': 'withdrawEntry',
     'festival': festival.value,
     'round': round.value,
     'camel': camel.value,
+  },
+  Tamper(:final camel, :final kind, :final strength) => {
+    'type': 'tamper',
+    'camel': camel.value,
+    'kind': kind.name,
+    'strength': strength,
   },
 };

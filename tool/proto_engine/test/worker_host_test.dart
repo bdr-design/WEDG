@@ -123,6 +123,25 @@ void main() {
     },
   );
 
+  test('a festival\'s page, asked by its id', () async {
+    final page = Page();
+    await page.call('start', {'newGame': newGame});
+    final snap = page.lastSnapshot!;
+    final f = (snap['festivals']! as List).first as Map;
+    final a = await page.call('festival', {'festival': f['id']});
+    expect(a['ok'], isTrue);
+    final d = a['festival']! as Map;
+    expect((d['festival']! as Map)['id'], f['id']);
+    final rounds = d['rounds']! as List;
+    expect(rounds, isNotEmpty);
+    expect((rounds.first as Map).keys, containsAll(['kind', 'day', 'field']));
+    expect(snap['festivalRules'], isA<Map<String, Object?>>());
+    expect(snap['tamperings'], isEmpty);
+    final none = await page.call('festival', {'festival': 'nope'});
+    expect(none['ok'], isFalse);
+    await page.call('pause');
+  });
+
   test('refuses what it cannot read, and says so with the id', () async {
     final page = Page();
     expect(await page.call('flush'), containsPair('error', 'noEngine'));

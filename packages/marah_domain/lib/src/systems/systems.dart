@@ -2,11 +2,13 @@ import '../catalog/catalog.dart';
 import '../common/ids.dart';
 import '../common/money.dart';
 import '../common/rng.dart';
+import '../common/time.dart';
 import '../events.dart';
 import '../model/camel.dart';
 import '../model/contest.dart';
 import '../model/market.dart';
 import '../model/player.dart';
+import '../model/tampering.dart';
 import '../rules/balance.dart';
 import '../rules/contest_rules.dart';
 import '../rules/genetics.dart';
@@ -35,6 +37,7 @@ const List<DailySystem> dailyPipeline = [
   HealthSystem(),
   BreedingSystem(),
   MarketSystem(),
+  TamperingSystem(),
   ContestSystem(),
 ];
 
@@ -49,7 +52,7 @@ class CalendarSystem implements DailySystem {
     if (sim.today >= w.plannedUntil - 60) {
       WorldGen(sim).planSeason(w.plannedUntil.year);
       w.festivals.removeWhere(
-        (_, f) => f.done && sim.today.daysSince(f.judgedOn) > 400,
+        (_, f) => f.done && sim.today.daysSince(f.endsOn) > 400,
       );
     }
   }
@@ -470,8 +473,16 @@ void releaseCamel(Sim sim, Camel c) {
   for (final f in w.festivals.values) {
     if (f.done) continue;
     for (final r in f.rounds) {
-      r.entries.removeWhere((e) => e.camelId == c.id);
+      if (r.judged) continue;
+      for (final e in r.entries) {
+        e.camels.remove(c.id);
+      }
+      r.entries.removeWhere((e) => e.camels.isEmpty);
     }
+  }
+  // a treatment goes with the camel: its new owner does not know of it
+  for (final p in sim.state.players.values) {
+    p.tamperings.removeWhere((t) => t.camelId == c.id);
   }
 }
 
@@ -702,8 +713,122 @@ class MarketSystem implements DailySystem {
   }
 }
 
+// ------------------------------------------------------------- cheating
+
+/// A treatment can be found outside the festivals too, in the market or by
+/// the vet (GDD 7.1): each day, for each treatment showing on a player's
+/// camel, a small chance (Balance), more while the camel is listed for sale.
+/// Spent treatments leave the list.
+class TamperingSystem implements DailySystem {
+  const TamperingSystem();
+
+  @override
+  void run(Sim sim) {
+    for (final p in sim.state.players.values) {
+      if (p.tamperings.isEmpty) continue;
+      p.tamperings.removeWhere((t) => sim.today > t.until);
+      for (final t in [...p.tamperings]) {
+        final c = sim.world.camels[t.camelId];
+        if (c == null || !c.isAlive || c.ownerId != p.id) {
+          p.tamperings.remove(t);
+          continue;
+        }
+        final listed = sim.world.listings.values.any((l) => l.camelId == c.id);
+        if (sim
+            .rng(['tamper-out', c.id.value, t.kind.name])
+            .chance(outsideChance(t, listed: listed))) {
+          foundOutside(sim, p, c, t);
+        }
+      }
+    }
+  }
+
+  /// The day's chance [t] is found outside the festivals: more while the
+  /// camel is listed for sale (buyers and their vets look closely).
+  static double outsideChance(Tampering t, {required bool listed}) =>
+      Balance.outsideCatchPerDay *
+      t.strength *
+      (listed ? Balance.outsideCatchListedFactor : 1);
+
+  /// A treatment found outside a festival (the market, the vet): MEWA's
+  /// fine, the name lost in the family, the news; no festival ban (the
+  /// festivals' committees did not find it).
+  static void foundOutside(Sim sim, PlayerState p, Camel c, Tampering t) {
+    p.tamperings.remove(t);
+    sim.pay(
+      p,
+      const Riyal(-Balance.outsideFine),
+      LedgerCategory.fine,
+      ref: c.id.value,
+    );
+    lowerReputation(p, c.category, Balance.reputationCaughtOutside);
+    sim
+      ..emit(
+        TamperingFound(
+          sim.today,
+          owner: p.id,
+          camel: c.id,
+          name: c.name,
+          kind: t.kind,
+          festival: null,
+          stage: null,
+          fine: Balance.outsideFine,
+          bannedThrough: null,
+        ),
+      )
+      ..emit(
+        CheatNews(
+          sim.today,
+          ownerName: p.name,
+          name: c.name,
+          kind: t.kind,
+          festival: null,
+          fine: Balance.outsideFine,
+        ),
+      );
+  }
+}
+
+/// الصيت (GDD 8) moved by [by] in [family], kept within 0 to 100.
+void raiseReputation(PlayerState p, ColorCategory family, double by) =>
+    p.reputation[family] = clampDouble(p.reputationIn(family) + by, 0, 100);
+
+void lowerReputation(PlayerState p, ColorCategory family, double by) =>
+    raiseReputation(p, family, -by);
+
 // ------------------------------------------------------------- contests
 
+/// One entry on the festival day: a player's (its camels) or a rival's
+/// (generated for the day).
+class _Competitor {
+  _Competitor({
+    required this.owner,
+    required this.name,
+    this.entry,
+    this.camels = const [],
+    required this.head,
+  });
+  final OwnerId owner;
+  final String name;
+  final Entry? entry;
+  final List<Camel> camels;
+  final int head;
+  double score = 0;
+  Map<Trait, double>? marks;
+  Stage? removedAt;
+  RemovalReason? reason;
+
+  /// A rival's treatment, if it has one.
+  TamperKind? kind;
+  int strength = 0;
+
+  bool get rival => entry == null;
+  bool get inField => removedAt == null;
+}
+
+/// Festivals: registration news, each round on its day through the six
+/// stages (GDD 7), the places announced (الفحل وإنتاجه's after the DNA
+/// tests) and the festival closed with its integrity report.
 class ContestSystem implements DailySystem {
   const ContestSystem();
 
@@ -718,7 +843,7 @@ class ContestSystem implements DailySystem {
             festival: f.id,
             name: f.name,
             tier: f.tier,
-            judgedOn: f.judgedOn,
+            judgedOn: f.startsOn,
           ),
         );
       }
@@ -727,159 +852,575 @@ class ContestSystem implements DailySystem {
           RegistrationClosingSoon(sim.today, festival: f.id, name: f.name),
         );
       }
-      if (sim.today >= f.judgedOn) _judge(sim, f);
+      for (final r in f.rounds) {
+        if (!r.judged && r.day <= sim.today && r.entries.isNotEmpty) {
+          _judge(sim, f, r);
+        }
+        if (r.judged &&
+            !r.paid &&
+            (r.announceOn == null || sim.today >= r.announceOn!)) {
+          _announce(sim, f, r);
+        }
+      }
+      if (sim.today >= f.endsOn &&
+          f.rounds.every((r) => r.judged ? r.paid : r.entries.isEmpty)) {
+        _close(sim, f);
+      }
     }
   }
 
-  static void _judge(Sim sim, Festival f) {
-    f.done = true;
-    final w = sim.world;
-
-    // Each player trucks their entries to the festival and back.
-    final byOwner = <String, int>{};
-    for (final r in f.rounds) {
-      for (final e in r.entries) {
-        byOwner[e.ownerId.value] = (byOwner[e.ownerId.value] ?? 0) + 1;
+  /// What the panel sees of [c] on [day]: the eye's look with the owner's
+  /// treatments showing that day (GDD 7.1: they act on judging day).
+  static Map<Trait, double> judgedLooks(Camel c, PlayerState? p, GameDay day) {
+    final looks = Judging.observedAll(c, day);
+    for (final t in p?.tamperings ?? const <Tampering>[]) {
+      if (t.camelId != c.id || !t.activeOn(day)) continue;
+      for (final trait in t.kind.traits) {
+        looks[trait] = clampDouble(
+          looks[trait]! + Balance.tamperGainPerLevel * t.strength,
+          0,
+          100,
+        );
       }
     }
-    for (final entry in byOwner.entries) {
-      final p = sim.player(OwnerId(entry.key));
+    return looks;
+  }
+
+  static OwnerId _rivalOwner(WorldGen gen, Rng rng, Festival f) {
+    final w = gen.sim.world;
+    var o = gen.randomOwner(rng).id;
+    for (var i = 0; i < 4 && (w.bans[o] ?? -1) >= f.season; i++) {
+      o = gen.randomOwner(rng).id;
+    }
+    return o;
+  }
+
+  static void _judge(Sim sim, Festival f, ContestRound r) {
+    final w = sim.world;
+    final rng = sim.rng(['judge', f.id.value, r.id.value]);
+    final comps = <_Competitor>[];
+    for (final e in r.entries) {
+      final camels = [
+        for (final id in e.camels)
+          if (w.camels[id] case final c?
+              when c.isAlive && c.ownerId == e.ownerId)
+            c,
+      ];
+      if (camels.isEmpty) continue;
+      comps.add(
+        _Competitor(
+          owner: e.ownerId,
+          name: camels.first.name,
+          entry: e,
+          camels: camels,
+          head: camels.length,
+        ),
+      );
+    }
+    // each player trucks his entries to the festival and back
+    final head = <OwnerId, int>{};
+    for (final c in comps) {
+      head[c.owner] = (head[c.owner] ?? 0) + c.head;
+    }
+    for (final MapEntry(key: o, value: n) in head.entries) {
+      final p = sim.player(o);
       if (p == null) continue;
       final km = p.farm.region.roadKmTo(f.region);
       sim.pay(
         p,
-        Riyal(-Balance.transportCost(km, entry.value) * 2),
+        Riyal(-Balance.transportCost(km, n) * 2),
         LedgerCategory.transport,
         ref: f.id.value,
       );
     }
+    final gen = WorldGen(sim);
+    for (var i = 0; i < r.rivals; i++) {
+      final c = _Competitor(
+        owner: _rivalOwner(gen, rng, f),
+        name: randomCamelName(rng, female: r.sex != Sex.male),
+        head: r.size,
+      );
+      if (rng.chance(Balance.rivalTamperChance)) {
+        c
+          ..kind = rng.pick(TamperKind.values)
+          ..strength = rng.range(1, 3);
+      }
+      comps.add(c);
+    }
 
-    final prizesByOwner = <String, int>{};
-    for (final r in f.rounds) {
-      if (r.entries.isEmpty) continue;
-      final rng = sim.rng(['judge', f.id.value, r.id.value]);
-      final prizes = ContestRules.prizes(f.tier, r.age);
-      final rows = <_Scored>[];
-      for (final e in r.entries) {
-        final c = w.camels[e.camelId];
-        if (c == null || !c.isAlive || c.ownerId != e.ownerId) continue;
-        if (c.health == HealthStatus.sick) {
-          sim.emit(
-            DisqualifiedSick(
-              sim.today,
-              owner: c.ownerId,
-              camel: c.id,
-              name: c.name,
-              festival: f.name,
-            ),
+    final field = <int>[];
+    void remove(_Competitor c, Stage s, RemovalReason why) {
+      c
+        ..removedAt = s
+        ..reason = why;
+    }
+
+    Iterable<_Competitor> active() => comps.where((c) => c.inField);
+
+    // 1. the chip and the witness
+    for (final c in comps) {
+      if (!c.rival && c.camels.length < r.size) {
+        remove(c, Stage.chipWitness, RemovalReason.short);
+      } else if (rng.chance(Balance.chipMismatchChance)) {
+        remove(c, Stage.chipWitness, RemovalReason.chip);
+      }
+    }
+    field.add(active().length);
+
+    // 2. the colour's purity and the age by the teeth
+    for (final c in active().toList()) {
+      if (c.rival) {
+        if (rng.chance(Balance.rivalBreedCheckChance)) {
+          remove(
+            c,
+            Stage.breedColourAge,
+            rng.chance(0.5) ? RemovalReason.colour : RemovalReason.teeth,
           );
+        }
+        continue;
+      }
+      final p = sim.player(c.owner);
+      for (final camel in c.camels) {
+        if (judgedLooks(camel, p, r.day)[Trait.coat]! <
+            Balance.colourPurityMin) {
+          remove(c, Stage.breedColourAge, RemovalReason.colour);
+          break;
+        }
+        if (_teethMisread(rng, r, camel)) {
+          remove(c, Stage.breedColourAge, RemovalReason.teeth);
+          break;
+        }
+      }
+    }
+    field.add(active().length);
+
+    // 3. the preliminary judging keeps the best part of the field
+    final (mean, sd) = ContestRules.rivalQuality(f.tier);
+    for (final c in active()) {
+      _score(sim, rng, r, c, mean, sd);
+    }
+    final ranked = active().toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+    final keep = (ranked.length * Balance.preliminaryKeeps).ceil();
+    for (final c in ranked.skip(
+      keep < Balance.preliminaryKeepsAtLeast
+          ? Balance.preliminaryKeepsAtLeast
+          : keep,
+    )) {
+      remove(c, Stage.preliminary, RemovalReason.cut);
+    }
+    field.add(active().length);
+
+    // 4 and 5. the tampering experts, then the medical committee
+    for (final stage in [Stage.tamperingExperts, Stage.medical]) {
+      for (final c in active().toList()) {
+        if (!c.inField) continue; // barred with another of his camels
+        if (c.rival) {
+          final kind = c.kind;
+          if (kind != null &&
+              rng.chance(ContestRules.detectChance(kind, c.strength, stage))) {
+            remove(c, stage, RemovalReason.tampering);
+            _rivalCaught(sim, f, r, c, kind);
+          }
           continue;
         }
-        final js = Judging.judge(
-          rng,
-          Judging.observedAll(c, sim.today),
-          judges: Balance.judgesPerPanel,
-        );
-        rows.add(
-          _Scored(js.total, c.name, c.ownerId.value, c.id.value, js.marks),
+        if (stage == Stage.medical &&
+            c.camels.any((x) => x.health == HealthStatus.sick)) {
+          remove(c, stage, RemovalReason.sick);
+          continue;
+        }
+        final p = sim.player(c.owner);
+        if (p == null) continue;
+        final found =
+            [
+                  for (final camel in c.camels)
+                    for (final t in p.tamperings)
+                      if (t.camelId == camel.id && t.activeOn(r.day))
+                        (camel, t),
+                ]
+                .where(
+                  (x) => rng.chance(
+                    ContestRules.detectChance(x.$2.kind, x.$2.strength, stage),
+                  ),
+                )
+                .toList();
+        if (found.isNotEmpty) {
+          final (camel, t) = found.first;
+          remove(c, stage, RemovalReason.tampering);
+          _caught(sim, f, r, p, camel, t, stage, comps);
+        }
+      }
+      field.add(active().length);
+    }
+
+    // 6. the final judging: the panel looks again
+    final finalists = active().toList();
+    for (final c in finalists) {
+      c.score = clampDouble(
+        c.score + rng.normal(sd: Balance.finalLookSd),
+        0,
+        100,
+      );
+    }
+    finalists.sort((a, b) => b.score.compareTo(a.score));
+    field.add(finalists.length);
+
+    final prizes = ContestRules.prizes(f.tier, r.kind, r.size);
+    final rows = <ResultRow>[];
+    for (var i = 0; i < finalists.length; i++) {
+      final c = finalists[i];
+      if (c.rival && i >= 10) continue;
+      rows.add(
+        ResultRow(
+          rank: i + 1,
+          camelName: c.name,
+          ownerId: c.owner,
+          score: c.score,
+          prize: i < prizes.length ? prizes[i] : 0,
+          camelId: c.rival ? null : c.camels.first.id,
+          marks: c.marks,
+          head: c.head,
+        ),
+      );
+    }
+    for (final c in comps) {
+      if (c.rival || c.inField) continue;
+      rows.add(
+        ResultRow(
+          rank: null,
+          camelName: c.name,
+          ownerId: c.owner,
+          score: c.score,
+          prize: 0,
+          camelId: c.camels.first.id,
+          marks: c.marks,
+          removedAt: c.removedAt,
+          reason: c.reason,
+          head: c.head,
+        ),
+      );
+      sim.emit(
+        EntryRemoved(
+          sim.today,
+          owner: c.owner,
+          camel: c.camels.first.id,
+          name: c.name,
+          festival: f.name,
+          round: r.id,
+          stage: c.removedAt!,
+          reason: c.reason!,
+        ),
+      );
+    }
+    r
+      ..results = rows
+      ..field = field;
+    if (r.kind == RoundKind.fahal) {
+      r.announceOn = r.day + Balance.dnaDays;
+      for (final o in {
+        for (final c in finalists)
+          if (!c.rival) c.owner,
+      }) {
+        sim.emit(
+          ResultsPending(
+            sim.today,
+            owner: o,
+            festival: f.name,
+            round: r.id,
+            announceOn: r.announceOn!,
+          ),
         );
       }
-      final (mean, sd) = ContestRules.rivalQuality(f.tier);
-      final gen = WorldGen(sim);
-      for (var i = 0; i < r.rivals; i++) {
+    }
+  }
+
+  /// The age by the teeth (stage 2): a camel within
+  /// [Balance.teethMarginDays] of its class's edge may be read as the class
+  /// beside it; removed if that class does not fit the round.
+  static bool _teethMisread(Rng rng, ContestRound r, Camel camel) {
+    final banded =
+        r.legacyAge != null ||
+        r.kind == RoundKind.mafareed ||
+        r.kind == RoundKind.diq ||
+        r.kind == RoundKind.fardiDiq;
+    if (!banded) return false;
+    final days = r.day.daysSince(camel.born);
+    final age = AgeClass.fromDays(days);
+    final i = age.index;
+    AgeClass? read;
+    if (i > 0 && days - age.minDays < Balance.teethMarginDays) {
+      read = AgeClass.values[i - 1];
+    } else if (i + 1 < AgeClass.values.length &&
+        AgeClass.values[i + 1].minDays - days <= Balance.teethMarginDays) {
+      read = AgeClass.values[i + 1];
+    }
+    if (read == null || !rng.chance(Balance.teethMisreadChance)) return false;
+    final legacy = r.legacyAge;
+    final fits = legacy != null
+        ? read == legacy ||
+              (legacy == AgeClass.fater && read.index > legacy.index)
+        : ContestRules.ageFits(r.kind, read, read.minDays);
+    return !fits;
+  }
+
+  /// The panel's mark (0 to 100) for [c].
+  static void _score(
+    Sim sim,
+    Rng rng,
+    ContestRound r,
+    _Competitor c,
+    double mean,
+    double sd,
+  ) {
+    if (c.rival) {
+      if (!r.kind.beauty) {
+        c.score = clampDouble(rng.normal(mean: 55, sd: 8), 0, 100);
+        return;
+      }
+      if (r.size == 1) {
         final q = rng.normal(mean: mean, sd: sd);
         final observed = {
           for (final t in Trait.values)
             t: clampDouble(q + rng.normal(sd: 6), 0, 100),
         };
-        final js = Judging.judge(rng, observed, judges: Balance.judgesPerPanel);
-        final owner = gen.randomOwner(rng);
-        rows.add(
-          _Scored(
-            js.total,
-            randomCamelName(rng, female: r.sex == Sex.female),
-            owner.id.value,
-            null,
-            null,
-          ),
+        c.score = Judging.judge(
+          rng,
+          observed,
+          judges: Balance.judgesPerPanel,
+        ).total;
+      } else {
+        c.score = clampDouble(rng.normal(mean: mean, sd: sd * 0.5), 0, 100);
+      }
+      final kind = c.kind;
+      if (kind != null) {
+        final weight = kind.traits.fold(0.0, (s, t) => s + t.weight);
+        c.score = clampDouble(
+          c.score + Balance.tamperGainPerLevel * c.strength * weight,
+          0,
+          100,
         );
       }
-      rows.sort((a, b) => b.score.compareTo(a.score));
-
-      final results = <ResultRow>[];
-      for (var i = 0; i < rows.length; i++) {
-        final row = rows[i];
-        final rank = i + 1;
-        final prize = rank <= prizes.length ? prizes[rank - 1] : 0;
-        if (row.camelId != null || rank <= 10) {
-          results.add(
-            ResultRow(
-              rank: rank,
-              camelName: row.name,
-              ownerId: OwnerId(row.owner),
-              score: row.score,
-              prize: prize,
-              camelId: row.camelId == null ? null : CamelId(row.camelId!),
-              marks: row.marks,
-            ),
-          );
-        }
-        if (row.camelId == null) continue;
-        final c = w.camels[CamelId(row.camelId!)]!;
-        final p = sim.player(c.ownerId);
-        c.placings.add(
-          Placing(
-            festivalId: f.id,
-            festivalName: f.name,
-            roundId: r.id,
-            rank: rank,
-            of: rows.length,
-            day: sim.today,
-            tier: f.tier.level,
-            prize: prize,
-          ),
-        );
-        if (p != null && prize > 0) {
-          sim.pay(p, Riyal(prize), LedgerCategory.prize, ref: f.id.value);
-          prizesByOwner[p.id.value] = (prizesByOwner[p.id.value] ?? 0) + prize;
-        }
-        sim.emit(
-          Placed(
-            sim.today,
-            owner: c.ownerId,
-            camel: c.id,
-            name: c.name,
-            festival: f.name,
-            round: r.id,
-            rank: rank,
-            of: rows.length,
-            score: row.score,
-            prize: prize,
-          ),
-        );
-      }
-      r.results = results;
+      return;
     }
-    // Only judged rounds are worth keeping in the record.
-    f.rounds.removeWhere((r) => r.results == null);
-    for (final e in prizesByOwner.entries) {
-      sim.emit(
-        FestivalSummary(
+    final p = sim.player(c.owner);
+    final judged = [
+      for (final camel in c.camels)
+        Judging.judge(
+          rng,
+          judgedLooks(camel, p, r.day),
+          judges: Balance.judgesPerPanel,
+        ),
+    ];
+    if (r.kind == RoundKind.fahal && judged.length > 1) {
+      final kids =
+          judged.skip(1).fold(0.0, (s, j) => s + j.total) / (judged.length - 1);
+      c.score =
+          ContestRules.fahalBullShare * judged.first.total +
+          (1 - ContestRules.fahalBullShare) * kids;
+    } else {
+      c.score = judged.fold(0.0, (s, j) => s + j.total) / judged.length;
+    }
+    if (judged.length == 1) c.marks = judged.first.marks;
+  }
+
+  /// A player's treatment found at a festival (GDD 7.1): the entry out, the
+  /// fine (the cap, scaled by the treatment's strength), the owner and his
+  /// camels barred from this edition and five more, every festival (the
+  /// owner, 13 Nov 2026), his other entries withdrawn, the name lost in the
+  /// family, and the news.
+  static void _caught(
+    Sim sim,
+    Festival f,
+    ContestRound r,
+    PlayerState p,
+    Camel camel,
+    Tampering t,
+    Stage stage,
+    List<_Competitor> comps,
+  ) {
+    final w = sim.world;
+    final fine = Balance.tamperFine(t.kind, t.strength);
+    final through = f.season + Balance.banEditionsAfter;
+    r
+      ..caught += 1
+      ..fines += fine;
+    p.tamperings.remove(t);
+    sim.pay(p, Riyal(-fine), LedgerCategory.fine, ref: f.id.value);
+    if ((w.bans[p.id] ?? -1) < through) w.bans[p.id] = through;
+    for (final c in w.aliveOwnedBy(p.id)) {
+      if ((c.bannedThrough ?? -1) < through) c.bannedThrough = through;
+    }
+    // his other entries in this round, and in every festival of the ban
+    for (final c in comps) {
+      if (!c.rival && c.owner == p.id && c.inField) {
+        c
+          ..removedAt = stage
+          ..reason = RemovalReason.banned;
+      }
+    }
+    for (final x in w.festivals.values) {
+      if (x.done || x.season > through) continue;
+      for (final y in x.rounds) {
+        if (y == r || y.judged) continue;
+        y.entries.removeWhere((e) => e.ownerId == p.id);
+      }
+    }
+    lowerReputation(p, camel.category, Balance.reputationCaught);
+    sim
+      ..emit(
+        TamperingFound(
           sim.today,
-          owner: OwnerId(e.key),
+          owner: p.id,
+          camel: camel.id,
+          name: camel.name,
+          kind: t.kind,
           festival: f.name,
-          prizes: e.value,
+          stage: stage,
+          fine: fine,
+          bannedThrough: through,
+        ),
+      )
+      ..emit(
+        CheatNews(
+          sim.today,
+          ownerName: p.name,
+          name: camel.name,
+          kind: t.kind,
+          festival: f.name,
+          fine: fine,
+        ),
+      );
+  }
+
+  /// A rival caught in a round the player is in: barred, and in the news.
+  static void _rivalCaught(
+    Sim sim,
+    Festival f,
+    ContestRound r,
+    _Competitor c,
+    TamperKind kind,
+  ) {
+    final w = sim.world;
+    final fine = Balance.tamperFine(kind, c.strength);
+    final through = f.season + Balance.banEditionsAfter;
+    r
+      ..caught += 1
+      ..fines += fine;
+    if ((w.bans[c.owner] ?? -1) < through) w.bans[c.owner] = through;
+    sim.emit(
+      CheatNews(
+        sim.today,
+        ownerName: w.owners[c.owner]?.name ?? '',
+        name: c.name,
+        kind: kind,
+        festival: f.name,
+        fine: fine,
+      ),
+    );
+  }
+
+  /// The places announced and paid; each placing on the camel's record and
+  /// the owner's name (الصيت) in its family raised.
+  static void _announce(Sim sim, Festival f, ContestRound r) {
+    r.paid = true;
+    final w = sim.world;
+    final of = r.field?.last ?? 0;
+    for (final row in r.results!) {
+      final rank = row.rank;
+      final id = row.camelId;
+      if (rank == null || id == null) continue;
+      final c = w.camels[id];
+      final p = sim.player(row.ownerId);
+      c?.placings.add(
+        Placing(
+          festivalId: f.id,
+          festivalName: f.name,
+          roundId: r.id,
+          rank: rank,
+          of: of,
+          day: sim.today,
+          tier: f.tier.level,
+          prize: row.prize,
+        ),
+      );
+      if (p == null) continue;
+      if (row.prize > 0) {
+        sim.pay(p, Riyal(row.prize), LedgerCategory.prize, ref: f.id.value);
+      }
+      if (rank <= 10) {
+        final by = rank == 1
+            ? Balance.reputationForFirst
+            : rank <= 3
+            ? Balance.reputationForPodium
+            : Balance.reputationForTopTen;
+        raiseReputation(
+          p,
+          r.category ?? c?.category ?? ColorCategory.majaheem,
+          by * f.tier.level,
+        );
+      }
+      sim.emit(
+        Placed(
+          sim.today,
+          owner: row.ownerId,
+          camel: id,
+          name: row.camelName,
+          festival: f.name,
+          round: r.id,
+          rank: rank,
+          of: of,
+          score: row.score,
+          prize: row.prize,
         ),
       );
     }
   }
-}
 
-class _Scored {
-  _Scored(this.score, this.name, this.owner, this.camelId, this.marks);
-  final double score;
-  final String name;
-  final String owner;
-  final String? camelId;
-  final Map<Trait, double>? marks;
+  /// The festival over: the rounds no player entered are run as rivals'
+  /// rounds only for their committees' count of treatments found, then
+  /// dropped (only judged rounds are worth keeping); the integrity report
+  /// and each player's prizes in the news.
+  static void _close(Sim sim, Festival f) {
+    f.done = true;
+    final rng = sim.rng(['integrity', f.id.value]);
+    var cases = 0, fines = 0;
+    for (final r in f.rounds) {
+      if (r.judged) {
+        cases += r.caught;
+        fines += r.fines;
+        continue;
+      }
+      for (var i = 0; i < r.rivals; i++) {
+        if (!rng.chance(Balance.rivalTamperChance)) continue;
+        final kind = rng.pick(TamperKind.values);
+        final strength = rng.range(1, 3);
+        if (rng.chance(ContestRules.festivalCatchChance(kind, strength))) {
+          cases++;
+          fines += Balance.tamperFine(kind, strength);
+        }
+      }
+    }
+    f.rounds.removeWhere((r) => !r.judged);
+    sim.emit(
+      FestivalIntegrity(
+        sim.today,
+        festival: f.name,
+        cases: cases,
+        fines: fines,
+      ),
+    );
+    final prizes = <OwnerId, int>{};
+    for (final r in f.rounds) {
+      for (final row in r.results!) {
+        if (row.prize > 0 && sim.isPlayer(row.ownerId)) {
+          prizes[row.ownerId] = (prizes[row.ownerId] ?? 0) + row.prize;
+        }
+      }
+    }
+    for (final MapEntry(key: o, value: n) in prizes.entries) {
+      sim.emit(
+        FestivalSummary(sim.today, owner: o, festival: f.name, prizes: n),
+      );
+    }
+  }
 }

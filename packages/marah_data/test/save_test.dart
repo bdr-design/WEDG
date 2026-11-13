@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:marah_data/marah_data.dart';
 import 'package:marah_domain/marah_domain.dart';
+import 'package:marah_domain/src/sim.dart';
+import 'package:marah_domain/src/world_gen.dart';
 import 'package:marah_domain/testing.dart';
 import 'package:test/test.dart';
 
@@ -26,6 +28,25 @@ Game sampleGame() {
   // a facility being built and the calves' share of the milk (since v7)
   g.dispatch(SetCalfShare(g.me.id, CalfShare.quarter));
   g.dispatch(BuildFacility(g.me.id, Facility.pen));
+  // an entry, a secret treatment and a ban (since v8)
+  grant(g, 100000);
+  final f = g.state.world.festivals.values.firstWhere((f) => !f.done);
+  g.advanceTo(f.opensOn);
+  final r = f.rounds.firstWhere((r) => r.kind == RoundKind.mafareed);
+  final sim = Sim(g.state);
+  final c = WorldGen(sim).makeCamel(
+    sim.rng(['fixture']),
+    owner: g.me.id,
+    mean: 70,
+    category: r.category,
+    sex: r.sex,
+    ageDays: AgeClass.mafrood.minDays + 100 - r.day.daysSince(g.today),
+  )..acquiredOn = g.today - 100;
+  final ok = g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id])).ok;
+  if (!ok) throw StateError('the fixture camel did not enter');
+  g.dispatch(Tamper(g.me.id, c.id, TamperKind.dye, 2));
+  final rival = g.state.world.owners.keys.first;
+  g.state.world.bans[rival] = 2031;
   return g;
 }
 
@@ -41,6 +62,7 @@ const fixtures = {
   5: 'test/fixtures/save_v5.json',
   6: 'test/fixtures/save_v6.json',
   7: 'test/fixtures/save_v7.json',
+  8: 'test/fixtures/save_v8.json',
 };
 
 /// [data] at version [from] brought up to today's by the later steps, as
@@ -427,7 +449,7 @@ void main() {
       final out = SaveCodec.migrations[6]!(
         raw['data']! as Map<String, Object?>,
       );
-      final state = GameState.fromJson(out);
+      final state = GameState.fromJson(toNow(out, 7));
       expect(checkInvariants(state), isEmpty);
       final farm = state.players.values.first.farm;
       for (final f in Facility.values.where((f) => f != Facility.pen)) {
@@ -445,6 +467,118 @@ void main() {
       expect(g.dispatch(BuildFacility(g.me.id, Facility.pen)).ok, isTrue);
     },
   );
+
+  test('v8 holds an entry, a treatment and a ban', () {
+    final state =
+        (codec.decode(File(fixtures[8]!).readAsStringSync()) as Loaded).state;
+    final entries = [
+      for (final f in state.world.festivals.values)
+        for (final r in f.rounds) ...r.entries,
+    ];
+    expect(entries, isNotEmpty);
+    expect(state.players.values.first.tamperings, isNotEmpty);
+    expect(state.world.bans, isNotEmpty);
+  });
+
+  group('v7 to v8: the Saudi rounds', () {
+    // a v7 save made by hand: an open old-style round with an entry, and a
+    // judged one with its places
+    Map<String, Object?> v7() {
+      final raw = jsonDecode(
+        File(fixtures[7]!).readAsStringSync(),
+      ) as Map<String, Object?>;
+      final data = raw['data']! as Map<String, Object?>;
+      final world = data['world']! as Map<String, Object?>;
+      final me = (data['players']! as List).first as Map<String, Object?>;
+      final dam = (world['camels']! as List)
+          .cast<Map<String, Object?>>()
+          .firstWhere((c) => c['owner'] == me['id'] && c['sex'] == 'female');
+      final fests = (world['festivals']! as List).cast<Map<String, Object?>>();
+      final open = fests.firstWhere((f) => f['done'] == false);
+      final round = (open['rounds']! as List)
+          .cast<Map<String, Object?>>()
+          .firstWhere((r) => r['cat'] == dam['cat'] && r['age'] == 'fater');
+      (round['entries']! as List).add({'camel': dam['id'], 'owner': me['id']});
+      final done = fests.firstWhere((f) => f['done'] == true);
+      (done['rounds']! as List).add({
+        'id': 'r-old',
+        'cat': 'wodh',
+        'sex': 'female',
+        'age': 'thani',
+        'rivals': 20,
+        'entries': [
+          {'camel': dam['id'], 'owner': me['id']},
+        ],
+        'results': [
+          {
+            'rank': 3,
+            'name': dam['name'],
+            'owner': me['id'],
+            'score': 71.5,
+            'prize': 12000,
+            'camel': dam['id'],
+            'marks': {'head': 7.1},
+          },
+        ],
+      });
+      return data;
+    }
+
+    test('the open round keeps its entry, judged by its old age class', () {
+      final data = v7();
+      final out = SaveCodec.migrations[7]!(data);
+      final state = GameState.fromJson(out);
+      expect(checkInvariants(state), isEmpty);
+      final p = state.players.values.first;
+      expect(p.tamperings, isEmpty);
+      expect(p.reputation, isEmpty);
+      expect(state.world.bans, isEmpty);
+      final f = state.world.festivals.values.firstWhere(
+        (f) => !f.done && f.rounds.any((r) => r.entries.isNotEmpty),
+      );
+      expect(f.startsOn, f.endsOn);
+      expect(f.season, 2026);
+      final r = f.rounds.firstWhere((r) => r.entries.isNotEmpty);
+      expect(r.legacyAge, AgeClass.fater);
+      expect(r.kind, RoundKind.fardiJil);
+      expect(r.day, f.startsOn);
+      expect(r.entries.single.camels, hasLength(1));
+      expect(r.entries.single.late, isFalse);
+      expect(r.paid, isFalse);
+      // it plays: the round runs on the old judging day
+      final g = Game(state);
+      final events = g.advanceTo(r.day);
+      expect(r.judged, isTrue);
+      expect(r.field, hasLength(Stage.values.length));
+      final c = r.entries.single.camelId;
+      expect(
+        events.whereType<Placed>().any((e) => e.camel == c) ||
+            events.whereType<EntryRemoved>().any((e) => e.camel == c),
+        isTrue,
+      );
+      expect(checkInvariants(g.state), isEmpty);
+    });
+
+    test('the judged round keeps its places, announced and paid', () {
+      final out = SaveCodec.migrations[7]!(v7());
+      final state = GameState.fromJson(out);
+      final f = state.world.festivals.values.firstWhere(
+        (f) => f.rounds.any((r) => r.id.value == 'r-old'),
+      );
+      final r = f.round(const RoundId('r-old'))!;
+      expect(r.paid, isTrue);
+      expect(r.kind, RoundKind.fardiJil);
+      expect(r.results!.single.rank, 3);
+      expect(r.results!.single.head, 1);
+      final me = state.players.values.first.id;
+      final seen = GameView(
+        state,
+        me,
+      ).festival(f.id)!.rounds.firstWhere((x) => x.id == r.id);
+      expect(seen.announced, isTrue);
+      expect(seen.results!.single.prize, 12000);
+    });
+  });
 
   group('rejects without losing anything', () {
     test('garbage', () {

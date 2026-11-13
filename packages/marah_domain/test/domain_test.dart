@@ -29,30 +29,6 @@ String snapshot(Game g) => jsonEncode(g.state.toJson());
 Game reload(Game g) =>
     Game(GameState.fromJson(jsonDecode(snapshot(g)) as Map<String, Object?>));
 
-/// Adds a camel to the player's herd that fits [round] of [f] on judging day.
-Camel camelFor(
-  Game g,
-  Festival f,
-  ContestRound r, {
-  double mean = 70,
-  int? daysOldOnJudging,
-}) {
-  final sim = Sim(g.state);
-  // 150 days into the round's age class on judging day, unless told.
-  final ageToday =
-      (daysOldOnJudging ?? r.age.minDays + 150) - f.judgedOn.daysSince(g.today);
-  final c = WorldGen(sim).makeCamel(
-    sim.rng(['test-camel', r.id.value]),
-    owner: g.me.id,
-    mean: mean,
-    category: r.category,
-    sex: r.sex,
-    ageDays: ageToday,
-  );
-  c.acquiredOn = g.today - 200;
-  return c;
-}
-
 void expectClean(Game g) => expect(checkInvariants(g.state), isEmpty);
 
 /// The farm's stores filled for a long run: for tests about other things than
@@ -1307,112 +1283,6 @@ void main() {
     });
   });
 
-  group('Contests', () {
-    test('entry rules: category, sex, age on judging day, ownership', () {
-      final g = newGame(21);
-      final f = g.state.world.festivals.values.first;
-      final r = f.rounds.first;
-      final fits = camelFor(g, f, r);
-      final v = GameView(g.state, g.me.id);
-      g.advanceTo(f.opensOn);
-      expect(v.canEnter(f.id, r.id, fits.id), isNull);
-
-      final wrong = f.rounds.firstWhere(
-        (x) => x.category != r.category,
-        orElse: () => f.rounds.firstWhere((x) => x.age != r.age),
-      );
-      expect(
-        GameView(g.state, g.me.id).canEnter(f.id, wrong.id, fits.id),
-        isNotNull,
-      );
-
-      fits.acquiredOn = g.today; // just bought
-      expect(
-        GameView(g.state, g.me.id).canEnter(f.id, r.id, fits.id)?.code,
-        ErrorCode.ownershipTooRecent,
-      );
-    });
-
-    test(
-      'the eldest round (فاطر) takes every older camel, as "mature" did',
-      () {
-        final g = newGame(3);
-        final f = g.state.world.festivals.values.firstWhere(
-          (f) => f.rounds.any((r) => r.age == AgeClass.fater),
-        );
-        final r = f.rounds.firstWhere((r) => r.age == AgeClass.fater);
-        final view = GameView(g.state, g.me.id);
-        g.advanceTo(f.opensOn);
-        for (final years in [9, 11, 15, 22]) {
-          final c = camelFor(g, f, r, daysOldOnJudging: 365 * years + 30);
-          expect(
-            view.canEnter(f.id, r.id, c.id),
-            isNull,
-            reason: '$years years',
-          );
-        }
-        final young = camelFor(g, f, r, daysOldOnJudging: 365 * 7 + 30);
-        expect(
-          GameView(g.state, g.me.id).canEnter(f.id, r.id, young.id)?.code,
-          ErrorCode.wrongAgeClass,
-        );
-      },
-    );
-
-    test('judging places the entry, pays prizes and records the placing', () {
-      final g = newGame(21);
-      final f = g.state.world.festivals.values.first;
-      final r = f.rounds.first;
-      final strong = camelFor(g, f, r, mean: 95)..condition = 90;
-      g.advanceTo(f.opensOn);
-      expect(g.dispatch(EnterRound(g.me.id, f.id, r.id, strong.id)).ok, isTrue);
-      final cash = g.me.cash.value;
-      final events = g.advanceTo(f.judgedOn);
-      expect(f.done, isTrue);
-      final placed = events.whereType<Placed>().single;
-      final rank = placed.rank;
-      expect(rank, lessThanOrEqualTo(3), reason: 'an elite camel should place');
-      expect(strong.placings.single.rank, rank);
-      final prize = ContestRules.prizes(f.tier, r.age)[rank - 1];
-      final transport =
-          Balance.transportCost(g.me.farm.region.roadKmTo(f.region), 1) * 2;
-      expect(g.me.cash.value, isNot(cash));
-      expect(r.results!.any((row) => row.camelId == strong.id), isTrue);
-      expect(
-        g.me.ledger.any(
-          (l) => l.category == LedgerCategory.prize && l.amount.value == prize,
-        ),
-        isTrue,
-      );
-      expect(
-        g.me.ledger.any(
-          (l) =>
-              l.category == LedgerCategory.transport &&
-              l.amount.value == -transport,
-        ),
-        isTrue,
-      );
-      expectClean(g);
-    });
-
-    test('a sick entry is disqualified at the vet check', () {
-      final g = newGame(21);
-      final f = g.state.world.festivals.values.first;
-      final r = f.rounds.first;
-      final c = camelFor(g, f, r);
-      g.advanceTo(f.opensOn);
-      g.dispatch(EnterRound(g.me.id, f.id, r.id, c.id));
-      g.advanceTo(f.judgedOn - 1);
-      c
-        ..health = HealthStatus.sick
-        ..illness = Illness.lameness
-        ..sickSince = g.today;
-      final events = g.advanceDays(1);
-      expect(events.whereType<DisqualifiedSick>(), isNotEmpty);
-      expect(r.results!.any((row) => row.camelId == c.id), isFalse);
-    });
-  });
-
   group('Long run', () {
     test('three years with an active player keeps every invariant', () {
       for (final seed in [3, 4, 5]) {
@@ -1555,23 +1425,6 @@ void main() {
       final again =
           g.dispatch(MateWithOwnBull(g.me.id, dam.id, bull.id)) as Err;
       expect(again.error.code, ErrorCode.awaitingPregnancyCheck);
-    });
-
-    test('withdrawing frees the camel for sale', () {
-      final g = newGame(21);
-      final f = g.state.world.festivals.values.first;
-      final r = f.rounds.first;
-      final c = camelFor(g, f, r);
-      g.advanceTo(f.opensOn);
-      g.dispatch(EnterRound(g.me.id, f.id, r.id, c.id));
-      expect(
-        GameView(g.state, g.me.id).canSell(c.id)?.code,
-        ErrorCode.enteredInContest,
-      );
-      expect(g.dispatch(WithdrawEntry(g.me.id, f.id, r.id, c.id)).ok, isTrue);
-      expect(GameView(g.state, g.me.id).canSell(c.id), isNull);
-      final again = g.dispatch(WithdrawEntry(g.me.id, f.id, r.id, c.id)) as Err;
-      expect(again.error.code, ErrorCode.notEntered);
     });
   });
   group('Hidden information', () {

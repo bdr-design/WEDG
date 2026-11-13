@@ -10,7 +10,9 @@ import '../model/camel.dart';
 import '../model/contest.dart';
 import '../model/market.dart';
 import '../model/player.dart';
+import '../model/tampering.dart';
 import '../rules/balance.dart';
+import '../rules/contest_rules.dart';
 import '../rules/eligibility.dart';
 import '../rules/provisions.dart';
 import '../rules/valuation.dart';
@@ -42,6 +44,7 @@ Result handle(Sim sim, Command cmd) {
     SetCalfShare() => _calfShare(sim, p, cmd),
     EnterRound() => _enter(sim, p, cmd),
     WithdrawEntry() => _withdraw(sim, p, cmd),
+    Tamper() => _tamper(sim, p, cmd),
   };
 }
 
@@ -429,6 +432,15 @@ Result _treat(Sim sim, PlayerState p, Treat cmd) {
       cost: cost.value,
     ),
   );
+  // the vet may see a treatment on it (GDD 7.1)
+  for (final t in [...p.tamperings]) {
+    if (t.camelId == camel.id &&
+        t.activeOn(sim.today) &&
+        rng.chance(Balance.vetCatchChance)) {
+      TamperingSystem.foundOutside(sim, p, camel, t);
+      break;
+    }
+  }
   return _ok(sim);
 }
 
@@ -553,20 +565,37 @@ Result _calfShare(Sim sim, PlayerState p, SetCalfShare cmd) {
 
 Result _enter(Sim sim, PlayerState p, EnterRound cmd) {
   final f = sim.world.festivals[cmd.festival];
-  final r = f?.rounds.where((x) => x.id == cmd.round).firstOrNull;
+  final r = f?.round(cmd.round);
   if (f == null || r == null) return _err(sim, ErrorCode.notFound);
-  final c = sim.world.camels[cmd.camel];
-  final problem = Eligibility.canEnter(sim.world, f, r, c, p.id, sim.today);
+  final camels = [for (final id in cmd.camels) sim.world.camels[id]];
+  final problem = Eligibility.canEnter(
+    sim.world,
+    f,
+    r,
+    camels,
+    p.id,
+    sim.today,
+  );
   if (problem != null) return Err(problem, sim.drain());
-  r.entries.add(Entry(camelId: c!.id, ownerId: p.id));
+  final late = Eligibility.isLate(f, sim.today);
+  final fee = late ? Balance.lateEntryFee * camels.length : 0;
+  if (p.cash.value < fee) {
+    return _err(sim, ErrorCode.insufficientFunds, {'needed': fee});
+  }
+  sim.pay(p, Riyal(-fee), LedgerCategory.entryFee, ref: f.id.value);
+  r.entries.add(
+    Entry(ownerId: p.id, camels: [for (final c in camels) c!.id], late: late),
+  );
   sim.emit(
     Entered(
       sim.today,
       owner: p.id,
-      camel: c.id,
-      name: c.name,
+      camel: camels.first!.id,
+      name: camels.first!.name,
       festival: f.name,
       round: r.id,
+      head: camels.length,
+      fee: fee,
     ),
   );
   return _ok(sim);
@@ -574,13 +603,76 @@ Result _enter(Sim sim, PlayerState p, EnterRound cmd) {
 
 Result _withdraw(Sim sim, PlayerState p, WithdrawEntry cmd) {
   final f = sim.world.festivals[cmd.festival];
-  final r = f?.rounds.where((x) => x.id == cmd.round).firstOrNull;
-  if (f == null || r == null || f.done) return _err(sim, ErrorCode.notFound);
-  final before = r.entries.length;
-  r.entries.removeWhere((e) => e.camelId == cmd.camel && e.ownerId == p.id);
-  if (r.entries.length == before) return _err(sim, ErrorCode.notEntered);
+  final r = f?.round(cmd.round);
+  if (f == null || r == null || f.done || r.judged || sim.today >= r.day) {
+    return _err(sim, ErrorCode.notFound);
+  }
+  final e = r.entries
+      .where((e) => e.ownerId == p.id && e.camels.contains(cmd.camel))
+      .firstOrNull;
+  if (e == null) return _err(sim, ErrorCode.notEntered);
+  r.entries.remove(e);
+  // after the closing the class was fixed: not entered again here
+  if (Eligibility.isLate(f, sim.today)) f.scratched.addAll(e.camels);
   sim.emit(
     Withdrawn(sim.today, owner: p.id, camel: cmd.camel, festival: f.name),
+  );
+  return _ok(sim);
+}
+
+/// Why [kind] at [strength] cannot be done on [c] now, or null.
+DomainError? cannotTamper(
+  Sim sim,
+  PlayerState p,
+  Camel? c,
+  TamperKind kind,
+  int strength,
+) {
+  final own = Eligibility.owned(c, p.id);
+  if (own != null) return own;
+  if (Eligibility.onTheWay(c!, sim.today)) {
+    return const DomainError(ErrorCode.onTheWay);
+  }
+  if (strength < 1 || strength > 3) {
+    return const DomainError(ErrorCode.invalidAmount);
+  }
+  if (p.tamperings.any(
+    (t) => t.camelId == c.id && t.kind == kind && t.activeOn(sim.today),
+  )) {
+    return const DomainError(ErrorCode.alreadyTreated);
+  }
+  final price = ContestRules.tamperPrice(kind, strength);
+  if (p.cash.value < price) {
+    return DomainError(ErrorCode.insufficientFunds, {'needed': price});
+  }
+  return null;
+}
+
+Result _tamper(Sim sim, PlayerState p, Tamper cmd) {
+  final c = sim.world.camels[cmd.camel];
+  final problem = cannotTamper(sim, p, c, cmd.kind, cmd.strength);
+  if (problem != null) return Err(problem, sim.drain());
+  final price = ContestRules.tamperPrice(cmd.kind, cmd.strength);
+  sim.pay(p, Riyal(-price), LedgerCategory.tampering, ref: c!.id.value);
+  p.tamperings.add(
+    Tampering(
+      camelId: c.id,
+      kind: cmd.kind,
+      strength: cmd.strength,
+      on: sim.today,
+      until: sim.today + (cmd.kind.lastsDays - 1),
+    ),
+  );
+  sim.emit(
+    Tampered(
+      sim.today,
+      owner: p.id,
+      camel: c.id,
+      name: c.name,
+      kind: cmd.kind,
+      strength: cmd.strength,
+      price: price,
+    ),
   );
   return _ok(sim);
 }

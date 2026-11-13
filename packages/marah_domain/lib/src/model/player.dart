@@ -1,7 +1,10 @@
+import '../catalog/catalog.dart';
 import '../catalog/region.dart';
 import '../common/ids.dart';
 import '../common/money.dart';
 import '../common/time.dart';
+import '../rules/balance.dart';
+import 'tampering.dart';
 
 /// The ration: an adult's dry matter a day and the barley's share of it (the
 /// rest alfalfa), and the body condition it holds a camel at. The real intake
@@ -283,6 +286,15 @@ enum LedgerCategory {
   commission,
   construction,
   milk,
+
+  /// A late festival registration's fee (GDD 7).
+  entryFee,
+
+  /// The secret vet's price for a treatment (GDD 7.1).
+  tampering,
+
+  /// A fine for a treatment found (GDD 7.1).
+  fine,
 }
 
 /// One money movement. Recurring costs (feed, wages) are kept as one row per
@@ -334,7 +346,11 @@ class PlayerState {
     required this.farm,
     required this.favourite,
     List<LedgerEntry>? ledger,
-  }) : ledger = ledger ?? [];
+    List<Tampering>? tamperings,
+    Map<ColorCategory, double>? reputation,
+  }) : ledger = ledger ?? [],
+       tamperings = tamperings ?? [],
+       reputation = reputation ?? {};
 
   final OwnerId id;
   String name;
@@ -346,6 +362,18 @@ class PlayerState {
   final String favourite;
   final List<LedgerEntry> ledger;
 
+  /// The player's secret treatments, the spent ones until a while after
+  /// they end (GDD 7.1). Only this player's own view reads them.
+  final List<Tampering> tamperings;
+
+  /// The name the player has in each colour family (الصيت, GDD 8), 0 to
+  /// 100: raised by placings, lowered when caught cheating (GDD 7.1). A
+  /// family not in the map is at Balance.startingReputation.
+  final Map<ColorCategory, double> reputation;
+
+  double reputationIn(ColorCategory c) =>
+      reputation[c] ?? Balance.startingReputation;
+
   Map<String, Object?> toJson() => {
     'id': id.value,
     'name': name,
@@ -353,6 +381,8 @@ class PlayerState {
     'farm': farm.toJson(),
     'favourite': favourite,
     'ledger': [for (final l in ledger) l.toJson()],
+    'tamperings': [for (final t in tamperings) t.toJson()],
+    'reputation': {for (final e in reputation.entries) e.key.name: e.value},
   };
 
   static PlayerState fromJson(Map<String, Object?> j) => PlayerState(
@@ -365,5 +395,13 @@ class PlayerState {
       for (final l in j['ledger']! as List<Object?>)
         LedgerEntry.fromJson(l! as Map<String, Object?>),
     ],
+    tamperings: [
+      for (final t in j['tamperings']! as List<Object?>)
+        Tampering.fromJson(t! as Map<String, Object?>),
+    ],
+    reputation: {
+      for (final e in (j['reputation']! as Map<String, Object?>).entries)
+        ColorCategory.values.byName(e.key): (e.value! as num).toDouble(),
+    },
   );
 }

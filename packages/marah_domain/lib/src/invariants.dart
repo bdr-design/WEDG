@@ -35,11 +35,15 @@ List<String> checkInvariants(GameState s) {
   for (final f in w.festivals.values) {
     if (f.done) continue;
     for (final r in f.rounds) {
+      if (r.judged) continue;
       for (final e in r.entries) {
-        final c = w.camels[e.camelId];
-        if (c == null || !c.isAlive || c.ownerId != e.ownerId) {
-          problems.add('entry ${e.camelId.value} in ${r.id.value} is stale');
+        for (final id in e.camels) {
+          final c = w.camels[id];
+          if (c == null || !c.isAlive || c.ownerId != e.ownerId) {
+            problems.add('entry ${id.value} in ${r.id.value} is stale');
+          }
         }
+        if (e.camels.isEmpty) problems.add('empty entry in ${r.id.value}');
       }
     }
   }

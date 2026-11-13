@@ -151,6 +151,16 @@ class WorkerHost {
                 : null,
             'events': [for (final e in r.events) e.toJson()],
           });
+        case 'festival':
+          // a festival's page, for the phone's المزاين app
+          final fid = m['festival'];
+          final d = fid is String
+              ? await core.festivalDetail(FestivalId(fid))
+              : null;
+          _reply(id, {
+            'ok': d != null,
+            'festival': d == null ? null : SnapshotJson.festivalDetail(d),
+          });
         case 'flush':
           await core.flush();
           _reply(id, {'ok': true});
