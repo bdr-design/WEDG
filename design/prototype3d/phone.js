@@ -76,6 +76,7 @@ const CSS = `
   .wg { border-radius: 22px; padding: 12px 13px; background: rgba(255,255,255,.78); -webkit-backdrop-filter: none; height: 136px; display: flex; flex-direction: column; box-shadow: 0 4px 14px rgba(70,50,20,.10); }
   .wg small { font-size: 11.5px; font-weight: 600; color: var(--ink2); }
   .wg .big2 { font: 700 21px/1.1 "Alexandria", sans-serif; margin-top: 8px; }
+  .wg .big2.bad { color: var(--red); }      /* (a balance under zero: «عليك», what the player owes) */
   .wg .ln { font-size: 11.5px; font-weight: 500; margin-top: auto; }
   .apps { display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 14px; }
   .app { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #2b2116; position: relative; }
@@ -271,6 +272,43 @@ const badge = (n) => n ? `<span class="bd">${n}</span>` : '';
 const waiting = () => `<div class="note" style="margin-top:6px">يجهّز…</div>`;
 const alertCard = (title, line) => `<div class="warn"><span class="lead">${svg('alert')}</span><b>${title}</b><small>${line}</small></div>`;
 const errCard = () => ERR ? alertCard('ما تم الطلب', ERR) : '';
+// cash below zero (wages or a fine can take it there: the owner's decision 8): no camel bought and nothing built till
+// it is paid
+const debtLine = () => `عليك دين ${n0(-G.cash)} ريال: ما تقدر تشتري حلال ولا تبني لين تسدد.`;
+// the merchant's account (the owner's decisions 9 and 10): feed, water and the vet go on it when the money does not
+// cover them, up to its limit. [cost]: what the money does not cover goes on it; null when it is past the limit
+function onAccount(cost) {
+  const A = G.farm.account, short = cost - Math.max(0, Math.min(G.cash, cost));
+  if (short <= 0) return { short: 0, owed: A.owed };
+  return A.owed + short <= A.limit ? { short, owed: A.owed + short } : null;
+}
+const accountLine = (owed) => `على الحساب: عليك للتاجر ${n0(owed)} ريال من حده ${n0(G.farm.account.limit)} ريال`;
+const accountFullLine = () => `حساب التاجر وصل حده ${n0(G.farm.account.limit)} ريال: بيع من حلالك أو سدد.`;
+// a treatment's kind in the phone's words
+const TAMPER = { botox: 'بوتوكس', filler: 'فيلر', hormones: 'هرمونات', lipStretch: 'شد الشفة', teethFiling: 'برد الأسنان', tailCut: 'قص الذيل', dye: 'صبغ' };
+const tamperNames = (ks) => ks.map((k) => TAMPER[k] || 'تجميل').join(' و');
+// a treatment found in one of his camels (GDD 7.1), said on الحراج's answer card: by a buyer's or the broker's look
+// before paying (the sale off), or outside a sale (the vet, the daily look). With the fine when there is one; with no
+// fine (he bought her treated without knowing: the owner's decision 15) that he was not fined and knows now, and that
+// it goes in time. [who]: the one who looked, or null.
+function foundWords(name, kinds, fine, who, male) {
+  const what = tamperNames(kinds), hf = (f, m) => (male ? m : f);
+  const title = who ? `${esc(who)} فحص ${esc(name)} ولقى ${hf('فيها', 'فيه')} ${what}` : `انكشف إن ${esc(name)} ${hf('فيها', 'فيه')} ${what}`;
+  const off = who ? 'البيعة انلغت' : '';
+  const rest = fine > 0
+    ? `وانكتبت عليك غرامة ${n0(fine)} ريال.`
+    : `ما تتغرم لأنك ما دريت، والحين صرت تدري. التجميل يروح مع الوقت، ولو ${hf('بعتها', 'بعته')} قبل وانكشف تتغرم.`;
+  return { title, line: off ? `${off}، ${rest}` : rest };
+}
+// treatments found while the phone was shut (the daily look, the vet): told once on الحراج's answer card, the oldest
+// not yet told first; those told with a refused sale are told already
+const FOUND_SEEN = new Set();
+const foundKey = (e) => `${e.day}|${e.camel}|${e.kind}`;
+function unseenFound() {
+  if (!G) return null;
+  const sales = new Set(G.recentEvents.filter((e) => e.type === 'saleRefused').map((e) => `${e.day}|${e.camel}`));
+  return G.recentEvents.find((e) => e.type === 'tamperingFound' && e.festival == null && !FOUND_SEEN.has(foundKey(e)) && !sales.has(`${e.day}|${e.camel}`)) || null;
+}
 const FEED = { barley: 'شعير', alfalfa: 'برسيم' };
 const stepper = (k, n, unit, canUp) => `<span class="stp"><button data-act="step" data-s="${k}" data-d="-1" aria-label="${FEED[k]} أقل" ${n ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button data-act="step" data-s="${k}" data-d="1" aria-label="${FEED[k]} أكثر" ${canUp ? '' : 'disabled'}>${svg('plus')}</button></span>`;
 // where the feed is kept: the start's shade until the store is built (the review: العلف spoke of a store the farm has not)
@@ -288,6 +326,8 @@ function refusal(r, command) {
   const water = command.supply === 'water', st = STORE();
   const where = water ? 'الخزان' : st.the, holds = water ? 'يشيل' : st.holds, none = water ? 'ما فيه' : st.none;
   const unit = water ? 'tanker' : command.supply === 'barley' ? 'bag' : 'bale';
+  if (code === 'inDebt') return debtLine();
+  if (code === 'accountFull') return accountFullLine();
   if (command.type === 'buyListing' || command.type === 'bargain') {
     if (code === 'insufficientFunds') return `رصيدك ما يكفي: تبي ${n0(p.needed ?? 0)} ريال مع النقل.`;
     if (code === 'farmFull') return 'عزبتك مليانة: ابنِ شبك من العزبة.';
@@ -348,8 +388,10 @@ function waterScreen() {
       const under = f.tankL - t.litres / 2, wait = need > 0 ? Math.ceil((have + coming - under) / need) : null;
       line = `الخزان ما يشيله لين ينزل تحت ${n0(under)} لتر${wait ? `، بعد ${days(wait)} تقريبًا` : ''}`;
     }
-    if (t.room > 0 && G.cash < t.price) line = `${n0(t.price)} ريال · رصيدك ما يكفي`;
-    const can = t.room > 0 && G.cash >= t.price;
+    const acc = onAccount(t.price);
+    if (t.room > 0 && acc && acc.short > 0) line = `${n0(t.price)} ريال · ${accountLine(acc.owed)}`;
+    else if (t.room > 0 && !acc) line = `${n0(t.price)} ريال · ${accountFullLine()}`;
+    const can = t.room > 0 && acc != null;
     return `<div class="row"><span class="lead">${svg('water')}</span><b>${name}</b><span class="act"><button class="btn ${can ? 'pri' : ''}" data-act="tanker" data-t="${t.tanker}" aria-label="اطلب ${name}" ${can ? '' : 'disabled'}>اطلب</button></span><small>${line}</small></div>`;
   };
   const bar = `<div class="bar${f.dryDays > 0 ? ' low' : ''}"><i style="width:${pct(have).toFixed(1)}%"></i>${coming ? `<i class="in" style="width:${(pct(have + coming) - pct(have)).toFixed(1)}%"></i>` : ''}</div>`;
@@ -401,12 +443,14 @@ function feedScreen() {
   const cut = suggest(b) * b.unitSize + suggest(a) * a.unitSize > room;
   const heading = (ordered) => `<div class="sec">${ordered ? 'اطلب زيادة' : cut ? `اطلب على قد ${ST.the}` : suggest(b) + suggest(a) > 0 ? 'اطلب لـ 3 أسابيع' : 'اطلب'}</div>`;
   const ordered = b.onTheWayAmount || a.onTheWayAmount;
-  // short of money: as the approved screen has it, the warning and a week's order first
-  if (total > G.cash) {
+  // past the merchant's account: as the approved short-of-money screen has it, the warning and a week's order first
+  // (an order the money does not cover goes on the account, up to its limit: the owner's decisions 9 and 10)
+  const acc = onAccount(total);
+  if (!acc) {
     const [wb, wa] = fitRoom(suggest(b, 1), suggest(a, 1), b, a, room), wt = wb * b.unitPrice + wa * a.unitPrice;
-    const week = wt > 0 && wt <= G.cash;
+    const week = wt > 0 && onAccount(wt) != null;
     return `<div class="body">${nav()}<div class="title">العلف</div>${errCard()}
-      ${alertCard(`رصيدك ما يكفي لـ 3 أسابيع`, `عندك ${n0(G.cash)} ريال.${week ? ` يكفي لأسبوع: ${[wb ? count(wb, 'bag') : '', wa ? count(wa, 'bale') : ''].filter(Boolean).join(' و')}.` : ''}`)}
+      ${alertCard('حساب التاجر وصل حده', `${accountFullLine()}${week ? ` يكفي لأسبوع: ${[wb ? count(wb, 'bag') : '', wa ? count(wa, 'bale') : ''].filter(Boolean).join(' و')}.` : ''}`)}
       ${week ? `<button class="btn ghost two" data-act="week"><span>اطلب لأسبوع</span><span>${n0(wt)} ريال</span></button>` : ''}
       ${store}${heading(ordered)}${rows(canUp)}
       <div class="order"><span><small>المجموع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div></div>`;
@@ -430,7 +474,7 @@ function feedScreen() {
   const way = ordered ? `<div class="sec">بالطريق</div><div class="group way">${[[b, 'شعير', 'bag'], [a, 'برسيم', 'bale']].filter(([x]) => x.onTheWayAmount).map(([x, nm, k]) => `<div class="row"><span class="lead">${svg('truck')}</span><b>${nm} · ${count(x.onTheWay, k)}</b><small>${n0(x.onTheWayAmount)} كجم · ${n0(x.onTheWay * x.unitPrice)} ريال · يوصل بكرة</small></div>`).join('')}</div>` : '';
   let order;
   if (usedKg > room) order = `<div class="order"><span><small>${ST.the} ${ST.holds} ${n0(Math.max(0, room))} كجم بعد</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div>`;
-  else if (total > 0) order = `<div class="order"><span><small>المجموع · يوصل بكرة ${ST.to}</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>`;
+  else if (total > 0) order = `<div class="order"><span><small>المجموع · يوصل بكرة ${ST.to}</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>${acc.short > 0 ? `<div class="note">${accountLine(acc.owed)}.</div>` : ''}`;
   else order = `<div class="note">${suggest(b) + suggest(a) > 0 || ordered ? 'زد الكمية ويطلع لك المجموع وزر الطلب.' : `${ST.the} ${ST.lasts} أكثر من 3 أسابيع.`}</div>`;
   return `<div class="body">${nav()}<div class="title">العلف</div>${errCard()}${warn}
     ${store}${ration}${way}${heading(ordered)}${rows(canUp)}${order}</div>`;
@@ -514,8 +558,8 @@ function buildScreen() {
       out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${nameOf(x.has + k)}</b><small>ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}</small></div>`);
     }
     if (made < x.most) {
-      const poor = x.cannot === 'insufficientFunds', name = nameOf(made);
-      const line = [d.what, `${n0(x.price)} ريال`, poor ? 'رصيدك ما يكفي' : ''].filter(Boolean).join(' · ');
+      const debt = x.cannot === 'inDebt', poor = debt || x.cannot === 'insufficientFunds', name = nameOf(made);
+      const line = [d.what, `${n0(x.price)} ريال`, debt ? `عليك دين ${n0(-G.cash)} ريال` : poor ? 'رصيدك ما يكفي' : ''].filter(Boolean).join(' · ');
       out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${name}</b><span class="act"><button class="btn ${poor ? '' : 'pri'}" data-act="build" data-f="${x.facility}" aria-label="ابنِ ${name}" ${poor ? 'disabled' : ''}>ابنه</button></span><small>${line}</small></div>`);
     } else if (!x.building) {
       out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${x.facility === 'pen' ? 'الشبوك' : d.name}</b><small>${x.facility === 'pen' ? 'بنيت الشبوك كلها' : 'مبني'}</small></div>`);
@@ -526,6 +570,7 @@ function buildScreen() {
     ${have}
     <div class="sec">ابنِ ووسّع</div>
     <div class="group">${f.facilities.map(row).join('')}</div>
+    ${G.cash < 0 ? `<div class="note">${debtLine()}</div>` : ''}
     <div class="note">اللي تبنيه يخلص بعد 3 أيام ويطلع مكانه في العزبة.</div></div>`;
 }
 
@@ -600,7 +645,7 @@ function listingScreen() {
   if (HJ.bid == null) HJ.bid = Math.min(top, Math.max(k, roundTo(c.estimateLow, k)));
   HJ.bid = Math.min(top, Math.max(k, HJ.bid));
   const left = l.bargainsLeft, canPayBid = G.cash >= HJ.bid + l.transport;
-  const canBid = left > 0 && !full && canPayBid;
+  const canBid = left > 0 && !full && canPayBid && G.cash >= 0;
   const facts = [
     `<b>${esc(c.name)}</b>`,
     `<small>${REGION[l.region]} · عند ${esc(l.sellerName)}</small>`,
@@ -608,7 +653,7 @@ function listingScreen() {
     c.pregnant && c.dueOn != null ? `<small>عشار، ${dueText(c)}</small>` : '',
     `<small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small>`,
   ].join('');
-  const why = full ? 'عزبتك مليانة: ابنِ شبك من العزبة.' : poor ? `رصيدك ${n0(G.cash)} ريال ما يكفي.` : '';
+  const why = full ? 'عزبتك مليانة: ابنِ شبك من العزبة.' : G.cash < 0 ? debtLine() : poor ? `رصيدك ${n0(G.cash)} ريال ما يكفي.` : '';
   const canBuy = !full && !poor;
   const bidRow = `<div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} ${her(c, 'عليها', 'عليه')}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
   return `<div class="body">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${msgCard()}${errCard()}
@@ -622,7 +667,7 @@ function listingScreen() {
     <div class="sec">${her(c, 'سوم عليها', 'سوم عليه')}</div>
     ${bidRow}
     <button class="btn ${canBid ? 'ghost' : ''} wide" data-act="bid" ${canBid ? '' : 'disabled'}>سوم بـ ${n0(HJ.bid)}</button>
-    ${left > 0 && !full && !canPayBid ? `<div class="note">لو قبل سومك تدفع ${n0(HJ.bid + l.transport)} ريال مع النقل، ورصيدك ما يكفي.</div>` : ''}
+    ${left > 0 && !full && !canPayBid && G.cash >= 0 ? `<div class="note">لو قبل سومك تدفع ${n0(HJ.bid + l.transport)} ريال مع النقل، ورصيدك ما يكفي.</div>` : ''}
     <div class="note">يرد عليك على طول: يقبل، أو ينزل لك، أو يرفض. والنقل ${her(c, 'يوصلها', 'يوصله')} بكرة لعزبتك.</div></div>`;
 }
 // one's own camels to sell: those on the farm (the 3D yard's, the first 40 to come), each with what stops a sale
@@ -795,7 +840,7 @@ const S = {
     // the example content of the design's screens, are not shown until they work on the engine)
     home: () => `<div class="body"><div class="hs">${dateLine()}
       <div class="widgets">
-        <div class="wg" data-go="bank" role="button" tabindex="0" aria-label="الرصيد ${G ? n0(G.cash) : ''} ريال، البنك"><small>الرصيد</small><div class="big2"><b class="fit">${G ? n0(G.cash) : '…'}</b></div><div class="ln ink2">ريال</div><div class="ln${G && !G.todayNet ? ' ink2' : ''}">${!G ? '' : G.todayNet > 0 ? `<span class="pos">دخل اليوم ${n0(G.todayNet)}</span>` : G.todayNet < 0 ? `صرفت اليوم ${n0(-G.todayNet)}` : 'ما فيه حركة اليوم'}</div></div>
+        <div class="wg" data-go="bank" role="button" tabindex="0" aria-label="${G && G.cash < 0 ? `عليك ${n0(-G.cash)} ريال` : `الرصيد ${G ? n0(G.cash) : ''} ريال`}، البنك"><small>${G && G.cash < 0 ? 'عليك' : 'الرصيد'}</small><div class="big2${G && G.cash < 0 ? ' bad' : ''}"><b class="fit">${G ? n0(Math.abs(G.cash)) : '…'}</b></div><div class="ln ink2">ريال</div><div class="ln${G && !G.todayNet ? ' ink2' : ''}">${!G ? '' : G.todayNet > 0 ? `<span class="pos">دخل اليوم ${n0(G.todayNet)}</span>` : G.todayNet < 0 ? `صرفت اليوم ${n0(-G.todayNet)}` : 'ما فيه حركة اليوم'}</div></div>
         <div class="wg"><small>الحلال</small><div class="big2"><b class="fit">${G ? n0(G.herd.total) : '…'}</b></div><div class="ln ink2">${herdWord()}</div><div class="ln ink2">${G && G.herd.total ? `قيمته ${n0(G.herdValue)} ريال` : ''}</div></div>
       </div>
       <div class="apps">
@@ -957,7 +1002,14 @@ export function createPhone({ host }) {
     const id = t.dataset.id, to = t.dataset.go;
     if (to === 'listing' && id) { HJ.listing = id; HJ.bid = null; }
     if (to === 'sell' && id) { HJ.camel = id; HJ.ask = null; }
-    if (to === 'haraj' && st.screen === 'home') HJ.tab = 'market';      // (the app opened afresh: what is for sale)
+    if (to === 'haraj' && st.screen === 'home') {
+      HJ.tab = 'market';      // (the app opened afresh: what is for sale)
+      const f = unseenFound();
+      if (f) {
+        FOUND_SEEN.add(foundKey(f)); HJ.msg = foundWords(f.name, [f.kind], f.fine, null, myCamel(f.camel)?.sex === 'male');
+        sr.textContent = `${HJ.msg.title}. ${HJ.msg.line}`.replace(/<[^>]+>/g, '');      // (said as the other answers are)
+      }
+    }
     if (to === 'bankMonth' && t.dataset.month) { BK.month = t.dataset.month; BK.data = null; loadMonth(); }
   }
   // البنك: the month opened, its kinds asked of the engine (again when money moves while it is open); an answer that
@@ -1052,7 +1104,7 @@ export function createPhone({ host }) {
         const b = sup('barley'), a = sup('alfalfa');
         let [nb, na] = kind === 'week' ? fitRoom(suggest(b, 1), suggest(a, 1), b, a, storeRoom(G.farm, b, a)) : [ORD.barley, ORD.alfalfa];
         // the whole order's total checked first (the engine takes the two feeds as two orders)
-        if (nb * b.unitPrice + na * a.unitPrice > G.cash) { ERR = 'رصيدك ما يكفي الطلب كامل.'; return; }
+        if (!onAccount(nb * b.unitPrice + na * a.unitPrice)) { ERR = accountFullLine(); return; }
         if (nb > 0 && await send({ type: 'orderSupply', supply: 'barley', units: nb })) nb = 0;
         if (!ERR && na > 0 && await send({ type: 'orderSupply', supply: 'alfalfa', units: na })) na = 0;
         // what went through leaves the order; what did not stays for another try
@@ -1095,6 +1147,7 @@ export function createPhone({ host }) {
       if (!c) return;
       const command = how === 'list' ? { type: 'listForSale', camel: c.id, askPrice: HJ.ask } : { type: 'quickSale', camel: c.id };
       const r = await engine.dispatch(command);
+      if (refusedSale(r, how === 'quick' ? 'الدلال' : null)) { HJ.ask = null; HJ.camel = null; next = 'haraj'; return; }
       if (!r.ok) { ERR = refusal(r, command); return; }
       const sold = (r.events || []).find((e) => e.type === 'camelSold');
       HJ.msg = how === 'list'
@@ -1102,13 +1155,25 @@ export function createPhone({ host }) {
         : { good: true, title: `بعت ${esc(c.name)} للدلال بـ ${n0(sold ? sold.price : c.quickSale)} ريال`, line: 'دخلت الفلوس رصيدك.' };
       HJ.tab = how === 'list' ? 'mine' : 'market'; HJ.ask = null; HJ.camel = null; next = 'haraj';
     }
+    // a sale the buyer or the broker refused, a treatment found in her (the owner's decision 12): said on the answer
+    // card by the engine's facts (who looked, what he found, the fine or none), its findings told
+    function refusedSale(r, who = null) {
+      if (r.ok || r.error?.code !== 'saleRefused') return false;
+      const ev = (r.events || []).find((e) => e.type === 'saleRefused');
+      for (const e of r.events || []) if (e.type === 'tamperingFound') FOUND_SEEN.add(foundKey(e));
+      HJ.msg = ev ? foundWords(ev.name, ev.kinds, ev.fine, who || ev.buyer, myCamel(ev.camel)?.sex === 'male') : foundWords('', [], r.error.params?.fine ?? 0, null);
+      return true;
+    }
     // an offer on one's listing taken (the camel sold to that buyer) or turned down
     async function answer(how, offer) {
       const l = G.myListings.find((x) => x.offers.some((o) => o.id === offer)), o = l && l.offers.find((x) => x.id === offer);
       if (!o) return;
       if (how === 'decline') { await send({ type: 'declineOffer', offer }); return; }
       const fee = Math.round(o.amount * G.haraj.commission);
-      if (await send({ type: 'acceptOffer', offer })) HJ.msg = { good: true, title: `بعت ${esc(l.camel.name)} على ${esc(o.buyerName)} بـ ${n0(o.amount)} ريال`, line: `يوصلك ${n0(o.amount - fee)} بعد السعي.` };
+      const r = await engine.dispatch({ type: 'acceptOffer', offer });
+      if (refusedSale(r)) return;
+      if (!r.ok) { ERR = refusal(r, { type: 'acceptOffer', offer }); return; }
+      HJ.msg = { good: true, title: `بعت ${esc(l.camel.name)} على ${esc(o.buyerName)} بـ ${n0(o.amount)} ريال`, line: `يوصلك ${n0(o.amount - fee)} بعد السعي.` };
     }
   }
   scr.addEventListener('keydown', (e) => {
