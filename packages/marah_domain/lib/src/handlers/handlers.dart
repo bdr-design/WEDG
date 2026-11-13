@@ -243,6 +243,11 @@ Result _accept(Sim sim, PlayerState p, AcceptOffer cmd) {
   if (l.sellerId != p.id) return _err(sim, ErrorCode.notYourListing);
   final c = sim.world.camels[l.camelId]!;
   final buyer = sim.world.owners[o.buyerId];
+  final refused = _examined(sim, p, c, buyer?.name ?? '', 'offer');
+  if (refused != null) {
+    sim.world.offers.remove(o.id); // the buyer walks away
+    return refused;
+  }
   _sellTo(sim, p, c, o.amount, o.buyerId, buyer?.name ?? '');
   return _ok(sim);
 }
@@ -290,6 +295,8 @@ Result _quickSale(Sim sim, PlayerState p, QuickSale cmd) {
   if (problem != null) return Err(problem, sim.drain());
   final rng = sim.rng(['broker', c!.id.value]);
   final broker = WorldGen(sim).randomOwner(rng, region: p.farm.region);
+  final refused = _examined(sim, p, c, broker.name, 'broker');
+  if (refused != null) return refused;
   // he buys it himself, so takes no commission (السعي is the fee for
   // finding a buyer); his lower price is his margin
   _sellTo(
@@ -302,6 +309,45 @@ Result _quickSale(Sim sim, PlayerState p, QuickSale cmd) {
     commission: false,
   );
   return _ok(sim);
+}
+
+/// The buyer's or the broker's examination before paying (the owner, 13
+/// Nov 2026; they look at no cost to themselves): each treatment showing in
+/// her is found with its chance (stronger, easier); found, the sale is off,
+/// the seller fined MEWA's fine for each kind found and his name lowered
+/// (TamperingSystem.foundOutside), and the refusal says the fine. Null when
+/// nothing is found: the sale goes on.
+Err? _examined(
+  Sim sim,
+  PlayerState seller,
+  Camel c,
+  String buyerName,
+  String path,
+) {
+  final rng = sim.rng(['sale-check', c.id.value, path]);
+  final found = [
+    for (final t in c.treatments)
+      if (t.activeOn(sim.today) &&
+          rng.chance(ContestRules.saleCheckChance(t.strength)))
+        t,
+  ];
+  if (found.isEmpty) return null;
+  for (final t in found) {
+    TamperingSystem.foundOutside(sim, seller, c, t);
+  }
+  final fine = Balance.outsideFine * found.length;
+  sim.emit(
+    SaleRefused(
+      sim.today,
+      owner: seller.id,
+      camel: c.id,
+      name: c.name,
+      buyer: buyerName,
+      kinds: [for (final t in found) t.kind],
+      fine: fine,
+    ),
+  );
+  return _err(sim, ErrorCode.saleRefused, {'fine': fine});
 }
 
 void _sellTo(

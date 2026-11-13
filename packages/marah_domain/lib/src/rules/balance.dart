@@ -363,6 +363,17 @@ class Balance {
   /// the buyers' (she looks finer, and fetches more), while it lasts.
   static const tamperLiftPerLevel = 3.4;
 
+  /// (balance) The share of a treatment's lift that counts in what buyers
+  /// pay (the owner, 13 Nov 2026: higher, but by less than at judging), so
+  /// that treating to sell loses on average at every strength (measured).
+  static const tamperPriceShare = 0.05;
+
+  /// (balance) Buyers and the broker examine a camel before paying (the
+  /// owner, 13 Nov 2026): each treatment showing is found with
+  /// 1 - (1 - this)^strength; found, the sale is called off, the seller
+  /// fined [outsideFine] for each and his name lowered.
+  static const saleCheckPerLevel = 0.35;
+
   /// The points it adds to each of its features.
   static double tamperTraitGain(TamperKind kind, int strength) =>
       tamperLiftPerLevel *

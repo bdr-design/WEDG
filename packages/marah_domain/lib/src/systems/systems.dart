@@ -820,6 +820,10 @@ class _Competitor {
   Stage? removedAt;
   RemovalReason? reason;
 
+  /// The stage the clinical check's finding is told at (it looks at every
+  /// entry before the preliminary judging).
+  Stage? caughtAt;
+
   /// A rival's treatment, if it has one.
   TamperKind? kind;
   int strength = 0;
@@ -978,39 +982,21 @@ class ContestSystem implements DailySystem {
     }
     field.add(active().length);
 
-    // 3. the preliminary judging keeps the best part of the field
-    final (mean, sd) = ContestRules.rivalQuality(f.tier);
-    for (final c in active()) {
-      _score(sim, rng, r, c, mean, sd);
-    }
-    final ranked = active().toList()
-      ..sort((a, b) => b.score.compareTo(a.score));
-    final keep = (ranked.length * Balance.preliminaryKeeps).ceil();
-    for (final c in ranked.skip(
-      keep < Balance.preliminaryKeepsAtLeast
-          ? Balance.preliminaryKeepsAtLeast
-          : keep,
-    )) {
-      remove(c, Stage.preliminary, RemovalReason.cut);
-    }
-    field.add(active().length);
-
-    // 4 and 5. the tampering experts, then the medical committee
+    // the clinical check of every camel that entered (the owner, 13 Nov
+    // 2026; research section 3, [33]: every camel is examined), before the
+    // preliminary judging decides who goes on; what it finds is announced
+    // at the tampering experts' stage or the medical committee's, in the
+    // day's order (GDD 7)
     for (final stage in [Stage.tamperingExperts, Stage.medical]) {
       for (final c in active().toList()) {
-        if (!c.inField) continue; // barred with another of his camels
+        if (!c.inField || c.caughtAt != null) continue;
         if (c.rival) {
           final kind = c.kind;
           if (kind != null &&
               rng.chance(ContestRules.detectChance(kind, c.strength, stage))) {
-            remove(c, stage, RemovalReason.tampering);
+            c.caughtAt = stage;
             _rivalCaught(sim, f, r, c, kind);
           }
-          continue;
-        }
-        if (stage == Stage.medical &&
-            c.camels.any((x) => x.health == HealthStatus.sick)) {
-          remove(c, stage, RemovalReason.sick);
           continue;
         }
         // the one who entered her answers for it (the owner, 13 Nov 2026:
@@ -1033,7 +1019,7 @@ class ContestSystem implements DailySystem {
         // (the owner, 13 Nov 2026: the risk adds up); one found by the
         // tampering experts, the medical committee still looks for the rest
         if (found.isEmpty) continue;
-        remove(c, stage, RemovalReason.tampering);
+        c.caughtAt = stage;
         final later = stage == Stage.tamperingExperts
             ? [
                 for (final camel in c.camels)
@@ -1054,6 +1040,39 @@ class ContestSystem implements DailySystem {
         }
         for (final (camel, t) in later) {
           _caught(sim, f, r, p, camel, t, Stage.medical, comps);
+        }
+      }
+    }
+
+    // 3. the preliminary judging keeps the best part of the field (those
+    // found treated are out already, told at their stage below)
+    final (mean, sd) = ContestRules.rivalQuality(f.tier);
+    final judgedField = active().where((c) => c.caughtAt == null).toList();
+    for (final c in judgedField) {
+      _score(sim, rng, r, c, mean, sd);
+    }
+    judgedField.sort((a, b) => b.score.compareTo(a.score));
+    final keep = (judgedField.length * Balance.preliminaryKeeps).ceil();
+    for (final c in judgedField.skip(
+      keep < Balance.preliminaryKeepsAtLeast
+          ? Balance.preliminaryKeepsAtLeast
+          : keep,
+    )) {
+      remove(c, Stage.preliminary, RemovalReason.cut);
+    }
+    field.add(active().length);
+
+    // 4 and 5. the tampering experts' and the medical committee's findings,
+    // and the medical committee's look at each camel's health
+    for (final stage in [Stage.tamperingExperts, Stage.medical]) {
+      for (final c in active().toList()) {
+        if (c.caughtAt == stage) {
+          remove(c, stage, RemovalReason.tampering);
+        } else if (stage == Stage.medical &&
+            c.caughtAt == null &&
+            !c.rival &&
+            c.camels.any((x) => x.health == HealthStatus.sick)) {
+          remove(c, stage, RemovalReason.sick);
         }
       }
       field.add(active().length);
@@ -1257,7 +1276,7 @@ class ContestSystem implements DailySystem {
     }
     // his other entries in this round, and in every festival of the ban
     for (final c in comps) {
-      if (!c.rival && c.owner == p.id && c.inField) {
+      if (!c.rival && c.owner == p.id && c.inField && c.caughtAt == null) {
         c
           ..removedAt = stage
           ..reason = RemovalReason.banned;

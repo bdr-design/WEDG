@@ -142,6 +142,11 @@ class ContestRules {
   static Stage foundMostlyBy(TamperKind kind) =>
       kind.experts >= kind.medical ? Stage.tamperingExperts : Stage.medical;
 
+  /// The chance a buyer's or the broker's examination before paying finds a
+  /// treatment of [strength] (balance, Balance.saleCheckPerLevel).
+  static double saleCheckChance(int strength) =>
+      1 - math.pow(1 - Balance.saleCheckPerLevel, strength).toDouble();
+
   /// What the secret vet takes for a treatment.
   static int tamperPrice(TamperKind kind, int strength) =>
       kind.price * strength;

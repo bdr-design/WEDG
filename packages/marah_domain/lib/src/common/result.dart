@@ -77,6 +77,10 @@ enum ErrorCode {
   /// owner, 13 Nov 2026).
   accountFull,
 
+  /// The buyer or the broker found a treatment in her before paying: the
+  /// sale is off and the seller fined ({'fine'}; the owner, 13 Nov 2026).
+  saleRefused,
+
   /// An order would overfill the feed store or the water tank ({'room'}: units
   /// that still fit).
   storeFull,
