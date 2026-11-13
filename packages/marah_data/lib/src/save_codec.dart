@@ -19,7 +19,7 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 8;
+  static const currentVersion = 9;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
@@ -32,6 +32,7 @@ class SaveCodec {
     5: _v5ToV6,
     6: _v6ToV7,
     7: _v7ToV8,
+    8: _v8ToV9,
   };
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
@@ -393,6 +394,29 @@ class SaveCodec {
             ..['head'] = 1;
         }
       }
+    }
+    return data;
+  }
+
+  /// v8 to v9 (المزاين in the phone; the owner's decisions of 13 Nov 2026):
+  /// a round's day is told stage by stage (a judged round was told whole
+  /// already: its six stages counted told, and nothing waits to be told);
+  /// the secret treatment man has sent no message yet; the treatments found
+  /// outside a festival before were told then, by the events.
+  static Map<String, Object?> _v8ToV9(Map<String, Object?> input) {
+    final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
+    final world = data['world']! as Map<String, Object?>;
+    for (final fe in (world['festivals'] as List<Object?>?) ?? const []) {
+      for (final ro
+          in (fe! as Map<String, Object?>)['rounds']! as List<Object?>) {
+        final r = ro! as Map<String, Object?>;
+        r['told'] = r['results'] == null ? 0 : 6;
+      }
+    }
+    for (final pl in (data['players'] as List<Object?>?) ?? const []) {
+      (pl! as Map<String, Object?>)
+        ..['dealer'] = <Object?>[]
+        ..['untold'] = <Object?>[];
     }
     return data;
   }

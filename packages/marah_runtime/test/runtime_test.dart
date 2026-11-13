@@ -72,6 +72,54 @@ void main() {
       await e.close();
     });
 
+    test('a round\'s day is told stage by stage by the clock', () async {
+      final e = core();
+      await e.newGame(params);
+      final g = e.game!;
+      final me = g.me.id;
+      final v = GameView(g.state, me);
+      // the starting she-camel in her own round at the open festival
+      final dam = v.herd.firstWhere((c) => c.sex == Sex.female);
+      final f = v.festivals.firstWhere(
+        (f) => !f.done && f.opensOn <= g.today && g.today <= f.closesOn,
+      );
+      final (round, why) = v.ownRound(f.id, dam.id);
+      expect(why, isNull);
+      expect(
+        (await e.dispatch(EnterRound(me, f.id, round!, [dam.id]))).ok,
+        isTrue,
+      );
+      final r = g.state.world.festivals[f.id]!.round(round)!;
+      final len = g.state.clock(now: now.call).gameDayLength;
+      // to the round's day at 8:40: two stages told
+      now.advance(
+        g.state.clock(now: now.call).untilNextDay() +
+            len * (r.day.daysSince(g.today) - 1) +
+            len * (520 / 1440),
+      );
+      await e.catchUp();
+      expect(g.today, r.day);
+      expect(r.told, 2);
+      MyEntryCard mine() => snapshots().last.festivals
+          .firstWhere((x) => x.id == f.id)
+          .entries
+          .single;
+      expect(mine().told, 2);
+      expect(mine().rank, isNull);
+      // nothing more to tell till 10:00: no new snapshot
+      final count = snapshots().length;
+      now.advance(len * (60 / 1440));
+      await e.catchUp();
+      expect(snapshots().length, count);
+      // the evening: all six told, the outcome in the snapshot
+      now.advance(len * (560 / 1440));
+      await e.catchUp();
+      expect(r.told, 6);
+      expect(mine().told, 6);
+      expect(mine().rank != null || mine().removedAt != null, isTrue);
+      await e.close();
+    });
+
     test('one real day later the world is one game week older', () async {
       final e = core();
       await e.newGame(params);

@@ -292,10 +292,65 @@ class GameView {
   /// or null.
   int? get bannedThrough => _w.bans[viewer];
 
-  /// الصيت in each family (GDD 8), 0 to 100.
-  Map<ColorCategory, double> get reputation => {
-    for (final c in ColorCategory.values) c: me.reputationIn(c),
+  /// الصيت in each family (GDD 8) as the player hears it: a band, never
+  /// the number (Balance.reputationBand).
+  Map<ColorCategory, ReputationBand> get reputation => {
+    for (final c in ColorCategory.values)
+      c: Balance.reputationBand(me.reputationIn(c)),
   };
+
+  /// The secret treatment man's messages (the oldest first) and how many
+  /// are unread.
+  List<DealerMessage> get dealerMessages => List.unmodifiable(me.dealer);
+  int get unreadMessages => me.dealer.where((m) => !m.read).length;
+
+  /// Treatments found outside a festival and a sale, not yet told.
+  List<Finding> get untoldFindings => List.unmodifiable(me.untold);
+
+  /// [c]'s own round at festival [f] (its colour, its sex, its age's kind on
+  /// the round's day; الفحل وإنتاجه, a group, is not one) and why it cannot
+  /// enter it now, or null: the round it may enter, else the one whose
+  /// refusal says most (the money or the rules before its age's or calvings'
+  /// kind, which before none). No round of its colour and sex there: null and
+  /// wrongCategory.
+  (RoundId?, DomainError?) ownRound(FestivalId f, CamelId c) {
+    final fest = _w.festivals[f];
+    final camel = _w.camels[c];
+    if (fest == null || camel == null) {
+      return (null, const DomainError(ErrorCode.notFound));
+    }
+    RoundId? best;
+    DomainError? why;
+    var rank = 99;
+    int rankOf(DomainError? e) => switch (e?.code) {
+      null => 0,
+      ErrorCode.tooFewCalvings => 2,
+      ErrorCode.wrongAgeClass => 3,
+      _ => 1,
+    };
+    for (final r in fest.rounds) {
+      if (!r.kind.single ||
+          (r.category != null && r.category != camel.category) ||
+          (r.sex != null && r.sex != camel.sex)) {
+        continue;
+      }
+      final e = handlers.cannotEnter(_sim, me, fest, r, [camel]);
+      final k = rankOf(e);
+      if (k < rank) {
+        rank = k;
+        best = r.id;
+        why = e;
+        if (k == 0) break;
+      }
+    }
+    if (best == null) {
+      return (
+        null,
+        DomainError(ErrorCode.wrongCategory, {'category': camel.category.name}),
+      );
+    }
+    return (best, why);
+  }
 
   /// The secret treatments in the player's camels that he knows of (his
   /// own, or found by his vet), showing now, with their risk.
@@ -379,6 +434,13 @@ class GameView {
   int get onAccount => me.onAccount;
   int accountLimit([({double barley, double alfalfa, double water})? needs]) =>
       Account.limitFor(needs ?? dailyNeeds, me);
+
+  /// Why a necessity costing [cost] cannot be bought now, from the money
+  /// and then on account up to [limit] (accountFull), or null; and what of
+  /// it would go on the account.
+  DomainError? cannotPayNecessity(int cost, int limit) =>
+      Account.canPay(me, cost, limit);
+  int onAccountFor(int cost) => Account.shortfall(me, cost);
 
   /// What is in store now (kg or L), not counting orders on the way.
   double inStore(Supply s) => Provisions.stocked(me.farm, s, withOrders: false);
@@ -568,20 +630,29 @@ class RoundView {
           if (e.ownerId == v.viewer) e,
       ],
       judged = r.judged,
-      announced = r.judged && r.paid,
+      told = r.judged ? r.told : 0,
+      entrants = r.judged ? r.entrants : 0,
+      announced = r.over && r.paid,
       announceOn = r.announceOn,
-      field = r.field,
-      caught = r.caught,
-      results = !(r.judged && r.paid)
+      // only what the stages told so far decided (the owner, 13 Nov 2026:
+      // the day told stage by stage; no later stage's outcome before its
+      // hour)
+      field = r.field?.sublist(0, r.told.clamp(0, r.field!.length)),
+      caught = r.told > Stage.medical.index ? r.caught : 0,
+      results = !(r.over && r.paid)
           ? (r.judged
-                // judged, the places to come: only the owner's removals
+                // its day being told, or the places to come: only the
+                // owner's entries the stages told so far removed
                 ? [
                     for (final row in r.results!)
-                      if (row.ownerId == v.viewer && row.rank == null)
-                        ResultView._(row, v.viewer),
+                      if (row.ownerId == v.viewer &&
+                          row.rank == null &&
+                          row.removedAt != null &&
+                          row.removedAt!.index < r.told)
+                        ResultView._(row, v),
                   ]
                 : null)
-          : [for (final row in r.results!) ResultView._(row, v.viewer)];
+          : [for (final row in r.results!) ResultView._(row, v)];
 
   final RoundId id;
   final RoundKind kind;
@@ -595,6 +666,12 @@ class RoundView {
   final List<int> prizes;
   final List<Entry> myEntries;
   final bool judged;
+
+  /// How many of the day's six stages have been told (Stage order).
+  final int told;
+
+  /// The entries on its day, before the first stage (once judged).
+  final int entrants;
 
   /// The places announced (الفحل وإنتاجه's after the DNA tests).
   final bool announced;
@@ -615,19 +692,30 @@ class RoundView {
 /// and the stage an entry left at; never its score or marks, the player's
 /// own included (hidden values: the judges' marks are not announced).
 class ResultView {
-  ResultView._(ResultRow r, OwnerId viewer)
+  ResultView._(ResultRow r, GameView v)
     : rank = r.rank,
       camelName = r.camelName,
       ownerId = r.ownerId,
+      ownerName = v.ownerName(r.ownerId),
       prize = r.prize,
       head = r.head,
       removedAt = r.removedAt,
       reason = r.reason,
-      camelId = r.ownerId == viewer ? r.camelId : null;
+      camelId = r.ownerId == v.viewer ? r.camelId : null,
+      reputation = r.ownerId != v.viewer
+          ? null
+          : r.reason == RemovalReason.tampering
+          ? ReputationMove.fell
+          : (r.rank ?? 99) <= 10
+          ? ReputationMove.rose
+          : ReputationMove.same;
 
   final int? rank;
   final String camelName;
   final OwnerId ownerId;
+
+  /// The owner's name (the places name the owners).
+  final String ownerName;
   final int prize;
   final int head;
   final Stage? removedAt;
@@ -636,17 +724,26 @@ class ResultView {
   /// Only on the viewer's own rows.
   final CamelId? camelId;
 
+  /// Only on the viewer's own rows: what the entry did to his name in its
+  /// family (GDD 8: the top ten raise it, a treatment found lowers it).
+  final ReputationMove? reputation;
+
   Map<String, Object?> toJson() => {
     'rank': rank,
     'name': camelName,
     'owner': ownerId.value,
+    'ownerName': ownerName,
     'prize': prize,
     'head': head,
     if (camelId != null) 'camel': camelId!.value,
     if (removedAt != null) 'removedAt': removedAt!.name,
     if (reason != null) 'reason': reason!.name,
+    if (reputation != null) 'reputation': reputation!.name,
   };
 }
+
+/// Which way an entry moved its owner's name (الصيت).
+enum ReputationMove { rose, fell, same }
 
 /// One of the player's own secret treatments and its risk, in words: at a
 /// festival, outside one in a month, and who finds it most (never the odds).

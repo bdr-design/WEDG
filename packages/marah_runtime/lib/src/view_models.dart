@@ -281,6 +281,9 @@ class FestivalCard {
     required this.myPrizes,
     required this.late,
     required this.bannedThrough,
+    this.topEnterable = 0,
+    this.topEnterableKind,
+    this.entries = const [],
   });
 
   final FestivalId id;
@@ -305,9 +308,20 @@ class FestivalCard {
   /// The player is barred from it, through this season (GDD 7.1).
   final int? bannedThrough;
 
+  /// The highest first prize over the rounds a player can enter, and that
+  /// round's kind ([topPrize] counts the group rounds too).
+  final int topEnterable;
+  final RoundKind? topEnterableKind;
+
+  /// The player's entries here, each with what its day has told so far.
+  final List<MyEntryCard> entries;
+
   @override
   bool operator ==(Object other) =>
       other is FestivalCard &&
+      other.topEnterable == topEnterable &&
+      other.topEnterableKind == topEnterableKind &&
+      _listEquals(other.entries, entries) &&
       other.id == id &&
       other.name == name &&
       other.region == region &&
@@ -345,7 +359,84 @@ class FestivalCard {
     myPrizes,
     late,
     bannedThrough,
+    topEnterable,
+    topEnterableKind,
+    ...entries,
   ]);
+}
+
+/// One of the player's entries at a festival: its camel, its round, and
+/// what the round's day has told of it so far ([told] stages, Stage order;
+/// the place and prize once the final judging is told, or the stage that
+/// removed it once that stage is told).
+class MyEntryCard {
+  const MyEntryCard({
+    required this.camel,
+    required this.name,
+    required this.sex,
+    required this.round,
+    required this.kind,
+    required this.category,
+    required this.day,
+    required this.lastEntryDay,
+    required this.told,
+    this.rank,
+    this.prize = 0,
+    this.removedAt,
+    this.reason,
+    this.reputation,
+  });
+
+  final CamelId camel;
+  final String name;
+  final Sex sex;
+  final RoundId round;
+  final RoundKind kind;
+  final ColorCategory? category;
+  final GameDay day;
+  final GameDay lastEntryDay;
+  final int told;
+  final int? rank;
+  final int prize;
+  final Stage? removedAt;
+  final RemovalReason? reason;
+  final ReputationMove? reputation;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MyEntryCard &&
+      other.camel == camel &&
+      other.name == name &&
+      other.sex == sex &&
+      other.round == round &&
+      other.kind == kind &&
+      other.category == category &&
+      other.day == day &&
+      other.lastEntryDay == lastEntryDay &&
+      other.told == told &&
+      other.rank == rank &&
+      other.prize == prize &&
+      other.removedAt == removedAt &&
+      other.reason == reason &&
+      other.reputation == reputation;
+
+  @override
+  int get hashCode => Object.hash(
+    camel,
+    name,
+    sex,
+    round,
+    kind,
+    category,
+    day,
+    lastEntryDay,
+    told,
+    rank,
+    prize,
+    removedAt,
+    reason,
+    reputation,
+  );
 }
 
 /// One of the player's own secret treatments and its risk (GDD 7.1): never
@@ -509,6 +600,8 @@ class TankerSummary {
     required this.litres,
     required this.price,
     required this.room,
+    this.goes = true,
+    this.onAccount = 0,
   });
 
   final Tanker tanker;
@@ -518,16 +611,23 @@ class TankerSummary {
   /// Loads that fit, orders on the way counted.
   final int room;
 
+  /// The money or the merchant's account covers it (Account.canPay), and
+  /// what of it would go on the account.
+  final bool goes;
+  final int onAccount;
+
   @override
   bool operator ==(Object other) =>
       other is TankerSummary &&
       other.tanker == tanker &&
       other.litres == litres &&
       other.price == price &&
-      other.room == room;
+      other.room == room &&
+      other.goes == goes &&
+      other.onAccount == onAccount;
 
   @override
-  int get hashCode => Object.hash(tanker, litres, price, room);
+  int get hashCode => Object.hash(tanker, litres, price, room, goes, onAccount);
 }
 
 /// A facility the farm can build (the owner, 13 Nov 2026), how many it has
@@ -716,6 +816,7 @@ class FarmSummary {
     required this.milk,
     required this.onAccount,
     required this.accountLimit,
+    this.accountSpend = 0,
   });
 
   final String name;
@@ -755,9 +856,15 @@ class FarmSummary {
   final int onAccount;
   final int accountLimit;
 
+  /// The most an order of the herd's necessities may cost now: the money
+  /// above zero and the room left on the account (Account.canPay); what of
+  /// an order the money does not cover goes on the account.
+  final int accountSpend;
+
   @override
   bool operator ==(Object other) =>
       other is FarmSummary &&
+      other.accountSpend == accountSpend &&
       other.onAccount == onAccount &&
       other.accountLimit == accountLimit &&
       other.name == name &&
@@ -829,6 +936,9 @@ class PlayerSnapshot {
     required this.breedingSeason,
     required this.recentEvents,
     required this.bank,
+    this.dealerName = Balance.dealerName,
+    this.dealer = const [],
+    this.findings = const [],
   });
 
   /// Increases with every snapshot; older ones can be dropped.
@@ -867,8 +977,8 @@ class PlayerSnapshot {
   final List<StudCard> studs;
   final List<FestivalCard> festivals;
 
-  /// الصيت in each family (GDD 8), 0 to 100.
-  final Map<ColorCategory, double> reputation;
+  /// الصيت in each family (GDD 8), as a band (never the number).
+  final Map<ColorCategory, ReputationBand> reputation;
 
   /// The player is barred from festivals through this season, or null.
   final int? bannedThrough;
@@ -883,6 +993,75 @@ class PlayerSnapshot {
 
   /// البنك's main screen.
   final BankSummary bank;
+
+  /// The secret treatment man (a generic name, a game choice) and his
+  /// messages, sent after each registration, the oldest first.
+  final String dealerName;
+  final List<DealerMessageCard> dealer;
+
+  /// Treatments found outside a festival and a sale, not yet told (the
+  /// oldest first; MarkFindingsTold once said).
+  final List<Finding> findings;
+}
+
+/// One of the treatment man's messages: the camel registered, where, and
+/// her round's kind, colour and day.
+class DealerMessageCard {
+  const DealerMessageCard({
+    required this.camel,
+    required this.name,
+    required this.sex,
+    required this.festival,
+    required this.festivalName,
+    required this.round,
+    required this.kind,
+    required this.category,
+    required this.roundDay,
+    required this.day,
+    required this.read,
+  });
+
+  final CamelId camel;
+  final String name;
+  final Sex? sex;
+  final FestivalId festival;
+  final String festivalName;
+  final RoundId round;
+  final RoundKind? kind;
+  final ColorCategory? category;
+  final GameDay? roundDay;
+  final GameDay day;
+  final bool read;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DealerMessageCard &&
+      other.camel == camel &&
+      other.name == name &&
+      other.sex == sex &&
+      other.festival == festival &&
+      other.festivalName == festivalName &&
+      other.round == round &&
+      other.kind == kind &&
+      other.category == category &&
+      other.roundDay == roundDay &&
+      other.day == day &&
+      other.read == read;
+
+  @override
+  int get hashCode => Object.hash(
+    camel,
+    name,
+    sex,
+    festival,
+    festivalName,
+    round,
+    kind,
+    category,
+    roundDay,
+    day,
+    read,
+  );
 }
 
 /// البنك's main screen (the owner's approved design of 13 Nov 2026,
@@ -1022,6 +1201,8 @@ class RoundCard {
     required this.field,
     required this.caught,
     required this.results,
+    this.told = 0,
+    this.entrants = 0,
   });
 
   final RoundId id;
@@ -1052,10 +1233,16 @@ class RoundCard {
   /// A head's fee if entered today (a late entry's), else 0.
   final int entryFee;
   final bool judged;
+
+  /// How many of its day's six stages have been told (Stage order).
+  final int told;
+
+  /// The entries on its day, before the first stage (the N of "5th of N").
+  final int entrants;
   final bool announced;
   final GameDay? announceOn;
 
-  /// Entries left after each stage (Stage order).
+  /// Entries left after each stage told so far (Stage order).
   final List<int>? field;
   final int caught;
 
@@ -1070,6 +1257,8 @@ class FestivalDetail {
     required this.rounds,
     required this.distanceKm,
     required this.transportPerHead,
+    this.register = const [],
+    this.registerTotal = 0,
   });
 
   final FestivalCard card;
@@ -1078,6 +1267,23 @@ class FestivalDetail {
 
   /// Round trip for one camel.
   final int transportPerHead;
+
+  /// Registering (while it takes entries and the player is not barred):
+  /// the player's camels, the best by look first, those still on the truck
+  /// among them, each with its own round here and why it cannot enter it now
+  /// ([GameView.ownRound]); [registerTotal] is the herd's head.
+  final List<RegisterRow> register;
+  final int registerTotal;
+}
+
+/// One of the player's camels on the registering screen: its own round at
+/// the festival (null: none of its colour and sex there) and the engine's
+/// refusal to enter it now, or null when it may.
+class RegisterRow {
+  const RegisterRow({required this.camel, this.round, this.error});
+  final CamelCard camel;
+  final RoundId? round;
+  final DomainError? error;
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {
@@ -1204,6 +1410,7 @@ class SectionRevisions {
     required this.festivals,
     required this.news,
     required this.bank,
+    this.notices = 1,
   });
 
   final int farm;
@@ -1213,4 +1420,7 @@ class SectionRevisions {
   final int festivals;
   final int news;
   final int bank;
+
+  /// The treatment man's messages and the untold findings.
+  final int notices;
 }

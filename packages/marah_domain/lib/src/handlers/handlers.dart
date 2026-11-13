@@ -47,6 +47,8 @@ Result handle(Sim sim, Command cmd) {
     WithdrawEntry() => _withdraw(sim, p, cmd),
     Tamper() => _tamper(sim, p, cmd),
     CheckListing() => _checkListing(sim, p, cmd),
+    ReadMessages() => _readMessages(sim, p),
+    MarkFindingsTold() => _findingsTold(sim, p, cmd),
   };
 }
 
@@ -696,6 +698,46 @@ Result _enter(Sim sim, PlayerState p, EnterRound cmd) {
       fee: fee,
     ),
   );
+  // and the secret treatment man messages (the owner, 13 Nov 2026)
+  p.dealer.add(
+    DealerMessage(
+      camel: camels.first!.id,
+      name: camels.first!.name,
+      festival: f.id,
+      round: r.id,
+      day: sim.today,
+    ),
+  );
+  final over = p.dealer.length - Balance.dealerMessagesKept;
+  if (over > 0) {
+    // the oldest read ones go first; an unread one is kept until read
+    for (var i = 0, gone = 0; i < p.dealer.length && gone < over;) {
+      if (p.dealer[i].read) {
+        p.dealer.removeAt(i);
+        gone++;
+      } else {
+        i++;
+      }
+    }
+  }
+  return _ok(sim);
+}
+
+Result _readMessages(Sim sim, PlayerState p) {
+  final unread = p.dealer.where((m) => !m.read).toList();
+  if (unread.isEmpty) return _ok(sim);
+  for (final m in unread) {
+    m.read = true;
+  }
+  sim.emit(MessagesRead(sim.today, owner: p.id, count: unread.length));
+  return _ok(sim);
+}
+
+Result _findingsTold(Sim sim, PlayerState p, MarkFindingsTold cmd) {
+  final n = cmd.count.clamp(0, p.untold.length);
+  if (cmd.count < 1) return _err(sim, ErrorCode.invalidAmount);
+  p.untold.removeRange(0, n);
+  sim.emit(FindingsTold(sim.today, owner: p.id, count: n));
   return _ok(sim);
 }
 
@@ -765,6 +807,20 @@ DomainError? cannotTamper(
   }
   if (strength < 1 || strength > 3) {
     return const DomainError(ErrorCode.invalidAmount);
+  }
+  // at the festival on her round's day (judged at dawn, its stages told
+  // through the day): no vet comes to her there
+  if (sim.world.festivals.values.any(
+    (f) =>
+        !f.done &&
+        f.rounds.any(
+          (r) =>
+              r.judged &&
+              !r.over &&
+              r.entries.any((e) => e.camels.contains(c.id)),
+        ),
+  )) {
+    return const DomainError(ErrorCode.enteredInContest);
   }
   // (one he knows of; a kind already in her unknown to him is not told)
   if (c.treatments.any(

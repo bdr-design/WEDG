@@ -81,12 +81,13 @@ class Eligibility {
   static bool isListed(WorldState w, CamelId id) =>
       w.listings.values.any((l) => l.camelId == id);
 
-  /// In a round of a festival still running, not yet judged.
+  /// In a round of a festival still running whose day is not over (not
+  /// judged, or its stages still being told).
   static bool isEntered(WorldState w, CamelId id) => w.festivals.values.any(
     (f) =>
         !f.done &&
         f.rounds.any(
-          (r) => !r.judged && r.entries.any((e) => e.camels.contains(id)),
+          (r) => !r.over && r.entries.any((e) => e.camels.contains(id)),
         ),
   );
 

@@ -2,6 +2,7 @@ import '../catalog/catalog.dart';
 import '../catalog/region.dart';
 import '../common/ids.dart';
 import '../common/time.dart';
+import 'tampering.dart';
 
 enum FestivalTier {
   local(1),
@@ -236,6 +237,53 @@ class ResultRow {
   );
 }
 
+/// A treatment the clinical check found on the day, kept with the round
+/// until its stage is told (the owner, 13 Nov 2026: the six stages told one
+/// by one through the day): then the fine, the ban and the news, for a
+/// player ([camel] his camel), or the news, for a rival (no [camel]).
+class Caught {
+  const Caught({
+    required this.stage,
+    required this.owner,
+    required this.name,
+    required this.kind,
+    required this.strength,
+    required this.fine,
+    this.camel,
+  });
+
+  /// The tampering experts or the medical committee.
+  final Stage stage;
+  final OwnerId owner;
+
+  /// The camel's name.
+  final String name;
+  final TamperKind kind;
+  final int strength;
+  final int fine;
+  final CamelId? camel;
+
+  Map<String, Object?> toJson() => {
+    'stage': stage.name,
+    'owner': owner.value,
+    'name': name,
+    'kind': kind.name,
+    'strength': strength,
+    'fine': fine,
+    if (camel != null) 'camel': camel!.value,
+  };
+
+  static Caught fromJson(Map<String, Object?> j) => Caught(
+    stage: Stage.values.byName(j['stage']! as String),
+    owner: OwnerId(j['owner']! as String),
+    name: j['name']! as String,
+    kind: TamperKind.values.byName(j['kind']! as String),
+    strength: j['strength']! as int,
+    fine: j['fine']! as int,
+    camel: j['camel'] == null ? null : CamelId(j['camel']! as String),
+  );
+}
+
 /// A round (شوط) on its own day of the festival. [category] and [sex] are
 /// null where the round takes any; [size] is the head an entry shows.
 class ContestRound {
@@ -256,7 +304,10 @@ class ContestRound {
     this.fines = 0,
     this.announceOn,
     this.paid = false,
-  }) : entries = entries ?? [];
+    this.told = 0,
+    List<Caught>? found,
+  }) : entries = entries ?? [],
+       found = found ?? [];
 
   final RoundId id;
   final RoundKind kind;
@@ -294,7 +345,20 @@ class ContestRound {
   /// The places announced and the prizes paid.
   bool paid;
 
+  /// How many of the day's six stages have been told (Stage order): the
+  /// round is judged at dawn, and each stage's outcome, its fines, bans,
+  /// news and, at the last, the places, come at its hour
+  /// (Balance.stageMinutes), or when the day is over. Nothing of a stage not
+  /// told is in any view.
+  int told;
+
+  /// The treatments found on the day, until their stage is told.
+  final List<Caught> found;
+
   bool get judged => results != null;
+
+  /// Judged, and every stage of its day told.
+  bool get over => judged && told >= Stage.values.length;
 
   Map<String, Object?> toJson() => {
     'id': id.value,
@@ -313,6 +377,8 @@ class ContestRound {
     'fines': fines,
     'announceOn': announceOn?.value,
     'paid': paid,
+    'told': told,
+    if (found.isNotEmpty) 'found': [for (final c in found) c.toJson()],
   };
 
   static ContestRound fromJson(Map<String, Object?> j) => ContestRound(
@@ -348,6 +414,11 @@ class ContestRound {
         ? null
         : GameDay(j['announceOn']! as int),
     paid: j['paid']! as bool,
+    told: j['told']! as int,
+    found: [
+      for (final c in (j['found'] as List<Object?>?) ?? const <Object?>[])
+        Caught.fromJson(c! as Map<String, Object?>),
+    ],
   );
 }
 

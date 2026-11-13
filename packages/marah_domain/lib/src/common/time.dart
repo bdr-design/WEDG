@@ -60,6 +60,25 @@ class RealTimeClock implements WorldClock {
     return anchorDay + elapsed.inMicroseconds ~/ gameDayLength.inMicroseconds;
   }
 
+  /// The minute of the game day now (0 to 1439): a game day is
+  /// [gameDayLength] of real time, its minutes in proportion.
+  int minuteOfDay() {
+    final elapsed = _now().toUtc().difference(anchorReal.toUtc());
+    if (elapsed.isNegative) return 0;
+    final into = elapsed.inMicroseconds % gameDayLength.inMicroseconds;
+    return into * 1440 ~/ gameDayLength.inMicroseconds;
+  }
+
+  /// Real time left until [minute] of today's game day (zero if it has
+  /// come).
+  Duration untilMinute(int minute) {
+    final elapsed = _now().toUtc().difference(anchorReal.toUtc());
+    final day = gameDayLength.inMicroseconds;
+    final into = elapsed.isNegative ? 0 : elapsed.inMicroseconds % day;
+    final at = (minute * day / 1440).ceil();
+    return Duration(microseconds: at > into ? at - into : 0);
+  }
+
   /// Real time left until the next game day starts.
   Duration untilNextDay() {
     final elapsed = _now().toUtc().difference(anchorReal.toUtc());

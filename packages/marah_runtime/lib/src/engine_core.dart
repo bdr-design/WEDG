@@ -220,7 +220,9 @@ class EngineCore {
     return g == null ? null : Presenter(g.state, g.me.id).herdPage(q);
   });
 
-  Future<void> catchUp() => _serial(_catchUpNow);
+  /// Catches up with the clock: the days, and the stages of today's rounds
+  /// whose hour has come; a snapshot only when something changed.
+  Future<void> catchUp() => _serial(() => _catchUpNow(always: false));
 
   /// A bug left the in-memory game half-changed: throw it away and reload
   /// the last save, which is always consistent. If the same day keeps
@@ -258,12 +260,13 @@ class EngineCore {
   /// Simulates up to the clock in slices, yielding between them; reports
   /// progress for long catch-ups. Handles device clock jumps: backwards
   /// never rewinds the world, and far forward is capped.
-  Future<void> _catchUpNow() async {
+  Future<void> _catchUpNow({bool always = true}) async {
     final g = _game;
     if (g == null || _halted) {
       _publish();
       return;
     }
+    var changed = false;
     try {
       final s = g.state;
       final nowMs = _now().toUtc().millisecondsSinceEpoch;
@@ -301,10 +304,23 @@ class EngineCore {
           }
         }
         if (total > 14) emit(CatchUpProgress(total, total));
-        await _saveNow();
+        changed = true;
       }
+      // the stages of today's rounds whose hour has come (the owner, 13 Nov
+      // 2026: the round's day told stage by stage through the day)
+      if (g.nextTelling != null) {
+        try {
+          final before = g.toldStages;
+          g.tellTo(s.clock(now: _now).minuteOfDay());
+          if (g.toldStages != before) changed = true;
+        } on Object catch (e) {
+          await _recover(e);
+          return;
+        }
+      }
+      if (changed) await _saveNow();
     } finally {
-      _publish();
+      if (always || changed) _publish();
       _scheduleNextDay();
     }
   }
@@ -353,7 +369,14 @@ class EngineCore {
     _nextDay?.cancel();
     final g = _game;
     if (g == null || _paused || _closed || _halted) return;
-    final wait = g.state.clock(now: _now).untilNextDay();
+    final clock = g.state.clock(now: _now);
+    var wait = clock.untilNextDay();
+    // or the next stage of a round today, if it comes first
+    final stage = g.nextTelling;
+    if (stage != null) {
+      final until = clock.untilMinute(stage);
+      if (until < wait) wait = until;
+    }
     _nextDay = Timer(wait + const Duration(milliseconds: 50), () {
       if (!_closed) unawaited(catchUp().catchError((Object _) {}));
     });

@@ -281,6 +281,18 @@ sealed class DomainEvent {
         head: (j['head'] as int?) ?? 1,
         fee: (j['fee'] as int?) ?? 0,
       ),
+      'messagesRead' => MessagesRead(
+        day,
+        owner: owner,
+        camel: camel,
+        count: j['count']! as int,
+      ),
+      'findingsTold' => FindingsTold(
+        day,
+        owner: owner,
+        camel: camel,
+        count: j['count']! as int,
+      ),
       'withdrawn' => Withdrawn(
         day,
         owner: owner,
@@ -1042,6 +1054,36 @@ final class Entered extends DomainEvent {
     'head': head,
     'fee': fee,
   };
+}
+
+/// The secret treatment man's [count] unread messages read.
+final class MessagesRead extends DomainEvent {
+  const MessagesRead(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.count,
+  });
+  final int count;
+  @override
+  String get type => 'messagesRead';
+  @override
+  Map<String, Object?> fieldsToJson() => {'count': count};
+}
+
+/// [count] of the player's untold findings told by the phone.
+final class FindingsTold extends DomainEvent {
+  const FindingsTold(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.count,
+  });
+  final int count;
+  @override
+  String get type => 'findingsTold';
+  @override
+  Map<String, Object?> fieldsToJson() => {'count': count};
 }
 
 final class Withdrawn extends DomainEvent {

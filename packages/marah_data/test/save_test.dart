@@ -47,6 +47,18 @@ Game sampleGame() {
   g.dispatch(Tamper(g.me.id, c.id, TamperKind.dye, 2));
   final rival = g.state.world.owners.keys.first;
   g.state.world.bans[rival] = 2031;
+  // the secret treatment man's message (the entry above sent it) and a
+  // finding not yet told (since v9)
+  g.me.untold.add(
+    Finding(
+      camel: c.id,
+      name: c.name,
+      kind: TamperKind.dye,
+      fine: 0,
+      knew: false,
+      day: g.today,
+    ),
+  );
   return g;
 }
 
@@ -63,6 +75,7 @@ const fixtures = {
   6: 'test/fixtures/save_v6.json',
   7: 'test/fixtures/save_v7.json',
   8: 'test/fixtures/save_v8.json',
+  9: 'test/fixtures/save_v9.json',
 };
 
 /// [data] at version [from] brought up to today's by the later steps, as
@@ -483,6 +496,49 @@ void main() {
     expect(state.world.bans, isNotEmpty);
   });
 
+  test('v8 to v9: judged rounds told whole, no messages, nothing untold', () {
+    final data =
+        (jsonDecode(File(fixtures[8]!).readAsStringSync())
+                as Map<String, Object?>)['data']!
+            as Map<String, Object?>;
+    final out = SaveCodec.migrations[8]!(data);
+    final rounds = [
+      for (final f
+          in (out['world']! as Map<String, Object?>)['festivals']!
+              as List<Object?>)
+        for (final r
+            in (f! as Map<String, Object?>)['rounds']! as List<Object?>)
+          r! as Map<String, Object?>,
+    ];
+    expect(rounds.where((r) => r['results'] != null), isNotEmpty);
+    for (final r in rounds) {
+      expect(r['told'], r['results'] == null ? 0 : 6);
+    }
+    final state = GameState.fromJson(toNow(out, 9));
+    final me = state.players.values.single;
+    expect(me.dealer, isEmpty);
+    expect(me.untold, isEmpty);
+    expect(checkInvariants(state), isEmpty);
+    // its judged rounds' places stay as they were seen
+    final g = Game(state);
+    final v = GameView(state, me.id);
+    for (final f in v.festivals) {
+      for (final r in f.rounds.where((r) => r.judged)) {
+        expect(r.told, 6);
+        expect(r.results, isNotNull);
+      }
+    }
+    expect(g.tellTo(Game.minutesInDay), isEmpty);
+  });
+
+  test('v9 holds a message from the treatment man and an untold finding', () {
+    final state =
+        (codec.decode(File(fixtures[9]!).readAsStringSync()) as Loaded).state;
+    final me = state.players.values.single;
+    expect(me.dealer.single.read, isFalse);
+    expect(me.untold.single.kind, TamperKind.dye);
+  });
+
   group('v7 to v8: the Saudi rounds', () {
     // a v7 save made by hand: an open old-style round with an entry, and a
     // judged one with its places
@@ -530,7 +586,7 @@ void main() {
     test('the open round keeps its entry, judged by its old age class', () {
       final data = v7();
       final out = SaveCodec.migrations[7]!(data);
-      final state = GameState.fromJson(out);
+      final state = GameState.fromJson(toNow(out, 8));
       expect(checkInvariants(state), isEmpty);
       final p = state.players.values.first;
       expect(p.reputation, isEmpty);
@@ -549,7 +605,7 @@ void main() {
       expect(r.paid, isFalse);
       // it plays: the round runs on the old judging day
       final g = Game(state);
-      final events = g.advanceTo(r.day);
+      final events = [...g.advanceTo(r.day), ...g.tellTo(Game.minutesInDay)];
       expect(r.judged, isTrue);
       expect(r.field, hasLength(Stage.values.length));
       final c = r.entries.single.camelId;
@@ -591,7 +647,9 @@ void main() {
           });
         }
       }
-      final state = GameState.fromJson(SaveCodec.migrations[7]!(data));
+      final state = GameState.fromJson(
+        toNow(SaveCodec.migrations[7]!(data), 8),
+      );
       final kinds = {
         for (final fe in state.world.festivals.values)
           for (final r in fe.rounds)
@@ -618,7 +676,7 @@ void main() {
 
     test('the judged round keeps its places, announced and paid', () {
       final out = SaveCodec.migrations[7]!(v7());
-      final state = GameState.fromJson(out);
+      final state = GameState.fromJson(toNow(out, 8));
       final f = state.world.festivals.values.firstWhere(
         (f) => f.rounds.any((r) => r.id.value == 'r-old'),
       );

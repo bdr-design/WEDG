@@ -207,6 +207,8 @@ class Game {
     final out = <DomainEvent>[];
     final sim = Sim(state);
     while (state.world.day < day) {
+      // the day over: whatever of its rounds' stages was not told is now
+      ContestSystem.tellDay(sim, minutesInDay);
       state.world.day = state.world.day + 1;
       for (final system in dailyPipeline) {
         system.run(sim);
@@ -219,6 +221,36 @@ class Game {
   }
 
   List<DomainEvent> advanceDays(int days) => advanceTo(today + days);
+
+  /// Minutes in a game day.
+  static const minutesInDay = 1440;
+
+  /// Tells the stages of today's rounds whose hour has come by [minute] of
+  /// the day (Balance.stageMinutes): the round is judged at dawn, and each
+  /// stage's outcome comes at its hour. Returns what was told.
+  List<DomainEvent> tellTo(int minute) {
+    final sim = Sim(state);
+    ContestSystem.tellDay(sim, minute);
+    final events = sim.drain();
+    state.record(events);
+    return events;
+  }
+
+  /// The minute of today the next stage of a round is told, or null.
+  int? get nextTelling => ContestSystem.nextTelling(state.world);
+
+  /// The stages told so far over the rounds whose day is being told: moves
+  /// whenever [tellTo] tells one, whether or not it caused news.
+  int get toldStages {
+    var n = 0;
+    for (final f in state.world.festivals.values) {
+      if (f.done) continue;
+      for (final r in f.rounds) {
+        if (r.judged) n += r.told;
+      }
+    }
+    return n;
+  }
 
   /// Brings the world up to the clock (offline: device time at 7× speed).
   List<DomainEvent> catchUp(WorldClock clock) => advanceTo(clock.today());

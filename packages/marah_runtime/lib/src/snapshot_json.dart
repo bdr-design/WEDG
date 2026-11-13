@@ -31,13 +31,15 @@ class SnapshotJson {
       'festivals': s.sections.festivals,
       'news': s.sections.news,
       'bank': s.sections.bank,
+      'notices': s.sections.notices,
     },
     'market': [for (final l in s.market) listing(l)],
     'myListings': [for (final l in s.myListings) listing(l)],
     'studs': [for (final x in s.studs) stud(x)],
     'festivals': [for (final f in s.festivals) festival(f)],
+    // a band, never the number (Balance.reputationBand)
     'reputation': {
-      for (final e in s.reputation.entries) e.key.name: _tenth(e.value),
+      for (final e in s.reputation.entries) e.key.name: e.value.name,
     },
     'bannedThrough': s.bannedThrough,
     'tamperings': [for (final t in s.tamperings) tampering(t)],
@@ -57,6 +59,39 @@ class SnapshotJson {
       for (final e in s.recentEvents) e.toJson()..remove('score'),
     ],
     'bank': bank(s.bank),
+    // the secret treatment man's messages (after each registration), and the
+    // treatments found outside a festival and a sale not yet told
+    'dealer': {
+      'name': s.dealerName,
+      'unread': s.dealer.where((m) => !m.read).length,
+      'messages': [
+        for (final m in s.dealer)
+          {
+            'camel': m.camel.value,
+            'name': m.name,
+            'sex': m.sex?.name,
+            'festival': m.festival.value,
+            'festivalName': m.festivalName,
+            'round': m.round.value,
+            'kind': m.kind?.name,
+            'cat': m.category?.name,
+            'roundDay': m.roundDay?.value,
+            'day': m.day.value,
+            'read': m.read,
+          },
+      ],
+    },
+    'findings': [
+      for (final f in s.findings)
+        {
+          'camel': f.camel.value,
+          'name': f.name,
+          'kind': f.kind.name,
+          'fine': f.fine,
+          'knew': f.knew,
+          'day': f.day.value,
+        },
+    ],
   };
 
   /// البنك's main screen: the opening balance, today's money in and out, and
@@ -116,6 +151,8 @@ class SnapshotJson {
           'litres': t.litres,
           'price': t.price,
           'room': t.room,
+          'goes': t.goes,
+          'onAccount': t.onAccount,
         },
     ],
     'pastureGreen': f.pastureGreen,
@@ -146,7 +183,14 @@ class SnapshotJson {
     ],
     // the merchant's account: what is owed for feed, water and the vet,
     // and its limit (the debt itself is the cash below zero)
-    'account': {'owed': f.onAccount, 'limit': f.accountLimit},
+    'account': {
+      'owed': f.onAccount,
+      'limit': f.accountLimit,
+      // the most an order of necessities may cost now (the money above zero
+      // and the room left on the account); what the money does not cover of
+      // it goes on the account
+      'spend': f.accountSpend,
+    },
     'milk': {
       'camels': [
         for (final m in f.milk.camels)
@@ -281,6 +325,27 @@ class SnapshotJson {
     'myPrizes': f.myPrizes,
     'late': f.late,
     'bannedThrough': f.bannedThrough,
+    'topEnterable': f.topEnterable,
+    'topEnterableKind': f.topEnterableKind?.name,
+    'entries': [
+      for (final e in f.entries)
+        {
+          'camel': e.camel.value,
+          'name': e.name,
+          'sex': e.sex.name,
+          'round': e.round.value,
+          'kind': e.kind.name,
+          'cat': e.category?.name,
+          'day': e.day.value,
+          'lastEntryDay': e.lastEntryDay.value,
+          'told': e.told,
+          if (e.rank != null) 'rank': e.rank,
+          if (e.prize > 0) 'prize': e.prize,
+          if (e.removedAt != null) 'removedAt': e.removedAt!.name,
+          if (e.reason != null) 'reason': e.reason!.name,
+          if (e.reputation != null) 'reputation': e.reputation!.name,
+        },
+    ],
   };
 
   /// A festival's page (the phone's المزاين app asks for it when opened):
@@ -290,6 +355,17 @@ class SnapshotJson {
     'festival': festival(d.card),
     'distanceKm': d.distanceKm,
     'transportPerHead': d.transportPerHead,
+    'registerTotal': d.registerTotal,
+    'register': [
+      for (final x in d.register)
+        {
+          'camel': camel(x.camel),
+          'round': x.round?.value,
+          'error': x.error == null
+              ? null
+              : {'code': x.error!.code.name, 'params': x.error!.params},
+        },
+    ],
     'rounds': [
       for (final r in d.rounds)
         {
@@ -310,6 +386,8 @@ class SnapshotJson {
           'eligible': [for (final c in r.eligible) camel(c)],
           'entryFee': r.entryFee,
           'judged': r.judged,
+          'told': r.told,
+          'entrants': r.entrants,
           'announced': r.announced,
           'announceOn': r.announceOn?.value,
           'field': r.field,
@@ -342,6 +420,8 @@ class SnapshotJson {
     'lateEntryHoursBefore': Balance.lateEntryHoursBefore,
     'banEditionsAfter': Balance.banEditionsAfter,
     'dnaDays': Balance.dnaDays,
+    // the minute of the round's day each stage is told (a game choice)
+    'stageMinutes': Balance.stageMinutes,
     'tamperKinds': [
       for (final k in TamperKind.values)
         {

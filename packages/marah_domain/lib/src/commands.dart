@@ -169,3 +169,16 @@ final class Tamper extends Command {
   final TamperKind kind;
   final int strength;
 }
+
+/// The secret treatment man's messages read (the phone's «المحادثات»
+/// opened on his chat).
+final class ReadMessages extends Command {
+  const ReadMessages(super.actor);
+}
+
+/// The oldest [count] of the player's untold findings told (the phone has
+/// said them).
+final class MarkFindingsTold extends Command {
+  const MarkFindingsTold(super.actor, this.count);
+  final int count;
+}

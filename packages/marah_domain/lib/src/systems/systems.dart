@@ -5,6 +5,7 @@ import '../common/rng.dart';
 import '../events.dart';
 import '../model/camel.dart';
 import '../model/contest.dart';
+import '../model/game_state.dart';
 import '../model/market.dart';
 import '../model/player.dart';
 import '../model/tampering.dart';
@@ -772,8 +773,26 @@ class TamperingSystem implements DailySystem {
     // what he knows) and is not fined this time. Who treated her stays on
     // the treatment, so passing her on clears no one.
     final knew = t.by == p.id || t.knownBy.contains(p.id);
+    // told on the sale's refusal at a sale; else it waits in the player's
+    // untold findings till the phone tells it
+    void untold(int fine) {
+      if (!atSale) {
+        p.untold.add(
+          Finding(
+            camel: c.id,
+            name: c.name,
+            kind: t.kind,
+            fine: fine,
+            knew: knew,
+            day: sim.today,
+          ),
+        );
+      }
+    }
+
     if (!knew) {
       t.knownBy.add(p.id);
+      untold(0);
       sim.emit(
         TamperingFound(
           sim.today,
@@ -790,6 +809,7 @@ class TamperingSystem implements DailySystem {
       return 0;
     }
     c.treatments.remove(t);
+    untold(Balance.outsideFine);
     sim.pay(
       p,
       const Riyal(-Balance.outsideFine),
@@ -896,9 +916,11 @@ class ContestSystem implements DailySystem {
         if (!r.judged && r.day <= sim.today && r.entries.isNotEmpty) {
           _judge(sim, f, r);
         }
-        if (r.judged &&
+        // الفحل وإنتاجه's places, once its day is told and the DNA is back
+        if (r.over &&
             !r.paid &&
-            (r.announceOn == null || sim.today >= r.announceOn!)) {
+            r.announceOn != null &&
+            sim.today >= r.announceOn!) {
           _announce(sim, f, r);
         }
       }
@@ -1041,7 +1063,7 @@ class ContestSystem implements DailySystem {
           if (kind != null &&
               rng.chance(ContestRules.detectChance(kind, c.strength, stage))) {
             c.caughtAt = stage;
-            _rivalCaught(sim, f, r, c, kind);
+            _rivalCaught(sim, f, r, c, kind, stage);
           }
           continue;
         }
@@ -1082,18 +1104,23 @@ class ContestSystem implements DailySystem {
               ]
             : const <(Camel, Tampering)>[];
         for (final (camel, t) in found) {
-          _caught(sim, f, r, p, camel, t, stage, comps);
+          _caught(f, r, p, camel, t, stage);
         }
         for (final (camel, t) in later) {
-          _caught(sim, f, r, p, camel, t, Stage.medical, comps);
+          _caught(f, r, p, camel, t, Stage.medical);
         }
       }
     }
 
-    // 3. the preliminary judging keeps the best part of the field (those
-    // found treated are out already, told at their stage below)
+    // 3. the preliminary judging keeps the best part of the field, on their
+    // looks, every entry in it judged alike, those the check found among
+    // them: the day's announcements keep the six stages' order (the owner, 13
+    // Nov 2026), and the preliminary's list must not tell who was found (one
+    // left off it for a finding would be told at the preliminary's hour). A
+    // found entry on the list leaves at its finding's stage; one cut here is
+    // cut, its finding still told at its stage with the fine and the ban
     final (mean, sd) = ContestRules.rivalQuality(f.tier);
-    final judgedField = active().where((c) => c.caughtAt == null).toList();
+    final judgedField = active().toList();
     for (final c in judgedField) {
       _score(sim, rng, r, c, mean, sd);
     }
@@ -1111,9 +1138,17 @@ class ContestSystem implements DailySystem {
     // 4 and 5. the tampering experts' and the medical committee's findings,
     // and the medical committee's look at each camel's health
     for (final stage in [Stage.tamperingExperts, Stage.medical]) {
+      // an owner found at this stage (in the field or cut) is barred from
+      // here: his other entries still in the round leave with it
+      final barred = {
+        for (final c in comps)
+          if (!c.rival && c.caughtAt == stage) c.owner,
+      };
       for (final c in active().toList()) {
         if (c.caughtAt == stage) {
           remove(c, stage, RemovalReason.tampering);
+        } else if (!c.rival && barred.contains(c.owner)) {
+          remove(c, stage, RemovalReason.banned);
         } else if (stage == Stage.medical &&
             c.caughtAt == null &&
             !c.rival &&
@@ -1170,28 +1205,98 @@ class ContestSystem implements DailySystem {
           head: c.head,
         ),
       );
-      sim.emit(
-        EntryRemoved(
-          sim.today,
-          owner: c.owner,
-          camel: c.camels.first.id,
-          name: c.name,
-          festival: f.name,
-          round: r.id,
-          stage: c.removedAt!,
-          reason: c.reason!,
-        ),
-      );
     }
     r
       ..results = rows
       ..field = field
-      ..entrants = comps.length;
-    if (r.kind == RoundKind.fahal) {
-      r.announceOn = r.day + Balance.dnaDays;
+      ..entrants = comps.length
+      ..told = 0;
+    if (r.kind == RoundKind.fahal) r.announceOn = r.day + Balance.dnaDays;
+  }
+
+  /// Tells the stages of today's rounds whose hour has come by [minute] of
+  /// the day (Balance.stageMinutes; 1440 or more tells them all), and every
+  /// stage left of a round of an earlier day.
+  static void tellDay(Sim sim, int minute) {
+    var due = 0;
+    while (due < Balance.stageMinutes.length &&
+        Balance.stageMinutes[due] <= minute) {
+      due++;
+    }
+    for (final f in sim.world.festivals.values) {
+      if (f.done) continue;
+      for (final r in f.rounds) {
+        if (!r.judged || r.over) continue;
+        _tell(sim, f, r, r.day < sim.today ? Stage.values.length : due);
+      }
+    }
+  }
+
+  /// The minute of the day the next stage of a round judged today is told,
+  /// or null when none is left today.
+  static int? nextTelling(WorldState w) {
+    int? next;
+    for (final f in w.festivals.values) {
+      if (f.done) continue;
+      for (final r in f.rounds) {
+        if (!r.judged || r.over || r.day != w.day) continue;
+        final at = Balance.stageMinutes[r.told];
+        if (next == null || at < next) next = at;
+      }
+    }
+    return next;
+  }
+
+  /// Tells [r]'s stages up to [upTo] (Stage.index, exclusive), each with
+  /// what it decided: the entries it removed, the treatments found (for a
+  /// player the fine, the ban and the name lost; for a rival the news), and
+  /// at the final judging the places (الفحل وإنتاجه's wait for the DNA).
+  static void _tell(Sim sim, Festival f, ContestRound r, int upTo) {
+    while (r.told < upTo && r.told < Stage.values.length) {
+      final stage = Stage.values[r.told];
+      for (final c in [...r.found]) {
+        if (c.stage != stage) continue;
+        r.found.remove(c);
+        final p = sim.player(c.owner);
+        if (p != null) {
+          _caughtTold(sim, f, r, p, c);
+        } else {
+          sim.emit(
+            CheatNews(
+              sim.today,
+              ownerName: sim.world.owners[c.owner]?.name ?? '',
+              name: c.name,
+              kind: c.kind,
+              festival: f.name,
+              fine: c.fine,
+            ),
+          );
+        }
+      }
+      for (final row in r.results!) {
+        if (row.removedAt != stage || !sim.isPlayer(row.ownerId)) continue;
+        sim.emit(
+          EntryRemoved(
+            sim.today,
+            owner: row.ownerId,
+            camel: row.camelId,
+            name: row.camelName,
+            festival: f.name,
+            round: r.id,
+            stage: stage,
+            reason: row.reason!,
+          ),
+        );
+      }
+      r.told++;
+      if (stage != Stage.finalJudging) continue;
+      if (r.announceOn == null) {
+        _announce(sim, f, r);
+        continue;
+      }
       for (final o in {
-        for (final c in finalists)
-          if (!c.rival) c.owner,
+        for (final row in r.results!)
+          if (row.rank != null && sim.isPlayer(row.ownerId)) row.ownerId,
       }) {
         sim.emit(
           ResultsPending(
@@ -1293,60 +1398,89 @@ class ContestSystem implements DailySystem {
     if (judged.length == 1) c.marks = judged.first.marks;
   }
 
-  /// A player's treatment found at a festival (GDD 7.1): the entry out, the
-  /// fine (the cap, scaled by the treatment's strength), the owner and his
-  /// camels barred from this edition and five more, every festival (the
-  /// owner, 13 Nov 2026), his other entries withdrawn, the name lost in the
-  /// family, and the news.
+  /// A player's treatment found at a festival (GDD 7.1), on the day:
+  /// counted in the round's cases and kept to be told at [stage]; the entry
+  /// leaves at that stage if the preliminary kept it, and what follows (the
+  /// fine, the ban, the news) waits for the stage to be told ([_caughtTold]).
   static void _caught(
-    Sim sim,
     Festival f,
     ContestRound r,
     PlayerState p,
     Camel camel,
     Tampering t,
     Stage stage,
-    List<_Competitor> comps,
   ) {
-    final w = sim.world;
     final fine = Balance.tamperFine(t.kind, t.strength);
-    final through = f.season + Balance.banEditionsAfter;
     r
       ..caught += 1
-      ..fines += fine;
-    camel.treatments.remove(t);
-    sim.pay(p, Riyal(-fine), LedgerCategory.fine, ref: f.id.value);
+      ..fines += fine
+      ..found.add(
+        Caught(
+          stage: stage,
+          owner: p.id,
+          name: camel.name,
+          kind: t.kind,
+          strength: t.strength,
+          fine: fine,
+          camel: camel.id,
+        ),
+      );
+  }
+
+  /// A player's treatment found at a festival, told at its stage: the fine
+  /// (the cap, scaled by the treatment's strength), the owner and his camels
+  /// barred from this edition and five more, every festival (the owner, 13
+  /// Nov 2026), his entries elsewhere withdrawn (a round of the same day
+  /// already judged loses his places from the stage it has come to), the
+  /// name lost in the family, and the news. The treatment leaves her.
+  static void _caughtTold(
+    Sim sim,
+    Festival f,
+    ContestRound r,
+    PlayerState p,
+    Caught found,
+  ) {
+    final w = sim.world;
+    final camel = found.camel == null ? null : w.camels[found.camel!];
+    if (camel != null) {
+      final t = camel.treatments
+          .where((x) => x.kind == found.kind && x.strength == found.strength)
+          .firstOrNull;
+      if (t != null) camel.treatments.remove(t);
+    }
+    final through = f.season + Balance.banEditionsAfter;
+    sim.pay(p, Riyal(-found.fine), LedgerCategory.fine, ref: f.id.value);
     if ((w.bans[p.id] ?? -1) < through) w.bans[p.id] = through;
     for (final c in w.aliveOwnedBy(p.id)) {
       if ((c.bannedThrough ?? -1) < through) c.bannedThrough = through;
     }
-    // his other entries in this round, and in every festival of the ban
-    for (final c in comps) {
-      if (!c.rival && c.owner == p.id && c.inField && c.caughtAt == null) {
-        c
-          ..removedAt = stage
-          ..reason = RemovalReason.banned;
-      }
-    }
     for (final x in w.festivals.values) {
       if (x.done || x.season > through) continue;
       for (final y in x.rounds) {
-        if (y == r || y.judged) continue;
-        y.entries.removeWhere((e) => e.ownerId == p.id);
+        if (y == r) continue;
+        if (!y.judged) {
+          y.entries.removeWhere((e) => e.ownerId == p.id);
+        } else if (!y.over) {
+          _barFrom(x, y, p.id);
+        }
       }
     }
-    lowerReputation(p, camel.category, Balance.reputationCaught);
+    lowerReputation(
+      p,
+      camel?.category ?? r.category ?? ColorCategory.majaheem,
+      Balance.reputationCaught,
+    );
     sim
       ..emit(
         TamperingFound(
           sim.today,
           owner: p.id,
-          camel: camel.id,
-          name: camel.name,
-          kind: t.kind,
+          camel: found.camel,
+          name: found.name,
+          kind: found.kind,
           festival: f.name,
-          stage: stage,
-          fine: fine,
+          stage: found.stage,
+          fine: found.fine,
           bannedThrough: through,
         ),
       )
@@ -1354,39 +1488,91 @@ class ContestSystem implements DailySystem {
         CheatNews(
           sim.today,
           ownerName: p.name,
-          name: camel.name,
-          kind: t.kind,
+          name: found.name,
+          kind: found.kind,
           festival: f.name,
-          fine: fine,
+          fine: found.fine,
         ),
       );
   }
 
-  /// A rival caught in a round the player is in: barred, and in the news.
+  /// [owner] barred while [r] (judged, its day being told) is under way: his
+  /// entries still in its field leave at the stage it has come to, the
+  /// places after them move up and the field counts from that stage on
+  /// drop by as many.
+  static void _barFrom(Festival f, ContestRound r, OwnerId owner) {
+    final stage = Stage.values[r.told];
+    final rows = r.results!;
+    var out = 0;
+    for (var i = 0; i < rows.length; i++) {
+      final row = rows[i];
+      if (row.ownerId != owner || row.removedAt != null) continue;
+      out++;
+      rows[i] = ResultRow(
+        rank: null,
+        camelName: row.camelName,
+        ownerId: row.ownerId,
+        score: row.score,
+        prize: 0,
+        camelId: row.camelId,
+        marks: row.marks,
+        removedAt: stage,
+        reason: RemovalReason.banned,
+        head: row.head,
+      );
+    }
+    if (out == 0) return;
+    final prizes = ContestRules.prizes(f.tier, r.kind, r.size);
+    final placed = [
+      for (var i = 0; i < rows.length; i++)
+        if (rows[i].rank != null) i,
+    ]..sort((a, b) => rows[a].rank!.compareTo(rows[b].rank!));
+    for (var k = 0; k < placed.length; k++) {
+      final row = rows[placed[k]];
+      rows[placed[k]] = ResultRow(
+        rank: k + 1,
+        camelName: row.camelName,
+        ownerId: row.ownerId,
+        score: row.score,
+        prize: k < prizes.length ? prizes[k] : 0,
+        camelId: row.camelId,
+        marks: row.marks,
+        head: row.head,
+      );
+    }
+    final field = r.field!;
+    for (var i = r.told; i < field.length; i++) {
+      field[i] = field[i] > out ? field[i] - out : 0;
+    }
+  }
+
+  /// A rival caught in a round the player is in, on the day: barred, and in
+  /// the news when the stage is told.
   static void _rivalCaught(
     Sim sim,
     Festival f,
     ContestRound r,
     _Competitor c,
     TamperKind kind,
+    Stage stage,
   ) {
     final w = sim.world;
     final fine = Balance.tamperFine(kind, c.strength);
     final through = f.season + Balance.banEditionsAfter;
     r
       ..caught += 1
-      ..fines += fine;
+      ..fines += fine
+      ..found.add(
+        Caught(
+          stage: stage,
+          owner: c.owner,
+          name: c.name,
+          kind: kind,
+          strength: c.strength,
+          fine: fine,
+        ),
+      );
     if ((w.bans[c.owner] ?? -1) < through) w.bans[c.owner] = through;
-    sim.emit(
-      CheatNews(
-        sim.today,
-        ownerName: w.owners[c.owner]?.name ?? '',
-        name: c.name,
-        kind: kind,
-        festival: f.name,
-        fine: fine,
-      ),
-    );
   }
 
   /// The places announced and paid; each placing on the camel's record and
@@ -1498,6 +1684,7 @@ class ContestSystem implements DailySystem {
               );
             }(),
         ]
+        ..told = Stage.values.length
         ..paid = true;
     }
     f.rounds.removeWhere((r) => !r.judged);

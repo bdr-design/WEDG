@@ -352,6 +352,18 @@ class Balance {
   /// the offspring are his (research section 2, [17]). (balance) In 10 days.
   static const dnaDays = 10;
 
+  /// (balance) The minute of the round's day each of its six stages is told
+  /// (Stage order), the owner's decision of 13 Nov 2026: the stages told one
+  /// by one through the day, in the morning, at noon, in the afternoon and
+  /// at sunset, the hours the game's. The round is judged at dawn; the chip
+  /// and the witness at 7:00, the breed, colour and age at 8:30 and the
+  /// preliminary judging at 10:00 in the morning, the tampering experts at
+  /// 12:30 (الظهر), the medical committee at 15:30 (العصر) and the final
+  /// judging at 18:00 (المغرب). A game day is about 3 hours 26 minutes of
+  /// real time (a real day is a game week), so they come about 26, 21, 21,
+  /// 21, 43 and 21 real minutes apart.
+  static const stageMinutes = [420, 510, 600, 750, 930, 1080];
+
   // ------------------------------------------------------------ cheating
   // GDD 7.1 (the owner, 12 Nov 2026). The kinds and their fine caps are real
   // (TamperKind); the rest is the game's.
@@ -444,6 +456,13 @@ class Balance {
   /// barred six seasons after 2.18% of purchases (the review).
   static const marketTamperChance = 0.03;
 
+  /// (balance) The man who offers the secret treatment (the owner, 13 Nov
+  /// 2026: a man messages in secret after a camel is registered, in a new
+  /// «المحادثات» app; the festival's own app never offers it): a generic
+  /// name, and how many of his messages a player keeps.
+  static const dealerName = 'أبو سند';
+  static const dealerMessagesKept = 20;
+
   /// (balance) A rival's entry the stage 2 check removes (its colour or its
   /// teeth), and how far the final judging's second look moves a mark.
   static const rivalBreedCheckChance = 0.02;
@@ -467,6 +486,21 @@ class Balance {
   static const reputationCaught = 25.0;
   static const reputationCaughtOutside = 10.0;
 
+  /// (balance) الصيت as the player hears it, a band, never the number (the
+  /// views never expose hidden values): under where it starts (a fall,
+  /// [ReputationBand.fallen]), from where it starts to 25 (new), to 50
+  /// (known), to 80 (renowned), and from 80 (famous).
+  static ReputationBand reputationBand(double reputation) =>
+      reputation < startingReputation
+      ? ReputationBand.fallen
+      : reputation < 25
+      ? ReputationBand.fresh
+      : reputation < 50
+      ? ReputationBand.known
+      : reputation < 80
+      ? ReputationBand.renowned
+      : ReputationBand.famous;
+
   /// (balance) A sale this far over the camel's value is a strong one (GDD
   /// 8: الصيت grows with wins and strong sales), and adds this.
   static const strongSaleOver = 1.1;
@@ -478,3 +512,6 @@ class Balance {
   static double reputationPriceFactor(double reputation) =>
       1 + 0.002 * (reputation - startingReputation);
 }
+
+/// الصيت in words' bands (Balance.reputationBand).
+enum ReputationBand { fallen, fresh, known, renowned, famous }

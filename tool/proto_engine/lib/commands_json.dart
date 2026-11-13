@@ -78,6 +78,8 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         TamperKind.values.byName(_str(j['kind'])),
         _int(j['strength']),
       ),
+      'readMessages' => ReadMessages(me),
+      'markFindingsTold' => MarkFindingsTold(me, _int(j['count'])),
       _ => null,
     };
   } on Object {
@@ -181,5 +183,10 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'camel': camel.value,
     'kind': kind.name,
     'strength': strength,
+  },
+  ReadMessages() => {'type': 'readMessages'},
+  MarkFindingsTold(:final count) => {
+    'type': 'markFindingsTold',
+    'count': count,
   },
 };

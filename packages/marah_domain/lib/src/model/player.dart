@@ -4,6 +4,7 @@ import '../common/ids.dart';
 import '../common/money.dart';
 import '../common/time.dart';
 import '../rules/balance.dart';
+import 'tampering.dart';
 
 /// The ration: an adult's dry matter a day and the barley's share of it (the
 /// rest alfalfa), and the body condition it holds a camel at. The real intake
@@ -343,6 +344,91 @@ class LedgerEntry {
 
 /// What belongs to one player: identity, money and farm. Camels live in the
 /// world registry and point back with their owner id.
+/// A message from the man who offers the secret treatment
+/// (Balance.dealerName), sent when the player registers a camel (the owner,
+/// 13 Nov 2026: he messages in secret after a registration, in the phone's
+/// «المحادثات»; the festival's own app never offers it). Kept until read,
+/// and after, [Balance.dealerMessagesKept] at most.
+class DealerMessage {
+  DealerMessage({
+    required this.camel,
+    required this.name,
+    required this.festival,
+    required this.round,
+    required this.day,
+    this.read = false,
+  });
+
+  final CamelId camel;
+
+  /// The camel's name.
+  final String name;
+  final FestivalId festival;
+  final RoundId round;
+  final GameDay day;
+  bool read;
+
+  Map<String, Object?> toJson() => {
+    'camel': camel.value,
+    'name': name,
+    'festival': festival.value,
+    'round': round.value,
+    'day': day.value,
+    'read': read,
+  };
+
+  static DealerMessage fromJson(Map<String, Object?> j) => DealerMessage(
+    camel: CamelId(j['camel']! as String),
+    name: j['name']! as String,
+    festival: FestivalId(j['festival']! as String),
+    round: RoundId(j['round']! as String),
+    day: GameDay(j['day']! as int),
+    read: j['read']! as bool,
+  );
+}
+
+/// A treatment found in one of the player's camels outside a festival and
+/// outside a sale (the daily look, the vet treating her: GDD 7.1), not yet
+/// told to him: the phone tells it from here, and marks it told
+/// (MarkFindingsTold), so none is missed or told twice. [knew]: he had it
+/// done or knew of it, and was fined; else he is told and not fined (the
+/// owner's decision 15).
+class Finding {
+  const Finding({
+    required this.camel,
+    required this.name,
+    required this.kind,
+    required this.fine,
+    required this.knew,
+    required this.day,
+  });
+
+  final CamelId camel;
+  final String name;
+  final TamperKind kind;
+  final int fine;
+  final bool knew;
+  final GameDay day;
+
+  Map<String, Object?> toJson() => {
+    'camel': camel.value,
+    'name': name,
+    'kind': kind.name,
+    'fine': fine,
+    'knew': knew,
+    'day': day.value,
+  };
+
+  static Finding fromJson(Map<String, Object?> j) => Finding(
+    camel: CamelId(j['camel']! as String),
+    name: j['name']! as String,
+    kind: TamperKind.values.byName(j['kind']! as String),
+    fine: j['fine']! as int,
+    knew: j['knew']! as bool,
+    day: GameDay(j['day']! as int),
+  );
+}
+
 class PlayerState {
   PlayerState({
     required this.id,
@@ -353,8 +439,12 @@ class PlayerState {
     List<LedgerEntry>? ledger,
     Map<ColorCategory, double>? reputation,
     this.onAccount = 0,
+    List<DealerMessage>? dealer,
+    List<Finding>? untold,
   }) : ledger = ledger ?? [],
-       reputation = reputation ?? {};
+       reputation = reputation ?? {},
+       dealer = dealer ?? [],
+       untold = untold ?? [];
 
   final OwnerId id;
   String name;
@@ -376,6 +466,12 @@ class PlayerState {
   /// when the money is back above zero. Never a fine.
   int onAccount;
 
+  /// The secret treatment man's messages, the oldest first.
+  final List<DealerMessage> dealer;
+
+  /// Treatments found outside a festival and a sale, not yet told.
+  final List<Finding> untold;
+
   double reputationIn(ColorCategory c) =>
       reputation[c] ?? Balance.startingReputation;
 
@@ -388,6 +484,8 @@ class PlayerState {
     'ledger': [for (final l in ledger) l.toJson()],
     'reputation': {for (final e in reputation.entries) e.key.name: e.value},
     'onAccount': onAccount,
+    'dealer': [for (final m in dealer) m.toJson()],
+    'untold': [for (final f in untold) f.toJson()],
   };
 
   static PlayerState fromJson(Map<String, Object?> j) => PlayerState(
@@ -405,5 +503,13 @@ class PlayerState {
         ColorCategory.values.byName(e.key): (e.value! as num).toDouble(),
     },
     onAccount: j['onAccount']! as int,
+    dealer: [
+      for (final m in j['dealer']! as List<Object?>)
+        DealerMessage.fromJson(m! as Map<String, Object?>),
+    ],
+    untold: [
+      for (final f in j['untold']! as List<Object?>)
+        Finding.fromJson(f! as Map<String, Object?>),
+    ],
   );
 }

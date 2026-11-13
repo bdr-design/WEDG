@@ -48,6 +48,15 @@ ContestRound roundOf(
       (sex == null || r.sex == sex),
 );
 
+/// The game advanced to [d] and that day told to its end (the round is
+/// judged at dawn, each stage told at its hour: the owner, 13 Nov 2026).
+extension on Game {
+  List<DomainEvent> through(GameDay d) => [
+    ...advanceTo(d),
+    ...tellTo(Game.minutesInDay),
+  ];
+}
+
 int _n = 0;
 
 /// A camel of the player's that fits [r] on its day, unless told otherwise.
@@ -433,7 +442,7 @@ void main() {
       g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
       g.advanceTo(r.day - 1);
       expect(r.judged, isFalse);
-      final events = g.advanceDays(1);
+      final events = g.through(g.today + 1);
       expect(r.judged, isTrue);
       expect(r.field, hasLength(Stage.values.length));
       for (var i = 1; i < r.field!.length; i++) {
@@ -478,7 +487,7 @@ void main() {
       c.genes[Trait.coat] = 5;
       g.advanceTo(f.opensOn);
       g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
-      final events = g.advanceTo(r.day);
+      final events = g.through(r.day);
       final out = events.whereType<EntryRemoved>().single;
       expect(out.stage, Stage.breedColourAge);
       expect(out.reason, RemovalReason.colour);
@@ -503,7 +512,7 @@ void main() {
         g
           ..dispatch(EnterRound(g.me.id, f.id, r.id, [edge.id]))
           ..dispatch(EnterRound(g.me.id, f.id, r.id, [mid.id]));
-        for (final e in g.advanceTo(r.day).whereType<EntryRemoved>()) {
+        for (final e in g.through(r.day).whereType<EntryRemoved>()) {
           if (e.reason != RemovalReason.teeth) continue;
           if (e.camel == edge.id) misread++;
           if (e.camel == mid.id) middle++;
@@ -528,7 +537,7 @@ void main() {
         ..health = HealthStatus.sick
         ..illness = Illness.lameness
         ..sickSince = g.today;
-      final events = g.advanceDays(1).whereType<EntryRemoved>().toList();
+      final events = g.through(g.today + 1).whereType<EntryRemoved>().toList();
       expect(
         events.firstWhere((e) => e.camel == weak.id).reason,
         RemovalReason.cut,
@@ -563,7 +572,7 @@ void main() {
         g.dispatch(EnterRound(g.me.id, f.id, r.id, [bull.id, ...kids])).ok,
         isTrue,
       );
-      final day = g.advanceTo(r.day);
+      final day = g.through(r.day);
       expect(day.whereType<EntryRemoved>(), isEmpty);
       expect(r.judged, isTrue);
       RoundView rv() => GameView(
@@ -790,7 +799,7 @@ void main() {
             ..dispatch(EnterRound(g.me.id, f.id, m.id, [other.id]));
           // the mafareed round comes later than the دق one
           if (!(m.day > r.day)) continue;
-          final events = g.advanceTo(r.day);
+          final events = g.through(r.day);
           final found = events.whereType<TamperingFound>().firstOrNull;
           if (found == null) continue;
           expect(found.camel, c.id);
@@ -1020,7 +1029,7 @@ void main() {
         ..endedOn = g.today;
       releaseCamel(sim, kids.last);
       expect(r.entries.single.camels, hasLength(5));
-      final out = g.advanceTo(r.day).whereType<EntryRemoved>().single;
+      final out = g.through(r.day).whereType<EntryRemoved>().single;
       expect((out.stage, out.reason), (Stage.chipWitness, RemovalReason.short));
     });
 
@@ -1031,7 +1040,7 @@ void main() {
       final c = camelFor(g, r, mean: 92)..condition = 90;
       g.advanceTo(f.opensOn);
       g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
-      final placed = g.advanceTo(r.day).whereType<Placed>().single;
+      final placed = g.through(r.day).whereType<Placed>().single;
       expect(r.entrants, r.rivals + 1);
       expect(placed.of, r.entrants);
       expect(c.placings.single.of, r.entrants);
@@ -1064,10 +1073,7 @@ void main() {
         expect(GameView(g.state, g.me.id).tamperings, isEmpty);
         g.advanceTo(f.opensOn);
         g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
-        final found = g
-            .advanceTo(r.day)
-            .whereType<TamperingFound>()
-            .firstOrNull;
+        final found = g.through(r.day).whereType<TamperingFound>().firstOrNull;
         if (found == null) continue;
         expect(found.camel, c.id);
         expect(found.fine, Balance.tamperFine(TamperKind.botox, 3));
@@ -1229,7 +1235,7 @@ void main() {
           ..dispatch(Tamper(h.me.id, x.id, TamperKind.dye, 3))
           ..dispatch(Tamper(h.me.id, x.id, TamperKind.botox, 3));
         final found = h
-            .advanceTo(hr.day)
+            .through(hr.day)
             .whereType<TamperingFound>()
             .where((e) => e.festival != null)
             .toList();
@@ -1431,7 +1437,7 @@ void main() {
               ..dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]))
               ..dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 3));
             final found = g
-                .advanceTo(r.day)
+                .through(r.day)
                 .whereType<TamperingFound>()
                 .any((e) => e.camel == c.id && e.festival != null);
             if (found && mean < 50) weak++;
@@ -1664,9 +1670,11 @@ void main() {
   );
 
   group('Round 5: the rules the mutations found untested', () {
-    test('the preliminary cuts only among entries the check let through: a '
-        'weak camel found treated is told as found, not as cut', () {
-      var found = 0;
+    test('the preliminary judges every entry on its looks, those found '
+        'among them (the review of T10: its list must not tell who was '
+        'found): a weak camel found treated is cut there, its finding told at '
+        'its stage with the fine', () {
+      var found = 0, cutThenFound = 0;
       for (var seed = 0; seed < 20; seed++) {
         final g = newGame(seed);
         final f = grand(g);
@@ -1675,34 +1683,58 @@ void main() {
         final c = camelFor(g, r, mean: 30)..acquiredOn = g.today - 200;
         expect(g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id])).ok, isTrue);
         g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 3));
-        final events = g.advanceTo(r.day);
+        final events = g.through(r.day);
         // (a weak camel can die before the day: her entry goes with her)
         if (!c.isAlive) continue;
         final out = events.whereType<EntryRemoved>().firstOrNull;
-        if (events.whereType<TamperingFound>().any((e) => e.camel == c.id)) {
+        final t = events
+            .whereType<TamperingFound>()
+            .where((e) => e.camel == c.id)
+            .firstOrNull;
+        if (t != null) {
           found++;
-          expect(out?.reason, RemovalReason.tampering);
+          // told at the experts' or the committee's stage, fined either way
+          expect(
+            t.stage == Stage.tamperingExperts || t.stage == Stage.medical,
+            isTrue,
+          );
+          expect(t.fine, greaterThan(0));
+          if (out?.reason == RemovalReason.cut) {
+            cutThenFound++;
+            expect(out?.stage, Stage.preliminary);
+          } else {
+            expect(
+              (out?.reason, out?.stage),
+              (RemovalReason.tampering, t.stage),
+            );
+          }
+          // the finding comes after the cut in the day's order
+          expect(events.indexOf(t), greaterThan(events.indexOf(out!)));
         } else {
-          // cut, or (a small field) placed
           expect(
             out?.reason == RemovalReason.cut ||
                 events.whereType<Placed>().any((e) => e.camel == c.id),
             isTrue,
           );
         }
-        // the found ones took none of the preliminary's places
+        // the preliminary kept its share of the whole field after stage 2,
+        // the found ones counted like any other
         final field = r.field!;
-        final checked = field[Stage.breedColourAge.index] - r.caught;
-        final kept = (checked * Balance.preliminaryKeeps).ceil();
+        final judged = field[Stage.breedColourAge.index];
+        final kept = (judged * Balance.preliminaryKeeps).ceil();
         final keep = kept < Balance.preliminaryKeepsAtLeast
             ? Balance.preliminaryKeepsAtLeast
             : kept;
+        expect(field[Stage.preliminary.index], keep < judged ? keep : judged);
+        // and the found ones still in the field leave at their stages
         expect(
-          field[Stage.preliminary.index],
-          (keep < checked ? keep : checked) + r.caught,
+          field[Stage.preliminary.index] - field[Stage.medical.index],
+          greaterThanOrEqualTo(0),
         );
       }
       expect(found, greaterThan(5));
+      // a weak camel is mostly cut before her finding is told
+      expect(cutThenFound, greaterThan(0));
     });
 
     test(
@@ -2016,7 +2048,7 @@ void main() {
       final c = camelFor(g, r, mean: 90);
       g.advanceTo(f.opensOn);
       g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
-      g.advanceTo(r.day);
+      g.through(r.day);
       // another owner's row with marks, as a second player's would be
       r.results!.add(
         ResultRow(
@@ -2115,5 +2147,361 @@ void main() {
       );
       expect(g.state.world.bans, isNot(contains(g.me.id)));
     }
+  });
+
+  group('The day told stage by stage (the owner, 13 Nov 2026)', () {
+    // a strong camel in a round, treated with a heavy Botox, entered: the
+    // first game (of a few seeds) where a festival finds it
+    (Game, Festival, ContestRound, Camel)? caughtGame() {
+      for (var seed = 1; seed < 60; seed++) {
+        final g = newGame(seed);
+        final f = grand(g);
+        final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+        final c = camelFor(g, r, mean: 80);
+        g.advanceTo(f.opensOn);
+        g
+          ..dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]))
+          ..dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 3));
+        g.advanceTo(r.day);
+        if (r.found.any((x) => x.camel == c.id)) return (g, f, r, c);
+      }
+      return null;
+    }
+
+    RoundView seen(Game g, Festival f, ContestRound r) => GameView(
+      g.state,
+      g.me.id,
+    ).festival(f.id)!.rounds.firstWhere((x) => x.id == r.id);
+
+    test('judged at dawn, nothing of it is seen or paid before its hour', () {
+      final (g, f, r, c) = caughtGame()!;
+      final found = r.found.firstWhere((x) => x.camel == c.id);
+      expect(r.judged, isTrue);
+      expect(r.told, 0);
+      final v = seen(g, f, r);
+      expect(v.field, isEmpty);
+      expect(v.results, isEmpty);
+      expect(v.caught, 0);
+      expect(v.announced, isFalse);
+      // no fine, no ban, no news, the treatment still in her
+      expect(
+        g.me.ledger.where((l) => l.category == LedgerCategory.fine),
+        isEmpty,
+      );
+      expect(g.state.world.bans[g.me.id], isNull);
+      expect(GameView(g.state, g.me.id).bannedThrough, isNull);
+      expect(g.state.inboxOf(g.me.id).whereType<TamperingFound>(), isEmpty);
+      expect(c.treatments, isNotEmpty);
+      // still at the festival: not for sale while its day is told
+      expect(
+        GameView(g.state, g.me.id).canSell(c.id)?.code,
+        ErrorCode.enteredInContest,
+      );
+      // nor treated: she is at the festival
+      expect(
+        GameView(g.state, g.me.id).canTamper(c.id, TamperKind.dye, 1)?.code,
+        ErrorCode.enteredInContest,
+      );
+      // the morning tells the first three stages, and only those
+      final morning = g.tellTo(Balance.stageMinutes[2]);
+      expect(r.told, 3);
+      expect(seen(g, f, r).field, hasLength(3));
+      expect(morning.whereType<TamperingFound>(), isEmpty);
+      expect(g.state.world.bans[g.me.id], isNull);
+      // the finding comes at its own stage's hour, with the fine and the ban
+      final at = Balance.stageMinutes[found.stage.index];
+      final before = g.me.cash.value;
+      final told = g.tellTo(at);
+      final t = told.whereType<TamperingFound>().single;
+      expect((t.camel, t.stage, t.fine), (c.id, found.stage, found.fine));
+      expect(g.me.cash.value, before - found.fine);
+      expect(g.state.world.bans[g.me.id], f.season + Balance.banEditionsAfter);
+      final mine = seen(g, f, r).results!.single;
+      expect(mine.reason, RemovalReason.tampering);
+      expect(mine.reputation, ReputationMove.fell);
+      expect(c.treatments.where((x) => x.kind == TamperKind.botox), isEmpty);
+      // the rest at the end of the day, the places with it
+      final rest = g.advanceDays(1);
+      expect(r.over, isTrue);
+      expect(r.paid, isTrue);
+      expect(rest.whereType<TamperingFound>(), isEmpty);
+      expect(seen(g, f, r).field, hasLength(Stage.values.length));
+      expect(seen(g, f, r).results!.where((x) => x.rank != null), isNotEmpty);
+    });
+
+    test('a stage is told once, and a day not watched loses nothing', () {
+      // the same game told hour by hour, and told only as the next day comes
+      final watched = caughtGame()!;
+      final (g, f, r, c) = watched;
+      final byHour = <DomainEvent>[];
+      for (final m in Balance.stageMinutes) {
+        byHour.addAll(g.tellTo(m));
+        expect(g.tellTo(m), isEmpty);
+      }
+      final g2 = Game(GameState.fromJson(g.state.toJson()));
+      expect(g.toldStages, greaterThanOrEqualTo(6));
+      // a fresh copy at dawn: the save as it was before the first stage
+      final (h, hf, hr, hc) = caughtGame()!;
+      final atOnce = h.advanceDays(1);
+      g.advanceDays(1);
+      String key(DomainEvent e) => '${e.type} ${e.camel?.value}';
+      expect(
+        atOnce.where((e) => e.day == hr.day).map(key).toList(),
+        byHour.map(key).toList(),
+      );
+      expect(h.me.cash.value, g.me.cash.value);
+      expect(hc.placings.length, c.placings.length);
+      expect(hf.done, f.done);
+      expect(g2.state.world.bans[g2.me.id], g.state.world.bans[g.me.id]);
+    });
+
+    test('the stages come at their hours: 7:00 to 18:00', () {
+      expect(Balance.stageMinutes, [420, 510, 600, 750, 930, 1080]);
+      final g = newGame();
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+      final c = camelFor(g, r, mean: 85);
+      g.advanceTo(f.opensOn);
+      g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
+      g.advanceTo(r.day);
+      expect(g.nextTelling, 420);
+      g.tellTo(419);
+      expect(r.told, 0);
+      g.tellTo(420);
+      expect((r.told, g.nextTelling), (1, 510));
+      g.tellTo(1079);
+      expect((r.told, r.paid), (5, false));
+      g.tellTo(1080);
+      expect((r.told, r.paid, g.nextTelling), (6, true, null));
+    });
+
+    test('caught in one round, his place in another of the same day goes', () {
+      for (var seed = 1; seed < 80; seed++) {
+        final g = newGame(seed);
+        final f = grand(g);
+        final a = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+        final b = f.rounds.firstWhere(
+          (x) =>
+              x != a &&
+              x.day == a.day &&
+              x.kind.single &&
+              x.kind.roundClass != RoundClass.fardi,
+          orElse: () => a,
+        );
+        if (b == a) continue;
+        final treated = camelFor(g, a, mean: 80);
+        final good = camelFor(g, b, mean: 95)..condition = 90;
+        g.advanceTo(f.opensOn);
+        g
+          ..dispatch(EnterRound(g.me.id, f.id, a.id, [treated.id]))
+          ..dispatch(EnterRound(g.me.id, f.id, b.id, [good.id]))
+          ..dispatch(Tamper(g.me.id, treated.id, TamperKind.botox, 3));
+        g.advanceTo(a.day);
+        if (!a.judged || !b.judged) continue;
+        final caught = a.found.where((x) => x.camel == treated.id).firstOrNull;
+        final placed = b.results!.any(
+          (x) => x.camelId == good.id && x.rank != null,
+        );
+        if (caught == null || !placed) continue;
+        final fieldBefore = [...b.field!];
+        final atHour = g.tellTo(Balance.stageMinutes[caught.stage.index]);
+        final row = b.results!.firstWhere((x) => x.camelId == good.id);
+        expect(row.rank, isNull);
+        expect(row.reason, RemovalReason.banned);
+        expect(row.prize, 0);
+        final ranks = [
+          for (final x in b.results!)
+            if (x.rank != null) x.rank!,
+        ]..sort();
+        expect(ranks, [for (var i = 1; i <= ranks.length; i++) i]);
+        expect(b.field!.last, fieldBefore.last - 1);
+        final rest = [...atHour, ...g.advanceDays(1)];
+        expect(
+          rest.whereType<Placed>().where((e) => e.camel == good.id),
+          isEmpty,
+        );
+        expect(
+          rest.whereType<EntryRemoved>().where((e) => e.camel == good.id),
+          hasLength(1),
+        );
+        return;
+      }
+      fail('no seed had a camel caught and another placed the same day');
+    });
+  });
+
+  group('The treatment man and the findings (the owner, 13 Nov 2026)', () {
+    test('he messages after each registration; read, his messages stay', () {
+      final g = newGame();
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+      final c = camelFor(g, r);
+      g.advanceTo(f.opensOn);
+      expect(GameView(g.state, g.me.id).unreadMessages, 0);
+      g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
+      final v = GameView(g.state, g.me.id);
+      expect(v.unreadMessages, 1);
+      final m = v.dealerMessages.single;
+      expect(
+        (m.camel, m.festival, m.round, m.day),
+        (c.id, f.id, r.id, g.today),
+      );
+      // kept through a save
+      final again = GameState.fromJson(g.state.toJson());
+      expect(again.players[g.me.id]!.dealer.single.read, isFalse);
+      // a refused registration sends none
+      expect(g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id])).ok, isFalse);
+      expect(GameView(g.state, g.me.id).dealerMessages, hasLength(1));
+      expect(g.dispatch(ReadMessages(g.me.id)).events, hasLength(1));
+      expect(GameView(g.state, g.me.id).unreadMessages, 0);
+      expect(g.dispatch(ReadMessages(g.me.id)).events, isEmpty);
+      expect(GameView(g.state, g.me.id).dealerMessages, hasLength(1));
+    });
+
+    test('an unread message is never dropped for room', () {
+      final g = newGame();
+      for (var i = 0; i < Balance.dealerMessagesKept + 5; i++) {
+        g.me.dealer.add(
+          DealerMessage(
+            camel: CamelId('c$i'),
+            name: 'n$i',
+            festival: const FestivalId('f'),
+            round: const RoundId('r'),
+            day: g.today,
+            read: i.isOdd,
+          ),
+        );
+      }
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+      final c = camelFor(g, r);
+      g.advanceTo(f.opensOn);
+      g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
+      expect(g.me.dealer, hasLength(Balance.dealerMessagesKept));
+      expect(
+        g.me.dealer.where((m) => !m.read),
+        hasLength(1 + (Balance.dealerMessagesKept + 5 + 1) ~/ 2),
+      );
+    });
+
+    test('a finding outside a sale waits untold until the phone tells it', () {
+      final g = newGame();
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+      final c = camelFor(g, r);
+      // one bought treated, unknowing; and one of his own doing
+      c.treatments.add(
+        Tampering(
+          kind: TamperKind.dye,
+          strength: 1,
+          on: g.today,
+          until: g.today + 30,
+        ),
+      );
+      final s = sim(g);
+      TamperingSystem.foundOutside(s, g.me, c, c.treatments.single);
+      g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 1));
+      final own = c.treatments.firstWhere((t) => t.kind == TamperKind.botox);
+      TamperingSystem.foundOutside(s, g.me, c, own);
+      // at a sale the refusal tells it: not kept
+      g.dispatch(Tamper(g.me.id, c.id, TamperKind.filler, 1));
+      final sold = c.treatments.firstWhere((t) => t.kind == TamperKind.filler);
+      TamperingSystem.foundOutside(s, g.me, c, sold, atSale: true);
+      final u = GameView(g.state, g.me.id).untoldFindings;
+      expect(
+        [for (final x in u) (x.kind, x.fine, x.knew)],
+        [
+          (TamperKind.dye, 0, false),
+          (TamperKind.botox, Balance.outsideFine, true),
+        ],
+      );
+      expect(
+        GameState.fromJson(g.state.toJson()).players[g.me.id]!.untold,
+        hasLength(2),
+      );
+      expect(g.dispatch(MarkFindingsTold(g.me.id, 1)).ok, isTrue);
+      expect(GameView(g.state, g.me.id).untoldFindings.single.knew, isTrue);
+      expect(g.dispatch(MarkFindingsTold(g.me.id, 0)).ok, isFalse);
+      expect(g.dispatch(MarkFindingsTold(g.me.id, 5)).ok, isTrue);
+      expect(GameView(g.state, g.me.id).untoldFindings, isEmpty);
+    });
+  });
+
+  group('What the phone is told', () {
+    test('each camel\'s own round, and why it cannot enter it now', () {
+      final g = newGame();
+      final f = grand(g);
+      final jil = roundOf(f, RoundKind.fardiJil, cat: ColorCategory.wodh);
+      final mother = camelFor(g, jil, cat: ColorCategory.wodh);
+      final young = camelFor(g, jil, cat: ColorCategory.wodh, sex: Sex.female)
+        ..calvings = 1;
+      final calf = camelFor(
+        g,
+        roundOf(f, RoundKind.mafareed, sex: Sex.male),
+        ageOnDay: 200,
+        cat: ColorCategory.wodh,
+        sex: Sex.male,
+      );
+      final bought = camelFor(
+        g,
+        roundOf(f, RoundKind.diq, sex: Sex.male),
+        cat: ColorCategory.wodh,
+        sex: Sex.male,
+      );
+      g.advanceTo(f.opensOn);
+      bought.acquiredOn = roundOf(f, RoundKind.diq, sex: Sex.male).day - 5;
+      final v = GameView(g.state, g.me.id);
+      final (r1, e1) = v.ownRound(f.id, mother.id);
+      expect(r1, jil.id);
+      expect(e1, isNull);
+      final (_, e2) = v.ownRound(f.id, young.id);
+      expect(e2?.code, ErrorCode.tooFewCalvings);
+      final (r3, e3) = v.ownRound(f.id, calf.id);
+      expect(f.round(r3!)!.kind, RoundKind.mafareed);
+      expect(e3?.code, ErrorCode.wrongAgeClass);
+      final (r4, e4) = v.ownRound(f.id, bought.id);
+      expect(f.round(r4!)!.kind, RoundKind.diq);
+      expect(e4?.code, ErrorCode.ownershipTooRecent);
+      expect(e4?.params['days'], Balance.ownershipDaysBeforeJudging);
+      // asking enters nothing
+      expect(f.rounds.every((r) => r.entries.isEmpty), isTrue);
+      // entered, the mother's fardi round is the one; another she-camel's is
+      // refused for the one فردي camel a festival
+      g.dispatch(EnterRound(g.me.id, f.id, jil.id, [mother.id]));
+      final second = camelFor(g, jil, cat: ColorCategory.wodh);
+      final (_, e5) = GameView(g.state, g.me.id).ownRound(f.id, second.id);
+      expect(e5?.code, ErrorCode.oneFardiRound);
+    });
+
+    test('الصيت as a band, never the number', () {
+      expect(Balance.reputationBand(0), ReputationBand.fallen);
+      expect(Balance.reputationBand(9.9), ReputationBand.fallen);
+      expect(Balance.reputationBand(10), ReputationBand.fresh);
+      expect(Balance.reputationBand(25), ReputationBand.known);
+      expect(Balance.reputationBand(50), ReputationBand.renowned);
+      expect(Balance.reputationBand(80), ReputationBand.famous);
+      final g = newGame();
+      expect(GameView(g.state, g.me.id).reputation.values.toSet(), {
+        ReputationBand.fresh,
+      });
+    });
+
+    test('the clock\'s minute of the game day', () {
+      final t0 = DateTime.utc(2026, 11, 8);
+      var now = t0;
+      final clock = RealTimeClock(
+        anchorReal: t0,
+        anchorDay: const GameDay(300),
+        now: () => now,
+      );
+      expect(clock.minuteOfDay(), 0);
+      now = t0.add(clock.gameDayLength * 0.5);
+      expect(clock.minuteOfDay(), 720);
+      expect(clock.untilMinute(720), Duration.zero);
+      expect(
+        clock.untilMinute(1080).inSeconds,
+        (clock.gameDayLength * 0.25).inSeconds,
+      );
+    });
   });
 }

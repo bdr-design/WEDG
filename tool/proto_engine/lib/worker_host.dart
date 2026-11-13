@@ -313,20 +313,30 @@ class WorkerHost {
   }
 
   /// EngineCore waits for the next game day in real time; under a faster
-  /// clock the worker wakes it as often as a game day passes.
+  /// clock the worker wakes it as often as a game day passes, and, while a
+  /// round's day is being told, as often as its stages come
+  /// (Balance.stageMinutes: the closest two 90 game minutes apart), so the
+  /// day is told stage by stage on the fast clock too. A wake with nothing
+  /// to tell sends no snapshot.
   void _startTicker() {
     _ticker?.cancel();
     final tick = _tick;
     final core = _core;
     if (tick == null || core == null) return;
-    final every = tick < const Duration(milliseconds: 10)
+    final step = tick * (90 / Game.minutesInDay);
+    final every = step < const Duration(milliseconds: 10)
         ? const Duration(milliseconds: 10)
-        : tick;
+        : step;
     // one catch-up at a time: a tick that comes while the last one (its
     // day, save and snapshot) is still running is skipped, never queued
     var busy = false;
+    var last = _wall();
     _ticker = Timer.periodic(every, (_) {
       if (busy) return;
+      final now = _wall();
+      final telling = core.game?.nextTelling != null;
+      if (!telling && now.difference(last) < tick) return;
+      last = now;
       busy = true;
       unawaited(
         core
