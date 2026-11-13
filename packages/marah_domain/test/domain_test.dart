@@ -655,6 +655,45 @@ void main() {
       );
     });
 
+    test('a calf without its dam does worst of all; no wages without a '
+        'shepherd', () {
+      double condition(CalfShare? share) {
+        final g = stocked(newGame(27));
+        if (share == null) {
+          final dam = damOf(g);
+          expect(g.dispatch(QuickSale(g.me.id, dam.id)).ok, isTrue);
+        } else {
+          g.dispatch(SetCalfShare(g.me.id, share));
+        }
+        final events = g.advanceDays(60);
+        expect(events.whereType<WagesPaid>(), isEmpty);
+        return g.state.world
+            .aliveOwnedBy(g.me.id)
+            .firstWhere((c) => c.dam != null && c.ageDays(g.today) < 365)
+            .condition;
+      }
+
+      expect(condition(null), lessThan(condition(CalfShare.quarter)));
+    });
+
+    test('a tanker that does not fit takes the rest back, and says so', () {
+      final g = newGame(28);
+      g.me.farm.waterL = 2500; // 3,500 L of room in the start's 6,000 L tank
+      expect(
+        g
+            .dispatch(
+              OrderSupply(g.me.id, Supply.water, 1, tanker: Tanker.small),
+            )
+            .ok,
+        isTrue,
+      );
+      final drunk = GameView(g.state, g.me.id).dailyNeeds.water;
+      final ev = g.advanceDays(1).whereType<SupplyDelivered>().single;
+      // what did not fit, as the tank stood before the day's drinking
+      expect(ev.returned, 2500);
+      expect(g.me.farm.waterL, closeTo(6000 - drunk, 1));
+    });
+
     test('without her calf all the milk is sold; dry after a year', () {
       final g = stocked(newGame(24));
       final calf = calfOf(g);
@@ -866,7 +905,13 @@ void main() {
 
   group('Events', () {
     test('news keeps coming after the stored history is full', () {
-      final g = newGame();
+      // a farm with a shepherd (his caravan built), so wages are paid every
+      // month (none are paid with no shepherd)
+      final g = stocked(newGame());
+      Sim(g.state).pay(g.me, const Riyal(100000), LedgerCategory.sale);
+      expect(g.dispatch(BuildFacility(g.me.id, Facility.caravan)).ok, isTrue);
+      g.advanceDays(Balance.buildDays);
+      expect(g.dispatch(SetShepherds(g.me.id, 1)).ok, isTrue);
       g.advanceDays(365 * 3);
       expect(
         g.state.inboxOf(g.me.id).length,

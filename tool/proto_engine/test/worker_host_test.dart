@@ -174,6 +174,25 @@ void main() {
     await page.call('pause');
   });
 
+  test('a save from before the one-camel start gives way to a new game', () async {
+    final page = Page();
+    // the head of a v6 save, as the old start's games were written
+    final old =
+        '{"format":"marah-save","version":6,"savedAt":"2026-11-12","data":{}}';
+    final r = await page.call('start', {
+      'store': {'marah.save': old},
+    });
+    expect(r, containsPair('status', 'new'));
+    final snap =
+        (page.messages.lastWhere((m) => m['type'] == 'snapshot')['snapshot']!
+            as Map);
+    expect((snap['herd']! as Map)['total'], 2);
+    expect(snap['cash'], 20000);
+    expect(WorkerHost.savedVersion(old), 6);
+    expect(WorkerHost.savedVersion('{"format":"marah-save","version":12}'), 12);
+    await page.call('pause');
+  });
+
   test('a second start stops the first engine before the next opens', () async {
     final page = Page();
     // the first runs a fast clock, so it would write again within milliseconds

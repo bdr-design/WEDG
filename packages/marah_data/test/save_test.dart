@@ -418,21 +418,33 @@ void main() {
     expect(state.players.values.first.farm.deliveries.first.size, 20000);
   });
 
-  test('v6 to v7: a farm saved before has every facility', () {
-    final raw = jsonDecode(
-      File(fixtures[6]!).readAsStringSync(),
-    ) as Map<String, Object?>;
-    final out = SaveCodec.migrations[6]!(raw['data']! as Map<String, Object?>);
-    final state = GameState.fromJson(out);
-    expect(checkInvariants(state), isEmpty);
-    final farm = state.players.values.first.farm;
-    for (final f in Facility.values) {
-      expect(farm.has(f), f.most, reason: f.name);
-    }
-    expect(farm.building, isEmpty);
-    expect(farm.calfShare, CalfShare.half);
-    expect(farm.milkOn, isNull);
-  });
+  test(
+    'v6 to v7: a farm saved before has its facilities, pens by its room',
+    () {
+      final raw = jsonDecode(
+        File(fixtures[6]!).readAsStringSync(),
+      ) as Map<String, Object?>;
+      final out = SaveCodec.migrations[6]!(
+        raw['data']! as Map<String, Object?>,
+      );
+      final state = GameState.fromJson(out);
+      expect(checkInvariants(state), isEmpty);
+      final farm = state.players.values.first.farm;
+      for (final f in Facility.values.where((f) => f != Facility.pen)) {
+        expect(farm.has(f), f.most, reason: f.name);
+      }
+      // the old start's 20 head: the first pen's 6 and two more pens' room
+      expect(farm.capacity, 20);
+      expect(farm.has(Facility.pen), 2);
+      expect(farm.building, isEmpty);
+      expect(farm.calfShare, CalfShare.half);
+      expect(farm.milkOn, isNull);
+      // so it can still build the other three
+      final g = Game(state);
+      grant(g, 100000);
+      expect(g.dispatch(BuildFacility(g.me.id, Facility.pen)).ok, isTrue);
+    },
+  );
 
   group('rejects without losing anything', () {
     test('garbage', () {

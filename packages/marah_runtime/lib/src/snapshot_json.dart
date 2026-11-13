@@ -21,6 +21,7 @@ class SnapshotJson {
     'farm': farm(s.farm),
     'herd': herd(s.herd),
     'herdTop': [for (final c in s.herdTop) camel(c)],
+    'yard': [for (final c in s.yard) camel(c)],
     'herdSignature': s.herdSignature,
     'sections': {
       'farm': s.sections.farm,
@@ -45,6 +46,7 @@ class SnapshotJson {
     'capacity': f.capacity,
     'shepherds': f.shepherds,
     'shepherdsNeeded': f.shepherdsNeeded,
+    'ownerTendsUpTo': Balance.ownerTendsUpTo,
     'feedPlan': f.feedPlan.name,
     'dailyFeed': f.dailyFeed,
     'monthlyWages': f.monthlyWages,
@@ -93,10 +95,13 @@ class SnapshotJson {
             'name': m.name,
             'days': m.days,
             'calfName': m.calfName,
-            'litres': m.litres,
-            'sold': m.sold,
+            'litres': _tenth(m.litres),
+            'sold': _tenth(m.sold),
           },
       ],
+      'nursing': f.milk.nursing,
+      'litres': _tenth(f.milk.litres),
+      'sold': _tenth(f.milk.sold),
       'calfShare': f.milk.calfShare.name,
       'price': f.milk.price,
       'incomeToday': f.milk.incomeToday,
@@ -139,6 +144,7 @@ class SnapshotJson {
     'sex': c.sex.name,
     'category': c.category.name,
     'ageClass': c.ageClass.name,
+    'ageName': c.sex == Sex.male ? c.ageClass.male : c.ageClass.female,
     'ageDays': c.ageDays,
     'quality': c.quality,
     'estimateLow': c.estimateLow,
@@ -202,6 +208,10 @@ class SnapshotJson {
     'myBestRank': f.myBestRank,
     'myPrizes': f.myPrizes,
   };
+
+  /// To a tenth: a litre to a tenth is what the screens show, and the full
+  /// doubles were most of the milk's bytes.
+  static double _tenth(double v) => (v * 10).roundToDouble() / 10;
 
   static String _date(GameDay d) {
     final t = d.date;

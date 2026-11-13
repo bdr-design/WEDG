@@ -130,8 +130,9 @@ class Bot {
       }
     }
 
-    // Buy a promising young female when the money allows.
-    if (v.me.cash.value > 50000 && v.herd.length < v.me.farm.capacity) {
+    // Buy a promising young female when rich (the long runs' farm, given the
+    // old start's money).
+    if (v.me.cash.value > 400000 && v.herd.length < v.me.farm.capacity) {
       final pick =
           v.market
               .where(
@@ -139,7 +140,7 @@ class Bot {
                     l.camel.sex == Sex.female &&
                     l.camel.ageDays < 5 * 365 &&
                     l.askPrice.value + l.transport.value <
-                        v.me.cash.value * 0.1,
+                        v.me.cash.value * 0.3,
               )
               .toList()
             ..sort((a, b) => b.camel.quality.compareTo(a.camel.quality));

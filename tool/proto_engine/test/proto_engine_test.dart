@@ -356,7 +356,16 @@ void main() {
         'estimateLow', 'estimateHigh', 'condition', 'health', 'illness',
         'pregnant', 'dueOn', 'awaitingCheck', 'listed', 'entered', 'bestRank',
         'crossbred',
+        // the age's name as the camel's sex has it (ageClass and sex, read)
+        'ageName',
       });
+      // the 3D farm's camels (the start's camel and her calf), and the milk
+      // to a tenth of a litre
+      expect((j['yard']! as List).length, 2);
+      final milk = farm['milk']! as Map<String, Object?>;
+      expect(milk['nursing'], 1);
+      final litres = milk['litres']! as num;
+      expect((litres * 10).round() / 10, litres);
     });
 
     test('the stores as the game holds them', () async {

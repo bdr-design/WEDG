@@ -76,6 +76,21 @@ class WorkerHost {
   /// The fastest clock a test may ask for (a game day in about 12 ms).
   static const maxTimeScale = 1e6;
 
+  /// The save version of the one-camel start (the owner, 13 Nov 2026: a
+  /// game starts with one nursing camel and her calf). The prototype's saves
+  /// from before it are games of the old start (three camels and SAR 600,000,
+  /// the whole farm built): set aside for a new game, which the owner asked
+  /// to see. The app itself keeps every save (SaveCodec migrates it).
+  static const oneCamelStart = 7;
+
+  /// The version an encoded save was written in, read from its head (the
+  /// envelope names it first; the whole text is megabytes at 10,000 head).
+  static int? savedVersion(String text) {
+    final head = text.length > 400 ? text.substring(0, 400) : text;
+    final m = RegExp(r'"version"\s*:\s*(\d+)').firstMatch(head);
+    return m == null ? null : int.parse(m.group(1)!);
+  }
+
   void ready() => _send({'type': 'ready'});
 
   /// One message from the page.
@@ -258,7 +273,10 @@ class WorkerHost {
       emit: _push,
       now: now,
     );
-    final opened = await core.open();
+    final old = kept['marah.save'];
+    final oldStart =
+        old != null && (savedVersion(old) ?? oneCamelStart) < oneCamelStart;
+    final opened = oldStart ? const NoGame() : await core.open();
     var status = _status(opened);
     if (opened is NoGame) {
       await core.newGame(

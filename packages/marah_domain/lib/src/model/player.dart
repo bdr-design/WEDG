@@ -67,17 +67,19 @@ class Delivery {
 /// 2026: the farm starts small, a pen, a 6,000 L tank and a feed shade, and
 /// every other facility is bought and built in its place). Prices in riyals:
 /// (field) the 30,000 L tank's from its maker (Marjan, SAR 14,110, research
-/// section 7); (balance) the rest, approved by the owner. [most] is how many
-/// the farm can have.
+/// section 7); (balance) the rest, approved by the owner. (balance) [most]
+/// is how many one farm can have (the farm drawn has room for five more pens:
+/// a bigger herd waits for more farms, GDD 4.1), and what each adds: head of
+/// room, litres of tank, kilograms of store.
 enum Facility {
   /// Another pen: room for ten more head.
-  pen(price: 12000, most: 5),
+  pen(price: 12000, most: 5, head: 10),
 
   /// A 30,000 L tank beside the first: a 19 t tanker fits it.
-  tank(price: 14110, most: 1),
+  tank(price: 14110, most: 1, litres: 30000),
 
   /// A feed store for ten tonnes.
-  store(price: 18000, most: 1),
+  store(price: 18000, most: 1, kg: 10000),
 
   /// The shepherd's caravan: needed before a shepherd is hired.
   caravan(price: 25000, most: 1),
@@ -88,9 +90,18 @@ enum Facility {
   /// The farm's room, a sitting room with air conditioning.
   room(price: 60000, most: 1);
 
-  const Facility({required this.price, required this.most});
+  const Facility({
+    required this.price,
+    required this.most,
+    this.head = 0,
+    this.litres = 0,
+    this.kg = 0,
+  });
   final int price;
   final int most;
+  final int head;
+  final int litres;
+  final int kg;
 }
 
 /// A facility being built, done on [doneOn].

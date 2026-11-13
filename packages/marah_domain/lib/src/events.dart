@@ -153,6 +153,7 @@ sealed class DomainEvent {
         supply: Supply.values.byName(j['supply']! as String),
         units: j['units']! as int,
         size: j['size'] as int?,
+        returned: (j['returned'] as int?) ?? 0,
       ),
       'supplyLow' => SupplyLow(
         day,
@@ -615,12 +616,17 @@ final class SupplyDelivered extends DomainEvent {
     required this.supply,
     required this.units,
     this.size,
+    this.returned = 0,
   });
   final Supply supply;
   final int units;
 
   /// Kilograms or litres in each unit (null in events kept before v6).
   final int? size;
+
+  /// Litres of a tanker that did not fit the tank and went back with it
+  /// (paid all the same).
+  final int returned;
   @override
   String get type => 'supplyDelivered';
   @override
@@ -628,6 +634,7 @@ final class SupplyDelivered extends DomainEvent {
     'supply': supply.name,
     'units': units,
     'size': size,
+    if (returned > 0) 'returned': returned,
   };
 }
 

@@ -74,7 +74,7 @@ class UpkeepSystem implements DailySystem {
       _finish(sim, p);
       _deliver(sim, p);
       _consume(sim, p);
-      if (sim.today.date.day == 1) {
+      if (sim.today.date.day == 1 && p.farm.shepherds > 0) {
         final wages = Riyal(p.farm.shepherds * Balance.shepherdMonthlyWage);
         sim.bill(p, -wages, LedgerCategory.wages);
         sim.emit(
@@ -97,16 +97,10 @@ class UpkeepSystem implements DailySystem {
     final f = p.farm;
     for (final b in f.building.where((b) => b.doneOn <= sim.today)) {
       f.built[b.facility] = f.has(b.facility) + 1;
-      switch (b.facility) {
-        case Facility.pen:
-          f.capacity += 10;
-        case Facility.tank:
-          f.tankL += 30000;
-        case Facility.store:
-          f.storeKg += 10000;
-        case Facility.caravan || Facility.tent || Facility.room:
-          break;
-      }
+      f
+        ..capacity += b.facility.head
+        ..tankL += b.facility.litres
+        ..storeKg += b.facility.kg;
       sim.emit(FacilityBuilt(sim.today, owner: p.id, facility: b.facility));
     }
     f.building.removeWhere((b) => b.doneOn <= sim.today);
@@ -116,6 +110,7 @@ class UpkeepSystem implements DailySystem {
     final f = p.farm;
     for (final d in f.deliveries.where((d) => d.arrivesOn <= sim.today)) {
       final amount = (d.units * d.size).toDouble();
+      var returned = 0;
       switch (d.supply) {
         case Supply.barley:
           f.barleyKg += amount;
@@ -124,7 +119,9 @@ class UpkeepSystem implements DailySystem {
         case Supply.water:
           // filled to the top; the rest goes back with the tanker
           final room = f.tankL - f.waterL;
-          f.waterL += amount < room ? amount : (room > 0 ? room : 0);
+          final kept = amount < room ? amount : (room > 0 ? room : 0.0);
+          f.waterL += kept;
+          returned = (amount - kept).round();
       }
       sim.emit(
         SupplyDelivered(
@@ -133,6 +130,7 @@ class UpkeepSystem implements DailySystem {
           supply: d.supply,
           units: d.units,
           size: d.size,
+          returned: returned,
         ),
       );
     }
@@ -229,15 +227,16 @@ class CareSystem implements DailySystem {
         if (crowded) target -= Balance.crowdedPenalty;
         if (c.health == HealthStatus.sick) target -= Balance.sickPenalty;
         if (c.health == HealthStatus.treated) target -= Balance.treatedPenalty;
-        // a suckling calf by the milk its dam's milking leaves it
+        // a suckling calf by the milk its dam's milking leaves it, and one
+        // without its dam (sold or dead) by none (the review: an orphan did
+        // as well as a calf on half its dam's milk)
         final age = c.ageDays(sim.today);
-        if (age < Balance.lactationDays && c.dam != null) {
-          final dam = byId[c.dam!.id];
-          if (dam != null &&
-              dam.lastCalvedOn == c.born &&
-              Milk.inMilkDays(dam, sim.today) != null) {
-            target += Balance.calfMilkTarget(p.farm.calfShare, age);
-          }
+        if (age < Balance.lactationDays) {
+          final dam = c.dam == null ? null : byId[c.dam!.id];
+          final suckles = dam != null && dam.lastCalvedOn == c.born;
+          target += suckles
+              ? Balance.calfMilkTarget(p.farm.calfShare, age)
+              : Balance.orphanMilkTarget(age);
         }
         final preg = c.pregnancy;
         if (preg != null &&

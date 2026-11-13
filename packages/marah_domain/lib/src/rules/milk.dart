@@ -21,8 +21,9 @@ abstract final class Milk {
     return d >= 0 && d < Balance.lactationDays ? d : null;
   }
 
-  /// [c]'s own level of milk (litres a day at the lactation's average),
-  /// fixed for the camel: drawn from her id, مجاهيم a quarter more.
+  /// [c]'s own level of milk (litres a day; the lactation's shape scales it
+  /// from 0.85 up to 1.2 and down to 0.5), fixed for the camel: drawn from
+  /// her id, مجاهيم a quarter more.
   static double level(Camel c, int seed) {
     final u = Rng.keyed(seed, ['milk', c.id.value]).nextDouble();
     final base =

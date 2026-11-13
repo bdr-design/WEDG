@@ -120,6 +120,7 @@ class Presenter {
           (signature * 31 + Object.hashAll(c.mutableFields())) & 0x3FFFFFFF;
     }
     final needs = v.dailyNeeds; // once: each walks the whole herd
+    final milk = v.milk;
     final farm = FarmSummary(
       name: me.farm.name,
       region: me.farm.region,
@@ -194,7 +195,7 @@ class Presenter {
       ],
       milk: MilkSummary(
         camels: [
-          for (final m in v.milk)
+          for (final m in milk.take(milkCount))
             MilkCamel(
               id: m.camel.id,
               name: m.camel.name,
@@ -204,6 +205,9 @@ class Presenter {
               sold: m.sold,
             ),
         ],
+        nursing: milk.length,
+        litres: milk.fold(0.0, (n, m) => n + m.litres),
+        sold: milk.fold(0.0, (n, m) => n + m.sold),
         calfShare: me.farm.calfShare,
         price: Balance.milkPrice,
         incomeToday: v.milkIncomeToday,
@@ -215,6 +219,14 @@ class Presenter {
       herdViews,
       HerdSort.quality,
     ).take(topCount).map((c) => card(c, v)).toList(growable: false);
+    final yard =
+        (herdViews.toList()..sort((a, b) {
+              final c = a.born.value.compareTo(b.born.value);
+              return c != 0 ? c : a.id.value.compareTo(b.id.value);
+            }))
+            .take(yardCount)
+            .map((c) => card(c, v))
+            .toList(growable: false);
     final market = [for (final l in v.market) listing(l, v)];
     final myListings = [for (final l in v.myListings) listing(l, v)];
     final studs = [
@@ -246,7 +258,8 @@ class Presenter {
         p != null &&
             p.herd == summary &&
             p.herdSignature == signature &&
-            _same(p.herdTop, top),
+            _same(p.herdTop, top) &&
+            _same(p.yard, yard),
       ),
       market: bump(
         p?.sections.market,
@@ -274,6 +287,7 @@ class Presenter {
       farm: farm,
       herd: summary,
       herdTop: top,
+      yard: yard,
       herdSignature: signature,
       sections: sections,
       market: market,
@@ -288,6 +302,14 @@ class Presenter {
 
   /// How many of the best camels the snapshot carries.
   static const topCount = 12;
+
+  /// How many camels the 3D farm shows at most (its yard held 34 drawn
+  /// camels within the frame budget, ADR 0005).
+  static const yardCount = 40;
+
+  /// How many nursing camels the snapshot lists by name (the totals count
+  /// them all).
+  static const milkCount = 40;
 
   /// Merges two day-ordered lists, keeping each list's own order (stable).
   static List<DomainEvent> _mergeByDay(

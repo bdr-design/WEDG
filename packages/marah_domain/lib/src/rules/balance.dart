@@ -215,11 +215,13 @@ class Balance {
   /// (field) A she-camel's common average is no more than about 5 L a day;
   /// high producers give 10 or more, low ones 5 or less; مجاهيم give the most
   /// (research sections 7). (balance) Each nursing camel's own level drawn
-  /// from 3.5 to 6.5 L, مجاهيم a quarter more, over a lactation of a year
-  /// from calving ((field) 190 to 404 days across studies), rising to its
-  /// peak at six weeks and falling to half of it by the year's end.
+  /// from 3.5 to 7 L, مجاهيم a quarter more, over a lactation of a year from
+  /// calving ((field) 190 to 404 days across studies), rising to 1.2 of it at
+  /// six weeks and falling to half of it by the year's end: the lactation's
+  /// average is 0.87 of the level, 4.6 L (5.7 for مجاهيم), and the best
+  /// مجاهيم reach 10.5 L at their peak.
   static const milkLevelMin = 3.5;
-  static const milkLevelMax = 6.5;
+  static const milkLevelMax = 7.0;
   static const majaheemMilk = 1.25;
   static const lactationDays = 365;
   static const milkPeakDay = 45;
@@ -232,8 +234,12 @@ class Balance {
   /// (field) In the traditional Saudi system the calf nurses freely for its
   /// first three months (research section 7). (balance) What the milk left
   /// to it does to a suckling calf's condition target: all of it more,
-  /// half the same, a quarter less, and more so in its first three months.
+  /// half the same, a quarter less, and more so in its first three months;
+  /// a calf under a year without its dam (sold or dead) gets none, the
+  /// least of all.
   static const freeNursingDays = 90;
+  static double orphanMilkTarget(int ageDays) =>
+      ageDays < freeNursingDays ? -20 : -8;
   static double calfMilkTarget(CalfShare share, int ageDays) =>
       ageDays < freeNursingDays
       ? switch (share) {

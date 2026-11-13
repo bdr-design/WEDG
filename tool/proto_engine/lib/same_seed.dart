@@ -47,7 +47,7 @@ Iterable<String> sameSeedLines({
 }
 
 /// The commands the bot never sends, so the check runs them too: the feed
-/// plan changed, a camel renamed, a camel listed and its offers declined, then
+/// plan changed, the calves' share of the milk, a camel renamed, a camel listed and its offers declined, then
 /// taken off the market, a female put to the farm's own bull, an entry
 /// withdrawn. Returns how many went through, and counts them by kind in
 /// [done].
@@ -66,6 +66,10 @@ int _extras(Game game, int week, Map<String, int> done) {
     send(
       SetFeedPlan(me, week % 16 == 0 ? FeedPlan.premium : FeedPlan.standard),
     );
+  }
+  // the calves' share of the milk, each of the three in turn
+  if (week % 6 == 3) {
+    send(SetCalfShare(me, CalfShare.values[(week ~/ 6) % 3]));
   }
   if (week % 4 == 1 && v.herd.isNotEmpty) {
     send(RenameCamel(me, v.herd.first.id, 'ناقة $week'));

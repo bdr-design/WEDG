@@ -44,7 +44,7 @@ class Provisions {
     final nursing =
         c.sex == Sex.female &&
         c.lastCalvedOn != null &&
-        today.daysSince(c.lastCalvedOn!) < 365;
+        today.daysSince(c.lastCalvedOn!) < Balance.lactationDays;
     if (nursing) return Balance.nursingWaterL;
     return Balance.waterL(today.month) *
         Balance.feedAgeFactor(c.ageDays(today));

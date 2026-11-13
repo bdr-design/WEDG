@@ -289,21 +289,26 @@ class SaveCodec {
 
   /// v6 to v7 (the owner's decisions of 13 Nov 2026: the farm starts small
   /// and every facility is bought; milk is sold each day): a farm saved
-  /// before was made whole, with the old start's pens, tank, store and a
-  /// shepherd, so it is given every facility, as many as it can have (the
-  /// names and counts written here so the step never depends on today's
-  /// classes); half the milk to the calves; no milk sold yet.
+  /// before was made whole, with the old start's tank, store and a shepherd,
+  /// so it is given each of those facilities; its pens are those its room
+  /// stands for past the first pen's 6 head, 10 each (rounded up, five at
+  /// most), so it can still build the rest (given all five, a farm of 20 head
+  /// could never grow, the review). The names and counts are written here so
+  /// the step never depends on today's classes. Half the milk to the calves;
+  /// no milk sold yet.
   static Map<String, Object?> _v6ToV7(Map<String, Object?> input) {
     final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
     for (final pl in (data['players'] as List<Object?>?) ?? const []) {
       final farm =
           (pl! as Map<String, Object?>)['farm']! as Map<String, Object?>;
+      final room = (farm['capacity']! as int) - 6;
+      final pens = room <= 0 ? 0 : ((room + 9) ~/ 10).clamp(0, 5);
       farm
         ..['calfShare'] = 'half'
         ..['milkIncome'] = 0
         ..['milkOn'] = null
         ..['built'] = <String, Object?>{
-          'pen': 5,
+          if (pens > 0) 'pen': pens,
           'tank': 1,
           'store': 1,
           'caravan': 1,

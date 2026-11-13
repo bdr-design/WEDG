@@ -248,7 +248,7 @@ import { createPlay } from './play.js';
 import { createPhone } from './phone.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { buildWorld, LAYOUT, VEHICLES, drapeOnTerrain, updateScatter } from './world.js';
+import { buildWorld, LAYOUT, PEN_FACILITY, VEHICLES, drapeOnTerrain, updateScatter } from './world.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildTerrain } from './terrain.js';
 
@@ -375,19 +375,25 @@ function mergeCasters(list, toParent) {
 // on their texture). The yard's casters are taken before the yard is merged (so it can merge by look alone), the parked
 // vehicles' once they are in; the shadow meshes are built then.
 const pendingCasters = [];
+// the facility an object belongs to (world.js tags what each one adds; the page shows a facility's pieces once it stands)
+const facOf = (o) => { for (let q = o; q; q = q.parent) if (q.userData && q.userData.facility) return q.userData.facility; return null; };
 function takeCasters(roots) {
   scene.updateMatrixWorld(true);
   const inst = new THREE.Matrix4();
-  for (const r of roots) r.traverseVisible((o) => {
+  for (const r of roots) {
+    const hidden = r.userData.facility && !r.visible; if (hidden) r.visible = true;      // (a facility not built yet: its shadows taken, shown with it)
+    r.traverseVisible((o) => {
     if (!plainCaster(o)) return;
     for (let k = 0, kn = o.isInstancedMesh ? o.count : 1; k < kn; k++) {
       const world = new THREE.Matrix4();
       if (o.isInstancedMesh) { o.getMatrixAt(k, inst); world.multiplyMatrices(o.matrixWorld, inst); } else world.copy(o.matrixWorld);
-      pendingCasters.push({ geometry: o.geometry, world, side: o.material.side, shadowSide: o.material.shadowSide });
+      pendingCasters.push({ geometry: o.geometry, world, side: o.material.side, shadowSide: o.material.shadowSide, fac: facOf(o) });
     }
     o.castShadow = false;
     if (o.userData.shadowProxy) o.visible = false;      // (a shadow's coarse copy: in the shadow meshes now, never drawn)
-  });
+    });
+    if (hidden) r.visible = false;
+  }
 }
 function bakeStaticShadows() {
   for (const root of scene.children) {
@@ -399,23 +405,43 @@ function bakeStaticShadows() {
   for (const p of pendingCasters) {
     if (!p.geometry.boundingSphere) p.geometry.computeBoundingSphere();
     sph.copy(p.geometry.boundingSphere).applyMatrix4(p.world);
-    const key = Math.floor(sph.center.x / CHUNK) + ',' + Math.floor(sph.center.z / CHUNK) + '|' + p.side + '|' + p.shadowSide;
+    const key = Math.floor(sph.center.x / CHUNK) + ',' + Math.floor(sph.center.z / CHUNK) + '|' + p.side + '|' + p.shadowSide + '|' + p.fac;      // (a facility's shadows apart: hidden with it until it is built)
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(p);
   }
   for (const parts of buckets.values()) {
     const mesh = new THREE.Mesh(mergeCasters(parts, (p) => p.world), shadowOnly(parts[0].side, parts[0].shadowSide));
     mesh.castShadow = true; mesh.receiveShadow = false; mesh.matrixAutoUpdate = false; mesh.name = 'static shadows'; mesh.userData.shadowOnly = true;
+    if (parts[0].fac) mesh.userData.facility = parts[0].fac;
     scene.add(mesh);
   }
   pendingCasters.length = 0;
+  applyFacilities(true);
 }
+
+// ------------------------------------------------------------ the player's own game in the farm (the rules engine)
+// GAME: the engine's latest snapshot (null until it starts: the start's farm is shown). The facilities stand only once
+// built (the owner, 13 Nov 2026: the farm starts small and grows by what is bought): world.js tags each piece; hidden
+// here, with its merged meshes and its shadows. The camels are the engine's (syncYard).
+let GAME = null, facSig = null, placesReady = false;
+const builtCount = (f) => (GAME ? GAME.farm.facilities.find((x) => x.facility === f)?.has ?? 0 : 0);
+const facVisible = (fac) => fac === 'start' || (fac === 'graze' ? camels.some((c) => c.home === 'graze') : fac.startsWith('pen') ? builtCount('pen') >= +fac.slice(3) : builtCount(fac) > 0);
+function applyFacilities(force) {
+  const sig = GAME ? GAME.farm.facilities.map((x) => x.has).join(',') : 'none';
+  if (!force && sig === facSig) return;
+  facSig = sig;
+  for (const o of scene.children) { const f = o.userData.facility; if (f) o.visible = facVisible(f); }
+  renderer.shadowMap.needsUpdate = true;
+  if (placesReady) placeFacilities();
+}
+const supOf = (k) => (GAME ? GAME.farm.supplies.find((x) => x.supply === k) : null);
 
 const before = scene.children.length;
 buildWorld(scene, renderer, sand);
 dedupeMaterials(scene.children.slice(before));
 takeCasters(scene.children.slice(before));
 mergeStatic(scene.children.slice(before));
+applyFacilities(true);
 function dedupeMaterials(roots) {
   const seen = new Map(), sph = new THREE.Sphere();
   scene.updateMatrixWorld(true);
@@ -460,7 +486,7 @@ function mergeStatic(roots) {
     if (g.morphAttributes && Object.keys(g.morphAttributes).length) return;
     const attrs = Object.keys(g.attributes).filter((k) => !(fold && /^uv/.test(k))).sort().join(',');
     const look = fold ? ['fold', m.emissive.getHex(), m.emissiveIntensity, m.side, m.shadowSide, m.flatShading, m.envMapIntensity, m.opacity, m.depthWrite, m.depthTest, m.polygonOffset, m.wireframe, m.fog].join(',') : m.uuid;
-    const key = [look, o.castShadow, o.receiveShadow, attrs, !!g.index, o.renderOrder].join('|');
+    const key = [look, o.castShadow, o.receiveShadow, attrs, !!g.index, o.renderOrder, facOf(o)].join('|');      // (merged within a facility: shown or hidden with it)
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(o);
   });
@@ -487,6 +513,7 @@ function mergeStatic(roots) {
     if (fold) mat = foldedMaterial(mat);
     const m = new THREE.Mesh(merged, mat);
     m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; m.renderOrder = list[0].renderOrder;
+    const fac = facOf(list[0]); if (fac) m.userData.facility = fac;
     scene.add(m);
     for (const o of list) drop.push(o);
   }
@@ -526,7 +553,10 @@ function footfall(pos, heading, near) {
 const COATS = {
   wodh: { name: 'وضحاء', group: 'وضح', tint: '#ffffff' }, shaqh: { name: 'شقحاء', group: 'شقح', tint: '#f3e3c8' },
   homr: { name: 'حمراء', group: 'حمر', tint: '#a8694a' }, majaheem: { name: 'مجهمية', group: 'مجاهيم', tint: '#2c2622' },
+  shoal: { name: 'شعلاء', group: 'شعل', tint: '#c99a68' }, sofr: { name: 'صفراء', group: 'صفر', tint: '#e2c58e' },
 };
+// the engine's colour family to the coat drawn (the festival's six, GDD 5.1)
+const CAT_COAT = { majaheem: 'majaheem', wodh: 'wodh', shoqh: 'shaqh', shoal: 'shoal', sofr: 'sofr', homr: 'homr' };
 const GRAZE = LAYOUT.graze;
 const camels = [];
 const SPEED = 1.15;            // the walk clip plants each foot and moves it back at this speed (1.67 m strides)
@@ -702,20 +732,68 @@ class Camel {
 }
 const tmpV = new THREE.Vector3(), tmpTo = new THREE.Vector3(), tmpAway = new THREE.Vector3(), UPV = new THREE.Vector3(0, 1, 0);
 
-const NAMES = ['الصفوة', 'هدلا', 'نجلا', 'الغالية', 'الهيلة', 'المزيونة', 'صيته', 'شهلا', 'عفرا', 'غرسة', 'ريمة', 'وضحى', 'دبلة', 'العنود', 'شيخة', 'مزون', 'الجوهرة', 'سمحة', 'زينة', 'حصة'];
-const AGES = ['ثنية', 'رباعية', 'سديسة', 'حقة', 'لقية', 'جذعة', 'فاطر'];
-const coatsOut = ['wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'wodh', 'homr', 'homr', 'homr', 'homr', 'majaheem', 'majaheem', 'shaqh', 'shaqh'];
+// The farm's camels are the player's own (the owner, 13 Nov 2026), from the engine's snapshot (yard: up to 40, in the
+// order they came): each in a built pen, the pens filled in their order; a camel sold or dead leaves; a calf grows.
+let LODS = null;      // the camel's three detail levels, once loaded
+const sizeOf = (d) => (d < 180 ? 0.55 : d < 365 ? 0.65 : d < 730 ? 0.8 : d < 1095 ? 0.9 : 1);
+// what the card says of a camel, from the engine: her calf or her mother, a pregnancy, an illness, the value estimated
+function cardInfo(card) {
+  const milk = GAME.farm.milk.camels, mine = milk.find((m) => m.id === card.id), mother = card.ageDays < 365 ? milk.find((m) => m.calfName === card.name) : null;
+  const female = card.sex === 'female', due = card.pregnant && card.dueOn != null ? Math.max(0, card.dueOn - GAME.today) : null;
+  const sick = card.health === 'sick', treated = card.health === 'treated';
+  const parts = [];
+  if (sick) parts.push(female ? 'مريضة، تبي علاج' : 'مريض، يبي علاج'); else if (treated) parts.push('تحت العلاج');
+  if (due != null) parts.push(due <= 1 ? 'تولد بكرة' : `عشار، تولد بعد ${days(due).join(' ')}`);
+  if (mine) parts.push(mine.calfName ? `مرضع، حوارها ${mine.calfName}` : 'تحلب');
+  if (mother) parts.push(`يرضع من أمه ${mother.name}`);
+  return {
+    name: card.name, age: card.ageName, card, sick: sick || treated, due,
+    note: parts.length ? parts.join(' · ') : 'بصحة زينة',
+    tag: sick ? (female ? 'مريضة' : 'مريض') : due != null && due <= 30 ? 'قريبة ولادة' : due != null ? 'عشار' : mine ? 'مرضع' : mother ? 'يرضع' : '',
+    warn: sick || (due != null && due <= 10),
+    value: Math.round((card.estimateLow + card.estimateHigh) / 2 / 500) * 500,
+  };
+}
+function syncYard() {
+  if (!LODS || !GAME) return;
+  const want = GAME.yard, ids = new Set(want.map((c) => c.id));
+  for (let i = camels.length - 1; i >= 0; i--) {
+    const c = camels[i];
+    if (ids.has(c.id)) continue;
+    if (selected === c || follow === c) stopFollow();
+    if (pop && pop.camel === c) closePop();
+    herd.remove(c.root); camels.splice(i, 1);
+  }
+  const pens = PEN_ORDER.filter((k) => facVisible(PEN_FACILITY[k]));
+  let pi = 0, n = 0;
+  for (const card of want) {
+    while (pi < pens.length - 1 && n >= penRoom(pens[pi])) { pi++; n = 0; }
+    const rect = P[pens[pi]]; n++;
+    let c = camels.find((x) => x.id === card.id);
+    const spot = () => [R(rect.x0 + 2, rect.x1 - 2), R(rect.z0 + 2, rect.z1 - 2)];
+    if (!c) {
+      const [x, z] = spot();
+      c = new Camel(LODS, { id: card.id, coat: CAT_COAT[card.category], male: card.sex === 'male', home: 'pen', pen: rect, x, z, heading: R(0, 6.28), scale: sizeOf(card.ageDays) });
+      camels.push(c);
+    } else if (c.pen !== rect) { const [x, z] = spot(); c.pen = rect; c.root.position.set(x, 0, z); c.mode = 'idle'; c.target = null; }
+    if (c.scale !== sizeOf(card.ageDays)) { c.scale = sizeOf(card.ageDays); c.root.scale.setScalar(c.scale); }      // (a calf grows)
+    Object.assign(c, cardInfo(card));
+  }
+}
+window.__farm = { setGame: (snap) => setGame(snap) };      // (for the browser tests: a snapshot as the engine would send it)
+function setGame(snap) {
+  GAME = snap;
+  applyFacilities();
+  syncYard();
+  if (pop) renderCard(); else refreshLabels();
+}
+
 
 // ------------------------------------------------------------ labels over the world
 const labelLayer = $('labels');
 const P = LAYOUT.pens, mid = (p, y) => new THREE.Vector3((p.x0 + p.x1) / 2, y, (p.z0 + p.z1) / 2);
 let pop = null;          // the open card: { place, camel } (camel: its details, opened from its place or tapped in the world)
 const GRAZE_MID = new THREE.Vector3((LAYOUT.graze.x0 + LAYOUT.graze.x1) / 2, 3.2, (LAYOUT.graze.z0 + LAYOUT.graze.z1) / 2);
-// far places in their real direction from the yard (25.81 N, 42.90 E), placed on the horizon:
-// Buraydah's camel market is about 57 km north and 107 km east (122 km, east-north-east); the big
-// festival ground at Al-Sayahid, north-east of Riyadh, lies about 465 km east and a little south
-const toward = (east, south) => new THREE.Vector3(east, 0, south).normalize().multiplyScalar(6000).setY(420);
-const water = { pct: 62, days: 8, ordered: false };
 const inPenOf = (pen) => camels.filter((c) => c.pen === pen);
 // Arabic counting: 1 and 2 have words of their own, 3-10 take the plural, 11 and up the singular ([value, unit])
 const count = (n, one, two, few, many) => (n === 1 ? [one, ''] : n === 2 ? [two, ''] : [String(n), n <= 10 ? few : many]);
@@ -738,56 +816,64 @@ const camelList = (title, list) => `<div class="sec">${title}<i></i></div><div c
 const attention = (list) => list.filter((c) => c.warn).length;
 const herdStats = (list, last) => { const k = attention(list); return [['العدد', ...heads(list.length)], ['تبي انتباه', String(k), '', k ? 'warn' : ''], last]; };
 const closer = (pl) => ({ label: 'قرّب', run: () => glideTo(pl, 36) });
-const pen = (key, name, rect, sub, cls) => ({ key, name, rect, cls, icon: 'pen', p: mid(rect, 2.6), max: 280,
-  text: () => `${name} · ${inPenOf(rect).length}`,
-  open() { const list = inPenOf(rect); return { sub, stats: herdStats(list, ['الحوض', water.pct > 0 ? 'ممتلي' : 'فاضي']), html: camelList('في الشبك', list), actions: [closer(this)] }; } });
+// the pens: the start's (الحوش) and the five bought after it, in that order (world.js PEN_FACILITY), each shown once built
+const PEN_ORDER = ['calves', 'main', 'young', 'bull', 'sick', 'spare'];
+const PEN_NAMES = { calves: 'الحوش', main: 'الشبك الثاني', young: 'الشبك الثالث', bull: 'الشبك الرابع', sick: 'الشبك الخامس', spare: 'الشبك السادس' };
+const penRoom = (key) => (key === 'calves' ? 6 : 10);      // (the engine's: the first pen 6 head, each bought one 10)
+const pen = (key) => ({ key, name: PEN_NAMES[key], rect: P[key], facility: PEN_FACILITY[key], icon: 'pen', p: mid(P[key], 2.6), max: 280,
+  text: () => `${PEN_NAMES[key]} · ${inPenOf(P[key]).length}`,
+  open() { const list = inPenOf(P[key]), w = supOf('water');
+    return { sub: `يشيل ${heads(penRoom(key))}`, stats: herdStats(list, ['الحوض', !w ? '…' : w.amount > 0 ? 'فيه ماء' : 'فاضي', '', w && w.amount <= 0 ? 'warn' : '']), html: list.length ? camelList('في الشبك', list) : '', actions: [closer(this)] }; } });
+// the water and the feed where they are: the big tank and the store once built, else the start's tank and feed shade
+const WATER_AT = { start: new THREE.Vector3(-35.6, 4.4, -13.5), big: new THREE.Vector3(30, 7.6, -40) };
+const FEED_AT = { start: new THREE.Vector3(-28, 4.2, -2.6), big: new THREE.Vector3(32, 4.6, -21) };
+const waterNow = () => {
+  const w = supOf('water'); if (!w) return null;
+  return { pct: Math.round(Math.min(100, w.amount / GAME.farm.tankL * 100)), days: w.daysLeft, coming: w.onTheWayAmount > 0, short: w.short || w.amount <= 0 };
+};
+const feedNow = () => {
+  const b = supOf('barley'), a = supOf('alfalfa'); if (!b) return null;
+  const d = [b.daysLeft, a.daysLeft].filter((x) => x != null);
+  return { b, a, days: d.length ? Math.min(...d) : null, coming: b.onTheWayAmount + a.onTheWayAmount > 0 };
+};
 const PLACES = [
-  pen('main', 'شبك النوق', P.main, 'المظلات والحوض'),
-  pen('young', 'المفاريد', P.young, 'مفاريد هالسنة'),
-  pen('calves', 'الحيران', P.calves, 'ينتظرون أمهاتهم من المرعى'),
-  pen('bull', 'شبك الفحل', P.bull, 'موسم الضراب'),
-  pen('sick', 'العزل', P.sick, 'جرب يعدي · باقي 12 يوم علاج', 'warn'),
-  { key: 'graze', name: 'الحلال يسرح', icon: 'herd', p: GRAZE_MID, max: 900, text: () => `المسراح · ${camels.filter((c) => c.home === 'graze').length}`,
+  ...PEN_ORDER.map(pen),
+  { key: 'graze', name: 'الحلال يسرح', facility: 'graze', icon: 'herd', p: GRAZE_MID, max: 900, text: () => `المسراح · ${camels.filter((c) => c.home === 'graze').length}`,
     open() { const list = camels.filter((c) => c.home === 'graze');
       return { sub: 'المسراح · رمث وعرفج', stats: herdStats(list, ['عن العزبة', '330', 'م']), html: camelList('في المسراح', list),
         actions: [{ label: followHerd ? 'وقف المتابعة' : 'تابع القطيع', icon: EYE, primary: !followHerd,
           run: () => { followHerd = !followHerd; follow = null; if (followHerd) view('near'); openPlace(this, true); } }] }; } },
-  // water and feed reach 220 m: the default drone view is 140 m from the tank, and its warning must show there
-  { key: 'water', name: 'خزان الماء', icon: 'water', p: new THREE.Vector3(30, 7.6, -40), max: 280, cls: () => (water.ordered ? '' : 'warn'),
-    text: () => (water.ordered ? `الماء ${water.pct}٪ · الوايت جاي` : `الماء ${water.pct}٪ · ${water.days} أيام`),
-    open() { return { sub: 'يعبّي أحواض الشبوك', gauge: water.pct,
-      stats: [['يكفي', ...days(water.days), water.ordered ? '' : 'warn'], ['يشرب منه', ...heads(camels.length)], ['الوايت', water.ordered ? 'في الطريق' : 'ما انطلب']],
-      actions: water.ordered ? [closer(this)] : [closer(this), { label: 'اطلب وايت', icon: TRUCK, primary: true, run: () => { water.ordered = true; refreshLabels(); openPlace(this, true); } }] }; } },
-  { key: 'feed', name: 'مخزن العلف', icon: 'feed', p: new THREE.Vector3(32, 4.6, -21), max: 280, text: () => 'العلف 13 يوم',
-    open() { return { sub: 'شعير وبرسيم', stats: [['يكفي', ...days(13)]], actions: [closer(this)] }; } },
-  { key: 'room', name: 'غرفة العزبة', icon: 'room', p: new THREE.Vector3(6, 4.6, 6.5), max: 280, text: () => 'غرفة العزبة',
+  // water and feed reach 280 m: the default drone view is 140 m from the tank, and its warning must show there. Their
+  // numbers are the engine's; ordering is the phone's (الوايت and العلف)
+  { key: 'water', name: 'خزان الماء', icon: 'water', p: WATER_AT.start.clone(), max: 280,
+    cls: () => { const w = waterNow(); return w && !w.coming && (w.short || (w.days != null && w.days <= 3)) ? 'warn' : ''; },
+    text: () => { const w = waterNow(); return !w ? 'خزان الماء' : `الماء ${w.pct}٪ · ${w.coming ? 'الوايت جاي' : w.short ? 'خلص' : w.days == null ? '' : days(w.days).join(' ')}`; },
+    open() { const w = waterNow(); if (!w) return { sub: 'يجهّز…' };
+      return { sub: `يعبّي أحواض الشبوك · ${GAME.farm.tankL.toLocaleString('en-US')} لتر`, gauge: w.pct,
+        stats: [w.short ? ['الماء', 'خلص', '', 'warn'] : ['يكفي', ...(w.days == null ? ['—'] : days(w.days)), !w.coming && w.days != null && w.days <= 3 ? 'warn' : ''], ['يشرب منه', ...heads(GAME.herd.total)], ['الوايت', w.coming ? 'في الطريق' : 'ما انطلب']],
+        actions: [closer(this), { label: 'افتح الوايت', icon: TRUCK, primary: true, run: () => { closePop(); phone.openApp('water'); } }] }; } },
+  { key: 'feed', name: 'مظلة العلف', icon: 'feed', p: FEED_AT.start.clone(), max: 280,
+    cls: () => { const f = feedNow(); return f && !f.coming && f.days != null && f.days <= 3 ? 'warn' : ''; },
+    text: () => { const f = feedNow(); return !f ? 'العلف' : `العلف · ${f.coming ? 'بالطريق' : f.days == null ? '' : days(f.days).join(' ')}`; },
+    open() { const f = feedNow(); if (!f) return { sub: 'يجهّز…' };
+      const d = (x) => (x.amount <= 0 || x.short ? ['خلص', '', 'warn'] : x.daysLeft == null ? ['—'] : [...days(x.daysLeft), x.daysLeft <= 3 ? 'warn' : '']);
+      return { sub: `شعير وبرسيم · يشيل ${GAME.farm.storeKg.toLocaleString('en-US')} كجم`, stats: [['الشعير', ...d(f.b)], ['البرسيم', ...d(f.a)]],
+        actions: [closer(this), { label: 'افتح العلف', primary: true, run: () => { closePop(); phone.openApp('feed'); } }] }; } },
+  { key: 'room', name: 'غرفة العزبة', facility: 'room', icon: 'room', p: new THREE.Vector3(6, 4.6, 6.5), max: 280, text: () => 'غرفة العزبة',
     open() { return { sub: 'جلسة ومكيفات · تطل على الشبوك', actions: [{ label: 'ادخل', primary: true, run: () => { closePop(); view('room'); } }] }; } },
-  { key: 'tent', name: 'بيت الشعر', icon: 'tent', p: new THREE.Vector3(-12, 3.0, 7), max: 280, text: () => 'بيت الشعر',
+  { key: 'tent', name: 'بيت الشعر', facility: 'tent', icon: 'tent', p: new THREE.Vector3(-12, 3.0, 7), max: 280, text: () => 'بيت الشعر',
     open() { return { sub: 'دلال وتمر · الضو شابّ', actions: [closer(this)] }; } },
   { key: 'gate', name: 'البوابة', icon: 'gate', p: new THREE.Vector3(24, 2.6, 15), max: 280, text: () => 'البوابة',
     open() { return { sub: 'الطريق للمسراح 330 م', actions: [closer(this)] }; } },
-  { key: 'camp', name: 'كرفان الراعي', icon: 'camp', p: new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22), max: 600, text: () => 'كرفان الراعي',
+  { key: 'camp', name: 'كرفان الراعي', facility: 'caravan', icon: 'camp', p: new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22), max: 600, text: () => 'كرفان الراعي',
     open() { return { sub: 'على تريلة · في المسراح', actions: [{ label: 'روح له', primary: true, run: () => { closePop(); view('camp'); } }] }; } },
   { key: 'asmar', name: 'أبان الأسمر', icon: 'mountain', p: new THREE.Vector3(6413, 520, -885), min: 900, cls: 'far', text: () => 'أبان الأسمر · 1225 م',
     open() { return { sub: 'جبل · شرق العزبة', stats: [['الارتفاع عن البحر', '1225', 'م'], ['المسافة', '6.4', 'كم']],
       actions: [{ label: 'منظر الجبل', primary: true, run: () => { closePop(); view('hill'); } }] }; } },
   { key: 'ahmar', name: 'أبان الأحمر', icon: 'mountain', p: new THREE.Vector3(-11344, 610, 35151), min: 900, cls: 'far', text: () => 'أبان الأحمر · 1309 م',
     open() { return { sub: 'جبل · جنوب غرب العزبة', stats: [['الارتفاع عن البحر', '1309', 'م'], ['المسافة', '37', 'كم']] }; } },
-  // example prices inside the bands in GDD §6: slaughter and hiqq 3-6k, maqani 10-40k, select fardiyat 60-100k (the three numbers)
-  { key: 'market', name: 'حراج الإبل · بريدة', icon: 'market', p: toward(107, -57), edge: true, cls: 'place', text: () => 'حراج الإبل · بريدة 122 كم',
-    open() { const L = [['حقة وضحاء', 'بريدة', 5000, 'wodh'], ['لقية حمراء مقانية', 'الرس', 18000, 'homr'], ['جذعة شقحاء مقانية', 'حائل', 33500, 'shaqh'], ['ثنية مجهمية فردية مميزة', 'الخرج', 85000, 'majaheem']];
-      const range = (a, b) => `<bdi dir="ltr">${a}–${b}</bdi>`;
-      return { sub: '122\u00a0كم\u00a0طيران · شرق\u00a0شمال\u00a0شرق', stats: [['ذبائح وحقايق', range(3, 6), 'آلاف'], ['مقاني', range(10, 40), 'ألف'], ['فرديات مميزة', range(60, 100), 'ألف']],
-        html: '<div class="sec">أمثلة من المعروض<i></i><em>بالريال</em></div><div class="list">' +
-          L.map(([t, w, pr, coat]) => `<div class="row tight"><span class="sw" style="background:${COAT_HEX[coat]}"></span><span class="nm"><b>${t}</b><span class="m">${w}</span></span><span class="price">${pr.toLocaleString('en-US')}</span></div>`).join('') +
-          '</div><p class="hint">أمثلة لشكل العرض. الأسعار الحقيقية يحسبها محرك اللعبة.</p>' }; } },
-  // generic names only, no official festival names (GDD §7); rounds in the Saudi system
-  { key: 'mazayen', name: 'مزاين الصياهد', icon: 'festival', p: toward(460, 30), edge: true, cls: 'place', text: () => 'المزاين · الصياهد 465 كم',
-    open() { const L = [['فردي دق · وضح', 'التسجيل يقفل بعد 3 أيام', 'مفتوح'], ['مفاريد البكار · مجاهيم', 'بعد 9 أيام', ''], ['جمل 30 متن · شقح', 'بعد 14 يوم', '']];
-      return { sub: 'من ديسمبر لأوائل يناير', stats: [['المسافة تقريبًا', '465', 'كم'], ['الاتجاه', 'شرق']],
-        html: '<div class="sec">الأشواط الجاية<i></i></div><div class="list">' +
-          L.map(([t, w, e]) => `<div class="row tight"><span class="sq">${svgI(ICONS.festival)}</span><span class="nm"><b>${t}</b><span class="m">${w}</span></span>${e ? `<span class="tag good">${e}</span>` : '<span></span>'}</div>`).join('') +
-          '</div><p class="hint">أمثلة لشكل العرض. المواعيد الحقيقية من تقويم اللعبة.</p>' }; } },
+  // Buraydah's market and the festival ground come back with the market and the festivals on the engine (the owner,
+  // 13 Nov 2026: nothing shown that does not work; their cards held example listings and rounds)
 ];
 // category icons for the pins (24 px grid, drawn with the stroke of svg.i; the herd is a filled camel)
 const ICONS = {
@@ -806,18 +892,36 @@ const ICONS = {
 const tagIcon = (k) => `<svg class="i ic${k === 'herd' ? ' fill' : ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
 const ARROW = '<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 // invisible boxes over the places, so tapping the building or the pen itself opens its card
+// (the water and the feed have two: the start's tank and shade, and the big tank and the store once built)
 const PLACE_BOXES = { water: [30, 4, -40, 5, 8, 5], feed: [32, 2, -24, 9, 4, 10], room: [6, 2, 4, 14, 4.5, 8], tent: [-12, 1.6, 6, 9, 3.2, 7],
-  gate: [24, 1.2, 14, 9, 2.6, 2], camp: [LAYOUT.camp.x - 2, 2, LAYOUT.camp.z - 22, 16, 4, 6] };
+  gate: [24, 1.2, 14, 9, 2.6, 2], camp: [LAYOUT.camp.x - 2, 2, LAYOUT.camp.z - 22, 16, 4, 6],
+  waterStart: [-35.6, 1.4, -13.5, 2.4, 2.8, 2.4], feedStart: [-28, 1.6, -2.6, 5, 3.2, 3.6] };
 const placeHits = [];
 {
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const box = (pl, b) => { const m = new THREE.Mesh(new THREE.BoxGeometry(b[3], b[4], b[5]), hitMat); m.position.set(b[0], b[1], b[2]); m.userData.place = pl; m.updateMatrixWorld(); return m; };
   for (const pl of PLACES) {
     let b = PLACE_BOXES[pl.key];
     if (!b && pl.rect) b = [(pl.rect.x0 + pl.rect.x1) / 2, 1.2, (pl.rect.z0 + pl.rect.z1) / 2, pl.rect.x1 - pl.rect.x0, 2.4, pl.rect.z1 - pl.rect.z0];
     if (!b) continue;
-    const m = new THREE.Mesh(new THREE.BoxGeometry(b[3], b[4], b[5]), hitMat);
-    m.position.set(b[0], b[1], b[2]); m.userData.place = pl; m.updateMatrixWorld(); placeHits.push(m);
+    pl.hit = box(pl, b);
+    if (PLACE_BOXES[pl.key + 'Start']) pl.hitStart = box(pl, PLACE_BOXES[pl.key + 'Start']);
   }
+}
+// what stands now: a facility's pin and its tap box once it is built; the water and the feed at the start's tank and
+// shade until the big tank and the store stand
+function placeFacilities() {
+  const bigTank = builtCount('tank') > 0, store = builtCount('store') > 0;
+  placeHits.length = 0;
+  for (const pl of PLACES) {
+    pl.off = pl.facility ? !facVisible(pl.facility) : false;
+    if (pl.key === 'water') pl.p.copy(bigTank ? WATER_AT.big : WATER_AT.start);
+    if (pl.key === 'feed') { pl.p.copy(store ? FEED_AT.big : FEED_AT.start); pl.name = store ? 'مخزن العلف' : 'مظلة العلف'; }
+    const hit = pl.key === 'water' ? (bigTank ? pl.hit : pl.hitStart) : pl.key === 'feed' ? (store ? pl.hit : pl.hitStart) : pl.hit;
+    if (hit && !pl.off) placeHits.push(hit);
+  }
+  if (pop && pop.place.off) closePop();
+  refreshLabels();
 }
 const labels = PLACES.map((pl) => {
   const el = document.createElement('button'); el.type = 'button';
@@ -846,7 +950,8 @@ function refreshLabels() {
   // when pins overlap, the earlier one wins: the open place, warnings and far places, pens, the rest
   for (const l of labels) l.rank = pop && pop.place === l ? 0 : l.warn || l.edge || l.min ? 1 : l.rect ? 2 : 3;
 }
-refreshLabels();
+placesReady = true;
+placeFacilities();
 document.fonts.ready.then(refreshLabels);
 // the free map between the HUD pieces, in px; measured on resize and when a card opens or closes
 const hud = { w: 1, h: 1, x0: 0, x1: 1, y0: 0, y1: 1 };
@@ -859,13 +964,9 @@ function measureHud() {
   let bottom = hud.h - 10;
   if (!popEl.hidden) { const r = rectOf(popEl); if (SIDE()) hud.x1 = r.left - 6; else bottom = Math.min(bottom, r.top); }
   // the frame meter (#fps) in the top right corner: the pins kept below it (it takes taps, and a far place's pin slid
-  // under it: the tap opened the meter and no card, the review), and its details closed when a card opens (they
-  // covered the card's header and its close button)
+  // under it: the tap opened the meter and no card, the review); measured again whenever its box changes size
   const m = $('meter');
-  if (m && !m.hidden) {
-    if (!popEl.hidden) m.classList.remove('open');
-    hud.y0 = Math.max(hud.y0, rectOf(m).bottom - rectOf(stage).top + 6);
-  }
+  if (m && !m.hidden) hud.y0 = Math.max(hud.y0, rectOf(m).bottom - rectOf(stage).top + 6);
   hud.y1 = bottom - 6;
 }
 measureHud();
@@ -903,7 +1004,7 @@ function placeLabels() {
       // a pin stands on its point: one that would cross a side of the free map is hidden, not slid (slid, its tip
       // would point beside its place)
       const inside = !behind && x > x0 && x < x1 && y > y0 && y < y1;
-      vis = inside && (open || ((!l.min || dist > l.min) && (!l.max || dist < l.max)));
+      vis = !l.off && inside && (open || ((!l.min || dist > l.min) && (!l.max || dist < l.max)));      // (off: a facility not built yet)
       if (vis && (x - l.hw < x0 || x + l.hw > x1 || y - 2 * l.hh < y0)) vis = false;
     }
     x = Math.round(x); y = Math.round(y);
@@ -942,15 +1043,9 @@ document.documentElement.style.setProperty('--sadu-band', saduUrl(SADU, 2));
 document.documentElement.style.setProperty('--sadu-edge', saduUrl(SADU.slice(-3), 2));      // the selvedge: the band's last three rows
 // a camel's numbers: its age from its stage (GDD §5, the stage's first year), and a value inside the GDD §6 band of its kind
 // (the young, to a حقة: 3-6k; breeding stock: 10-40k; game choice, steady per name) unless it has its own
-const AGE_YEARS = { 'مفرودة': 1, 'حقة': 2, 'لقية': 3, 'جذعة': 4, 'ثنية': 5, 'رباعية': 6, 'سديسة': 7, 'فحل\u00a0سديس': 7, 'فاطر': 8 };      // (the bull's stage is written with a no-break space, so it never splits across a line)
-const ageStat = (c) => (c.age in AGE_YEARS ? ['العمر', ...years(AGE_YEARS[c.age])] : ['العمر', '<bdi dir="ltr">0–6</bdi>', 'أشهر']);     // a حوار: up to 6 months
-const valueOf = (c) => {
-  if (c.value) return c.value;
-  let h = 7; for (const ch of c.name) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-  h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0; h = (h ^ (h >>> 12)) >>> 0;      // (unsigned throughout: a signed h gave negative values)      // (mixed: names differing in their last letter, حوار 1 to حوار 6, all came out alike)
-  const [lo, hi] = c.age === 'حوار' || c.age === 'مفرودة' || c.age === 'حقة' ? [3000, 6000] : [10000, 40000];
-  return lo + Math.round((h % 1000) / 999 * (hi - lo) / 500) * 500;
-};
+// the age from the engine's days: months under a year, then whole years
+const ageStat = (c) => { const d = c.card ? c.card.ageDays : 0; return d < 365 ? ['العمر', ...count(Math.max(1, Math.floor(d / 30)), 'شهر', 'شهرين', 'أشهر', 'شهر')] : ['العمر', ...years(Math.floor(d / 365))]; };
+const valueOf = (c) => c.value ?? 0;      // (the engine's estimate, the middle of its range)
 const metaOf = (c) => `${coatName(c)} · ${c.age} · ${stateWord(c)}`;
 const homeOf = (c) => PLACES.find((p) => p.rect && p.rect === c.pen) || PLACES.find((p) => p.key === 'graze');
 const CLOCK = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', ALERT = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16v.5"/>';
@@ -970,8 +1065,8 @@ function renderCard() {
   if (camel) {
     top = `<div class="backrow"><button type="button" class="back" data-back aria-label="رجوع إلى ${place.name}">${svgI('<path d="M9 6l6 6-6 6"/>')}${place.name}</button>${X_BTN}</div>` +
       `<div class="who"><span class="sw" style="background:${COAT_HEX[camel.coat]}"></span><div class="ttl"><h2 id="pop-title">${esc(camel.name)}</h2><p id="c-meta">${esc(metaOf(camel))}</p></div></div>`;
-    body = `<div class="note${camel.warn ? ' warn' : ''}">${camel.due ? svgI(CLOCK) : camel.warn ? svgI(ALERT) : ''}${esc(camel.note)}</div>` +
-      statsHtml([ageStat(camel), camel.due ? ['تولد بعد', ...days(camel.due), 'warn'] : camel.sick ? ['الصحة', 'جرب', '', 'warn'] : ['الصحة', 'زينة', '', 'good'],
+    body = `<div class="note${camel.warn ? ' warn' : ''}">${camel.due != null ? svgI(CLOCK) : camel.warn ? svgI(ALERT) : ''}${esc(camel.note)}</div>` +
+      statsHtml([ageStat(camel), camel.due != null ? ['تولد بعد', ...days(camel.due), camel.due <= 10 ? 'warn' : ''] : camel.sick ? ['الصحة', camel.male ? 'مريض' : 'مريضة', '', 'warn'] : ['الصحة', 'زينة', '', 'good'],
         ['القيمة التقريبية', valueOf(camel).toLocaleString('en-US'), 'ريال']]);
     acts = [{ label: 'قرّب', run: () => glideTo(spotOf(camel), 14) },
       { label: follow === camel ? 'وقف المتابعة' : 'تابعها', icon: EYE, primary: follow !== camel,
@@ -997,7 +1092,7 @@ function renderCard() {
 // a pick or a follow lasts while its card is open
 function stopFollow() { follow = null; followHerd = false; selected = null; if (selectedRing) selectedRing.visible = false; }
 function openPlace(pl, keep) {
-  phone.close();
+  phone.close(); if (!keep) closeMeter();
   if (pop && pop.place === pl && !pop.camel && !keep) return closePop();
   if (!keep) stopFollow();
   pop = { place: pl, camel: null };
@@ -1005,7 +1100,7 @@ function openPlace(pl, keep) {
   if (!keep) { glideTo(pl); $('pop').focus({ preventScroll: true }); }      // (focus moves to the card on a new open, not when its content changes under the player's finger)
 }
 function openCamel(c) {
-  phone.close();
+  phone.close(); closeMeter();
   if (!pop || pop.camel !== c) stopFollow();
   const fresh = !pop || pop.camel !== c;
   pop = { place: homeOf(c), camel: c };
@@ -1220,7 +1315,7 @@ $('phone-btn').addEventListener('click', () => { if (phone.state === 'closed') c
 phone.onChange((state) => { $('phone-btn').setAttribute('aria-pressed', String(state !== 'closed')); document.body.classList.toggle('phone-open', state === 'small'); });
 
 const STATE = { graze: 'ترعى', walk: 'تمشي', idle: 'واقفة' };
-const COAT_HEX = { wodh: '#f4f1ea', shaqh: '#ead7b5', homr: '#a8694a', majaheem: '#2c2622' };
+const COAT_HEX = { wodh: '#f4f1ea', shaqh: '#ead7b5', homr: '#a8694a', majaheem: '#2c2622', shoal: '#c99a68', sofr: '#e2c58e' };
 const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const STATE_M = { graze: 'يرعى', walk: 'يمشي', idle: 'واقف' };
 const stateWord = (c, mode = c.mode) => (c.male ? STATE_M : STATE)[mode];
@@ -1281,39 +1376,29 @@ function tapWorld(x, y) {
 // ------------------------------------------------------------ load and run
 Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   shareCoatMaps(T);
-  // the grazing herd, drifting back toward the pens late in the afternoon
-  for (let i = 0; i < 20; i++) {
-    camels.push(new Camel(T, {
-      name: NAMES[i], coat: coatsOut[i], age: AGES[i % AGES.length], home: 'graze',
-      x: R(GRAZE.x0 + 4, GRAZE.x1 - 4), z: R(GRAZE.z0 + 4, GRAZE.z1 - 6), heading: R(0, 6.28),
-      scale: i % 7 === 3 ? 0.86 : R(0.97, 1.03), note: i === 0 ? 'مرضع، حوارها بالشبك' : i % 5 === 1 ? 'عشار' : 'بصحة زينة', tag: i === 0 ? 'مرضع' : i % 5 === 1 ? 'عشار' : '',
-    }));
-  }
-  const inPen = (spec) => camels.push(new Camel(T, { home: 'pen', ...spec }));
-  const big = LAYOUT.pens.main, c = (p) => [(p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2];
-  inPen({ name: 'الهيفاء', coat: 'wodh', age: 'سديسة', x: -20, z: -34, heading: 1.2, pen: big, note: 'قريبة ولادة، بقت بالشبك', tag: 'قريبة ولادة', warn: true, due: 10, value: 28000 });
-  inPen({ name: 'ظبية', coat: 'homr', age: 'فاطر', x: -10, z: -38, heading: -2, pen: big, note: 'كبيرة بالسن', value: 14000 });
-  inPen({ name: 'مزعل', male: true, coat: 'wodh', age: 'فحل\u00a0سديس', x: c(LAYOUT.pens.bull)[0], z: c(LAYOUT.pens.bull)[1], heading: 0.6, scale: 1.08, pen: LAYOUT.pens.bull, note: 'فحل العزبة · موسم الضراب', tag: 'موسم الضراب', value: 40000 });
-  inPen({ name: 'مزنة', coat: 'majaheem', age: 'ثنية', x: c(LAYOUT.pens.sick)[0], z: c(LAYOUT.pens.sick)[1], heading: 2.4, pen: LAYOUT.pens.sick, note: 'جرب · تحت العلاج باقي 12 يوم', tag: 'جرب', warn: true, sick: true, value: 16000 });
-  for (let i = 0; i < 6; i++) inPen({ name: `حوار ${i + 1}`, male: true, coat: i === 4 ? 'homr' : 'wodh', age: 'حوار', x: R(-30, -19), z: R(-18, -9), heading: R(0, 6.28), scale: 0.6, pen: LAYOUT.pens.calves, note: 'ينتظر أمه ترجع من المرعى', tag: 'ينتظر أمه' });
-  for (let i = 0; i < 4; i++) inPen({ name: ['ريم', 'غزيل', 'نوف', 'جود'][i], coat: i === 2 ? 'shaqh' : 'wodh', age: 'مفرودة', x: R(1, 15), z: R(-42, -28), heading: R(0, 6.28), scale: 0.82, pen: LAYOUT.pens.young, note: 'مفاريد هالسنة' });
+  LODS = T;
+  // one camel of each coat, for warming its pictures and shaders below (taken out after: the farm's camels are the
+  // engine's, syncYard, and come once it starts)
+  const warmers = Object.keys(COATS).map((coat) => new Camel(T, { coat, home: 'pen', pen: P.calves, x: -24.5, z: -13.5, heading: 0 }));
   // the full and middle detail levels and their shadow stand-ins sent to the GPU now, under the loading screen, once for
   // each coat: drawn first when a camel came near, their meshes (about 1.5 MB) went up and a shader was made mid-play
   // (counted by the herd, where the owner's phone stuttered, 12 Nov). Their meshes are shared, so one camel a coat does it.
   const warm = [], coatsSeen = new Set();
-  for (const cm of camels) {
+  for (const cm of warmers) {
     if (coatsSeen.has(cm.coat)) continue; coatsSeen.add(cm.coat);
     for (const li of [0, 1]) for (const m of [...cm.lods[li].meshes, ...cm.shadowFor[li]]) { warm.push([m, m.visible, m.frustumCulled]); m.visible = true; m.frustumCulled = false; }
   }
   renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
   for (const [m, v, f] of warm) { m.visible = v; m.frustumCulled = f; }
+  for (const cm of warmers) herd.remove(cm.root);
+  syncYard();
   renderer.shadowMap.needsUpdate = true;
   $('status').hidden = true;
   refreshLabels();
   // the game's rules engine, in its worker (docs/plan-gameplay.md, G2), started once the yard is up so it never competes
   // with the loading; the phone's الوايت and العلف and its home screen show the game from it and send it the player's
   // orders (G3). Without its file (not built) the yard goes on without it.
-  import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => phone.setGame(snap) })).then((e) => { window.marahEngine = e; phone.setEngine(e); if (e.snapshot) phone.setGame(e.snapshot); }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); });      // (imported here, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
+  import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => { phone.setGame(snap); setGame(snap); } })).then((e) => { window.marahEngine = e; phone.setEngine(e); if (e.snapshot) { phone.setGame(e.snapshot); setGame(e.snapshot); } }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); });      // (imported here, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
 }).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
 
 // ------------------------------------------------------------ vehicles built from the owner's photos
@@ -1358,11 +1443,12 @@ async function loadVehicles() {
     const o = hero ? heroCar() : make(v.model === 'suv' ? 'suvfar' : v.model, v.tint);
     o.position.set(v.x, 0, v.z); o.rotation.y = v.rot; scene.add(o);
     if (hero) playCar = o;
+    if (v.hay) o.userData.facility = 'store';      // (the pickup loaded with bales stands by the feed store)
     if (v.hay) { const b = new THREE.Mesh(mergeGeometries([0, 1, 2].map((i) => new THREE.BoxGeometry(0.5, 0.42, 1.0).translate(-0.9 - i * 0.6, 1.4, 0))), hay); b.castShadow = b.receiveShadow = true; o.add(b); }      // (three bales, one draw)
   }
   // at the grazing camp: the caravan on its flatbed, coupled to the tractor unit
   const C = LAYOUT.camp, rig = new THREE.Group();
-  rig.position.set(C.x - 2, 0, C.z - 22); rig.rotation.y = 0.35; scene.add(rig);
+  rig.position.set(C.x - 2, 0, C.z - 22); rig.rotation.y = 0.35; rig.userData.facility = 'caravan'; scene.add(rig);
   rig.add(make('caravan'));
   const head = make('tractor'); head.position.set(6.85, 0, 0); rig.add(head);
 }
@@ -1393,8 +1479,11 @@ let shadowFrame = 0;
 const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0 } : null;
 if (meter) {
   meter.el.hidden = false;
-  meter.el.addEventListener('click', () => { meter.el.classList.toggle('open'); meter.shown = 0; measureHud(); });      // (drawn again on the next frame)
+  meter.el.addEventListener('click', () => { meter.el.classList.toggle('open'); meter.shown = 0; });      // (drawn again on the next frame, and measured then)
+  measureHud();      // (shown now: the pins kept below it from the start, not only after a card or a turn, the review)
 }
+// the meter's details closed when a card opens: open, they covered the card's header and its close button
+const closeMeter = () => { if (meter && meter.el.classList.contains('open')) { meter.el.classList.remove('open'); meter.shown = 0; } };
 // The resolution test on the owner's phone (12 Nov) alternated 1.5x and 70% of it: the same frame times (33.0 and 33.0
 // ms, the slowest 1% 44 and 43: every second refresh, so something else held the frame to 30 a second, and an upscaler
 // such as FSR1 would not have helped; what more pixels cost it does not say); it is done and taken out (the picture switched size every 4 s while it ran). What the frame's own work takes on
@@ -1430,8 +1519,15 @@ function meterFrame(now) {
   const bad = window.marahEngineError || eng?.stats?.failedWrites || String(eng?.status ?? '').startsWith('failed');
   // closed: the frames a second and the slowest 1%, and a red dot when the engine did not start, a save failed, or the
   // save could not be read (the game started over; it is kept as .broken)
-  if (!meter.el.classList.contains('open')) { meter.el.innerHTML = `<b>${fps}</b> · ${Math.round(p99)} م.ث${bad ? ' <span class="dot">●</span>' : ''}`; return; }
-  meter.el.innerHTML = `<b>${fps}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}${line4 ? '<br>' + line4 : ''}`;
+  if (!meter.el.classList.contains('open')) { meterText(`<b>${fps}</b> · ${Math.round(p99)} م.ث${bad ? ' <span class="dot">●</span>' : ''}`); return; }
+  meterText(`<b>${fps}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}${line4 ? '<br>' + line4 : ''}`);
+}
+// the meter's text, once a second; the pins measured again only when its box changed size (a read of its size a
+// second, no more)
+function meterText(html) {
+  meter.el.innerHTML = html;
+  const size = meter.el.offsetWidth + 'x' + meter.el.offsetHeight;
+  if (size !== meter.size) { meter.size = size; measureHud(); }
 }
 function tick(now) {
   if (meter) meterFrame(now);

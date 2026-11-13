@@ -510,13 +510,22 @@ class MilkCamel {
 class MilkSummary {
   const MilkSummary({
     required this.camels,
+    required this.nursing,
+    required this.litres,
+    required this.sold,
     required this.calfShare,
     required this.price,
     required this.incomeToday,
     required this.thisMonth,
   });
 
+  /// The nursing camels, at most Presenter.milkCount of them (the review:
+  /// at 2,442 nursing camels the list was 277 KB of the snapshot); [nursing]
+  /// counts them all, and [litres] and [sold] are the whole farm's today.
   final List<MilkCamel> camels;
+  final int nursing;
+  final double litres;
+  final double sold;
   final CalfShare calfShare;
 
   /// A litre's price.
@@ -531,14 +540,25 @@ class MilkSummary {
   bool operator ==(Object other) =>
       other is MilkSummary &&
       _listEquals(other.camels, camels) &&
+      other.nursing == nursing &&
+      other.litres == litres &&
+      other.sold == sold &&
       other.calfShare == calfShare &&
       other.price == price &&
       other.incomeToday == incomeToday &&
       other.thisMonth == thisMonth;
 
   @override
-  int get hashCode =>
-      Object.hashAll([...camels, calfShare, price, incomeToday, thisMonth]);
+  int get hashCode => Object.hashAll([
+    ...camels,
+    nursing,
+    litres,
+    sold,
+    calfShare,
+    price,
+    incomeToday,
+    thisMonth,
+  ]);
 }
 
 class FarmSummary {
@@ -653,6 +673,7 @@ class PlayerSnapshot {
     required this.farm,
     required this.herd,
     required this.herdTop,
+    required this.yard,
     required this.herdSignature,
     required this.sections,
     required this.market,
@@ -683,6 +704,11 @@ class PlayerSnapshot {
 
   /// The best few camels by look, for the farm screen.
   final List<CamelCard> herdTop;
+
+  /// The camels the 3D farm shows (the owner, 13 Nov 2026: the camels in
+  /// the farm are the player's own), in a fixed order (by when they came to
+  /// the farm, then id), at most Presenter.yardCount.
+  final List<CamelCard> yard;
 
   /// Changes whenever any camel in the herd changes (not only the top
   /// few), so herd lists know to refresh their pages.

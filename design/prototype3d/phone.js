@@ -212,10 +212,17 @@ const alertCard = (title, line) => `<div class="warn"><span class="lead">${svg('
 const errCard = () => ERR ? alertCard('ما تم الطلب', ERR) : '';
 const FEED = { barley: 'شعير', alfalfa: 'برسيم' };
 const stepper = (k, n, unit, canUp) => `<span class="stp"><button data-act="step" data-s="${k}" data-d="-1" aria-label="${FEED[k]} أقل" ${n ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button data-act="step" data-s="${k}" data-d="1" aria-label="${FEED[k]} أكثر" ${canUp ? '' : 'disabled'}>${svg('plus')}</button></span>`;
+// where the feed is kept: the start's shade until the store is built (the review: العلف spoke of a store the farm has not)
+const built = (f) => (G ? G.farm.facilities.find((x) => x.facility === f) : null);
+const hasStore = () => (built('store')?.has ?? 0) > 0;
+const STORE = () => (hasStore()
+  ? { name: 'مستودع العلف', the: 'المستودع', to: 'للمستودع', holds: 'يشيل', lasts: 'يكفي', none: 'ما فيه' }
+  : { name: 'مظلة العلف', the: 'المظلة', to: 'للمظلة', holds: 'تشيل', lasts: 'تكفي', none: 'ما فيها' });
 // the engine's refusal of [command] in words
 function refusal(r, command) {
   const code = r.error?.code, p = r.error?.params || {};
-  const water = command.supply === 'water', where = water ? 'الخزان' : 'المستودع';
+  const water = command.supply === 'water', st = STORE();
+  const where = water ? 'الخزان' : st.the, holds = water ? 'يشيل' : st.holds, none = water ? 'ما فيه' : st.none;
   const unit = water ? 'tanker' : command.supply === 'barley' ? 'bag' : 'bale';
   if (command.type === 'buildFacility') {
     if (code === 'insufficientFunds') return `رصيدك ما يكفي: البناء بـ ${n0(p.needed ?? 0)} ريال.`;
@@ -223,7 +230,7 @@ function refusal(r, command) {
     return 'جرّب مرة ثانية.';
   }
   if (code === 'insufficientFunds') return `رصيدك ما يكفي: الطلب بـ ${n0(p.needed ?? 0)} ريال.`;
-  if (code === 'storeFull') return p.room ? `${where} ما يشيل إلا ${count(p.room, unit)} بعد.` : `${where} ما فيه مكان الحين.`;
+  if (code === 'storeFull') return p.room ? `${where} ما ${holds} إلا ${count(p.room, unit)} بعد.` : `${where} ${none} مكان الحين.`;
   return 'جرّب مرة ثانية.';
 }
 
@@ -249,14 +256,17 @@ function waterScreen() {
     let line;
     const fill = Math.min(t.litres, Math.max(0, f.tankL - have - coming));
     if (t.room > 0) line = `${n0(t.price)} ريال · ${fill < t.litres ? `يعبّي الخزان ${n0(fill)} لتر والباقي يرجع` : need > 0 ? `يكفي ${days(Math.floor(t.litres / need))}` : 'يوصل بكرة'}`;
-    else if (f.tankL < t.litres / 2) line = 'خزانك ما يشيله، ابنِ خزان أكبر من العزبة';
+    else if (f.tankL < t.litres / 2) {
+      const big = built('tank'), soon = big && big.building ? daysTo(big.doneOn) : null;
+      line = soon != null ? `الخزان الكبير ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}` : 'خزانك ما يشيله، ابنِ خزان أكبر من العزبة';
+    }
     else {
       const under = f.tankL - t.litres / 2, wait = need > 0 ? Math.ceil((have + coming - under) / need) : null;
       line = `الخزان ما يشيله لين ينزل تحت ${n0(under)} لتر${wait ? `، بعد ${days(wait)} تقريبًا` : ''}`;
     }
     if (t.room > 0 && G.cash < t.price) line = `${n0(t.price)} ريال · رصيدك ما يكفي`;
     const can = t.room > 0 && G.cash >= t.price;
-    return `<div class="row"><span class="lead">${svg('water')}</span><b>${name}</b><span class="act"><button class="btn ${can ? 'pri' : ''}" data-act="tanker" data-t="${t.tanker}" ${can ? '' : 'disabled'}>اطلب</button></span><small>${line}</small></div>`;
+    return `<div class="row"><span class="lead">${svg('water')}</span><b>${name}</b><span class="act"><button class="btn ${can ? 'pri' : ''}" data-act="tanker" data-t="${t.tanker}" aria-label="اطلب ${name}" ${can ? '' : 'disabled'}>اطلب</button></span><small>${line}</small></div>`;
   };
   const bar = `<div class="bar${f.dryDays > 0 ? ' low' : ''}"><i style="width:${pct(have).toFixed(1)}%"></i>${coming ? `<i class="in" style="width:${(pct(have + coming) - pct(have)).toFixed(1)}%"></i>` : ''}</div>`;
   return `<div class="body">${nav()}<div class="title">الوايت</div>${errCard()}${warn}
@@ -294,7 +304,8 @@ function feedScreen() {
     const tail = withOrder != null ? `${today}، و${days(withOrder)} لما يوصل` : today;
     return `<div class="kind"><span>${name} ${n0(x.amount)} كجم</span><span class="d${bad ? ' bad' : ''}">${tail}</span></div><div class="bar feed${bad ? ' low' : ''}"><i style="width:${now.toFixed(1)}%"></i>${withOrder != null ? `<i class="in" style="width:${Math.max(0, all - now).toFixed(1)}%"></i>` : ''}</div>`;
   };
-  const store = `<div class="tank"><small>مستودع العلف · ${n0(f.storeKg)} كجم</small>${line('شعير', b, lb)}${line('برسيم', a, la)}
+  const ST = STORE();
+  const store = `<div class="tank"><small>${ST.name} · ${n0(f.storeKg)} كجم</small>${line('شعير', b, lb)}${line('برسيم', a, la)}
       <div class="ln">ياكلون باليوم ${n0(b.need)} كجم شعير و${n0(a.need)} كجم برسيم</div></div>`;
   const usedKg = ORD.barley * b.unitSize + ORD.alfalfa * a.unitSize;
   const total = ORD.barley * b.unitPrice + ORD.alfalfa * a.unitPrice;
@@ -304,7 +315,7 @@ function feedScreen() {
   const canUp = (x) => usedKg + x.unitSize <= room;
   // three weeks that do not fit in the store: the order is cut to what does, and the heading says so
   const cut = suggest(b) * b.unitSize + suggest(a) * a.unitSize > room;
-  const heading = (ordered) => `<div class="sec">${ordered ? 'اطلب زيادة' : cut ? 'اطلب على قد المستودع' : suggest(b) + suggest(a) > 0 ? 'اطلب لـ 3 أسابيع' : 'اطلب'}</div>`;
+  const heading = (ordered) => `<div class="sec">${ordered ? 'اطلب زيادة' : cut ? `اطلب على قد ${ST.the}` : suggest(b) + suggest(a) > 0 ? 'اطلب لـ 3 أسابيع' : 'اطلب'}</div>`;
   const ordered = b.onTheWayAmount || a.onTheWayAmount;
   // short of money: as the approved screen has it, the warning and a week's order first
   if (total > G.cash) {
@@ -334,9 +345,9 @@ function feedScreen() {
     <div class="note">${plans[cur.plan]} ${cur.asFedKg.toFixed(1)} كجم علف للراس الكبير باليوم (${cur.dryMatterKg} كجم مادة جافة)، <span class="ltr">${Math.round(cur.barleyShare * 100)}%</span> منها شعير. الحالة توصل لين حدها مع رعاية زينة.</div>`;
   const way = ordered ? `<div class="sec">بالطريق</div><div class="group way">${[[b, 'شعير', 'bag'], [a, 'برسيم', 'bale']].filter(([x]) => x.onTheWayAmount).map(([x, nm, k]) => `<div class="row"><span class="lead">${svg('truck')}</span><b>${nm} · ${count(x.onTheWay, k)}</b><small>${n0(x.onTheWayAmount)} كجم · ${n0(x.onTheWay * x.unitPrice)} ريال · يوصل بكرة</small></div>`).join('')}</div>` : '';
   let order;
-  if (usedKg > room) order = `<div class="order"><span><small>المستودع يشيل ${n0(Math.max(0, room))} كجم بعد</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div>`;
-  else if (total > 0) order = `<div class="order"><span><small>المجموع · يوصل بكرة للمستودع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>`;
-  else order = `<div class="note">${suggest(b) + suggest(a) > 0 || ordered ? 'زد الكمية ويطلع لك المجموع وزر الطلب.' : 'المستودع يكفي أكثر من 3 أسابيع.'}</div>`;
+  if (usedKg > room) order = `<div class="order"><span><small>${ST.the} ${ST.holds} ${n0(Math.max(0, room))} كجم بعد</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div>`;
+  else if (total > 0) order = `<div class="order"><span><small>المجموع · يوصل بكرة ${ST.to}</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>`;
+  else order = `<div class="note">${suggest(b) + suggest(a) > 0 || ordered ? 'زد الكمية ويطلع لك المجموع وزر الطلب.' : `${ST.the} ${ST.lasts} أكثر من 3 أسابيع.`}</div>`;
   return `<div class="body">${nav()}<div class="title">العلف</div>${errCard()}${warn}
     ${store}${ration}${way}${heading(ordered)}${rows(canUp)}${order}</div>`;
 }
@@ -351,7 +362,8 @@ const sinceCalving = (d) => d < 30 ? (d <= 1 ? 'من يوم' : `من ${days(d)}`
 function milkScreen() {
   if (!G) return `<div class="body">${nav()}<div class="title">الحليب</div>${waiting()}</div>`;
   const M = G.farm.milk, cs = M.camels;
-  const total = cs.reduce((n, c) => n + c.litres, 0), sold = cs.reduce((n, c) => n + c.sold, 0), kept = total - sold;
+  // the day's milking as it was sold (the share changed since, the list's litres follow the new share: the review)
+  const total = M.litres, sold = M.incomeToday / M.price, kept = Math.max(0, total - sold);
   const calves = cs.filter((c) => c.calfName).length;
   const keptTo = calves > 1 ? 'للحيران' : 'لحوارها';
   if (!cs.length) {
@@ -361,9 +373,9 @@ function milkScreen() {
         ${M.thisMonth ? `<div class="ln ink2">دخل الحليب هالشهر ${n0(M.thisMonth)} ريال</div>` : ''}</div></div>`;
   }
   let line;
-  if (!sold) line = calves > 1 ? 'خليته كله للحيران' : 'خليته كله لحوارها';
-  else if (!M.incomeToday) line = `يمر المشتري بكرة وياخذ ${litres(sold)}`;      // (a new game's first day: nothing sold yet)
-  else line = `بعت ${litres(sold)} بـ ${n0(M.incomeToday)} ريال${kept > 0.05 ? `، وخليت ${keptTo} ${litres(kept)}` : ''}`;
+  if (M.incomeToday) line = `بعت ${litres(sold)} بـ ${n0(M.incomeToday)} ريال${kept > 0.05 ? `، وخليت ${keptTo} ${litres(kept)}` : ''}`;
+  else if (M.sold > 0) line = `يمر المشتري بكرة وياخذ ${litres(M.sold)}`;      // (a new game's first day, or the share just changed from all: nothing sold today)
+  else line = calves > 1 ? 'خليته كله للحيران' : 'خليته كله لحوارها';
   const rows = cs.map((c) => `<div class="row"><span class="lead">${svg('camel')}</span><b>${c.name}</b><span class="qty">${litres(c.litres)}</span><small>مرضع ${sinceCalving(c.days)} · ${c.calfName ? `حوارها ${c.calfName}` : 'حليبها كله ينباع'}</small></div>`).join('');
   // each choice: the riyals a day (a camel without her calf sells all hers whatever the choice), and the calves'
   // growth by the engine's rule (Balance.calfMilkTarget): in their first three months a half share already slows them
@@ -379,8 +391,8 @@ function milkScreen() {
     <div class="tank"><small>حليب اليوم</small><div class="v"><b class="fit">${(Math.round(total * 10) / 10).toLocaleString('en-US')}</b><span>لتر</span></div>
       <div class="ln">${line}</div>
       <div class="ln ink2">دخل الحليب هالشهر ${n0(M.thisMonth)} ريال</div></div>
-    <div class="sec">الحلايب</div>
-    <div class="group">${rows}</div>
+    <div class="sec">الحلايب${M.nursing > cs.length ? ` · ${n0(M.nursing)}` : ''}</div>
+    <div class="group">${rows}</div>${M.nursing > cs.length ? `<div class="note">وغيرها ${n0(M.nursing - cs.length)} ناقة مرضع.</div>` : ''}
     ${seg}
     <div class="note">المشتري يمر كل يوم وياخذ الحليب، اللتر بـ ${n0(M.price)} ريال. الحوار يرضع لين يكمل سنة، وأول 3 شهور يبي حليب أمه كله.</div></div>`;
 }
@@ -400,7 +412,7 @@ function buildScreen() {
   const f = G.farm, F = Object.fromEntries(f.facilities.map((x) => [x.facility, x]));
   const kind = (label, value) => `<div class="kind"><span>${label}</span><span class="d">${value}</span></div>`;
   const pens = F.pen.has, store = F.store.has;
-  const care = f.shepherdsNeeded === 0 ? 'أنت ترعاها' : f.shepherds >= f.shepherdsNeeded ? count(f.shepherds, 'shepherd') : 'تحتاج راعي';
+  const care = f.shepherdsNeeded === 0 ? `أنت ترعاها لين ${count(f.ownerTendsUpTo, 'head')}` : f.shepherds >= f.shepherdsNeeded ? count(f.shepherds, 'shepherd') : 'تحتاج راعي';
   const have = `<div class="tank"><small>عزبتك</small>
       ${kind(pens ? 'الشبوك' : 'الحوش', `يشيل ${count(f.capacity, 'head')} · عندك ${n0(G.herd.total)}`)}
       ${kind('الخزان', `${n0(f.tankL)} لتر`)}
@@ -408,18 +420,20 @@ function buildScreen() {
       ${kind('الرعاية', care)}</div>`;
   const row = (x) => {
     const d = FAC[x.facility], made = x.has + x.building;
-    const name = x.facility === 'pen' ? `شبك ${PEN_NTH[Math.min(made, PEN_NTH.length - 1)]}` : d.name;
-    const soon = x.building ? daysTo(x.doneOn) : null;
-    const building = x.building ? `ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}` : '';
-    let line, button = '';
-    if (made >= x.most && !x.building) line = x.facility === 'pen' ? 'بنيت الشبوك كلها' : 'مبني';
-    else if (made >= x.most) line = building;
-    else {
-      const poor = x.cannot === 'insufficientFunds';
-      line = [d.what, `${n0(x.price)} ريال`, poor ? 'رصيدك ما يكفي' : '', building].filter(Boolean).join(' · ');
-      button = `<span class="act"><button class="btn ${poor ? '' : 'pri'}" data-act="build" data-f="${x.facility}" ${poor ? 'disabled' : ''}>ابنه</button></span>`;
+    const nameOf = (n) => (x.facility === 'pen' ? `شبك ${PEN_NTH[Math.min(n, PEN_NTH.length - 1)]}` : d.name);
+    const out = [];
+    if (x.building) {      // (the one being built, by its own name: «شبك ثالث … ينبني» named the next pen, the review)
+      const soon = daysTo(x.doneOn);
+      out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${nameOf(x.has)}</b><small>ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}</small></div>`);
     }
-    return `<div class="row"><span class="lead">${svg(d.icon)}</span><b>${name}</b>${button}<small>${line}</small></div>`;
+    if (made < x.most) {
+      const poor = x.cannot === 'insufficientFunds', name = nameOf(made);
+      const line = [d.what, `${n0(x.price)} ريال`, poor ? 'رصيدك ما يكفي' : ''].filter(Boolean).join(' · ');
+      out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${name}</b><span class="act"><button class="btn ${poor ? '' : 'pri'}" data-act="build" data-f="${x.facility}" aria-label="ابنِ ${name}" ${poor ? 'disabled' : ''}>ابنه</button></span><small>${line}</small></div>`);
+    } else if (!x.building) {
+      out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${x.facility === 'pen' ? 'الشبوك' : d.name}</b><small>${x.facility === 'pen' ? 'بنيت الشبوك كلها' : 'مبني'}</small></div>`);
+    }
+    return out.join('');
   };
   return `<div class="body">${nav()}<div class="title">العزبة</div>${errCard()}
     ${have}
@@ -668,6 +682,8 @@ export function createPhone({ host }) {
   return {
     toggle: () => set(st.state === 'closed' ? 'small' : 'closed'), close: () => set('closed'), hit,
     enlarge: () => { if (st.state !== 'closed') { bigAt = performance.now(); set('big'); } }, shrink: () => { if (st.state === 'big') set('small'); },
+    /** Opens the phone enlarged on an app (a place's card: الوايت from the tank, العلف from the feed). */
+    openApp: (v) => { if (st.state === 'closed') set('small'); bigAt = performance.now(); set('big'); show(v); focusIn(scr.querySelector('.back') || dev); },
     setPlay: (on) => { st.play = on; if (st.state !== 'closed') layout(); },
     onChange: (f) => listeners.add(f),
     /** The engine's newest view of the game (engine.js), and the engine to send the player's orders to. */
