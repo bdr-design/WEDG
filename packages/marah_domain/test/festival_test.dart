@@ -2267,6 +2267,92 @@ void main() {
       expect(g2.state.world.bans[g2.me.id], g.state.world.bans[g.me.id]);
     });
 
+    test('each gate opens at its stage\'s minute, not a minute before', () {
+      // a found entry the preliminary cut, and one it kept: every gate seen
+      var cut = false, kept = false;
+      for (var seed = 1; seed < 80 && !(cut && kept); seed++) {
+        final g = newGame(seed);
+        final f = grand(g);
+        final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+        final c = camelFor(g, r, mean: seed.isEven ? 30 : 85);
+        g.advanceTo(f.opensOn);
+        g
+          ..dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]))
+          ..dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 3));
+        g.advanceTo(r.day);
+        if (!r.judged) continue;
+        final row = r.results!.where((x) => x.camelId == c.id).firstOrNull;
+        if (row == null || row.foundAt == null) continue;
+        final out = row.removedAt!.index, found = row.foundAt!.index;
+        if (out < found) {
+          cut = true;
+        } else {
+          kept = true;
+        }
+        for (var i = 0; i < Stage.values.length; i++) {
+          for (final minute in [
+            Balance.stageMinutes[i] - 1,
+            Balance.stageMinutes[i],
+          ]) {
+            g.tellTo(minute);
+            final told = minute == Balance.stageMinutes[i] ? i + 1 : i;
+            expect(r.told, told);
+            final v = seen(g, f, r);
+            expect(
+              v.caught,
+              told > Stage.medical.index ? r.caught : 0,
+              reason: 'caught at ${Stage.values[i]} $minute',
+            );
+            final mine = v.results!.where((x) => x.camelId == c.id).firstOrNull;
+            // her removal from its stage on, her finding from its own
+            expect(mine != null, told > out, reason: 'removal $told');
+            expect(mine?.foundAt, told > found ? row.foundAt : null);
+            expect(mine?.fine ?? 0, told > found ? row.fine : 0);
+          }
+        }
+      }
+      expect((cut, kept), (true, true));
+    });
+
+    test('found, the owner\'s other entry in the round leaves at that stage, '
+        'and his entries at other festivals go', () {
+      for (var seed = 1; seed < 120; seed++) {
+        final g = newGame(seed);
+        final f = grand(g);
+        final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+        final treated = camelFor(g, r, mean: 85);
+        final other = camelFor(g, r, mean: 95)..condition = 90;
+        g.advanceTo(f.opensOn);
+        g
+          ..dispatch(EnterRound(g.me.id, f.id, r.id, [treated.id]))
+          ..dispatch(EnterRound(g.me.id, f.id, r.id, [other.id]))
+          ..dispatch(Tamper(g.me.id, treated.id, TamperKind.botox, 3));
+        // an entry already registered at another festival still to come
+        final later = g.state.world.festivals.values.firstWhere(
+          (x) => x != f && !x.done && x.rounds.any((y) => y.day > r.day),
+          orElse: () => f,
+        );
+        if (later == f) fail('no other festival to come');
+        final lr = later.rounds.firstWhere(
+          (x) => x.kind.enterable && x.day > r.day,
+        );
+        lr.entries.add(Entry(ownerId: g.me.id, camels: [CamelId('elsewhere')]));
+        g.advanceTo(r.day);
+        if (!r.judged) continue;
+        final found = r.found.where((x) => x.camel == treated.id).firstOrNull;
+        if (found == null) continue;
+        final mine = r.results!.firstWhere((x) => x.camelId == other.id);
+        // still in the field when he was found: out then, barred
+        if (mine.removedAt != found.stage) continue;
+        expect(mine.reason, RemovalReason.banned);
+        expect(lr.entries.where((e) => e.ownerId == g.me.id), isNotEmpty);
+        g.tellTo(Balance.stageMinutes[found.stage.index]);
+        expect(lr.entries.where((e) => e.ownerId == g.me.id), isEmpty);
+        return;
+      }
+      fail('no seed found a camel while his other entry was still in');
+    });
+
     test('the stages come at their hours: 7:00 to 18:00', () {
       expect(Balance.stageMinutes, [420, 510, 600, 750, 930, 1080]);
       final g = newGame();

@@ -149,4 +149,77 @@ void main() {
       Balance.stageMinutes,
     );
   });
+
+  test(
+    'the account\'s room and each tanker\'s quote are what the order does',
+    () {
+      for (final owed in [0, 1, 100, 150, 4000]) {
+        final g = Game.create(
+          seed: 7,
+          playerName: 'p',
+          farmName: 'f',
+          region: Region.qassim,
+          favourite: ColorCategory.wodh,
+          startedAt: DateTime.utc(2026, 10),
+        );
+        // in debt, the tank empty: every order goes on the account
+        g.me
+          ..cash = const Riyal(-3000)
+          ..farm.waterL = 0;
+        final limit = GameView(g.state, g.me.id).accountLimit();
+        g.me.onAccount = limit - owed;
+        final farm = Presenter(g.state, g.me.id).snapshot(1).farm;
+        expect(farm.accountSpend, owed, reason: 'room $owed');
+        for (final t in farm.tankers) {
+          expect(t.onAccount, t.price);
+          // what the quote said, the order then does
+          final copy = Game(GameState.fromJson(g.state.toJson()));
+          final r = copy.dispatch(
+            OrderSupply(copy.me.id, Supply.water, 1, tanker: t.tanker),
+          );
+          // (a tanker the tank does not take is refused for room, whatever
+          // the money: the quote is about the money)
+          expect(r.ok, t.goes && t.room > 0, reason: '${t.tanker} $owed');
+          if (t.room > 0 && !t.goes) {
+            expect((r as Err).error.code, ErrorCode.accountFull);
+          }
+          expect(t.goes, t.price <= farm.accountSpend);
+        }
+      }
+    },
+  );
+
+  test('the top prize a player can enter for leaves out the group rounds; '
+      'each place names its owner', () {
+    final g = Game.create(
+      seed: 42,
+      playerName: 'p',
+      farmName: 'f',
+      region: Region.qassim,
+      favourite: ColorCategory.wodh,
+      startedAt: DateTime.utc(2026, 11, 8),
+    );
+    final p = Presenter(g.state, g.me.id);
+    final f = g.state.world.festivals.values.firstWhere(
+      (f) => f.tier == FestivalTier.grand,
+    );
+    final card = p.snapshot(1).festivals.firstWhere((x) => x.id == f.id);
+    final best = f.rounds
+        .where((r) => r.kind.enterable)
+        .map((r) => ContestRules.prizes(f.tier, r.kind, r.size).first)
+        .reduce((a, b) => a > b ? a : b);
+    expect(card.topPrize, greaterThan(best));
+    expect((card.topEnterable, card.topEnterableKind), (best, RoundKind.fahal));
+    // a round run and told: every place has its owner's name
+    g.advanceTo(f.endsOn + 1);
+    final group = GameView(g.state, g.me.id)
+        .festival(f.id)!
+        .rounds
+        .firstWhere((r) => !r.enterable && r.results != null);
+    for (final row in group.results!) {
+      expect(row.ownerName, isNotEmpty);
+      expect(row.ownerName, GameView(g.state, g.me.id).ownerName(row.ownerId));
+      expect(row.toJson()['ownerName'], row.ownerName);
+    }
+  });
 }
