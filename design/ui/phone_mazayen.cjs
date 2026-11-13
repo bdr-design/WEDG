@@ -413,15 +413,17 @@ async function open(b, fast) {
       const NAMES = ['الشريحة والشاهد', 'فحص الهجين واللون والعمر', 'التحكيم الأولي', 'خبراء التلاعب', 'اللجنة الطبية', 'التحكيم النهائي'];
       const LINE = [`شريحتها باسمك`, `${COAT[noura.category][0]} صافية، و${noura.ageName} بأسنانها`];
       const atI = ORDER.indexOf(at);
-      const where = { lips: 'بشفايفها', nose: 'بخشمها', head: 'براسها', hump: 'بسنامها' };
-      const KF = FR.tamperKinds.find((k) => k.kind === found.kind);
+      // where each kind is done (copied: the engine gives a kind's features, not its place)
+      const WHERE = { botox: 'بشفايفها', filler: 'بخشمها', hormones: 'بسنامها', lipStretch: 'بشفايفها', teethFiling: 'بأسنانها', tailCut: 'بذيلها', dye: 'بوبرها' };
       const rows = [];
       for (let i = 0; i < atI; i++) {
-        // every entry is examined before the preliminary judging (the owner, 13 Nov): found there, she never reached it
-        if (i === 2) rows.push(stage('next', 'dot', NAMES[i], 'ما وصلته: انفحصت قبله', ['wait', '']));
+        // every entry is examined before the preliminary judging, and the stages are told in their order (the owner,
+        // 13 Nov): the preliminary passes her by without telling why; what was found is told at its own stage
+        if (i === 2) rows.push(stage('next', 'dot', NAMES[i], 'ما تحكّمت: الفحص قبل التحكيم، ونتيجته تنعلن بمرحلتها', ['wait', '']));
+        else if (i === 3) rows.push(stage('', 'check', NAMES[i], 'ما لقوا شي', ['ok', 'عدّت']));
         else rows.push(stage('', 'check', NAMES[i], LINE[i] || '', ['ok', 'عدّت']));
       }
-      rows.push(stage('bad', 'x', NAMES[atI], `لقوا ${TK[found.kind]} ${where[KF.traits[0]] || 'فيها'}`, ['bad', 'انكشفت']));
+      rows.push(stage('bad', 'x', NAMES[atI], `لقوا ${TK[found.kind]} ${WHERE[found.kind] || 'فيها'}`, ['bad', 'انكشفت']));
       const acc = C.account;
       caught = `<div class="body">${head}
       <div class="group">${rows.join('')}</div>
