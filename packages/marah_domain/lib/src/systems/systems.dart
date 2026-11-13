@@ -755,7 +755,30 @@ class TamperingSystem implements DailySystem {
   /// fine on the camel's owner [p] (whoever had it done), the name lost in
   /// the family, the news; no festival ban (the festivals' committees did
   /// not find it).
-  static void foundOutside(Sim sim, PlayerState p, Camel c, Tampering t) {
+  static int foundOutside(Sim sim, PlayerState p, Camel c, Tampering t) {
+    // the director's reading of the owner's decisions 7 and 12, awaiting
+    // his confirmation: outside a festival the fine falls only on an owner
+    // who had her treated or knew of it; one who did not is told (it joins
+    // what he knows) and is not fined this time. Who treated her stays on
+    // the treatment, so passing her on clears no one.
+    final knew = t.by == p.id || t.knownBy.contains(p.id);
+    if (!knew) {
+      t.knownBy.add(p.id);
+      sim.emit(
+        TamperingFound(
+          sim.today,
+          owner: p.id,
+          camel: c.id,
+          name: c.name,
+          kind: t.kind,
+          festival: null,
+          stage: null,
+          fine: 0,
+          bannedThrough: null,
+        ),
+      );
+      return 0;
+    }
     c.treatments.remove(t);
     sim.pay(
       p,
@@ -788,6 +811,7 @@ class TamperingSystem implements DailySystem {
           fine: Balance.outsideFine,
         ),
       );
+    return Balance.outsideFine;
   }
 }
 
@@ -875,6 +899,24 @@ class ContestSystem implements DailySystem {
     }
   }
 
+  /// The camels [o] has entered at [f], judged rounds counted.
+  static int entered(Festival f, OwnerId o) => {
+    for (final r in f.rounds)
+      for (final e in r.entries)
+        if (e.ownerId == o) ...e.camels,
+  }.length;
+
+  /// What [p] pays to truck his camels entered at [f] there and back that
+  /// are not there yet (Balance.transportCost, both ways); [more] counts
+  /// camels about to be entered.
+  static int festivalTrip(Festival f, PlayerState p, {int more = 0}) {
+    final km = p.farm.region.roadKmTo(f.region);
+    final there = f.trucked[p.id.value] ?? 0;
+    final going = entered(f, p.id) + more - there;
+    if (going <= 0) return 0;
+    return Balance.transportCost(km, going) * 2;
+  }
+
   static OwnerId _rivalOwner(WorldGen gen, Rng rng, Festival f) {
     final w = gen.sim.world;
     var o = gen.randomOwner(rng).id;
@@ -906,21 +948,15 @@ class ContestSystem implements DailySystem {
         ),
       );
     }
-    // each player trucks his entries to the festival and back
-    final head = <OwnerId, int>{};
-    for (final c in comps) {
-      head[c.owner] = (head[c.owner] ?? 0) + c.head;
-    }
-    for (final MapEntry(key: o, value: n) in head.entries) {
+    // each player's camels go to the festival together, on the day of
+    // his first round there, stay for its days and come back (one trip,
+    // paid whatever the result); one entered later goes on a trip of its own
+    for (final o in {for (final c in comps) c.owner}) {
       final p = sim.player(o);
       if (p == null) continue;
-      final km = p.farm.region.roadKmTo(f.region);
-      sim.pay(
-        p,
-        Riyal(-Balance.transportCost(km, n) * 2),
-        LedgerCategory.transport,
-        ref: f.id.value,
-      );
+      final extra = festivalTrip(f, p);
+      f.trucked[o.value] = entered(f, o);
+      sim.pay(p, Riyal(-extra), LedgerCategory.transport, ref: f.id.value);
     }
     final gen = WorldGen(sim);
     for (var i = 0; i < r.rivals; i++) {
@@ -1220,7 +1256,7 @@ class ContestSystem implements DailySystem {
       final kind = c.kind;
       if (kind != null) {
         c.score = clampDouble(
-          c.score + Balance.tamperLiftPerLevel * c.strength,
+          c.score + Balance.tamperLift(kind, c.strength),
           0,
           100,
         );

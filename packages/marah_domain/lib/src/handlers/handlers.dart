@@ -332,10 +332,10 @@ Err? _examined(
         t,
   ];
   if (found.isEmpty) return null;
+  var fine = 0;
   for (final t in found) {
-    TamperingSystem.foundOutside(sim, seller, c, t);
+    fine += TamperingSystem.foundOutside(sim, seller, c, t);
   }
-  final fine = Balance.outsideFine * found.length;
   sim.emit(
     SaleRefused(
       sim.today,
@@ -429,11 +429,9 @@ Result _mate(
   if (fp != null) return Err(fp, sim.drain());
   final bp = Eligibility.bullCanServe(bull, sim.today);
   if (bp != null) return Err(bp, sim.drain());
-  if (p.cash < fee + move) {
-    return _err(sim, ErrorCode.insufficientFunds, {
-      'needed': (fee + move).value,
-    });
-  }
+  // a stud's fee is no necessity: cash, not the account
+  final money = cashFor(p, (fee + move).value);
+  if (money != null) return Err(money, sim.drain());
   sim.pay(p, -fee, LedgerCategory.studFee, ref: bull.id.value);
   sim.pay(p, -move, LedgerCategory.transport, ref: female.id.value);
 
@@ -639,20 +637,10 @@ Result _enter(Sim sim, PlayerState p, EnterRound cmd) {
   final r = f?.round(cmd.round);
   if (f == null || r == null) return _err(sim, ErrorCode.notFound);
   final camels = [for (final id in cmd.camels) sim.world.camels[id]];
-  final problem = Eligibility.canEnter(
-    sim.world,
-    f,
-    r,
-    camels,
-    p.id,
-    sim.today,
-  );
+  final problem = cannotEnter(sim, p, f, r, camels);
   if (problem != null) return Err(problem, sim.drain());
   final late = Eligibility.isLate(f, sim.today);
   final fee = late ? Balance.lateEntryFee * camels.length : 0;
-  if (p.cash.value < fee) {
-    return _err(sim, ErrorCode.insufficientFunds, {'needed': fee});
-  }
   sim.pay(p, Riyal(-fee), LedgerCategory.entryFee, ref: f.id.value);
   r.entries.add(
     Entry(ownerId: p.id, camels: [for (final c in camels) c!.id], late: late),
@@ -689,6 +677,38 @@ Result _withdraw(Sim sim, PlayerState p, WithdrawEntry cmd) {
     Withdrawn(sim.today, owner: p.id, camel: cmd.camel, festival: f.name),
   );
   return _ok(sim);
+}
+
+/// Why [camels] cannot be entered in [r] now: the rules (Eligibility), then
+/// the money, which must cover a late entry's fee and the trucking of the
+/// camels not yet there (a festival entry is no necessity: no account; the
+/// owner's decisions 8 to 10). Null when allowed.
+DomainError? cannotEnter(
+  Sim sim,
+  PlayerState p,
+  Festival f,
+  ContestRound r,
+  List<Camel?> camels,
+) {
+  final rules = Eligibility.canEnter(sim.world, f, r, camels, p.id, sim.today);
+  if (rules != null) return rules;
+  final fee = Eligibility.isLate(f, sim.today)
+      ? Balance.lateEntryFee * camels.length
+      : 0;
+  final trip = ContestSystem.festivalTrip(f, p, more: camels.length);
+  return cashFor(p, fee + trip);
+}
+
+/// The money for a cost that is no necessity: inDebt below zero, else
+/// insufficientFunds when it does not cover [cost]; null when it does.
+DomainError? cashFor(PlayerState p, int cost) {
+  if (p.cash.isNegative) {
+    return DomainError(ErrorCode.inDebt, {'debt': -p.cash.value});
+  }
+  if (p.cash.value < cost) {
+    return DomainError(ErrorCode.insufficientFunds, {'needed': cost});
+  }
+  return null;
 }
 
 /// Why [kind] at [strength] cannot be done on [c] now, or null.

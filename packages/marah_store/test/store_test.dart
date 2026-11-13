@@ -382,43 +382,52 @@ void main() {
     });
 
     test('full save, command save, day save and reopen stay light', () async {
-      final store = SqliteGameStore(path);
-      await store.startOver();
-      final w = Stopwatch()..start();
-      await store.save(big.state);
-      final full = w.elapsedMilliseconds;
+      // timed in real time on a shared machine: tried up to three times, so
+      // another process's spike does not fail it; a store grown slow fails
+      // every one
+      for (var attempt = 1; ; attempt++) {
+        final store = SqliteGameStore(path);
+        await store.startOver();
+        final w = Stopwatch()..start();
+        await store.save(big.state);
+        final full = w.elapsedMilliseconds;
 
-      final c = GameView(big.state, big.me.id).herd.first;
-      big.dispatch(RenameCamel(big.me.id, c.id, 'الغالية'));
-      w.reset();
-      await store.save(big.state);
-      final command = w.elapsedMicroseconds / 1000;
+        final c = GameView(big.state, big.me.id).herd.first;
+        big.dispatch(RenameCamel(big.me.id, c.id, 'الغالية $attempt'));
+        w.reset();
+        await store.save(big.state);
+        final command = w.elapsedMicroseconds / 1000;
 
-      big.advanceDays(1); // every camel's condition moves
-      w.reset();
-      await store.save(big.state);
-      final day = w.elapsedMilliseconds;
-      final dayRows = store.lastWrite.camels;
-      await store.close();
+        big.advanceDays(1); // every camel's condition moves
+        w.reset();
+        await store.save(big.state);
+        final day = w.elapsedMilliseconds;
+        final dayRows = store.lastWrite.camels;
+        await store.close();
 
-      w.reset();
-      final reopened = await reopen();
-      final open = w.elapsedMilliseconds;
-      final size = File(path).lengthSync() ~/ 1024;
+        w.reset();
+        final reopened = await reopen();
+        final open = w.elapsedMilliseconds;
+        final size = File(path).lengthSync() ~/ 1024;
 
-      // Generous limits for shared CI machines; measured values in the
-      // printout.
-      // ignore: avoid_print
-      print(
-        '10k head: full save $full ms, command save '
-        '${command.toStringAsFixed(1)} ms, day save $day ms ($dayRows rows), '
-        'reopen $open ms, file $size KB',
-      );
-      expect(command, lessThan(50));
-      expect(full, lessThan(5000));
-      expect(day, lessThan(3000));
-      expect(open, lessThan(5000));
-      expect(snap(reopened), snap(big.state));
+        // Generous limits for shared CI machines; measured values in the
+        // printout.
+        // ignore: avoid_print
+        print(
+          '10k head: full save $full ms, command save '
+          '${command.toStringAsFixed(1)} ms, day save $day ms ($dayRows rows), '
+          'reopen $open ms, file $size KB',
+        );
+        expect(snap(reopened), snap(big.state));
+        final light = command < 50 && full < 5000 && day < 3000 && open < 5000;
+        if (light || attempt == 3) {
+          expect(command, lessThan(50));
+          expect(full, lessThan(5000));
+          expect(day, lessThan(3000));
+          expect(open, lessThan(5000));
+          break;
+        }
+      }
     });
   });
 }

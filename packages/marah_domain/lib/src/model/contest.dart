@@ -369,7 +369,9 @@ class Festival {
     required this.rounds,
     this.done = false,
     List<CamelId>? scratched,
-  }) : scratched = scratched ?? [];
+    Map<String, int>? trucked,
+  }) : scratched = scratched ?? [],
+       trucked = trucked ?? {};
 
   final FestivalId id;
   final String name;
@@ -386,6 +388,10 @@ class Festival {
   /// Camels withdrawn after the closing: their class was fixed then (GDD 7),
   /// so they are not entered again at this festival.
   final List<CamelId> scratched;
+
+  /// The camels each player has trucked here (by owner id): they stay for
+  /// the festival's days.
+  final Map<String, int> trucked;
 
   /// Some round still takes entries (each until 72 hours before it).
   bool registrationOpen(GameDay today) =>
@@ -407,6 +413,7 @@ class Festival {
     'rounds': [for (final r in rounds) r.toJson()],
     'done': done,
     'scratched': [for (final c in scratched) c.value],
+    if (trucked.isNotEmpty) 'trucked': trucked,
   };
 
   static Festival fromJson(Map<String, Object?> j) => Festival(
@@ -427,5 +434,10 @@ class Festival {
     scratched: [
       for (final c in j['scratched']! as List<Object?>) CamelId(c! as String),
     ],
+    trucked: {
+      for (final e
+          in ((j['trucked'] as Map<String, Object?>?) ?? const {}).entries)
+        e.key: e.value! as int,
+    },
   );
 }
