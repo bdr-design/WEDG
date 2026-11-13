@@ -363,9 +363,11 @@ class Balance {
   /// the buyers' (she looks finer, and fetches more), while it lasts.
   static const tamperLiftPerLevel = 3.4;
 
-  /// (balance) The share of a treatment's lift that counts in what buyers
-  /// pay (the owner, 13 Nov 2026: higher, but by less than at judging), so
-  /// that treating to sell loses on average at every strength (measured).
+  /// (balance) The share of a treatment's lift everyone outside the judging
+  /// ring sees: buyers, the broker, the appraisal and the cards follow one
+  /// look, so the price and the shown quality agree and no ratio tells (the
+  /// owner, 13 Nov 2026: higher, but by less than at judging); treating to
+  /// sell loses on average at every strength (measured).
   static const tamperPriceShare = 0.05;
 
   /// (balance) Buyers and the broker examine a camel before paying (the

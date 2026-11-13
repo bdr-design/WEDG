@@ -1005,7 +1005,7 @@ class ContestSystem implements DailySystem {
         continue;
       }
       for (final camel in c.camels) {
-        if (Judging.observed(camel, Trait.coat, r.day) <
+        if (Judging.observed(camel, Trait.coat, r.day, judges: true) <
             Balance.colourPurityMin) {
           remove(c, Stage.breedColourAge, RemovalReason.colour);
           break;
@@ -1267,7 +1267,7 @@ class ContestSystem implements DailySystem {
       for (final camel in c.camels)
         Judging.judge(
           rng,
-          Judging.observedAll(camel, r.day),
+          Judging.observedAll(camel, r.day, judges: true),
           judges: Balance.judgesPerPanel,
         ),
     ];
