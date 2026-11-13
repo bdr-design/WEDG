@@ -2336,7 +2336,9 @@ void main() {
         final lr = later.rounds.firstWhere(
           (x) => x.kind.enterable && x.day > r.day,
         );
-        lr.entries.add(Entry(ownerId: g.me.id, camels: [CamelId('elsewhere')]));
+        lr.entries.add(
+          Entry(ownerId: g.me.id, camels: [const CamelId('elsewhere')]),
+        );
         g.advanceTo(r.day);
         if (!r.judged) continue;
         final found = r.found.where((x) => x.camel == treated.id).firstOrNull;
