@@ -48,7 +48,7 @@ and the placements are from a museum photograph of a real AKM (Armémuseum, Stoc
 | Buttstock wood | 5 to 235, the butt 92 tall, its top about level with the bore | photo | 3 to 238, 92 tall, its comb 5 under the bore's line and level to the wrist |
 | Length of pull | 321 | Arsenal Inc (a part's figure) | 321 (the trigger at 321) |
 | Pistol grip | 236 to 305, its foot 133 under the bore; 254 to 304 / 244 to 288 / 236 to 278 at 62 / 92 / 122 under the bore | photo | its top's centre at 286.5, raked 20 degrees, 49 to 42 deep front to back, its foot 133 under |
-| Magazine | its top from 384, its foot 197 under the bore; its floor plate's front edge at 522 / 517 / 508 at 152 / 166 / 182 under the bore | photo | from 384, 197 under; an arc of radius 185 that leaves the receiver leaning 10 degrees forward (fitted to those points) |
+| Magazine | its top from 384, its foot 197 under the bore; its floor plate's front edge at 522 / 517 / 508 at 152 / 166 / 182 under the bore | photo | from 384, 197 under; an arc of radius 175 that leaves the receiver leaning 8 degrees forward, 66 deep front to back under the receiver and 54 at the foot: fitted to those points and three more of the front edge (476 / 490 / 506 at 106 / 122 / 136 under the bore), to within 2 mm; its rear edge was not measured |
 | Lower handguard | 491 to 642, from 17 above the bore to 30 under | photo | 491 to 642, 14 above to 31 under |
 | Upper handguard | 543 to 641 | photo | 543 to 641 |
 | Gas block | about 730, its front a concave sweep | photo | 716 to 747 |
@@ -57,8 +57,9 @@ and the placements are from a museum photograph of a real AKM (Armémuseum, Stoc
 
 Marked as taken from proportion, with no source of their own: the receiver's height (52) and width (33), the dust
 cover's height (22), the barrel's thickness (14.4), the compensator (22 long), the sights' and the selector's small
-parts, the sling (25 wide), the magazine's arc (its radius and lean are fitted to the photo's points, not published
-figures). The front sling swivel is placed on the handguard's retainer: no source was read for where the AKM carries
+parts, the sling (25 wide), the magazine's arc (its radius, lean and the foot's depth are fitted to the photo's
+points, not published figures), the stock's width seen from above (33 to 37, nearly the same all along: unverified,
+no view from above was found). The front sling swivel is placed on the handguard's retainer: no source was read for where the AKM carries
 it, so that is unverified. The sight radius is kept at the published 378 though the photo puts the front sight about
 6 mm further back (inside the photo's 2%).
 
@@ -99,9 +100,14 @@ python akm.py out render     # and all the pictures: both sides (the right with 
                              # three-quarter, close, and beside the player's figure (assets_src/characters/man.glb)
 ```
 
-The game's copies are `assets_src/weapons/akm.glb` and `akm_lod1.glb`; the pictures are in `design/weapon/`.
+The same code gives the same two GLB files byte for byte (the exporter's order of triangles is put in one order
+after it writes). The game's copies are `assets_src/weapons/akm.glb` and `akm_lod1.glb`; the pictures are in
+`design/weapon/` (as JPEG).
 
 ## Not done yet
+
+- The bolt carrier is a bare plate flush with the receiver, not seen through an ejection port; the front sight's
+  tower has no window; the upper handguard is a plain round of wood.
 
 - It is not in the game page: holding and slinging it on the figure comes with the hunting design.
 - The figure's fingers cannot curl (tool/char3d's known gap), so a held rifle will need that first.

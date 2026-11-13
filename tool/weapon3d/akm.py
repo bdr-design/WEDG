@@ -83,7 +83,7 @@ def paint_textures(size=512):
     orm[..., 1][m] = (0.42 + 0.08 * lines + 0.25 * held)[m]
     # black oxide steel: a satin black, dark but still a metal (a blacker one reflects less than any real surface)
     m = block('oxide')
-    g = 0.185 + fine(1, 0.022) + fine(8, 0.018)
+    g = 0.155 + fine(1, 0.02) + fine(3, 0.012)
     col[m] = np.stack([g, g, g * 1.06], -1)[m]
     orm[..., 1][m] = (0.46 + fine(2, 0.08))[m]
     orm[..., 2][m] = 0.85
@@ -452,8 +452,12 @@ def rifle(detail=0):
     b.add(p, 'oxide', 'edge', 0.4)
 
     # the 30-round steel magazine: its curve an arc, forward at the foot; ribs on its sides; the floor plate
-    # (it leaves the receiver already leaning forward, on a wide arc: fitted to the museum rifle's outline)
-    R, x_top, z_top, arc_len, lean = 185.0, 417.0, -40.0, 159.0, math.radians(10)
+    # (it leaves the receiver already leaning forward, on a wide arc, and is a little shallower front to back at its
+    # foot than under the receiver: the arc, the lean and the foot's depth are fitted to six points of the museum
+    # rifle's outline, to within 2 mm)
+    R, x_top, z_top, arc_len, lean = 175.0, 417.0, -40.0, 166.0, math.radians(8)
+    def half(s):      # half the depth front to back
+        return 33.0 - 6.0 * min(max(s / arc_len, 0.0), 1.0)
     cx, cz = x_top + R * math.cos(lean), z_top + R * math.sin(lean)
     def on_arc(s):
         phi = lean + s / R
@@ -461,19 +465,19 @@ def rifle(detail=0):
     secs = []
     for s in np.linspace(-16, arc_len, 10 if hi else 5):
         x, z, deg = on_arc(s)
-        secs.append((x, z, deg, 33.0, 13.6, 7.0))      # 66 mm front to back, 27 mm wide
+        secs.append((x, z, deg, half(s), 13.6, 7.0))      # 66 mm front to back at the top, 54 at the foot; 27 mm wide
     p = b.piece()
     b.loft(p, secs, n=N(14))
     b.add(p, 'oxide', 'edge', 0.9, min_angle=40)
     x, z, deg = on_arc(arc_len)
     x2, z2, _ = on_arc(arc_len + 3.5)
     p = b.piece()
-    b.loft(p, [(x, z, deg, 34.2, 14.6, 7.0), (x2, z2, deg, 34.2, 14.6, 7.0)], n=N(14))
+    b.loft(p, [(x, z, deg, half(arc_len) + 1.2, 14.6, 7.0), (x2, z2, deg, half(arc_len) + 1.2, 14.6, 7.0)], n=N(14))
     b.add(p, 'oxide', 'bright', 0.8, min_angle=40)
     if hi:
         # the pressed ribs: long, along the magazine's curve, three on each side
         for side in (1, -1):
-            for off in (-17.0, 0.0, 17.0):
+            for off in (-15.0, 0.0, 15.0):
                 p = b.piece()
                 rings = []
                 for s in np.linspace(14, arc_len - 12, 7):
@@ -669,6 +673,30 @@ def export(path, root):
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=True, export_image_format='AUTO', export_extras=False, export_materials='EXPORT')
 
 
+def settle(path):
+    """The exporter writes a mesh's triangles in an order, and from a corner, that differ from run to run (the same
+    triangles, the same winding). Put each part's index list in one order, so the same code gives the same file byte
+    for byte."""
+    import json
+    import struct
+    raw = bytearray(open(path, 'rb').read())
+    jlen = struct.unpack_from('<I', raw, 12)[0]
+    doc = json.loads(bytes(raw[20:20 + jlen]))
+    bin0 = 20 + jlen + 8
+    for mesh in doc['meshes']:
+        for prim in mesh['primitives']:
+            acc = doc['accessors'][prim['indices']]
+            view = doc['bufferViews'][acc['bufferView']]
+            dt = {5121: np.uint8, 5123: np.uint16, 5125: np.uint32}[acc['componentType']]
+            at = bin0 + view.get('byteOffset', 0) + acc.get('byteOffset', 0)
+            tri = np.frombuffer(bytes(raw[at:at + acc['count'] * np.dtype(dt).itemsize]), dt).reshape(-1, 3)
+            first = tri.argmin(1)      # each triangle from its lowest corner (the same winding), then in order
+            tri = np.stack([np.take_along_axis(tri, ((first + k) % 3)[:, None], 1)[:, 0] for k in range(3)], 1)
+            tri = tri[np.lexsort((tri[:, 2], tri[:, 1], tri[:, 0]))]
+            raw[at:at + tri.nbytes] = tri.astype(dt).tobytes()
+    open(path, 'wb').write(bytes(raw))
+
+
 def render(root):
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
@@ -735,7 +763,7 @@ def render(root):
         root.location = (0.52, 0, 0.0)
         for l, loc in ((key, (-0.6, -2.4, 2.4)), (fill, (1.6, -1.2, 1.2)), (top, (0.2, -0.4, 3.2))):
             l.location = loc
-            l.data.energy *= 2.2
+            l.data.energy *= 1.5
             look(l, (0.2, 0, 0.9))
         shot('akm_scale.png', (0.22, -6, 0.9), ortho=2.05, res=(1100, 1500), at=(0.22, 0, 0.9))
 
@@ -766,6 +794,7 @@ for detail in (1, 0):
     m = measure(body, strap)
     name = 'akm.glb' if detail == 0 else 'akm_lod1.glb'
     export(os.path.join(OUT, name), root)
+    settle(os.path.join(OUT, name))
     kb = os.path.getsize(os.path.join(OUT, name)) / 1024
     print(f"{name}: body {m['tris_body']} triangles, sling {m['tris_sling']}, length {m['length']:.1f} mm (x {m['x0']:.1f} to {m['x1']:.1f}), height {m['height']:.1f} mm (z {m['z0']:.1f} to {m['z1']:.1f}), width {m['width']:.1f} mm, file {kb:.0f} KB")
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(OUT, 'akm.blend')))
