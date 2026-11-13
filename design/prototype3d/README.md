@@ -85,9 +85,15 @@ in the code, and the numbers are in
 [ADR 0005](../../docs/adr/0005-3d-world.md#measured-budget-from-the-threejs-prototype-2026-11-08).
 - **Ground cover:** in cells that thin out with distance.
 - **Terrain:** three rings of detail.
-- **Camels:** culled off screen, with one skeleton for all three detail
-  levels and a lighter shadow mesh.
-- **Animation:** slower updates far away.
+- **Camels:** the herd is instanced. Each detail level is one draw for every
+  camel drawn at it, and each shadow mesh one draw in the shadow map, so 40
+  camels cost at most 3 + 2 draws. The bones come from the three clips baked
+  at load into a texture of bone matrices (60 frames a second). While a camel
+  fades from one clip into another, its bones are blended on the CPU as
+  three.js's mixer blends them (at most 16 at once). Each camel is culled off
+  screen and out of the sun's shadow area on its own.
+- **Animation:** every camel is animated every frame; the CPU work is the
+  fading camels' bones only, and the herd's frame allocates nothing.
 - **Draw calls:** the yard's fixed objects are merged, and footprints are
   instanced.
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)
@@ -107,7 +113,8 @@ in the code, and the numbers are in
     slip angles, so the car understeers, slides on sand and can be drifted with the stability control off). Its
     numbers are in `docs/GDD.md` section 9.1.
 - **Shadows:**
-  - Each camel's shadow comes from a lighter mesh.
+  - Each camel's shadow comes from a lighter mesh (the 8k one for a camel drawn at the full level, the 1.5k one
+    for the others).
   - The parked vehicles' shadows come from coarse copies (`veh_shas_shadow.json`, `veh_tractor_shadow.json`,
     `veh_caravan_shadow.json`: 1.4k triangles for 12k, from `tool/vehicle3d/shadow_proxy.py`), baked into the fixed
     shadow meshes and never drawn.
