@@ -1664,34 +1664,45 @@ void main() {
   );
 
   group('Round 5: the rules the mutations found untested', () {
-    test('the preliminary cuts only among entries the check let through', () {
+    test('the preliminary cuts only among entries the check let through: a '
+        'weak camel found treated is told as found, not as cut', () {
+      var found = 0;
       for (var seed = 0; seed < 20; seed++) {
         final g = newGame(seed);
         final f = grand(g);
         final r = roundOf(f, RoundKind.diq, sex: Sex.female);
-        final c = camelFor(g, r, mean: 60);
         g.advanceTo(f.opensOn);
-        g
-          ..dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]))
-          ..dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 3));
-        g.advanceTo(r.day);
+        final c = camelFor(g, r, mean: 30)..acquiredOn = g.today - 200;
+        expect(g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id])).ok, isTrue);
+        g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 3));
+        final events = g.advanceTo(r.day);
+        // (a weak camel can die before the day: her entry goes with her)
+        if (!c.isAlive) continue;
+        final out = events.whereType<EntryRemoved>().firstOrNull;
+        if (events.whereType<TamperingFound>().any((e) => e.camel == c.id)) {
+          found++;
+          expect(out?.reason, RemovalReason.tampering);
+        } else {
+          // cut, or (a small field) placed
+          expect(
+            out?.reason == RemovalReason.cut ||
+                events.whereType<Placed>().any((e) => e.camel == c.id),
+            isTrue,
+          );
+        }
+        // the found ones took none of the preliminary's places
         final field = r.field!;
-        final checked = field[Stage.breedColourAge.index];
-        final caught = r.caught;
-        if (caught == 0) continue;
-        final kept = (checked - caught) * Balance.preliminaryKeeps;
-        final keep = kept.ceil() < Balance.preliminaryKeepsAtLeast
+        final checked = field[Stage.breedColourAge.index] - r.caught;
+        final kept = (checked * Balance.preliminaryKeeps).ceil();
+        final keep = kept < Balance.preliminaryKeepsAtLeast
             ? Balance.preliminaryKeepsAtLeast
-            : kept.ceil();
-        // the found ones are told at their stage, after the cut, and took
-        // none of its places
+            : kept;
         expect(
           field[Stage.preliminary.index],
-          (keep < checked - caught ? keep : checked - caught) + caught,
+          (keep < checked ? keep : checked) + r.caught,
         );
-        return;
       }
-      fail('nothing found in 20 rounds');
+      expect(found, greaterThan(5));
     });
 
     test(
