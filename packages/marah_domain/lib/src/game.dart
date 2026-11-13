@@ -102,7 +102,10 @@ class Game {
       sex: Sex.female,
       ageDays: 7 * 365 + 40,
     );
-    // (the latest 15 January at least the free nursing's 90 days back)
+    // (the latest 15 January at least the free nursing's 90 days back; the
+    // game starts on 1 October, and a start between mid-January and mid-April
+    // would find the calf past its first year, the dam dry, and from the end
+    // of March her due day past: startDay is for tests, and none passes one)
     var born = GameDay.ofDate(DateTime.utc(start.year, 1, 15));
     if (start.daysSince(born) <= Balance.freeNursingDays) {
       born = GameDay.ofDate(DateTime.utc(start.year - 1, 1, 15));

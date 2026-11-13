@@ -72,6 +72,20 @@ abstract final class Milk {
     return byDam;
   }
 
+  /// [c] is a calf still suckling its mother, on its owner's farm: a حوار
+  /// whatever its age class says (the owner, 13 Nov 2026: «حوار لين ينفطم»;
+  /// مخلول is one weaned with الخلال, GDD 5.2), until its first year.
+  static bool suckling(Camel c, WorldState w, GameDay today) {
+    final ref = c.dam;
+    if (ref == null || !c.isAlive) return false;
+    if (c.ageDays(today) >= Balance.lactationDays) return false;
+    final dam = w.camels[ref.id];
+    return dam != null &&
+        dam.isAlive &&
+        dam.ownerId == c.ownerId &&
+        dam.lastCalvedOn == c.born;
+  }
+
   /// The day's milk on [owner]'s farm: each nursing camel's litres, what
   /// her calf keeps and what is sold (one bought today is milked from
   /// tomorrow, when the truck brings her).

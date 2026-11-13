@@ -244,6 +244,12 @@ class GameView {
     return Eligibility.bullCanServe(c, today);
   }
 
+  /// The camel is a calf still suckling its mother (Milk.suckling).
+  bool suckling(CamelId id) {
+    final c = _w.camels[id];
+    return c != null && Milk.suckling(c, _w, today);
+  }
+
   DomainError? canSell(CamelId id) =>
       Eligibility.canSell(_w, _w.camels[id], viewer);
 
@@ -371,15 +377,19 @@ class GameView {
     return handlers.quickSalePrice(c, _sim);
   }
 
-  /// The herd's worth as the viewer hears it: the sum of the appraisals
-  /// behind each camel's range, never the exact values (the review: with the
-  /// exact sum, buying or selling one camel moved it by that camel's value).
-  Riyal get herdValue => marketRound(
-    _w
+  /// The herd's worth as the viewer hears it: the true values' sum, off by
+  /// a few percent the same way for the whole herd that week (the market's
+  /// mood as he hears it), never the exact sum (the review: with it, buying
+  /// or selling one camel moved it by that camel's exact value). One draw for
+  /// the herd, not one a camel: a draw for each of 10,000 head added a
+  /// quarter to the snapshot's cost in JavaScript (the re-review).
+  Riyal get herdValue {
+    final sum = _w
         .aliveOwnedBy(viewer)
-        .fold<double>(
-          0,
-          (a, c) => a + CamelView.appraise(c, today, viewer, _w.seed),
-        ),
-  );
+        .fold<int>(0, (a, c) => a + Valuation.value(c, today).value);
+    final rng = Rng.keyed(_w.seed, ['herd', viewer.value, today.value ~/ 7]);
+    return marketRound(
+      sum * (1 + clampDouble(rng.normal(sd: 0.06), -0.15, 0.15)),
+    );
+  }
 }

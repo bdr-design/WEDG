@@ -429,7 +429,10 @@ function milkScreen() {
   // the day's milking as it was sold (the share changed since, the list's litres follow the new share: the review)
   const total = M.litres, sold = M.incomeToday / M.price, kept = Math.max(0, total - sold);
   const calves = cs.filter((c) => c.calfName).length;
-  const keptTo = calves > 1 ? 'للحيران' : 'لحوارها';
+  // a calf by its own sex: حوارها, or حوارتها for a she-calf (the re-review: the alert said حوارتها, this screen حوارها)
+  const calfWord = (m) => (G.yard.find((x) => x.id === m.calfId)?.sex === 'female' ? 'حوارتها' : 'حوارها');
+  const one = cs.find((c) => c.calfName);
+  const keptTo = calves > 1 ? 'للحيران' : `ل${one ? calfWord(one) : 'حوارها'}`;
   if (!cs.length) {
     return `<div class="body">${nav()}<div class="title">الحليب</div>${errCard()}
       <div class="tank"><small>حليب اليوم</small><div class="v"><b class="fit">0</b><span>لتر</span></div>
@@ -439,8 +442,8 @@ function milkScreen() {
   let line;
   if (M.incomeToday) line = `بعت ${litres(sold)} بـ ${n0(M.incomeToday)} ريال${kept > 0.05 ? `، وخليت ${keptTo} ${litres(kept)}` : ''}`;
   else if (M.sold > 0) line = `يمر المشتري بكرة وياخذ ${litres(M.sold)}`;      // (a new game's first day, or the share just changed from all: nothing sold today)
-  else line = calves > 1 ? 'خليته كله للحيران' : 'خليته كله لحوارها';
-  const rows = cs.map((c) => `<div class="row"><span class="lead">${svg('camel')}</span><b>${c.name}</b><span class="qty">${litres(c.litres)}</span><small>مرضع ${sinceCalving(c.days)} · ${c.calfName ? `حوارها ${c.calfName}` : 'حليبها كله ينباع'}</small></div>`).join('');
+  else line = `خليته كله ${keptTo}`;
+  const rows = cs.map((c) => `<div class="row"><span class="lead">${svg('camel')}</span><b>${c.name}</b><span class="qty">${litres(c.litres)}</span><small>مرضع ${sinceCalving(c.days)} · ${c.calfName ? `${calfWord(c)} ${c.calfName}` : 'حليبها كله ينباع'}</small></div>`).join('');
   // each choice: the riyals a day (a camel without her calf sells all hers whatever the choice), and the calves'
   // growth by the engine's rule (Balance.calfMilkTarget): in their first three months a half share already slows them
   const share = { all: 1, half: 0.5, quarter: 0.25 }, names = { all: 'كله', half: 'النص', quarter: 'الربع' };
@@ -847,7 +850,7 @@ export function createPhone({ host }) {
   }
   // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen);
   // a refusal is said on the screen, and what was not taken stays in the order
-  let engine = null, busy = false, sureAt = 0, sureTimer = 0;
+  let engine = null, busy = false, sureAt = 0, sureTimer = 0, orderAt = 0;
   const keyOf = (t) => ['act', 's', 'd', 'p', 't', 'f', 'o', 'id'].map((k) => t.dataset[k] ?? '').join('|');
   async function act(t) {
     const kind = t.dataset.act, focused = root.activeElement === t ? keyOf(t) : null;
@@ -866,7 +869,9 @@ export function createPhone({ host }) {
     if (kind !== 'tab' && kind !== 'bidStep' && kind !== 'askStep') HJ.msg = null;      // (the seller's answer stays while the haggle is set again)
     let next = null;
     const done = () => {
-      sr.textContent = HJ.msg ? `${HJ.msg.title}. ${HJ.msg.line}`.replace(/<[^>]+>/g, '') : ERR || '';
+      // said to a screen reader once, when an order is answered (not again at each stepper's press)
+      const said = HJ.msg ? `${HJ.msg.title}. ${HJ.msg.line}`.replace(/<[^>]+>/g, '') : ERR || '';
+      if (said && said !== sr.textContent) sr.textContent = said;
       if (!live()) return;
       if (next) { show(next); if (focused) focusIn(scr.querySelector('.back') || dev); return; }
       redraw();
@@ -881,6 +886,7 @@ export function createPhone({ host }) {
     if (kind === 'bidStep') { const l = listingOf(HJ.listing); if (l) HJ.bid += Number(t.dataset.d) * stepOf(l.askPrice); done(); return; }
     if (kind === 'askStep') { const c = myCamel(HJ.camel); if (c) HJ.ask += Number(t.dataset.d) * stepOf(c.estimateHigh); done(); return; }
     if (twice != null && !ready) { done(); return; }      // (the first tap of a sale: it asks again)
+    if (now - orderAt < DOUBLE_TAP) return;      // (an order's second tap, as its answer was just drawn: «سوم» tapped twice used two tries, the re-review)
     if (!engine || !G || busy) return;
     busy = true;
     const send = async (command) => { const r = await engine.dispatch(command); if (!r.ok) ERR = refusal(r, command); return r.ok; };
@@ -907,7 +913,7 @@ export function createPhone({ host }) {
       ERR = 'ما وصل الطلب، جرّب مرة ثانية.';
       console.warn('phone:', err);
     } finally {
-      busy = false;
+      busy = false; orderAt = performance.now();
       done();
     }
     // a purchase, at the asking price or by a haggle: the seller's answer is said on the camel's page (a lower price, or
@@ -925,10 +931,10 @@ export function createPhone({ host }) {
         // the answer as the engine gave it: each uses a try; a counter lowers the price (the next try halves the gap
         // again, so it is not his last word), and what can be done next is said only if it can be
         const left = l.bargainsLeft - 1, ask = r.error.params?.ask ?? l.askPrice, afford = G.cash >= ask + l.transport;
-        const then = [
-          afford ? her(c, `تقدر تشتريها بـ ${n0(ask)}`, `تقدر تشتريه بـ ${n0(ask)}`) : `رصيدك ما يكفي ${n0(ask + l.transport)} مع النقل`,
-          left > 0 ? `أو تسوم مرة ثانية (باقي لك ${count(left, 'bid')})` : 'وما عاد يقبل منك سوم',
-        ];
+        const more = `تسوم مرة ثانية (باقي لك ${count(left, 'bid')})`;
+        const then = afford
+          ? [her(c, `تقدر تشتريها بـ ${n0(ask)}`, `تقدر تشتريه بـ ${n0(ask)}`), left > 0 ? `أو ${more}` : 'وما عاد يقبل منك سوم']
+          : [`رصيدك ما يكفي ${n0(ask + l.transport)} ريال مع النقل`, left > 0 ? `بس تقدر ${more}` : 'وما عاد يقبل منك سوم'];
         HJ.msg = r.error.code === 'bargainCountered'
           ? { title: `${esc(l.sellerName)} نزل لـ ${n0(ask)} ريال`, line: `${then.join('، ')}.` }
           : { title: `${esc(l.sellerName)} رفض سومك`, line: `ما يبيع بهالسعر. ${then.join('، ')}.` };
@@ -957,6 +963,7 @@ export function createPhone({ host }) {
     }
   }
   scr.addEventListener('keydown', (e) => {
+    if (e.repeat) return;      // (a key held: its repeats are not more presses; held, Enter sold a readied camel, the re-review)
     const a = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-act]');
     if (a) { e.preventDefault(); act(a); return; }
     const t = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-go]');

@@ -30,6 +30,7 @@ class CamelCard {
     required this.crossbred,
     this.onTheWay = false,
     this.quickSale,
+    this.suckling = false,
   });
 
   final CamelId id;
@@ -61,6 +62,9 @@ class CamelCard {
   /// else null.
   final int? quickSale;
 
+  /// A calf still suckling its mother: named حوار whatever its age class.
+  final bool suckling;
+
   @override
   bool operator ==(Object other) =>
       other is CamelCard &&
@@ -84,7 +88,8 @@ class CamelCard {
       other.bestRank == bestRank &&
       other.crossbred == crossbred &&
       other.onTheWay == onTheWay &&
-      other.quickSale == quickSale;
+      other.quickSale == quickSale &&
+      other.suckling == suckling;
 
   @override
   int get hashCode => Object.hashAll([
@@ -109,6 +114,7 @@ class CamelCard {
     crossbred,
     onTheWay,
     quickSale,
+    suckling,
   ]);
 }
 

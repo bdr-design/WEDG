@@ -766,7 +766,18 @@ const tmpV = new THREE.Vector3(), tmpTo = new THREE.Vector3(), tmpAway = new THR
 // The farm's camels are the player's own (the owner, 13 Nov 2026), from the engine's snapshot (yard: up to 40, in the
 // order they came): each in a built pen, the pens filled in their order; a camel sold or dead leaves; a calf grows.
 let LODS = null;      // the camel's three detail levels, once loaded
-const sizeOf = (d) => (d < 180 ? 0.55 : d < 365 ? 0.65 : d < 730 ? 0.8 : d < 1095 ? 0.9 : 1);
+// a camel's size by its age, against a grown one's (a game choice, unsourced: a newborn stands about half a grown
+// camel's height, a yearling three quarters; the CIRAD growth study has the heights by age in its charts only, and
+// weights alone, 33 kg at birth and 286 kg at a year (Kamoun, ICAR), give no height). Smooth, so a calf does not jump
+// a size on the day it crosses a year (the re-review)
+const SIZE_AT = [[0, 0.55], [365, 0.75], [730, 0.85], [1095, 0.92], [1460, 1]];
+const sizeOf = (d) => {
+  for (let i = 1; i < SIZE_AT.length; i++) {
+    const [d1, s1] = SIZE_AT[i];
+    if (d < d1) { const [d0, s0] = SIZE_AT[i - 1]; return Math.round((s0 + (s1 - s0) * (d - d0) / (d1 - d0)) * 100) / 100; }
+  }
+  return 1;
+};
 // what the card says of a camel, from the engine: her calf or her mother, a pregnancy, an illness, the value estimated
 function cardInfo(card) {
   const milk = GAME.farm.milk.camels, mine = milk.find((m) => m.id === card.id), mother = milk.find((m) => m.calfId === card.id);
@@ -802,12 +813,16 @@ function syncYard() {
   // found a pen's pin saying 12 where its card said it holds 6)
   const withCalf = new Set();
   for (const [calf, dam] of calfOf) if (ids.has(calf) && ids.has(dam)) withCalf.add(dam);
-  let pi = 0, n = 0;
+  // each into the first pen with room for it (a dam and calf that do not fit one pen's last place go on, and a single
+  // camel after them still takes that place: a full pen overflowed into the last, the re-review); the last pen takes
+  // what fits nowhere
+  const free = pens.map((k) => penRoom(k));
   for (const card of want) {
     if (calfOf.has(card.id) && ids.has(calfOf.get(card.id))) continue;      // (placed with its dam, below)
     const need = withCalf.has(card.id) ? 2 : 1;
-    while (pi < pens.length - 1 && n + need > penRoom(pens[pi])) { pi++; n = 0; }
-    penOf.set(card.id, P[pens[pi]]); n += need;
+    let i = free.findIndex((f) => f >= need);
+    if (i < 0) i = pens.length - 1;
+    penOf.set(card.id, P[pens[i]]); free[i] -= need;
   }
   for (const card of want) if (!penOf.has(card.id)) penOf.set(card.id, penOf.get(calfOf.get(card.id)) || P[pens[0]]);
   for (const card of want) {

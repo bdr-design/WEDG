@@ -1026,27 +1026,28 @@ void main() {
       expect(r2.error.code, ErrorCode.farmFull);
     });
 
-    test('the herd\'s worth is the appraisals\', not the exact values', () {
+    test('the herd\'s worth is heard, not the exact values\' sum', () {
       final g = newGame();
       Sim(g.state).pay(g.me, const Riyal(400000), LedgerCategory.sale);
+      int exact() => g.state.world
+          .aliveOwnedBy(g.me.id)
+          .fold<int>(0, (a, c) => a + Valuation.value(c, g.today).value);
+      final before = GameView(g.state, g.me.id).herdValue.value;
       final l = GameView(
         g.state,
         g.me.id,
       ).market.firstWhere((l) => l.askPrice.value < 150000);
       expect(g.dispatch(BuyListing(g.me.id, l.id)).ok, isTrue);
-      final v = GameView(g.state, g.me.id);
-      final exact = g.state.world
-          .aliveOwnedBy(g.me.id)
-          .fold<int>(0, (a, c) => a + Valuation.value(c, g.today).value);
-      final heard = g.state.world
-          .aliveOwnedBy(g.me.id)
-          .fold<double>(
-            0,
-            (a, c) =>
-                a + CamelView.appraise(c, g.today, g.me.id, g.state.world.seed),
-          );
-      expect(v.herdValue, marketRound(heard));
-      expect(v.herdValue.value, isNot(exact));
+      final after = GameView(g.state, g.me.id).herdValue.value;
+      final value = Valuation.value(
+        g.state.world.camels[l.camel.id]!,
+        g.today,
+      ).value;
+      // neither the sum nor one camel's value can be read back from it
+      expect(after, isNot(exact()));
+      expect(after - before, isNot(value));
+      // and it stays near the truth: within the 15% the appraisals keep to
+      expect((after / exact() - 1).abs(), lessThanOrEqualTo(0.16));
     });
 
     test('seller stops after three bargains', () {
@@ -1168,8 +1169,8 @@ void main() {
         g.state,
         g.me.id,
       ).herd.firstWhere((c) => c.ageDays > 6 * 365);
-      // past her rest after calving and empty (the start's camel calved 120
-      // days ago and is in calf again)
+      // past her rest after calving and empty (the start's camel calved on
+      // 15 January and is in calf again)
       g.state.world.camels[f.id]!
         ..lastCalvedOn = g.today - 400
         ..pregnancy = null;

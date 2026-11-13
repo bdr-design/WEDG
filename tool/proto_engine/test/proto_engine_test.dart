@@ -367,6 +367,13 @@ void main() {
       // the 3D farm's camels (the start's camel and her calf), and the milk
       // to a tenth of a litre
       expect((j['yard']! as List).length, 2);
+      // the start's calf, eight and a half months and still suckling, is a
+      // حوار though its age class is مخلول (the owner, 13 Nov 2026)
+      final calf = (j['yard']! as List).cast<Map<String, Object?>>().firstWhere(
+        (c) => c['ageDays']! as int < 365,
+      );
+      expect(calf['ageClass'], 'makhlool');
+      expect(calf['ageName'], anyOf('حوار', 'حوارة'));
       final milk = farm['milk']! as Map<String, Object?>;
       expect(milk['nursing'], 1);
       final litres = milk['litres']! as num;

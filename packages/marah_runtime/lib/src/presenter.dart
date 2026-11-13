@@ -42,6 +42,7 @@ class Presenter {
           : placings.map((p) => p.rank).reduce((a, b) => a < b ? a : b),
       crossbred: c.crossbred,
       onTheWay: c.onTheWay,
+      suckling: v.suckling(c.id),
       quickSale: c.isMine && sell == null
           ? v.quickSalePrice(c.id)?.value
           : null,

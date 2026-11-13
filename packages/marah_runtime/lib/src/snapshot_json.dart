@@ -154,7 +154,8 @@ class SnapshotJson {
     'sex': c.sex.name,
     'category': c.category.name,
     'ageClass': c.ageClass.name,
-    'ageName': c.sex == Sex.male ? c.ageClass.male : c.ageClass.female,
+    // a calf still suckling is a حوار whatever its age (the owner, 13 Nov)
+    'ageName': (c.suckling ? AgeClass.hwar : c.ageClass).labelFor(c.sex),
     'ageDays': c.ageDays,
     'quality': c.quality,
     'estimateLow': c.estimateLow,
