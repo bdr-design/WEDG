@@ -586,6 +586,17 @@ void main() {
       final events = g.advanceTo(f.endsOn);
       expect(f.done, isTrue);
       expect(f.rounds.every((x) => x.judged), isTrue);
+      // the group rounds the rivals ran keep their top three
+      final groups = f.rounds.where((x) => !x.kind.enterable).toList();
+      expect(groups, hasLength(28));
+      final seen = GameView(g.state, g.me.id).festival(f.id)!;
+      for (final x in seen.rounds.where((x) => !x.enterable)) {
+        expect(x.announced, isTrue);
+        expect([for (final row in x.results!) row.rank], [1, 2, 3]);
+        expect(x.results!.first.prize, x.prizes.first);
+        expect(x.results!.first.head, x.size);
+        expect(g.state.players.containsKey(x.results!.first.ownerId), isFalse);
+      }
       final report = events.whereType<FestivalIntegrity>().singleWhere(
         (e) => e.festival == f.name,
       );

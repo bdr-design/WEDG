@@ -1377,11 +1377,13 @@ class ContestSystem implements DailySystem {
   }
 
   /// The festival over: the rounds no player entered are run as rivals'
-  /// rounds only for their committees' count of treatments found, then
-  /// dropped (only judged rounds are worth keeping); the integrity report
-  /// and each player's prizes in the news.
+  /// rounds for their committees' count of treatments found; the group
+  /// rounds keep their top three (rivals run them, the owner's decision of 13
+  /// Nov 2026), the single ones are dropped; the integrity report and each
+  /// player's prizes in the news.
   static void _close(Sim sim, Festival f) {
     f.done = true;
+    final w = sim.world;
     final rng = sim.rng(['integrity', f.id.value]);
     var cases = 0, fines = 0;
     for (final r in f.rounds) {
@@ -1399,6 +1401,34 @@ class ContestSystem implements DailySystem {
           fines += Balance.tamperFine(kind, strength);
         }
       }
+    }
+    // the group rounds, run by the rivals only (the owner, 13 Nov 2026):
+    // their top three kept for the festival's page
+    final gen = WorldGen(sim);
+    final (mean, sd) = ContestRules.rivalQuality(f.tier);
+    for (final r in f.rounds) {
+      if (r.judged || r.kind.enterable) continue;
+      final prizes = ContestRules.prizes(f.tier, r.kind, r.size);
+      final scores = [
+        for (var i = 0; i < 3; i++)
+          q2(clampDouble(rng.normal(mean: mean, sd: sd * 0.5), 0, 100)),
+      ]..sort((a, b) => b.compareTo(a));
+      r
+        ..results = [
+          for (var i = 0; i < 3; i++)
+            () {
+              final o = _rivalOwner(gen, rng, f);
+              return ResultRow(
+                rank: i + 1,
+                camelName: w.owners[o]?.name ?? '',
+                ownerId: o,
+                score: scores[i],
+                prize: prizes[i],
+                head: r.size,
+              );
+            }(),
+        ]
+        ..paid = true;
     }
     f.rounds.removeWhere((r) => !r.judged);
     sim.emit(
