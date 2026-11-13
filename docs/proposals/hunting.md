@@ -7,6 +7,24 @@
 > "[n]" below is a source number there. **(real)** = sourced; **(game choice)** = ours;
 > **(estimate)** = a weight on the phone that has not been measured yet.
 
+## Decided by the owner (13 Nov 2026)
+
+Only these three points are decided; everything below them stays a proposal. The GDD text
+for them is drafted in [gdd_hunting_section.md](gdd_hunting_section.md) for the director to
+move into `docs/GDD.md` after the owner reads it.
+
+1. **The Kalashnikov enters the game with its danger,** as cheating does in GDD 7.1
+   (option C2). It is bought in secret, and kept at the farm or hunted with. If the player
+   is caught, it is seized, he is fined and his name falls. It is never shown as lawful.
+2. **Hunting comes as a pastime that costs money.** The first to be built is المقناص with
+   the falcon (option A: the auction, the falcon's passport, the فطري permit, الدعو, and
+   the trip in the Land Cruiser in season). The air rifle (option B) comes after it.
+3. **Wolves and stray dogs at the calves enter the game** (option D): a rare danger at
+   night, lessened by the pen, a herdsman and a guard dog. Killing a wolf is fined if the
+   player is caught.
+
+Still open: questions 4, 5, 7 and 8 in section 7.
+
 ## 0. Read these official pages before anything here is adopted
 
 No official page could be opened from the session that wrote this, so every fact rests on
@@ -150,7 +168,7 @@ Firing it adds a muzzle flash (one short-lived quad) and a sound.
   buy) [149].
 - **What it earns or costs:** a guard dog's price and feed (**game choice**), and the
   calves lost without one.
-- **Real:** wolves enter pens and kill livestock; herders defend with dogs, pens and
+- **Real:** wolves enter pens and kill livestock; one case of a wolf taking a three-day-old camel calf from a pen near al-Aflaj, which herders there called unusual [168]; herders defend with dogs, pens and
   herdsmen; the wolf is protected and killing one costs SAR 80,000 [139][148][149]. Stray
   dog attacks are real in Qassim and elsewhere [151].
 - **Game choice:** how often a predator comes, and that it takes calves rather than adult
@@ -207,7 +225,7 @@ player's, and it is real.
 2. **The Kalashnikov.** *Recommended:* C2, allowed with its real risk as cheating is in
    7.1, and never a lawful hunting tool. C1 is the realist's alternative. Note that the
    seller and price would be our invention.
-   > الكلاش سلاح حربي، ما ينباع نظامي، والصيد فيه ممنوع: تبيه «مسموح مع خطره» مثل الغش، ولا ما يدخل أبد؟ نقترح مسموح مع خطره.
+   > الكلاش سلاح حربي، واقتناه بحد ذاته مخالفة عقوبتها لين 15 سنة سجن و150 ألف، وما ينباع نظامي، والصيد فيه ممنوع: تبيه يدخل اللعبة مع خطره مثل الغش، ولا ما يدخل أبد؟ نقترح يدخل مع خطره.
 3. **Which hunting comes first.** *Recommended:* A (المقناص with a falcon), then B (air
    rifle).
    > نبدأ بالمقناص بالصقر (مزاد، جواز، تصريح فطري، الدعو، طلعة بالجيب) وبعده الساكتون؟
@@ -218,7 +236,7 @@ player's, and it is real.
    > مسابقات الصقور (الملواح والمزاين) نخليها بعدين عشان تبقى الإبل الأساس؟
 6. **Predators at the herd (D).** *Recommended:* yes, with the real defences (pen,
    herdsman, guard dog), and shooting a wolf is an offence.
-   > الذيب والكلاب الضالة يدخلون على الحيران بالليل، والحماية شبك وراعي وكلب حراسة، وقتل الذيب غرامته 80 ألف: توافق؟
+   > فيه حالة وحدة لقيناها: ذيب سحب حوار عمره 3 أيام من حظيرة جنوب الأفلاج بالليل، والمربين قالوا إنها غريبة. نخلي الذيب والكلاب الضالة خطر نادر بالليل على الحيران (كم مرة يصير اختيار لعب)، والحماية شبك وراعي وكلب حراسة، وقتل الذيب غرامته 80 ألف: توافق؟
 7. **Prison for the war weapon.** The real penalty is up to 15 years. Any replacement is a
    game choice lighter than the law. *Recommended:* the owner chooses, knowing that:
    heavy fine with the weapon taken and a festival ban (as in 7.1), or a pause while the

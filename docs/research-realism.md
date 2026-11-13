@@ -281,6 +281,7 @@ Checked against search results; most news hosts cannot be opened from here, so a
 
 **The herd, wolves and stray dogs**
 - **The Arabian wolf is listed as endangered in the Kingdom and protected;** killing one is SAR 80,000 per animal (confirmed [139][150]). Wolves climb into pens and can kill several sheep or goats at once; retaliation after attacks has long happened (confirmed [149]). NCW's magazine says farmers often target wolves for attacking livestock, and some are killed and hung from trees as a warning to others (confirmed [148]); a researcher counted about 50 wolves hung in trees over 20 years (confirmed [148], translated from Dutch). Herders use guard dogs, traditional enclosures and herdsmen at times of high risk (confirmed [149]). A 2004 estimate gave 500–600 wolves in the Kingdom (confirmed [148]).
+- **One case of a wolf taking a camel calf:** at night a wild wolf got into a camel pen at al-Ajaliyah, 140 km south of al-Aflaj, dragged out a three-day-old calf (حوار) and ate it; local herders called an attack on camel calves unusual, since wolves usually take sheep, and blamed cold and hunger (confirmed [168], about 2018 by the site's dating; one report, the owner's account).
 - **No rule found that lets a herder shoot a wolf attacking his herd** (uncertain: not found, not confirmed absent). A herder in Makkah poisoned a camel carcass thinking of wolves or stray dogs and killed an Arabian leopard, and was investigated; poisoning any animal is banned (confirmed [150]).
 - **Stray dogs:** attacks on people are reported in al-Ahsa, Buraidah, al-Aflaj and Riyadh; the municipal ministry told municipalities to use capture, vaccination, sterilisation and release, and ordered an end to poisoned baits (confirmed [151]). Nothing found on shooting stray dogs or on dogs attacking camels (uncertain).
 - **What a herder at an عزبة really keeps, and why:** not found from a reliable source (uncertain). The common belief that herders keep a rifle against wolves is not confirmed; the sources found speak of guard dogs, pens and herdsmen [149].
@@ -465,3 +466,4 @@ Checked against search results; most news hosts cannot be opened from here, so a
 165. https://datazone.birdlife.org/species/factsheet/asian-houbara-chlamydotis-macqueenii/details
 166. https://www.mewa.gov.sa/ar/MediaCenter/News/Pages/News1972020.aspx ; https://www.okaz.com.sa/ampArticle/2058236
 167. https://ajel.sa/local/9nlks9sxb
+168. https://sabq.org/saudia/q7m8tr
