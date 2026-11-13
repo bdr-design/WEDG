@@ -67,8 +67,8 @@ it, so that is unverified. The sight radius is kept at the published 378 though 
 
 | Detail level | For | Triangles (rifle + sling) | Draws |
 |---|---|---|---|
-| `akm.glb` | in the hands, close | 4,562 + 204 | 1 (2 with the sling: the same material, a part of its own) |
-| `akm_lod1.glb` | slung on a walking figure | 980, no sling | 1 |
+| `akm.glb` | in the hands, close | 4,602 + 204 | 1 (2 with the sling: the same material, a part of its own) |
+| `akm_lod1.glb` | slung on a walking figure | 1,000, no sling | 1 |
 
 One one-sided material. The close model has two 512 px textures (colour; roughness and metal): 2 x 1.4 MiB
 uncompressed with mips, less compressed; the far model its own two at 256 px (0.7 MiB). The steel's bevels are real

@@ -433,7 +433,9 @@ def rifle(detail=0):
     secs = []
     # (down the grip from the receiver, half its depth front to back, half its width): full under the receiver,
     # waisted for the hand, swelling a little to its foot
-    for t, fb, w in resample([(0, 24.5, 14.5), (10, 24.0, 14.8), (25, 23.4, 14.8), (56, 20.8, 14.2), (88, 19.8, 14.0), (96, 19.4, 13.6), (101, 16.5, 12.0)], 9 if hi else 5):
+    # (it starts inside the receiver: the grip is square to its rake, so a top that began at the receiver's underside
+    # left a wedge of air between its front and the receiver, by the trigger)
+    for t, fb, w in resample([(-13, 24.5, 14.5), (0, 24.5, 14.5), (10, 24.0, 14.8), (25, 23.4, 14.8), (56, 20.8, 14.2), (88, 19.8, 14.0), (96, 19.4, 13.6), (101, 16.5, 12.0)], 10 if hi else 6):
         c = top + d * t
         secs.append((c.x, c.z, -20.0, fb, w, 2.7))      # the long axis front to back, square to the grip's rake
     p = b.piece()
@@ -736,7 +738,10 @@ def render(root):
     bg.use_nodes = True
     bg.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.50, 0.48, 0.45, 1)
     bg.node_tree.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.95
+    only = os.environ.get('AKM_SHOTS')      # e.g. AKM_SHOTS=close,right: only those pictures
     def shot(name, loc, ortho=None, res=(2000, 800), at=target, lens=85):
+        if only and name[4:-4] not in only.split(','):
+            return
         cam.location = loc
         look(cam, at)
         cam_d.type = 'ORTHO' if ortho else 'PERSP'
@@ -749,7 +754,8 @@ def render(root):
     shot('akm_right.png', (0.44, -3, -0.06), ortho=1.0, res=(1600, 640) if QUICK else (2000, 800))
     if QUICK:
         return
-    ruler(os.path.join(OUT, 'akm_right.png'), 2000 / 1000.0, 1000 - 440 * 2, 800 - 70)
+    if not only or 'right' in only.split(','):
+        ruler(os.path.join(OUT, 'akm_right.png'), 2000 / 1000.0, 1000 - 440 * 2, 800 - 70)
     shot('akm_left.png', (0.44, 3, -0.06), ortho=1.0)
     shot('akm_top.png', (0.44, 0, 3), ortho=1.0, res=(2000, 400), at=(0.44, 0, 0))
     shot('akm_front.png', (3.5, 0, -0.06), ortho=0.42, res=(800, 800))
@@ -757,7 +763,7 @@ def render(root):
     shot('akm_close.png', (0.42, -0.62, 0.16), res=(2000, 1100), at=(0.40, 0, -0.03), lens=60)
     # beside the player's figure (tool/char3d), the butt on the ground, for scale
     man = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets_src', 'characters', 'man.glb')
-    if os.path.exists(man):
+    if os.path.exists(man) and (not only or 'scale' in only.split(',')):
         bpy.ops.import_scene.gltf(filepath=man)
         root.rotation_euler = (0, math.radians(-90), 0)
         root.location = (0.52, 0, 0.0)
