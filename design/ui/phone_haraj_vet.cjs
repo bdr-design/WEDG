@@ -2,9 +2,13 @@
 //   1 check      a camel's page with the vet's look before buying (CheckListing, SAR 500): the button, and after a look
 //                «انفحصت مرة، ما لقى شي» (a look on another day is a fresh one; never a chance in numbers)
 //   2 found      the look found a treatment: what was found, that only the buyer knows, and his choice
-//   3 declare    selling one's own camel known to be treated: for one who bought her unknowing and was told (decision
-//                15), a third way, «بيعها معلنة» at her natural price with no examination and no fine; for one who
-//                treated her himself the engine refuses it (ownTreatment) and the page says why
+//   3 declare    selling one's own camel known to be treated, for one who bought her unknowing and was told (decision
+//                15): listed «معلنة» at his price (the buyers know), or to the broker «معلنة» now, at her natural price
+//                with no examination and no fine. Her natural price sits under the estimate the cards show (15,000 to
+//                18,000 here), because the cards and the market see her look with a share of the treatment's lift
+//                (Balance.tamperPriceShare) and a declared sale pays for her own look only
+//   4 own        for one who treated her himself the engine refuses the declared sale (ownTreatment), and the page
+//                says why
 // Drawn from real games on seed 4242 (1 October 2026, the page's new game) in the phone's own CSS and pieces: the
 // listings, the vet's looks (the engine's checkListing answers, run on the cheapest listings until one finds something
 // or the cash runs short) and the engine's own refusal of a declared sale for نورة, dyed by her owner. What the engine
@@ -89,14 +93,22 @@ const PORT = process.env.PORT || 8765, OUT = process.env.OUT || '.';
     // 3 selling one's own treated camel: the declared sale, and the engine's refusal for one who treated her himself
     const nr = G.noura, ownCode = G.own && G.own.code;
     const nat = Math.round(nr.estimateLow * 0.95 / 500) * 500;      // PLACEHOLDER: the engine's declaredSale price, for a camel that may be declared
-    const declare = `<div class="body">${back}<div class="title" style="font-size:22px">بيع ${nr.name}</div>
-      <div class="it"><span class="ph">${img(nr)}</span><b>${title(nr)}</b><small>${her(nr, 'يقدّرونها', 'يقدّرونه')} ${rng(nr)} ريال</small><small>${her(nr, 'فيها', 'فيه')} صبغ خفيف</small></div>
-      <div class="sec">لو اشتريتها مجمّلة وأنت ما تدري [PLACEHOLDER]</div>
-      <div class="msgc good"><span class="lead">${check}</span><b>${her(nr, 'بيعها', 'بيعه')} معلنة إن ${her(nr, 'فيها', 'فيه')} تجميل</b><small>بسعرها الطبيعي ${n0(nat)} ريال، بلا فحص ولا غرامة، والمشتري يدري.</small></div>
-      <button class="btn ghost two wide"><span>${her(nr, 'بيعها', 'بيعه')} معلنة للدلال</span><span>${n0(nat)} ريال</span></button>
-      <div class="sec">ولو جمّلتها أنت (${ownCode === 'ownTreatment' ? 'جواب اللعبة' : ownCode || 'ما رد'})</div>
-      ${`<div class="warn"><span class="lead">${alert}</span><b>ما تقدر ${her(nr, 'تعلنها', 'تعلنه')}</b><small>أنت اللي ${her(nr, 'جمّلتها', 'جمّلته')}، والتجميل ممنوع برا المهرجان بعد، وإعلانه اعتراف. ${her(nr, 'انتظرها', 'انتظره')} لين يروح الصبغ، أو ${her(nr, 'بيعها', 'بيعه')} ساكت ويفحصونها قبل ما يدفعون.</small></div>`}</div>`;
-    return { check: check1, found: found2, declare };
+    const minus = ic('<path d="M5 12h14"/>'), plusI = ic('<path d="M12 5v14M5 12h14"/>');
+    const tag = ic('<path d="M3.5 12.4V5c0-.8.7-1.5 1.5-1.5h7.4l8.1 8.1c.6.6.6 1.5 0 2.1l-7.4 7.4c-.6.6-1.5.6-2.1 0z"/><circle cx="8.2" cy="8.2" r="1.6"/>');
+    const head = `<div class="body">${back}<div class="title" style="font-size:22px">بيع ${nr.name}</div>
+      <div class="it"><span class="ph">${img(nr)}</span><b>${title(nr)}</b><small>${her(nr, 'يقدّرونها', 'يقدّرونه')} ${rng(nr)} ريال</small><small>${her(nr, 'فيها', 'فيه')} صبغ خفيف، وأنت ما دريت لين انقال لك</small></div>`;
+    const declare = `${head}
+      <div class="note">[PLACEHOLDER: اشتريتها مجمّلة وأنت ما تدري، وانقال لك]</div>
+      <div class="sec">${her(nr, 'اعرضها', 'اعرضه')} معلنة إن ${her(nr, 'فيها', 'فيه')} تجميل</div>
+      <div class="group"><div class="row ord full"><span class="lead">${tag}</span><b>سعرك</b><span class="stp"><button>${minus}</button><span class="n"><b>${n0(nat)}</b> <span>ريال</span></span><button>${plusI}</button></span><small>المشتري يدري إن ${her(nr, 'فيها', 'فيه')} صبغ، وما يفحصون ولا تتغرم</small></div></div>
+      <button class="btn pri wide">${her(nr, 'اعرضها', 'اعرضه')} معلنة بـ ${n0(nat)}</button>
+      <div class="sec">أو ${her(nr, 'بيعها', 'بيعه')} معلنة للدلال الحين</div>
+      <button class="btn ghost two wide"><span>${her(nr, 'بيعها', 'بيعه')} معلنة الحين</span><span>${n0(nat)} ريال</span></button>
+      <div class="note">${her(nr, 'سعرها', 'سعره')} الطبيعي بدون زيادة التجميل، فهو تحت تقديرهم. أو ${her(nr, 'انتظرها', 'انتظره')} لين يروح الصبغ.</div></div>`;
+    const own = `${head.replace('، وأنت ما دريت لين انقال لك', '، أنت اللي جمّلتها')}
+      <div class="sec">لو جمّلتها أنت (${ownCode === 'ownTreatment' ? 'جواب اللعبة' : ownCode || 'ما رد'})</div>
+      <div class="warn"><span class="lead">${alert}</span><b>ما تقدر ${her(nr, 'تعلنها', 'تعلنه')}</b><small>أنت اللي ${her(nr, 'جمّلتها', 'جمّلته')}، والتجميل ممنوع برا المهرجان بعد، وإعلانه اعتراف. ${her(nr, 'انتظرها', 'انتظره')} لين يروح الصبغ، أو ${her(nr, 'بيعها', 'بيعه')} ساكت ويفحصونها قبل ما يدفعون.</small></div></div>`;
+    return { check: check1, found: found2, declare, own };
   }, game);
   const files = [];
   let i = 0;
