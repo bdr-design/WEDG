@@ -324,15 +324,22 @@ Result _quickSale(Sim sim, PlayerState p, QuickSale cmd) {
   return _ok(sim);
 }
 
-/// Why [c] cannot be sold declared as treated: no treatment showing in her
-/// that her owner knows of (he had it done, or was told). Null when he can
-/// (the owner's decision 15: any owner who knows, the one who treated her
-/// included; he gains nothing, the natural price).
+/// Why [c] cannot be sold declared as treated, or null (the owner's
+/// decision 15): only by an owner who bought her treated without knowing
+/// and was told. One who had a treatment in her done himself cannot
+/// (treating is unlawful outside the festivals too, GDD 7.1: declaring it
+/// would be confessing it); he waits for it to wear off, or sells silently
+/// with the examination's risk.
 DomainError? cannotDeclare(Sim sim, PlayerState p, Camel c) {
-  final knows = c.treatments.any(
-    (t) => t.activeOn(sim.today) && (t.by == p.id || t.knownBy.contains(p.id)),
-  );
-  return knows ? null : const DomainError(ErrorCode.nothingToDeclare);
+  final showing = [
+    for (final t in c.treatments)
+      if (t.activeOn(sim.today)) t,
+  ];
+  if (showing.any((t) => t.by == p.id)) {
+    return const DomainError(ErrorCode.ownTreatment);
+  }
+  final told = showing.any((t) => t.knownBy.contains(p.id));
+  return told ? null : const DomainError(ErrorCode.nothingToDeclare);
 }
 
 /// The buyer's or the broker's examination before paying (the owner, 13

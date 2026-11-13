@@ -27,8 +27,8 @@ final class Bargain extends Command {
 
 /// Lists a camel in الحراج. [declared]: offered as treated, the treatment
 /// shown to every buyer, at her natural price, with no examination and no
-/// fine (the owner's decision 15; only for one with a treatment her owner
-/// knows of).
+/// fine (the owner's decision 15): only for an owner who bought her treated
+/// without knowing and was told, never the one who had her treated.
 final class ListForSale extends Command {
   const ListForSale(
     super.actor,

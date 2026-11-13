@@ -85,6 +85,10 @@ enum ErrorCode {
   /// (the owner's decision 15).
   nothingToDeclare,
 
+  /// Sold as declared treated by the owner who had her treated himself:
+  /// declaring it would be confessing it (decision 15; GDD 7.1).
+  ownTreatment,
+
   /// An order would overfill the feed store or the water tank ({'room'}: units
   /// that still fit).
   storeFull,

@@ -1799,7 +1799,12 @@ void main() {
       () {
         for (var seed = 0; seed < 12; seed++) {
           final g = newGame(seed);
-          final c = treatedBy(g, g.me.id, known: [g.me.id]);
+          // bought treated, unknowing, then told
+          final c = treatedBy(
+            g,
+            g.state.world.owners.keys.first,
+            known: [g.me.id],
+          );
           final natural = handlers
               .quickSalePrice(c, Sim(g.state), declared: true)
               .value;
@@ -1845,6 +1850,26 @@ void main() {
         expect(r.ok, isTrue);
         expect(r.events.whereType<SaleRefused>(), isEmpty);
       }
+    });
+
+    test('the owner who had her treated cannot sell her declared', () {
+      final g = newGame();
+      final c = treatedBy(g, g.me.id, known: [g.me.id]);
+      expect(
+        refused(g, QuickSale(g.me.id, c.id, declared: true)).error.code,
+        ErrorCode.ownTreatment,
+      );
+      expect(
+        refused(
+          g,
+          ListForSale(g.me.id, c.id, 50000, declared: true),
+        ).error.code,
+        ErrorCode.ownTreatment,
+      );
+      expect(
+        GameView(g.state, g.me.id).cannotDeclare(c.id)?.code,
+        ErrorCode.ownTreatment,
+      );
     });
 
     test('nothing to declare without a treatment he knows of', () {
