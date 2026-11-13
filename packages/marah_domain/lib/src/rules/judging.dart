@@ -38,6 +38,7 @@ class Judging {
     Trait t,
     GameDay today, {
     bool judges = false,
+    bool natural = false,
   }) {
     var v = c.genes[t]! + c.env[t]!;
     v += (c.condition - neutralCondition) * _sensitivity[t.index];
@@ -47,7 +48,7 @@ class Judging {
     final years = c.ageYears(today);
     if (years >= 16) v -= (years - 15) * 1.2;
     // a secret treatment makes her look finer while it lasts (GDD 7.1)
-    if (c.treatments.isNotEmpty) {
+    if (c.treatments.isNotEmpty && !natural) {
       final share = judges ? 1.0 : Balance.tamperPriceShare;
       for (final x in c.treatments) {
         if (x.activeOn(today) && x.kind.traits.contains(t)) {
@@ -108,6 +109,17 @@ class Judging {
   }
 
   static final _looks = Expando<(Object, double)>('looks');
+
+  /// Her look with no treatment counted: what a declared treated camel is
+  /// priced at (the owner's decision 15).
+  static double naturalQuality(Camel c, GameDay today) {
+    if (c.treatments.isEmpty) return quality(c, today);
+    var sum = 0.0;
+    for (final t in Trait.values) {
+      sum += observed(c, t, today, natural: true) * t.weight;
+    }
+    return sum;
+  }
 
   static Object _lookKey(Camel c, GameDay today) => (
     today.value,

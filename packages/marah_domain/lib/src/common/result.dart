@@ -81,6 +81,10 @@ enum ErrorCode {
   /// sale is off and the seller fined ({'fine'}; the owner, 13 Nov 2026).
   saleRefused,
 
+  /// Sold as declared treated, but she has no treatment her owner knows of
+  /// (the owner's decision 15).
+  nothingToDeclare,
+
   /// An order would overfill the feed store or the water tank ({'room'}: units
   /// that still fit).
   storeFull,

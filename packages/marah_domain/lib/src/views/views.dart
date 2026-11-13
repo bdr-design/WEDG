@@ -146,6 +146,7 @@ class ListingView {
     this.transport,
     this.knownTreatments,
   ) : id = listing.id,
+      declared = listing.declared,
       timesChecked = listing.checks[camel._viewer.value] ?? 0,
       askPrice = listing.askPrice,
       region = listing.region,
@@ -172,6 +173,10 @@ class ListingView {
   /// How many times the viewer's vet has looked at her (so the phone can
   /// say "checked N times, nothing found").
   final int timesChecked;
+
+  /// Offered as treated: [knownTreatments] then shows every buyer what is
+  /// in her (the owner's decision 15).
+  final bool declared;
 }
 
 class StudView {
@@ -233,7 +238,9 @@ class GameView {
       Riyal(handlers.transportToFarm(me, l)),
       [
         for (final t in c.treatments)
-          if (t.activeOn(today) && t.knownBy.contains(viewer)) t.kind,
+          if (t.activeOn(today) &&
+              (l.declared || t.knownBy.contains(viewer) || t.by == viewer))
+            t.kind,
       ],
     );
   }
@@ -486,10 +493,18 @@ class GameView {
   int get shepherdsNeeded => CareSystem.shepherdsNeeded(herd.length);
 
   /// What the broker pays now, only for the viewer's own camels.
-  Riyal? quickSalePrice(CamelId id) {
+  Riyal? quickSalePrice(CamelId id, {bool declared = false}) {
     final c = _w.camels[id];
     if (c == null || !c.isAlive || c.ownerId != viewer) return null;
-    return handlers.quickSalePrice(c, _sim);
+    return handlers.quickSalePrice(c, _sim, declared: declared);
+  }
+
+  /// Why the viewer cannot sell [id] declared as treated (no treatment he
+  /// knows of in her), or null (the owner's decision 15).
+  DomainError? cannotDeclare(CamelId id) {
+    final c = _w.camels[id];
+    final own = Eligibility.owned(c, viewer);
+    return own ?? handlers.cannotDeclare(_sim, me, c!);
   }
 
   /// The herd's worth as the viewer hears it: the sum of the appraisals

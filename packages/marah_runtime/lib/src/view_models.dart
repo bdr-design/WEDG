@@ -30,6 +30,7 @@ class CamelCard {
     required this.crossbred,
     this.onTheWay = false,
     this.quickSale,
+    this.declaredSale,
     this.suckling = false,
   });
 
@@ -62,6 +63,10 @@ class CamelCard {
   /// else null.
   final int? quickSale;
 
+  /// What the broker pays for her declared as treated (her natural price),
+  /// only when the player knows of a treatment in her (decision 15).
+  final int? declaredSale;
+
   /// A calf still suckling its mother: named حوار whatever its age class.
   final bool suckling;
 
@@ -89,6 +94,7 @@ class CamelCard {
       other.crossbred == crossbred &&
       other.onTheWay == onTheWay &&
       other.quickSale == quickSale &&
+      other.declaredSale == declaredSale &&
       other.suckling == suckling;
 
   @override
@@ -158,6 +164,7 @@ class ListingCard {
     required this.offers,
     this.knownTreatments = const [],
     this.timesChecked = 0,
+    this.declared = false,
   });
 
   final ListingId id;
@@ -182,6 +189,9 @@ class ListingCard {
   /// How many times the player's vet has looked at her.
   final int timesChecked;
 
+  /// Offered declared as treated (knownTreatments shows what is in her).
+  final bool declared;
+
   @override
   bool operator ==(Object other) =>
       other is ListingCard &&
@@ -197,7 +207,8 @@ class ListingCard {
       other.isMine == isMine &&
       _listEquals(other.offers, offers) &&
       _listEquals(other.knownTreatments, knownTreatments) &&
-      other.timesChecked == timesChecked;
+      other.timesChecked == timesChecked &&
+      other.declared == declared;
 
   @override
   int get hashCode => Object.hash(
@@ -958,6 +969,7 @@ class CamelDetail {
     required this.canSell,
     required this.canBreed,
     required this.quickSalePrice,
+    this.declaredSalePrice,
   });
 
   final CamelCard card;
@@ -981,6 +993,10 @@ class CamelDetail {
   final DomainError? canSell;
   final DomainError? canBreed;
   final int? quickSalePrice;
+
+  /// What the broker pays for her declared as treated (her natural price),
+  /// when the player knows of a treatment in her; null otherwise.
+  final int? declaredSalePrice;
 }
 
 /// A round as the player sees it (GDD 7).
