@@ -38,6 +38,7 @@ class Listing {
     required this.expiresOn,
     Map<String, int>? bargains,
     Map<String, int>? checks,
+    this.declared = false,
   }) : bargains = bargains ?? {},
        checks = checks ?? {};
 
@@ -59,6 +60,10 @@ class Listing {
   /// own day, a fresh look (CheckListing).
   final Map<String, int> checks;
 
+  /// Offered as treated (the owner's decision 15): the treatment shown to
+  /// every buyer, priced and paid at her natural look, never examined.
+  final bool declared;
+
   Map<String, Object?> toJson() => {
     'id': id.value,
     'camel': camelId.value,
@@ -70,6 +75,7 @@ class Listing {
     'expiresOn': expiresOn.value,
     'bargains': bargains,
     if (checks.isNotEmpty) 'checks': checks,
+    if (declared) 'declared': true,
   };
 
   static Listing fromJson(Map<String, Object?> j) => Listing(
@@ -87,6 +93,7 @@ class Listing {
     checks: ((j['checks'] as Map<String, Object?>?) ?? const {}).map(
       (k, v) => MapEntry(k, v! as int),
     ),
+    declared: j['declared'] == true,
   );
 }
 

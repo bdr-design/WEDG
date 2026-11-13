@@ -636,8 +636,9 @@ class MarketSystem implements DailySystem {
       if (c == null || !c.isAlive) continue;
       final r = sim.rng(['buyers', l.id.value]);
       // the seller's name in the family moves what buyers offer (GDD 8)
+      // a declared treated camel at her natural look (decision 15)
       final value =
-          (Valuation.value(c, sim.today).value *
+          (Valuation.value(c, sim.today, natural: l.declared).value *
                   Balance.reputationPriceFactor(
                     sim.player(l.sellerId)!.reputationIn(c.category),
                   ))

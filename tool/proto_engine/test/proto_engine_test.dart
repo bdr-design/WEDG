@@ -39,6 +39,13 @@ void main() {
       {'type': 'acceptOffer', 'offer': 'o1'},
       {'type': 'declineOffer', 'offer': 'o2'},
       {'type': 'quickSale', 'camel': 'c2'},
+      {'type': 'quickSale', 'camel': 'c2', 'declared': true},
+      {
+        'type': 'listForSale',
+        'camel': 'c1',
+        'askPrice': 52000,
+        'declared': true,
+      },
       {'type': 'mateWithOwnBull', 'female': 'c3', 'bull': 'c4'},
       {'type': 'mateWithStud', 'female': 'c3', 'stud': 's1'},
       {'type': 'treat', 'camel': 'c5'},
@@ -105,6 +112,7 @@ void main() {
         {'type': 'enterRound', 'festival': 'f1', 'camel': 'c1'},
         {'type': 'enterRound', 'festival': 'f1', 'round': 'r1', 'camels': 'c1'},
         {'type': 'tamper', 'camel': 'c1', 'kind': 'magic', 'strength': 1},
+        {'type': 'quickSale', 'camel': 'c1', 'declared': 'yes'},
         {'type': 'tamper', 'camel': 'c1', 'kind': 'dye', 'strength': 1.5},
       ]) {
         expect(commandFromJson(me, j), isNull, reason: '$j');

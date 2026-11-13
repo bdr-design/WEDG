@@ -201,6 +201,10 @@ Result _list(Sim sim, PlayerState p, ListForSale cmd) {
   if (cmd.askPrice < Balance.minAskPrice) {
     return _err(sim, ErrorCode.invalidAmount);
   }
+  if (cmd.declared) {
+    final cannot = cannotDeclare(sim, p, c!);
+    if (cannot != null) return Err(cannot, sim.drain());
+  }
   final l = Listing(
     id: sim.world.ids.listing(),
     camelId: c!.id,
@@ -210,6 +214,7 @@ Result _list(Sim sim, PlayerState p, ListForSale cmd) {
     reservePrice: Riyal(cmd.askPrice),
     listedOn: sim.today,
     expiresOn: sim.today + Balance.playerListingDays,
+    declared: cmd.declared,
   );
   sim.world.listings[l.id] = l;
   sim.emit(
@@ -243,7 +248,10 @@ Result _accept(Sim sim, PlayerState p, AcceptOffer cmd) {
   if (l.sellerId != p.id) return _err(sim, ErrorCode.notYourListing);
   final c = sim.world.camels[l.camelId]!;
   final buyer = sim.world.owners[o.buyerId];
-  final refused = _examined(sim, p, c, buyer?.name ?? '', 'offer');
+  // a declared treated camel is not examined: the buyer knows (decision 15)
+  final refused = l.declared
+      ? null
+      : _examined(sim, p, c, buyer?.name ?? '', 'offer');
   if (refused != null) {
     sim.world.offers.remove(o.id); // the buyer walks away
     return refused;
@@ -269,7 +277,7 @@ Result _decline(Sim sim, PlayerState p, DeclineOffer cmd) {
 /// by a few percent and the same all week (his price is the one the player
 /// is shown and the one paid; the exact value cannot be read back from it,
 /// as from the appraisals: views.dart).
-Riyal quickSalePrice(Camel c, Sim sim) {
+Riyal quickSalePrice(Camel c, Sim sim, {bool declared = false}) {
   final eye = Rng.keyed(sim.world.seed, [
     'broker',
     c.id.value,
@@ -277,7 +285,7 @@ Riyal quickSalePrice(Camel c, Sim sim) {
   ]).normal(sd: Balance.brokerEyeSd);
   final rep = sim.player(c.ownerId)?.reputationIn(c.category);
   return marketRound(
-    Valuation.value(c, sim.today).value *
+    Valuation.value(c, sim.today, natural: declared).value *
         (rep == null ? 1 : Balance.reputationPriceFactor(rep)) *
         Balance.quickSaleFactor *
         (1 +
@@ -295,20 +303,36 @@ Result _quickSale(Sim sim, PlayerState p, QuickSale cmd) {
   if (problem != null) return Err(problem, sim.drain());
   final rng = sim.rng(['broker', c!.id.value]);
   final broker = WorldGen(sim).randomOwner(rng, region: p.farm.region);
-  final refused = _examined(sim, p, c, broker.name, 'broker');
-  if (refused != null) return refused;
+  if (cmd.declared) {
+    final cannot = cannotDeclare(sim, p, c);
+    if (cannot != null) return Err(cannot, sim.drain());
+  } else {
+    final refused = _examined(sim, p, c, broker.name, 'broker');
+    if (refused != null) return refused;
+  }
   // he buys it himself, so takes no commission (السعي is the fee for
   // finding a buyer); his lower price is his margin
   _sellTo(
     sim,
     p,
     c,
-    quickSalePrice(c, sim),
+    quickSalePrice(c, sim, declared: cmd.declared),
     broker.id,
     broker.name,
     commission: false,
   );
   return _ok(sim);
+}
+
+/// Why [c] cannot be sold declared as treated: no treatment showing in her
+/// that her owner knows of (he had it done, or was told). Null when he can
+/// (the owner's decision 15: any owner who knows, the one who treated her
+/// included; he gains nothing, the natural price).
+DomainError? cannotDeclare(Sim sim, PlayerState p, Camel c) {
+  final knows = c.treatments.any(
+    (t) => t.activeOn(sim.today) && (t.by == p.id || t.knownBy.contains(p.id)),
+  );
+  return knows ? null : const DomainError(ErrorCode.nothingToDeclare);
 }
 
 /// The buyer's or the broker's examination before paying (the owner, 13

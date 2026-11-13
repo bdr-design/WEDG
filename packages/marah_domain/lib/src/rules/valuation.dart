@@ -57,8 +57,12 @@ class Valuation {
     return 1 + math.min(bonus, 3.0);
   }
 
-  static Riyal value(Camel c, GameDay today) {
-    final q = Judging.quality(c, today);
+  /// What she is worth; [natural]: with no treatment counted (a declared
+  /// treated camel, the owner's decision 15).
+  static Riyal value(Camel c, GameDay today, {bool natural = false}) {
+    final q = natural
+        ? Judging.naturalQuality(c, today)
+        : Judging.quality(c, today);
     var v =
         basePrice(c.ageClass(today), c.sex) *
         qualityMultiplier(q) *

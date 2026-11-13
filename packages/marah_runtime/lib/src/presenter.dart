@@ -43,6 +43,9 @@ class Presenter {
       crossbred: c.crossbred,
       onTheWay: c.onTheWay,
       suckling: v.suckling(c.id),
+      declaredSale: c.isMine && sell == null && v.cannotDeclare(c.id) == null
+          ? v.quickSalePrice(c.id, declared: true)?.value
+          : null,
       quickSale: c.isMine && sell == null
           ? v.quickSalePrice(c.id)?.value
           : null,
@@ -62,6 +65,7 @@ class Presenter {
     isMine: l.sellerId == viewer,
     knownTreatments: l.knownTreatments,
     timesChecked: l.timesChecked,
+    declared: l.declared,
     offers: l.sellerId == viewer
         ? [
             for (final o in v.offersOn(l.id))
@@ -515,6 +519,9 @@ class Presenter {
       listing: l == null ? null : listing(l, v),
       canSell: c.isMine ? v.canSell(id) : null,
       canBreed: c.isMine && c.sex == Sex.female ? v.canBreed(id) : null,
+      declaredSalePrice: v.canSell(id) == null && v.cannotDeclare(id) == null
+          ? v.quickSalePrice(id, declared: true)?.value
+          : null,
       quickSalePrice: v.canSell(id) == null
           ? v.quickSalePrice(id)?.value
           : null,

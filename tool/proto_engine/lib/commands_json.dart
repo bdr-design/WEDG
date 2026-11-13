@@ -24,11 +24,16 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         me,
         CamelId(_str(j['camel'])),
         _int(j['askPrice']),
+        declared: _bool(j['declared']),
       ),
       'cancelListing' => CancelListing(me, ListingId(_str(j['listing']))),
       'acceptOffer' => AcceptOffer(me, OfferId(_str(j['offer']))),
       'declineOffer' => DeclineOffer(me, OfferId(_str(j['offer']))),
-      'quickSale' => QuickSale(me, CamelId(_str(j['camel']))),
+      'quickSale' => QuickSale(
+        me,
+        CamelId(_str(j['camel'])),
+        declared: _bool(j['declared']),
+      ),
       'mateWithOwnBull' => MateWithOwnBull(
         me,
         CamelId(_str(j['female'])),
@@ -93,6 +98,9 @@ int _int(Object? v) {
 
 String _str(Object? v) => v! as String;
 
+/// An optional flag: absent is false; anything but a bool is malformed.
+bool _bool(Object? v) => v == null ? false : v as bool;
+
 /// The other way, for tests and tools. Its switch is exhaustive over the
 /// sealed [Command], so a new command does not compile until it is given a
 /// JSON form here and in [commandFromJson] (the round-trip test checks both).
@@ -113,10 +121,11 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'listing': listing.value,
     'amount': amount,
   },
-  ListForSale(:final camel, :final askPrice) => {
+  ListForSale(:final camel, :final askPrice, :final declared) => {
     'type': 'listForSale',
     'camel': camel.value,
     'askPrice': askPrice,
+    if (declared) 'declared': true,
   },
   CancelListing(:final listing) => {
     'type': 'cancelListing',
@@ -124,7 +133,11 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
   },
   AcceptOffer(:final offer) => {'type': 'acceptOffer', 'offer': offer.value},
   DeclineOffer(:final offer) => {'type': 'declineOffer', 'offer': offer.value},
-  QuickSale(:final camel) => {'type': 'quickSale', 'camel': camel.value},
+  QuickSale(:final camel, :final declared) => {
+    'type': 'quickSale',
+    'camel': camel.value,
+    if (declared) 'declared': true,
+  },
   MateWithOwnBull(:final female, :final bull) => {
     'type': 'mateWithOwnBull',
     'female': female.value,

@@ -25,10 +25,20 @@ final class Bargain extends Command {
   final int amount;
 }
 
+/// Lists a camel in الحراج. [declared]: offered as treated, the treatment
+/// shown to every buyer, at her natural price, with no examination and no
+/// fine (the owner's decision 15; only for one with a treatment her owner
+/// knows of).
 final class ListForSale extends Command {
-  const ListForSale(super.actor, this.camel, this.askPrice);
+  const ListForSale(
+    super.actor,
+    this.camel,
+    this.askPrice, {
+    this.declared = false,
+  });
   final CamelId camel;
   final int askPrice;
+  final bool declared;
 }
 
 final class CancelListing extends Command {
@@ -48,8 +58,11 @@ final class DeclineOffer extends Command {
 
 /// Sell straight to the broker for a quick, lower price.
 final class QuickSale extends Command {
-  const QuickSale(super.actor, this.camel);
+  const QuickSale(super.actor, this.camel, {this.declared = false});
   final CamelId camel;
+
+  /// Sold as treated, declared (ListForSale.declared).
+  final bool declared;
 }
 
 // --------------------------------------------------------------- breeding

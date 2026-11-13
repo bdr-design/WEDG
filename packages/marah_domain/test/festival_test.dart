@@ -1778,6 +1778,131 @@ void main() {
     });
   });
 
+  group('Decision 15: a treated camel sold declared', () {
+    Camel treatedBy(Game g, OwnerId? by, {List<OwnerId> known = const []}) {
+      final c = camelFor(g, roundOf(grand(g), RoundKind.fardiDiq));
+      c.treatments.add(
+        Tampering(
+          kind: TamperKind.hormones,
+          strength: 3,
+          on: g.today,
+          until: g.today + 40,
+          by: by,
+          knownBy: [...known],
+        ),
+      );
+      return c;
+    }
+
+    test(
+      'declared to the broker: no examination, her natural price, no fine',
+      () {
+        for (var seed = 0; seed < 12; seed++) {
+          final g = newGame(seed);
+          final c = treatedBy(g, g.me.id, known: [g.me.id]);
+          final natural = handlers
+              .quickSalePrice(c, Sim(g.state), declared: true)
+              .value;
+          final silent = handlers.quickSalePrice(c, Sim(g.state)).value;
+          expect(natural, lessThanOrEqualTo(silent));
+          final cash = g.me.cash.value;
+          final r = g.dispatch(QuickSale(g.me.id, c.id, declared: true));
+          expect(r.ok, isTrue);
+          expect(r.events.whereType<SaleRefused>(), isEmpty);
+          expect(r.events.whereType<TamperingFound>(), isEmpty);
+          expect(g.me.cash.value - cash, natural);
+          expect(c.ownerId, isNot(g.me.id));
+        }
+      },
+    );
+
+    test('declared on a listing: every buyer sees the treatment; an offer '
+        'accepted is never examined', () {
+      for (var seed = 0; seed < 12; seed++) {
+        final g = newGame(seed);
+        final c = treatedBy(g, null, known: [g.me.id]);
+        expect(
+          g.dispatch(ListForSale(g.me.id, c.id, 100000, declared: true)).ok,
+          isTrue,
+        );
+        final l = g.state.world.listings.values.firstWhere(
+          (l) => l.camelId == c.id,
+        );
+        expect(l.declared, isTrue);
+        final seen = GameView(g.state, g.me.id).listingOf(c.id)!;
+        expect(seen.declared, isTrue);
+        expect(seen.knownTreatments, [TamperKind.hormones]);
+        final o = Offer(
+          id: OfferId('od-$seed'),
+          listingId: l.id,
+          buyerId: g.state.world.owners.keys.first,
+          amount: const Riyal(40000),
+          madeOn: g.today,
+          expiresOn: g.today + 3,
+        );
+        g.state.world.offers[o.id] = o;
+        final r = g.dispatch(AcceptOffer(g.me.id, o.id));
+        expect(r.ok, isTrue);
+        expect(r.events.whereType<SaleRefused>(), isEmpty);
+      }
+    });
+
+    test('nothing to declare without a treatment he knows of', () {
+      final g = newGame();
+      final c = treatedBy(g, g.state.world.owners.keys.first);
+      expect(
+        refused(g, QuickSale(g.me.id, c.id, declared: true)).error.code,
+        ErrorCode.nothingToDeclare,
+      );
+      expect(
+        refused(
+          g,
+          ListForSale(g.me.id, c.id, 50000, declared: true),
+        ).error.code,
+        ErrorCode.nothingToDeclare,
+      );
+      expect(
+        GameView(g.state, g.me.id).cannotDeclare(c.id)?.code,
+        ErrorCode.nothingToDeclare,
+      );
+    });
+
+    test('sold silently: one who knew is fined when it is found; one who did '
+        'not is told, not fined, the sale off', () {
+      var knewFined = 0, unknowingTold = 0;
+      for (var seed = 0; seed < 30; seed++) {
+        final g = newGame(seed);
+        final knew = treatedBy(g, null, known: [g.me.id]);
+        final cash = g.me.cash.value;
+        final r = g.dispatch(QuickSale(g.me.id, knew.id));
+        if (!r.ok) {
+          expect((r as Err).error.code, ErrorCode.saleRefused);
+          expect(cash - g.me.cash.value, Balance.outsideFine);
+          knewFined++;
+        }
+        final h = newGame(seed + 100);
+        final unknowing = treatedBy(h, h.state.world.owners.keys.first);
+        final cash2 = h.me.cash.value;
+        final r2 = h.dispatch(QuickSale(h.me.id, unknowing.id));
+        if (!r2.ok) {
+          expect((r2 as Err).error.code, ErrorCode.saleRefused);
+          expect((r2.error.params['fine']), 0);
+          expect(h.me.cash.value, cash2);
+          expect(unknowing.ownerId, h.me.id);
+          expect(unknowing.treatments.single.knownBy, contains(h.me.id));
+          // now he knows: he may sell her declared
+          expect(
+            h.dispatch(QuickSale(h.me.id, unknowing.id, declared: true)).ok,
+            isTrue,
+          );
+          unknowingTold++;
+        }
+      }
+      expect(knewFined, greaterThan(10));
+      expect(unknowingTold, greaterThan(10));
+    });
+  });
+
   group('What a player sees', () {
     test('no row carries a score or a mark, the player\'s own included', () {
       final g = newGame();
