@@ -70,7 +70,15 @@ date and season, the balance, the herd), الوايت and العلف, الحلي
 listings), whose orders go to the engine, and البنك (opened by its app or by
 the home's balance: the balance, today's money, every month's net with its
 biggest movement, and a month opened by kind, asked of the engine with
-`engine.bankMonth`). A camel bought comes on the truck
+`engine.bankMonth`), المزاين (the festivals, the player's entries and their
+withdrawal, a festival's page asked of the engine with `engine.festival`,
+registering with each camel's own round or the engine's refusal, the round's
+day told stage by stage at the engine's hours, the results, and the day a
+treatment is found) and «المحادثات» (the treatment man's secret chat, his
+message after each registration, the seven kinds and their strengths, bought by
+two taps). A notice (a registration open, a stage told, a result, his message)
+is a red badge on the app, as الحراج's offers are; nothing is written over the
+game. A camel bought comes on the truck
 the next day and joins the yard then. The design's other phone screens come in as each works on the
 engine (G3 in `docs/plan-gameplay.md`); until then they are not shown. The
 frame meter (`#fps`) is one short line in the top right corner (frames a

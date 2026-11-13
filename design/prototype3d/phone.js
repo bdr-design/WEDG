@@ -5,7 +5,8 @@
 // owner, 13 Nov); a tap outside it makes it small again. It shows the player's own game only, from the rules engine
 // (setGame), and sends the player's orders to it (setEngine): the home screen (the date and its season, the balance,
 // the herd), الوايت and العلف (approved 12 Nov: design/ui/phone_supplies.html), الحليب and العزبة (13 Nov:
-// design/ui/phone_start_*.jpg), الحراج (13 Nov: design/ui/phone_haraj.jpg) and البنك (13 Nov: design/ui/phone_bank.jpg).
+// design/ui/phone_start_*.jpg), الحراج (13 Nov: design/ui/phone_haraj.jpg), البنك (13 Nov: design/ui/phone_bank.jpg),
+// المزاين and «المحادثات», the treatment man's secret chat (13 Nov: design/ui/phone_mazayen.jpg).
 // The design's other screens (design/ui/phone.html: auction, a talk with a buyer, weather) and the other apps come in as each works on the
 // engine; until then they are not shown (the owner, 13 Nov: no example content in a new game).
 // Light: plain DOM in a shadow root (its styles and the page's cannot touch each other), no canvas, no blur; while it
@@ -174,6 +175,44 @@ const CSS = `
   .row.ord.full .stp { grid-row: 1; }      /* (a price's stepper: its line under it as well, not squeezed beside it) */
   .row.ord.full small { grid-column: 2 / 4; }
   .nw { white-space: nowrap; }
+  /* ---------- المزاين and «المحادثات» (approved 13 Nov 2026: design/ui/phone_mazayen.jpg, its styles from design/ui/phone_mazayen.cjs) ---------- */
+  .row .qty.ok { color: var(--acc); font: 600 12.5px/1 "IBM Plex Sans Arabic", sans-serif; }
+  .row .qty.now { color: var(--amber); font: 700 12.5px/1 "IBM Plex Sans Arabic", sans-serif; }
+  .row .qty.bad { color: var(--red); font: 700 12.5px/1 "IBM Plex Sans Arabic", sans-serif; }
+  .row .qty.wait { color: var(--ink2); font: 500 12px/1 "IBM Plex Sans Arabic", sans-serif; }
+  .row.now .lead { background: #fdf1dc; color: var(--amber); }
+  .row.next .lead { background: #eeeef1; color: #a5a5ab; }
+  .row.next b { color: var(--ink2); font-weight: 500; }
+  .row.bad .lead { background: #fde6e4; color: var(--red); }
+  .row .lead.rk { font: 700 15px/1 "Alexandria", sans-serif; }
+  .row .lead.rk.g1 { background: #fbefd2; color: #a8730c; }
+  .row.later .lead { background: #eeeef1; color: #8e8e93; }
+  .row.two { grid-template-columns: 36px 1fr; }
+  .row .qty .dot { display: inline-block; min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px "Alexandria", sans-serif; text-align: center; padding: 0 5px; font-style: normal; }
+  .row .lead.av2 { border-radius: 50%; background: #d9cbb4; color: #4a3720; font: 700 15px/1 "Alexandria", sans-serif; }
+  .it small.bad, .row small.bad { color: var(--red); font-weight: 600; }
+  .it.no .ph, .it.no b { opacity: .55; }
+  .it.sel { box-shadow: inset 0 0 0 2px var(--acc); }
+  .open { background: var(--card); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; box-shadow: inset 0 0 0 1.5px #bfe3d2; }
+  .open .tag { align-self: flex-start; font-size: 11px; font-weight: 700; color: var(--acc); background: var(--acc-soft); border-radius: 8px; padding: 2px 8px; }
+  .open b { font: 700 17px/1.3 "Alexandria", sans-serif; }
+  .open small { font-size: 12px; color: var(--ink2); }
+  .chathd { display: flex; align-items: center; gap: 9px; }
+  .chathd .av { width: 34px; height: 34px; border-radius: 50%; background: #d9cbb4; display: grid; place-items: center; font: 700 15px/1 "Alexandria", sans-serif; color: #4a3720; }
+  .chathd b { font-size: 14.5px; display: block; line-height: 1.2; }
+  .chathd small { font-size: 11px; color: var(--ink2); }
+  .strip { display: flex; align-items: center; gap: 10px; padding: 7px; border-radius: 14px; background: var(--card); }
+  .strip .ph { width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(180deg, #f3eadc, #e2cfae); overflow: hidden; flex: none; }
+  .strip .ph img { width: 100%; height: 100%; object-fit: contain; }
+  .strip b { font-size: 13px; display: block; }
+  .strip small { font-size: 11px; color: var(--ink2); }
+  .strip .lim { margin-inline-start: auto; text-align: end; font-size: 11px; color: var(--ink2); }
+  .strip .lim span { display: block; font: 700 14px/1.1 "Alexandria", sans-serif; color: var(--ink); }
+  .chat { display: flex; flex-direction: column; gap: 6px; }
+  .msg { max-width: 82%; padding: 7px 11px; border-radius: 17px; font-size: 13px; line-height: 1.4; }
+  .msg.them { align-self: flex-start; background: #e9e9eb; border-end-start-radius: 5px; }
+  .msg.me { align-self: flex-end; background: var(--acc); color: #fff; border-end-end-radius: 5px; }
+  .row .act .btn.pr { padding-inline: 10px; font-size: 12.5px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }      /* (what is said after an order, for a screen reader: outside the screen the redraws replace) */
 `;
 
@@ -199,6 +238,17 @@ const I = {
     user: '<circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c.6-3.3 3-5 6.5-5s5.9 1.7 6.5 5"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     talk: '<path d="M4 5.5h16v10H9l-5 4z"/>',
+    // المزاين (design/ui/phone_mazayen.cjs)
+    cup: '<path d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.8c0 2.4 1.2 3.8 3.2 4.2M16.5 6h2.7c0 2.4-1.2 3.8-3.2 4.2"/><path d="M12 14v3.5M9.5 17.5h5v3h-5z"/>',
+    x: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+    dot: '<circle cx="12" cy="12" r="4.2" fill="currentColor"/>',
+    herd: '<path d="M2.5 10.5c0-.8.6-1.3 1.3-1.3h.7c.7 0 1.2.6 1.1 1.3l-.2 1c0 .6.2 1.2.6 1.6.4.3.9.3 1.3 0 .4-.4.7-.8.9-1.3.7-1.4 2-2.3 3.5-2.2.9.1 1.7.7 2.2 1.5.4.6.9 1 1.6 1.3.9.3 1.5 1.2 1.5 2.2v1.2"/><path d="M5.6 13.4v5M8 15.9v2.5M12.5 15.9v2.5"/><path d="M14 6.5c.5-1.2 1.6-1.9 2.9-1.8.9.1 1.6.6 2.1 1.4.3.5.7.8 1.2 1 .7.3 1.2 1 1.2 1.8"/>',
+    rule: '<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',
+    chip: '<rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21"/>',
+    eye: '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/>',
+    scope: '<path d="M6 3.5v6a4 4 0 0 0 8 0v-6"/><path d="M10 13.5v2a4.5 4.5 0 0 0 9 0v-2"/><circle cx="19" cy="11.5" r="2"/>',
+    star: '<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8z"/>',
+    chev: '<path d="M15 6l-6 6 6 6"/>',
     bank: '<path d="M3.5 9.5 12 4l8.5 5.5"/><path d="M5.5 10v7.5M10 10v7.5M14 10v7.5M18.5 10v7.5"/><path d="M3.5 20h17"/>',
   };
 const svg = (k) => `<svg class="i" viewBox="0 0 24 24">${I[k]}</svg>`;
@@ -207,8 +257,8 @@ const clockText = () => { const d = new Date(); return `${d.getHours() % 12 || 1
 const sbar = () => `<div class="sbar"><span class="clk">${clockText()}</span><span class="r"><svg width="16" height="11" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35"/></svg><span class="bat"></span></span></div>`;
 // the top bar: رجوع goes home, or to the screen [to] (الحراج's pages, one inside another)
 const nav = (end = '', to = '') => `<div class="nav"><button class="back"${to ? ` data-go="${to}"` : ''}>${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
-const APP_GO = { water: 'water', feed: 'feed', milk: 'milk', build: 'build', haraj: 'haraj', bank: 'bank' };      // the apps that open a screen
-const badgeSaid = (extra, k) => { const m = extra.match(/class="bd">(\d+)</); return !m ? '' : k === 'haraj' ? `، ${count(Number(m[1]), 'bid')}` : k === 'water' ? '، الماء يخلص' : m[1] === '1' ? '، صنف يخلص' : '، الشعير والبرسيم يخلصون'; };
+const APP_GO = { water: 'water', feed: 'feed', milk: 'milk', build: 'build', haraj: 'haraj', bank: 'bank', cup: 'mazayen', talk: 'chats' };      // the apps that open a screen
+const badgeSaid = (extra, k) => { const m = extra.match(/class="bd">(\d+)</); return !m ? '' : k === 'haraj' ? `، ${count(Number(m[1]), 'bid')}` : k === 'cup' ? `، ${count(Number(m[1]), 'news')}` : k === 'talk' ? `، ${count(Number(m[1]), 'message')}` : k === 'water' ? '، الماء يخلص' : m[1] === '1' ? '، صنف يخلص' : '، الشعير والبرسيم يخلصون'; };
 const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra, k)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge)
 
 
@@ -240,6 +290,10 @@ const NOUN = {
   time: ['مرة وحدة', 'مرتين', 'مرات', 'مرة'],
   entry: ['تسجيل واحد', 'تسجيلين', 'تسجيلات', 'تسجيل'],  // (البنك: a late festival entry's fee)
   fine: ['غرامة وحدة', 'غرامتين', 'غرامات', 'غرامة'],
+  news: ['خبر واحد', 'خبرين', 'أخبار', 'خبر'],           // (المزاين's badge: a registration open, a stage told, a result)
+  message: ['رسالة وحدة', 'رسالتين', 'رسايل', 'رسالة'],   // («المحادثات»'s badge)
+  fest: ['مهرجان واحد', 'مهرجانين', 'مهرجانات', 'مهرجان'],
+  edition: ['دورة وحدة', 'دورتين', 'دورات', 'دورة'],
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const days = (n) => count(n, 'day');
@@ -277,10 +331,12 @@ const errCard = () => ERR ? alertCard('ما تم الطلب', ERR) : '';
 const debtLine = () => `عليك دين ${n0(-G.cash)} ريال: ما تقدر تشتري حلال ولا تبني لين تسدد.`;
 // the merchant's account (the owner's decisions 9 and 10): feed, water and the vet go on it when the money does not
 // cover them, up to its limit. [cost]: what the money does not cover goes on it; null when it is past the limit
+// (the engine's account.spend: the most an order of necessities may cost now, the money above zero and the room left on
+// the account; what the money does not cover goes on it. Each tanker comes quoted: t.goes, t.onAccount)
 function onAccount(cost) {
-  const A = G.farm.account, short = cost - Math.max(0, Math.min(G.cash, cost));
-  if (short <= 0) return { short: 0, owed: A.owed };
-  return A.owed + short <= A.limit ? { short, owed: A.owed + short } : null;
+  const A = G.farm.account, short = Math.max(0, cost - Math.max(0, G.cash));
+  if (cost > A.spend) return null;
+  return { short, owed: A.owed + short };
 }
 const accountLine = (owed) => `على الحساب: عليك للتاجر ${n0(owed)} ريال من حده ${n0(G.farm.account.limit)} ريال`;
 const accountFullLine = () => `حساب التاجر وصل حده ${n0(G.farm.account.limit)} ريال: بيع من حلالك أو سدد.`;
@@ -300,15 +356,9 @@ function foundWords(name, kinds, fine, who, male) {
     : `ما تتغرم لأنك ما دريت، والحين صرت تدري. التجميل يروح مع الوقت، ولو ${hf('بعتها', 'بعته')} ساكت قبل وانكشف تتغرم.`;
   return { title, line: off ? `${off}، ${rest}` : rest };
 }
-// treatments found while the phone was shut (the daily look, the vet): told once on الحراج's answer card, the oldest
-// not yet told first; those told with a refused sale are told already
-const FOUND_SEEN = new Set();
-const foundKey = (e) => `${e.day}|${e.camel}|${e.kind}`;
-function unseenFound() {
-  if (!G) return null;
-  const sales = new Set(G.recentEvents.filter((e) => e.type === 'saleRefused').map((e) => `${e.day}|${e.camel}`));
-  return G.recentEvents.find((e) => e.type === 'tamperingFound' && e.festival == null && !FOUND_SEEN.has(foundKey(e)) && !sales.has(`${e.day}|${e.camel}`)) || null;
-}
+// treatments found outside a festival and a sale (the daily look, the vet) are told once on الحراج's answer card, the
+// oldest first, from the engine's untold list (G.findings), and marked told there (markFindingsTold): none missed, none
+// told twice, whether the phone was shut or the game restarted
 const FEED = { barley: 'شعير', alfalfa: 'برسيم' };
 const stepper = (k, n, unit, canUp) => `<span class="stp"><button data-act="step" data-s="${k}" data-d="-1" aria-label="${FEED[k]} أقل" ${n ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n}</b> <span>${unit}</span></span><button data-act="step" data-s="${k}" data-d="1" aria-label="${FEED[k]} أكثر" ${canUp ? '' : 'disabled'}>${svg('plus')}</button></span>`;
 // where the feed is kept: the start's shade until the store is built (the review: العلف spoke of a store the farm has not)
@@ -388,7 +438,7 @@ function waterScreen() {
       const under = f.tankL - t.litres / 2, wait = need > 0 ? Math.ceil((have + coming - under) / need) : null;
       line = `الخزان ما يشيله لين ينزل تحت ${n0(under)} لتر${wait ? `، بعد ${days(wait)} تقريبًا` : ''}`;
     }
-    const acc = onAccount(t.price);
+    const acc = t.goes ? { short: t.onAccount, owed: f.account.owed + t.onAccount } : null;
     if (t.room > 0 && acc && acc.short > 0) line = `${n0(t.price)} ريال · ${accountLine(acc.owed)}`;
     else if (t.room > 0 && !acc) line = `${n0(t.price)} ريال · ${accountFullLine()}`;
     const can = t.room > 0 && acc != null;
@@ -828,6 +878,317 @@ function bankMonthScreen() {
     ${outs.length ? `<div class="sec">المصروف</div><div class="group">${outs.map(line).join('')}</div>` : ''}</div>`;
 }
 
+// ---------------------------------------------------------------- المزاين (approved 13 Nov 2026: design/ui/phone_mazayen.jpg)
+// The festivals on the engine (GDD 7 and 7.1): the one open for registration, the player's entries (withdrawn by two
+// taps), the coming ones by their days and the highest first prize a player can enter for; a festival's page (its
+// individual rounds, each colour's day, the group rounds as coming later, the rules); registering (each camel with its
+// own round or the engine's refusal, the cost, two taps: it costs the trucking); the round's day told stage by stage as
+// the engine tells it (each stage at its hour; nothing of a stage not told is in the snapshot); the results; and the day
+// a treatment is found. The festival's page comes from the engine when it is opened (engine.festival), again when the
+// festivals change. Cheating is never offered here: it lives in «المحادثات» (the owner, 13 Nov).
+// MZ: the festival opened, its page as the engine gave it and the revision it was read at, the camel picked to
+// register, the entry looked at ({round, camel}).
+const MZ_SCREENS = new Set(['mazayen', 'fest', 'enter', 'day', 'result', 'chats', 'chat', 'strength']);
+const MZ = { fest: null, page: null, text: null, rev: null, asked: 0, sel: null, entry: null };
+// the phone's own words for the engine's names (one table each, as its other apps keep theirs; the engine's catalog
+// labels are not sent: these words change with the sentence, by sex and with the article)
+const RK = { fardiJil: 'الفردي جل', fardiDiq: 'الفردي دق', mafareed: 'مفاريد القعدان والبكار', diq: 'دق القعدان والبكار', fahal: 'الفحل وإنتاجه', jamal: 'الجمل', manqiya: 'المنقية', jazeera: 'منقية الجزيرة', hajij: 'الهجيج', tabaa: 'الطبع', badawa: 'البداوة' };
+const RK_SHORT = { fardiJil: 'الجل', fardiDiq: 'الدق', mafareed: 'المفاريد', diq: 'الدق', fahal: 'الفحل وإنتاجه' };
+const FAMILY = { wodh: 'الوضح', shoqh: 'الشقح', shoal: 'الشعل', sofr: 'الصفر', homr: 'الحمر', majaheem: 'المجاهيم' };
+const STAGE = ['الشريحة والشاهد', 'فحص الهجين واللون والعمر', 'التحكيم الأولي', 'خبراء التلاعب', 'اللجنة الطبية', 'التحكيم النهائي'];
+const STAGE_KEY = ['chipWitness', 'breedColourAge', 'preliminary', 'tamperingExperts', 'medical', 'finalJudging'];
+const STAGE_NEXT = ['يطابقون الشريحة باسمك', 'اللون صافي والعمر بالأسنان', 'اللجنة تختار النص للتحكيم النهائي', 'فحص الشفايف والخشم والوبر', 'سونار وأشعة وتحاليل', 'المراكز والجوايز'];
+const STAGE_ICON = ['chip', 'eye', 'dot', 'eye', 'scope', 'star'];
+// a stage's hour in words (the engine's festivalRules.stageMinutes, a game choice): the morning, noon, the afternoon, sunset
+const WHEN = (min) => (min < 720 ? 'الصبح' : min < 900 ? 'الظهر' : min < 1050 ? 'العصر' : 'المغرب');
+const FEATURE = { head: 'الرأس', nose: 'الخشم', lips: 'الشفايف', ears: 'الأذن', neck: 'الرقبة', hump: 'السنام', back: 'الغارب والظهر', fore: 'المقدمة', hind: 'المؤخرة', stance: 'الوقفة', coat: 'اللون والوبر' };
+const WHERE = { botox: 'بشفايفها', filler: 'بخشمها', hormones: 'بسنامها', lipStretch: 'بشفايفها', teethFiling: 'بأسنانها', tailCut: 'بذيلها', dye: 'بوبرها' };
+const STRENGTH = ['خفيف', 'وسط', 'قوي'];
+const theTamper = (k) => (/ /.test(TAMPER[k]) ? TAMPER[k] : `ال${TAMPER[k]}`);
+const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join('، ')} و${xs[xs.length - 1]}`);
+// dates: the engine's game days as the phone says them
+const dateOf = (day) => new Date(Date.parse(G.date + 'T00:00:00Z') + (day - G.today) * 864e5);
+const dd = (day) => { const d = dateOf(day); return `${WEEKDAY[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`; };
+const dShort = (day) => { const d = dateOf(day); return `${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`; };
+const span = (f) => { const a = dateOf(f.startsOn), z = dateOf(f.endsOn); if (f.startsOn === f.endsOn) return dShort(f.startsOn); return a.getUTCMonth() === z.getUTCMonth() ? `من ${a.getUTCDate()} لين ${dShort(f.endsOn)}` : `من ${dShort(f.startsOn)} لين ${dShort(f.endsOn)}`; };
+const inDays = (day) => { const n = day - G.today; return n <= 0 ? 'اليوم' : n === 1 ? 'بكرة' : `بعد ${days(n)}`; };
+// a festival still taking entries: from its opening, free till its closing, then late (till 72 hours before each round)
+const openFests = () => (G ? G.festivals.filter((f) => !f.done && G.today >= f.opensOn && G.today <= f.endsOn - 3).sort((a, b) => a.startsOn - b.startsOn) : []);
+const myEntries = () => (G ? G.festivals.flatMap((f) => (f.entries || []).map((e) => ({ ...e, festival: f.id, fest: f }))) : []);
+const entryKey = (e) => `${e.round}:${e.camel}`;
+// what the badge has shown the player (a convenience of this phone, kept in its storage: a registration open, the
+// stages of an entry's day told, its result); lost, it only shows the badge again
+const SEEN_KEY = 'marah.phone.mazayen';
+let SEEN = { open: [], told: {} };
+try { SEEN = { open: [], told: {}, ...JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') }; } catch { /* no storage: the badge shows again */ }
+function saveSeen() {
+  const keep = new Set(myEntries().map(entryKey)), open = new Set(openFests().map((f) => f.id));
+  SEEN = { open: SEEN.open.filter((id) => open.has(id)), told: Object.fromEntries(Object.entries(SEEN.told).filter(([k]) => keep.has(k))) };
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(SEEN)); } catch { /* no storage */ }
+}
+const mzBadge = () => (G ? openFests().filter((f) => !SEEN.open.includes(f.id)).length + myEntries().filter((e) => e.told > (SEEN.told[entryKey(e)] || 0)).length : 0);
+// the camel of an entry as the festival's page has it (on the farm or not)
+const entryCamel = (e) => (MZ.page && MZ.page.rounds.find((r) => r.id === e.round)?.myEntries.flat().find((c) => c.id === e.camel)) || myCamel(e.camel) || null;
+const strip = (c, line, end = '') => `<div class="strip"><span class="ph">${c ? photo(c) : ''}</span><span><b>${esc(c ? `${c.name} · ${titleOf(c)}` : '')}</b><small>${line}</small></span>${end}</div>`;
+const pageRound = (id) => (MZ.page ? MZ.page.rounds.find((r) => r.id === id) || null : null);
+const roundTitle = (kind, cat) => `${RK[kind]}${cat ? ` · ${FAMILY[cat]}` : ''}`;
+// the engine's refusals of an entry, in the phone's words, by the camel's sex
+const REASON = {
+  ownershipTooRecent: (c, p) => `${her(c, 'اشتريتها', 'اشتريته')}${c.onTheWay ? ' اليوم' : ' قريب'}، ولازم ${her(c, 'تكون', 'يكون')} باسمك ${days(p.days)} قبل الشوط`,
+  wrongAgeClass: (c) => (c.ageDays < 365 ? `${her(c, 'صغيرة', 'صغير')}، وأصغر شوط للمفاريد من سنة` : `${her(c, 'كبيرة', 'كبير')} على شوطها بهالمهرجان`),
+  wrongCategory: (c) => `ما فيه شوط ل${FAMILY[c.category]} بهالمهرجان`,
+  sick: (c) => her(c, 'مريضة، ما تدخل لين تطيب', 'مريض، ما يدخل لين يطيب'),
+  tooFewCalvings: (c, p) => `شوط الجل لمن ولدت ${p.calvings === 2 ? 'مرتين' : `${p.calvings} مرات`} وفوق`,
+  listedForSale: (c) => her(c, 'معروضة بالحراج، شيل الإعلان أول', 'معروض بالحراج، شيل الإعلان أول'),
+  alreadyEnteredInFestival: (c) => her(c, 'مسجلة بهالمهرجان', 'مسجل بهالمهرجان'),
+  oneFardiRound: () => 'سجلت ناقة بشوط فردي، وما يدخل إلا ناقة وحدة بكل مهرجان',
+  roundOwnerLimit: (c, p) => `ما تسجّل أكثر من ${count(p.max, 'camel')} بهالشوط`,
+  registrationClosed: () => 'التسجيل لشوطها قفل',
+  scratched: (c) => `${her(c, 'سحبتها', 'سحبته')} بعد الإغلاق، وما ${her(c, 'ترجع', 'يرجع')} بهالمهرجان`,
+  camelBanned: (c) => her(c, 'محرومة من المهرجانات', 'محروم من المهرجانات'),
+  crossbred: (c) => her(c, 'هجين، ما تدخل المزاين', 'هجين، ما يدخل المزاين'),
+  insufficientFunds: (c, p) => `رصيدك ما يكفي: النقل والرسوم ${n0(p.needed ?? 0)} ريال`,
+  inDebt: () => debtLine(),
+};
+const why = (c, err) => (REASON[err.code] ? REASON[err.code](c, err.params || {}) : 'ما تدخل الحين');
+// a removal by its stage, said of her
+const outWords = (e, c) => ({
+  chip: 'شريحتها ما طابقت', short: 'ناقصة', colour: 'لونها ما هو صافي', teeth: 'أسنانها انقرت سن ثاني',
+  cut: 'ما تأهلت للتحكيم النهائي', sick: her(c || e, 'مريضة يوم الشوط', 'مريض يوم الشوط'), banned: 'طلعت لأنك انحرمت',
+})[e.reason] || '';
+const caughtCard = (e, c) => {
+  const out = e.removedAt === e.foundAt ? `طلعت ${esc(e.name)} من الشوط، و` : '';
+  return alertCard(`انكشف ${theTamper(e.foundKind)}`, `${out}انكتبت عليك غرامة ${n0(e.fine)} ريال. وانحرمت أنت وحلالك من كل المهرجانات، هالدورة و${count(G.festivalRules.banEditionsAfter, 'edition')} جاية، والخبر طلع للملاك. وصيتك ب${FAMILY[c ? c.category : e.cat]} نزل.`);
+};
+const debtCard = () => (G.cash < 0 ? alertCard(`رصيدك صار <bdi dir="ltr">−${n0(-G.cash)}</bdi> ريال`, `ما تقدر تشتري حلال ولا تبني لين تسدد. والعلف والماء والبيطري ينطلبون على الحساب لين ${n0(G.farm.account.limit)} ريال${G.farm.account.owed ? ` (عليك ${n0(G.farm.account.owed)})` : ''}، وبعده لازم تبيع من حلالك.`) : '');
+
+function mazayenScreen() {
+  if (!G) return `<div class="body">${nav()}<div class="title">المزاين</div>${waiting()}</div>`;
+  const FR = G.festivalRules, open = openFests();
+  const top = (f) => (f.topEnterable ? `جايزة الأول لين ${n0(f.topEnterable)} ريال (${RK[f.topEnterableKind]})` : '');
+  const openCard = (f) => {
+    const late = G.today > f.closesOn;
+    const when = late ? `التسجيل المتأخر بـ ${n0(FR.lateEntryFee)} ريال لين قبل كل شوط بـ ${FR.lateEntryHoursBefore} ساعة` : `التسجيل ببلاش لين ${dd(f.closesOn)}، وبعده بـ ${n0(FR.lateEntryFee)} ريال لين قبل كل شوط بـ ${FR.lateEntryHoursBefore} ساعة`;
+    return `<div class="open" data-go="fest" data-id="${esc(f.id)}" role="button" tabindex="0" aria-label="${esc(f.name)}، ${late ? 'تسجيل متأخر' : 'التسجيل مفتوح'}"><span class="tag">${late ? 'تسجيل متأخر' : 'التسجيل مفتوح'}</span><b>${esc(f.name)}</b><small>${REGION[f.region]} · ${span(f)}</small><small>${when}</small>${top(f) ? `<small>${top(f)}</small>` : ''}</div>`;
+  };
+  // the player's entries: the coming ones (withdrawn by two taps till the day before), the day under way, the results
+  const mine = myEntries().filter((e) => !e.fest.done || G.today - e.day <= 30).sort((a, b) => a.day - b.day);
+  const entryRow = (e) => {
+    const c = myCamel(e.camel) || e, title = `${esc(e.name)} · ${roundTitle(e.kind, e.cat)}`;
+    if (G.today < e.day) {
+      const sure = HJ.sure === `withdraw:${e.camel}`;
+      return `<div class="row"><span class="lead">${svg('camel')}</span><b>${title}</b><span class="act"><button class="btn ${sure ? 'sure' : 'ghost'}" data-act="withdraw" data-f="${esc(e.festival)}" data-o="${esc(e.round)}" data-id="${esc(e.camel)}" aria-label="${sure ? 'أكّد سحب' : 'اسحب'} ${esc(e.name)} من الشوط">${sure ? 'أكّد' : her(c, 'اسحبها', 'اسحبه')}</button></span><small>${her(c, 'شوطها', 'شوطه')} ${dd(e.day)} (${inDays(e.day)})</small></div>`;
+    }
+    const go = `data-go="${e.told >= 6 && e.foundAt == null ? 'result' : 'day'}" data-f="${esc(e.festival)}" data-o="${esc(e.round)}" data-id="${esc(e.camel)}" role="button" tabindex="0"`;
+    let line;
+    if (e.foundAt != null) line = `انكشف فيها ${TAMPER[e.foundKind]}`;
+    else if (e.told >= 6) line = e.rank ? `المركز ${e.rank}${e.prize ? ` · ${n0(e.prize)} ريال` : ''}` : outWords(e, c);
+    else if (e.removedAt != null) line = `${outWords(e, c)} · ${STAGE[STAGE_KEY.indexOf(e.removedAt)]}`;
+    else line = e.told ? `يوم الشوط: الحين ${STAGE[e.told]}` : `يوم الشوط: يبدأ ${WHEN(FR.stageMinutes[0])}`;
+    return `<div class="row" ${go} aria-label="${title}، ${line}"><span class="lead">${svg(e.told >= 6 && e.rank ? 'cup' : 'camel')}</span><b>${title}</b><span class="qty" aria-hidden="true">${svg('chev')}</span><small>${line}</small></div>`;
+  };
+  const coming = G.festivals.filter((f) => !f.done && !open.includes(f) && f.startsOn > G.today).sort((a, b) => a.startsOn - b.startsOn);
+  const comingRow = (f) => `<div class="row" data-go="fest" data-id="${esc(f.id)}" role="button" tabindex="0"><span class="lead">${svg('cup')}</span><b>${esc(f.name)}</b><span class="qty">${f.topEnterable ? n0(f.topEnterable) : ''}</span><small>${span(f)}${f.topEnterable ? ` · ${RK[f.topEnterableKind]}` : ''} · التسجيل ${f.opensOn > G.today ? `من ${dShort(f.opensOn)}` : `لين ${dShort(f.closesOn)}`}</small></div>`;
+  const rest = coming.length - 3;
+  const banned = G.bannedThrough != null ? alertCard('محروم من المهرجانات', `أنت وحلالك، كل المهرجانات لين موسم ${G.bannedThrough}.`) : '';
+  return `<div class="body">${nav()}<div class="title">المزاين</div>${msgCard()}${errCard()}${banned}
+    ${G.bannedThrough == null ? open.map(openCard).join('') : ''}
+    ${mine.length ? `<div class="sec">مشاركاتك</div><div class="group">${mine.map(entryRow).join('')}</div>` : ''}
+    ${coming.length ? `<div class="sec">الجاية · أعلى جايزة أول تدخلها، بالريال</div><div class="group">${coming.slice(0, 3).map(comingRow).join('')}</div>` : ''}
+    ${rest > 0 ? `<div class="note">وبعدها ${count(rest, 'fest')} لين ${MONTH[dateOf(coming[coming.length - 1].endsOn).getUTCMonth()]}.</div>` : ''}
+    ${!open.length && !mine.length && !coming.length ? '<div class="note" style="margin-top:6px">ما فيه مهرجان جاي للحين.</div>' : ''}</div>`;
+}
+
+function festScreen() {
+  const back = nav('', 'mazayen');
+  const D = MZ.page, F = D ? D.festival : G && G.festivals.find((f) => f.id === MZ.fest);
+  if (!G || !D) return `<div class="body">${back}<div class="title">${F ? esc(F.name) : 'المزاين'}</div>${waiting()}</div>`;
+  const FR = G.festivalRules, rounds = D.rounds;
+  const kindRound = (k) => rounds.find((r) => r.kind === k && r.enterable);
+  const cats = [...new Set(rounds.filter((r) => r.cat && r.enterable).map((r) => r.cat))];
+  const missing = Object.keys(FAMILY).filter((k) => !cats.includes(k));
+  const dayOf = (k) => Math.min(...rounds.filter((r) => r.cat === k && r.enterable && r.kind !== 'mafareed' && r.kind !== 'diq').map((r) => r.day).concat(rounds.filter((r) => r.cat === k && r.enterable).map((r) => r.day)));
+  const rnd = (icon, k, line) => { const r = kindRound(k); return r ? `<div class="row"><span class="lead">${svg(icon)}</span><b>${RK[k]}</b><span class="qty">${n0(r.prizes[0])}</span><small>${line}</small></div>` : ''; };
+  const fahal = kindRound('fahal');
+  const later = [...new Set(rounds.filter((r) => !r.enterable).map((r) => (r.kind === 'jazeera' ? 'manqiya' : r.kind)))].map((k) => RK[k]);
+  const late = G.today > F.closesOn;
+  const canRegister = D.register.length > 0 && F.bannedThrough == null;
+  return `<div class="body">${back}<div class="title">${esc(F.name)}</div>
+    <div class="tank"><small>${REGION[F.region]} · ${span(F)}</small>
+      <div class="kind"><span>التسجيل ببلاش</span><span class="d">لين ${dd(F.closesOn)}</span></div>
+      <div class="kind"><span>وبعده بـ ${n0(FR.lateEntryFee)} ريال تأخير</span><span class="d">لين قبل الشوط بـ ${FR.lateEntryHoursBefore} ساعة</span></div></div>
+    <div class="sec">الأشواط · جايزة الأول بالريال</div>
+    <div class="group">
+      ${rnd('camel', 'fardiJil', 'النياق من ثاني ولادة وفوق')}
+      ${rnd('camel', 'fardiDiq', 'النياق من بعد المفرودة لين الجذعة')}
+      ${rnd('camel', 'mafareed', 'من سنة لين سنتين')}
+      ${rnd('camel', 'diq', 'من بعد المفرود لين الجذع')}
+      ${fahal ? `<div class="row"><span class="lead">${svg('star')}</span><b>${RK.fahal}</b><span class="qty">${n0(fahal.prizes[0])}</span><small>الفحل ومعه ${fahal.size - 1} من إنتاجه · النتيجة بعد فحص الحمض النووي</small></div>` : ''}</div>
+    <div class="sec">كل لون بيومه</div>
+    <div class="group">${[...new Set(cats.map(dayOf))].sort((a, b) => a - b).map((d) => `<div class="row two"><span class="lead">${svg('camel')}</span><b>${dd(d)}</b><small>${cats.filter((k) => dayOf(k) === d).map((k) => FAMILY[k]).join('، ')}</small></div>`).join('')}</div>
+    ${missing.length ? `<div class="note">وما فيه ${missing.map((k) => FAMILY[k]).join(' ولا ')} بهالمهرجان.</div>` : ''}
+    ${later.length ? `<div class="group"><div class="row two later"><span class="lead">${svg('herd')}</span><b>الأشواط الجماعية تجي بعدين</b><small>${later.join('، ')}</small></div></div>` : ''}
+    <div class="sec">الشروط</div>
+    <div class="group">
+      <div class="row two"><span class="lead">${svg('rule')}</span><b>ناقة وحدة بشوط فردي واحد</b><small>بكل مهرجان. والمفاريد والدق والفحل وإنتاجه غيره</small></div>
+      <div class="row two"><span class="lead">${svg('chip')}</span><b>الشريحة باسمك</b><small>هي وثيقة الملكية الوحيدة، والتسجيل من هنا</small></div>
+      <div class="row two"><span class="lead">${svg('eye')}</span><b>العمر يُفحص بالأسنان يوم الشوط</b><small>واللون والشوط ما يتغيرون بعد الإغلاق</small></div></div>
+    ${canRegister ? `<button class="sell" style="position:static;box-shadow:none;margin-bottom:6px" data-go="enter">${svg('plus')}${late ? 'سجّل ناقة متأخر' : 'سجّل ناقة'}</button>` : `<div class="note">${F.bannedThrough != null ? 'أنت محروم من المهرجانات.' : 'التسجيل بهالمهرجان قفل أو ما فتح للحين.'}</div>`}</div>`;
+}
+
+function enterScreen() {
+  const back = nav('', 'fest');
+  const D = MZ.page;
+  if (!G || !D) return `<div class="body">${back}<div class="title">سجّل ناقة</div>${waiting()}</div>`;
+  const F = D.festival, FR = G.festivalRules, rows = D.register;
+  const ok = rows.filter((x) => !x.error && x.round);
+  if (!ok.some((x) => x.camel.id === MZ.sel)) MZ.sel = ok.length ? ok[0].camel.id : null;
+  const item = (x) => {
+    const c = x.camel, r = x.round ? pageRound(x.round) : null, sel = c.id === MZ.sel;
+    const young = x.error && x.error.code === 'wrongAgeClass' && c.ageDays < 365;
+    const roundLine = r && !young ? `${her(c, 'شوطها', 'شوطه')} ${roundTitle(r.kind, r.cat)} · ${dShort(r.day)}` : doing(c) || titleOf(c);
+    const line = [doing(c), healthText(c)].filter(Boolean).join(' · ');
+    const reason = x.error ? why(c, x.error) : '';
+    const attrs = !x.error ? ` data-act="mzsel" data-id="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${sel}" aria-label="${esc(c.name)}، ${roundLine}"` : '';
+    return `<div class="it${sel ? ' sel' : ''}${reason ? ' no' : ''}"${attrs}><span class="ph">${photo(c)}</span><b>${esc(c.name)} · ${titleOf(c)}</b><small>${roundLine}</small><small${reason ? ' class="bad"' : ''}>${reason || line}</small></div>`;
+  };
+  const x = ok.find((y) => y.camel.id === MZ.sel), c = x && x.camel, r = x && pageRound(x.round);
+  const late = G.today > F.closesOn, sure = c && HJ.sure === `enter:${c.id}`;
+  const more = D.registerTotal - rows.length;
+  return `<div class="body">${back}<div class="title">سجّل ناقة</div>${errCard()}
+    <div class="note" style="margin-top:-4px">${esc(F.name)} · كل ناقة وشوطها من لونها وعمرها</div>
+    <div class="lst flat">${rows.map(item).join('')}</div>
+    ${more > 0 ? `<div class="note">وعندك ${count(more, 'head')} غيرها، والقائمة تبدأ بالأزين.</div>` : ''}
+    ${c ? `<div class="tank"><small>اللي تدفعه عن ${esc(c.name)}</small>
+      <div class="kind"><span>التسجيل</span><span class="d">${late ? `${n0(FR.lateEntryFee)} ريال تأخير` : `ببلاش لين ${dShort(F.closesOn)}، وبعده ${n0(FR.lateEntryFee)} ريال لين ${dShort(r.lastEntryDay)}`}</span></div>
+      <div class="kind"><span>${her(c, 'نقلها', 'نقله')} لـ${REGION[F.region]} و${her(c, 'رجعتها', 'رجعته')}</span><span class="d">${n0(D.transportPerHead)} ريال يوم الشوط</span></div></div>
+    <button class="btn ${sure ? 'sure' : 'pri'} wide" data-act="enter" data-id="${esc(c.id)}">${sure ? her(c, 'اضغط مرة ثانية وتتسجل', 'اضغط مرة ثانية ويتسجل') : `سجّل ${esc(c.name)} بشوط ${RK_SHORT[r.kind]}`}</button>
+    <div class="note">تقدر ${her(c, 'تسحبها', 'تسحبه')} لين يوم ${her(c, 'شوطها', 'شوطه')}، وبعد ما يقفل التسجيل ما ${her(c, 'ترجع تسجّلها', 'ترجع تسجّله')} بهالمهرجان. وما تقدر ${her(c, 'تبيعها وهي مسجلة', 'تبيعه وهو مسجل')}.</div>`
+    : '<div class="note">ما عندك حلال يدخل شوط بهالمهرجان الحين.</div>'}</div>`;
+}
+
+// the round's day: the six stages as the engine has told them, each at its hour (festivalRules.stageMinutes); a found
+// treatment is told at its stage for an entry the preliminary kept or cut alike (the preliminary's list says nothing of
+// the examination)
+function dayScreen() {
+  const back = nav('', 'mazayen');
+  const e = MZ.entry && myEntries().find((x) => x.round === MZ.entry.round && x.camel === MZ.entry.camel);
+  const R = e && pageRound(e.round);
+  if (!G || !e || !R) return `<div class="body">${back}<div class="title">يوم الشوط</div>${G && !e ? '<div class="note" style="margin-top:6px">ما عاد لها شوط هنا.</div>' : waiting()}</div>`;
+  const FR = G.festivalRules, c = entryCamel(e), told = e.told, fld = R.field || [], entered = R.entrants;
+  const lost = (i) => (i === 0 ? entered : fld[i - 1]) - fld[i];
+  const outLine = (i) => (lost(i) > 0 ? ` · طلعت ${count(lost(i), 'camel')}` : '');
+  const removed = e.removedAt != null ? STAGE_KEY.indexOf(e.removedAt) : 99, found = e.foundAt != null ? STAGE_KEY.indexOf(e.foundAt) : 99;
+  const row = (cls, icon, i, line, right) => `<div class="row ${cls}"><span class="lead">${svg(icon)}</span><b>${STAGE[i]}</b><span class="qty ${right[0]}">${right[1]}</span><small>${line}</small></div>`;
+  const okLine = (i) => [
+    'شريحتها باسمك',
+    c ? `${COAT[c.category][0]} صافية، و${esc(c.ageName)} بأسنانها` : 'لونها وعمرها مثل التسجيل',
+    `اللجنة اختارت ${fld[2]} من ${fld[1]}`,
+    'ما لقوا شي', 'ما لقوا شي',
+    e.rank ? `المركز ${e.rank} من ${count(entered, 'camel')}` : '',
+  ][i];
+  const rows = [];
+  for (let i = 0; i < 6; i++) {
+    if (i < told) {
+      if (i === found) rows.push(row('bad', 'x', i, `لقوا ${TAMPER[e.foundKind]} ${WHERE[e.foundKind] || 'فيها'}`, ['bad', 'انكشفت']));
+      else if (i === removed) rows.push(row('bad', 'x', i, `${outWords(e, c)}${outLine(i)}`, ['bad', 'طلعت']));
+      else if (i > removed) rows.push(row('next', STAGE_ICON[i], i, `${her(c || e, 'طلعت', 'طلع')} قبلها${outLine(i)}`, ['wait', '']));
+      else rows.push(row('', 'check', i, `${okLine(i)}${outLine(i)}`, ['ok', 'عدّت']));
+    } else if (i === told && told > 0 && G.today === e.day) rows.push(row('now', 'dot', i, STAGE_NEXT[i], ['now', 'الحين']));
+    else rows.push(row('next', STAGE_ICON[i], i, STAGE_NEXT[i], ['wait', WHEN(FR.stageMinutes[i])]));
+  }
+  if (!SEEN.told[entryKey(e)] || SEEN.told[entryKey(e)] < told) { SEEN.told[entryKey(e)] = told; saveSeen(); }
+  return `<div class="body">${back}<div class="title">يوم الشوط</div>
+    <div class="note" style="margin-top:-4px">${esc(e.fest.name)} · ${roundTitle(e.kind, e.cat)} · ${dd(e.day)}</div>
+    ${found >= 6 ? strip(c, `بالشوط ${count(entered, 'camel')}${told ? ` · باقي ${count(fld[told - 1], 'camel')}` : ''}`) : ''}
+    <div class="group">${rows.join('')}</div>
+    ${found < 6 ? caughtCard(e, c) + debtCard() : ''}
+    ${told < 6 ? '<div class="note">يجيك خبر مع كل مرحلة، ولو قفلت الجوال يكمل الشوط بدونك.</div>' : found >= 6 ? `<button class="btn ghost wide" data-go="result" data-f="${esc(e.festival)}" data-o="${esc(e.round)}" data-id="${esc(e.camel)}">النتيجة</button>` : ''}</div>`;
+}
+
+function resultScreen() {
+  const back = nav('', 'mazayen');
+  const e = MZ.entry && myEntries().find((x) => x.round === MZ.entry.round && x.camel === MZ.entry.camel);
+  const R = e && pageRound(e.round);
+  if (!G || !e || !R || !R.results) return `<div class="body">${back}<div class="title">النتيجة</div>${waiting()}</div>`;
+  const c = entryCamel(e) || myCamel(e.camel), fld = R.field || [], entered = R.entrants;
+  const STAGE_OUT = { preliminary: 'ما تأهلت للتحكيم النهائي', chipWitness: 'طلعت عند الشريحة والشاهد', breedColourAge: 'طلعت بفحص الهجين واللون والعمر', tamperingExperts: 'انكشفت عند خبراء التلاعب', medical: 'انكشفت عند اللجنة الطبية' };
+  const outcome = e.rank ? `المركز ${e.rank} من ${count(entered, 'camel')}` : e.reason === 'sick' || e.reason === 'banned' ? outWords(e, c) : STAGE_OUT[e.removedAt] || '';
+  const place = (r) => `<div class="row"><span class="lead rk${r.rank === 1 ? ' g1' : ''}">${r.rank}</span><b>${esc(r.name)}</b><span class="qty">${n0(r.prize)}</span><small>${esc(r.ownerName || '')}</small></div>`;
+  const places = R.results.filter((r) => r.rank != null).sort((a, b) => a.rank - b.rank);
+  const repWord = { rose: 'كبر', fell: 'نزل', same: 'ما تغير' }[e.reputation] || 'ما تغير';
+  const second = e.removedAt === 'preliminary' ? `اللجنة اختارت ${fld[2]} من ${fld[1]}` : e.prize ? `جايزتها ${n0(e.prize)} ريال نزلت برصيدك` : '';
+  const worth = e.rank && e.rank <= 10 ? her(c || e, 'المركز زاد قيمتها', 'المركز زاد قيمته') : her(c || e, 'الشوط ما زاد قيمتها شي', 'الشوط ما زاد قيمته شي');
+  if (!SEEN.told[entryKey(e)] || SEEN.told[entryKey(e)] < e.told) { SEEN.told[entryKey(e)] = e.told; saveSeen(); }
+  return `<div class="body">${back}<div class="title">النتيجة</div>
+    <div class="note" style="margin-top:-4px">${esc(e.fest.name)} · ${roundTitle(e.kind, e.cat)} · ${count(entered, 'camel')}</div>
+    <div class="it big"><span class="ph">${c ? photo(c) : ''}</span><b>${esc(e.name)}</b><small class="${e.rank && e.rank <= 10 ? '' : 'bad'}">${outcome}</small>${second ? `<small>${second}</small>` : ''}<small>${worth}</small>${c && c.estimateLow ? `<small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)}</small>` : ''}</div>
+    <div class="sec">المراكز · الجايزة بالريال</div>
+    <div class="group">${places.slice(0, 5).map(place).join('')}</div>
+    <div class="note">والجوايز لين العاشر (${n0(R.prizes[9])} ريال). اللي يجي بالعشرة الأوائل تزيد قيمته ويكبر صيته بلونه، وصيتك ب${FAMILY[c ? c.category : e.cat]} ${repWord}. والدرجات ما تنعلن. ونقلها ${n0(MZ.page.transportPerHead)} ريال انخصم.</div></div>`;
+}
+
+// ---------------------------------------------------------------- «المحادثات»: the treatment man's secret chat (the owner, 13 Nov)
+// He messages after each registration (the engine's G.dealer, kept until read: opening his chat reads them); his offer
+// is for the latest camel registered whose round is still to come: the seven kinds (GDD 7.1), then light, middle or
+// strong, each with its price, its fine and how often it is found in words (never a chance), kinds stacking, the full
+// warning, and two taps to buy (it is illegal and costs money). CH: the kind looked at.
+const CH = { kind: null };
+const dealerOffer = () => {
+  if (!G) return null;
+  const ms = G.dealer.messages;
+  for (let i = ms.length - 1; i >= 0; i--) {
+    const m = ms[i], c = myCamel(m.camel);
+    if (c && m.roundDay != null && m.roundDay > G.today) return { m, c };
+  }
+  return null;
+};
+const chatTop = (to = 'chats') => `<div class="nav"><button class="back" data-go="${to}" aria-label="رجوع">${svg('back')}</button><div class="chathd"><span class="av">${esc(G.dealer.name.slice(-3, -2) || 'س')}</span><span><b>${esc(G.dealer.name)}</b><small>يجمّل الحلال بالسر</small></span></div></div>`;
+function chatsScreen() {
+  if (!G) return `<div class="body">${nav()}<div class="title">المحادثات</div>${waiting()}</div>`;
+  const ms = G.dealer.messages, last = ms[ms.length - 1], n = G.dealer.unread;
+  return `<div class="body">${nav()}<div class="title">المحادثات</div>
+    ${last ? `<div class="group"><div class="row" data-go="chat" role="button" tabindex="0" aria-label="${esc(G.dealer.name)}${n ? `، ${count(n, 'message')}` : ''}"><span class="lead av2">${esc(G.dealer.name.slice(-3, -2) || 'س')}</span><b>${esc(G.dealer.name)}</b><span class="qty">${n ? `<i class="dot">${n}</i>` : svg('chev')}</span><small>أقدر أزيّن ${esc(last.name)} قبل الشوط…</small></div></div>`
+    : '<div class="note" style="margin-top:6px">ما عندك محادثات.</div>'}</div>`;
+}
+// his messages and what was bought from him (the treatments the player knows are in his camels)
+function chatLines() {
+  const out = [];
+  for (const m of G.dealer.messages.slice(-3)) {
+    out.push(`<div class="msg them">أقدر أزيّن ${esc(m.name)} قبل الشوط. بيني وبينك. وش تبي؟</div>`);
+    for (const t of G.tamperings.filter((x) => x.camel === m.camel)) out.push(`<div class="msg me">${TAMPER[t.kind]} ${STRENGTH[t.strength - 1]}.</div><div class="msg them">تم، وما أحد يدري.</div>`);
+  }
+  return out.join('');
+}
+function chatScreen() {
+  if (!G) return `<div class="body">${nav('', 'chats')}${waiting()}</div>`;
+  const FR = G.festivalRules, o = dealerOffer();
+  const kindRow = (k) => `<div class="row" data-go="strength" data-k="${k.kind}" role="button" tabindex="0" aria-label="${TAMPER[k.kind]}، من ${n0(k.price[0])} ريال، الغرامة لين ${n0(k.fineCap)} ريال"><span class="lead">${svg('scope')}</span><b>${TAMPER[k.kind]}</b><span class="qty" aria-hidden="true">${svg('chev')}</span><small>من ${n0(k.price[0])} ريال · الغرامة لين ${n0(k.fineCap)} ريال</small></div>`;
+  return `<div class="body">${chatTop()}${errCard()}
+    <div class="chat">${chatLines()}</div>
+    ${o ? `<div class="group">${FR.tamperKinds.map(kindRow).join('')}</div>` : '<div class="note">ما عندك شوط جاي يعرض عليه.</div>'}</div>`;
+}
+function strengthScreen() {
+  const o = dealerOffer(), FR = G && G.festivalRules, K = FR && FR.tamperKinds.find((k) => k.kind === CH.kind);
+  if (!G || !o || !K) return chatScreen();
+  const c = o.c, m = o.m;
+  const often = (band) => ({ low: 'قليل ما ينكشف', medium: 'ينكشف أحيان', high: 'ينكشف أغلب المرات' })[band];
+  const BY = { tamperingExperts: 'أكثر ما يلقونه خبراء التلاعب', medical: 'أكثر ما تلقاه اللجنة الطبية' };
+  const onHer = G.tamperings.filter((t) => t.camel === c.id).map((t) => `${TAMPER[t.kind]} ${STRENGTH[t.strength - 1]}`);
+  const raises = `يزيّن ${list(K.traits.map((t) => FEATURE[t]))}`;
+  const strRow = (i) => {
+    const sure = HJ.sure === `tamper:${K.kind}:${i + 1}`;
+    return `<div class="row"><span class="lead">${svg('scope')}</span><b>${STRENGTH[i]}</b><span class="act"><button class="btn ${sure ? 'sure' : 'ghost'} pr" data-act="tamper" data-k="${K.kind}" data-p="${i + 1}" aria-label="${TAMPER[K.kind]} ${STRENGTH[i]} بـ ${n0(K.price[i])} ريال">${sure ? 'أكّد' : `${n0(K.price[i])} ريال`}</button></span><small>${often(K.festivalRisk[i])} · الغرامة ${n0(K.fine[i])} ريال</small></div>`;
+  };
+  return `<div class="body">${chatTop('chat')}${errCard()}
+    ${strip(c, onHer.length ? `فيها: ${onHer.join('، ')}` : `${roundTitle(m.kind, m.cat)} · ${esc(m.festivalName)}`, `<span class="lim">الشوط<span>${dShort(m.roundDay)}</span></span>`)}
+    <div class="chat"><div class="msg me">${TAMPER[K.kind]}.</div>
+      <div class="msg them">${raises} يوم التحكيم، ويبقى ${her(c, 'فيها', 'فيه')} ${days(K.lastsDays)}. خفيف ولا وسط ولا قوي؟</div></div>
+    <div class="group">${[0, 1, 2].map(strRow).join('')}</div>
+    <div class="note">كل ما قوي يبيّن أكثر، وينكشف أكثر، وغرامته أكبر. و${BY[K.foundMostlyBy]}. وتقدر تجمع أكثر من نوع، وكل نوع له فحصه وغرامته، فالخطر يتجمع.</div>
+    ${alertCard('لو انكشف', `بالمهرجان ${her(c, 'تطلع', 'يطلع')} ${esc(c.name)} من الشوط على طول وتنكتب عليك الغرامة، وتنحرم أنت وحلالك من كل المهرجانات، هالدورة و${count(FR.banEditionsAfter, 'edition')} جاية، والخبر يطلع. ولو ${her(c, 'بعتها يفحصونها', 'بعته يفحصونه')} قبل ما يدفعون: لو لقوه تنلغي البيعة وتنغرم، ولو ما لقوه يزيد ${her(c, 'سعرها', 'سعره')} شوي. وممكن يلقاه البيطري بعد، وصيتك ينزل.`)}</div>`;
+}
+
 const herdWord = () => {
   if (!G) return '';
   const m = G.farm.milk.camels;
@@ -850,6 +1211,8 @@ const S = {
         ${app('build', 'العزبة')}
         ${app('haraj', 'الحراج', badge(G ? G.openOffers : 0))}
         ${app('bank', 'البنك')}
+        ${app('cup', 'المزاين', badge(mzBadge()))}
+        ${app('talk', 'المحادثات', badge(G ? G.dealer.unread : 0))}
       </div></div></div>`,
     water: waterScreen,
     feed: feedScreen,
@@ -861,6 +1224,14 @@ const S = {
     sell: sellScreen,
     bank: bankScreen,
     bankMonth: bankMonthScreen,
+    mazayen: mazayenScreen,
+    fest: festScreen,
+    enter: enterScreen,
+    day: dayScreen,
+    result: resultScreen,
+    chats: chatsScreen,
+    chat: chatScreen,
+    strength: strengthScreen,
   };
 
 export function createPhone({ host }) {
@@ -873,11 +1244,17 @@ export function createPhone({ host }) {
   let press = null, lastDown = 0, bigAt = 0, focusBack = null, shownAt = 0;
   const turned = () => document.body.classList.contains('rot');      // (farm.html: a phone held upright, the game turned a quarter)
   const endPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
-  function show(v) {
+  let drawn = '';
+  function show(v, same = false) {
     if (v !== st.screen) { ERR = null; shownAt = performance.now(); }
     if (v === 'feed' && st.screen !== 'feed') ORD.barley = ORD.alfalfa = null;      // (opened afresh: the order starts at three weeks' need)
     st.screen = v; scr.classList.toggle('home', v === 'home');
-    scr.innerHTML = `<span class="pill"></span>${sbar()}${S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0')}<div class="hb"></div>`;      // (a number kept on the line of the word after it: «20,000 | ريال» split across lines otherwise)
+    // (المزاين's and the chat's screens, as their design: a number kept with the word before it too, «لين | 100,000»)
+    let html = S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0');
+    if (MZ_SCREENS.has(v)) html = html.replace(/([\u0600-\u06FF]) (?=\d)/g, '$1\u00a0');
+    if (same && html === drawn) return false;      // (a redraw that would draw the same: left as it is)
+    drawn = html;
+    scr.innerHTML = `<span class="pill"></span>${sbar()}${html}<div class="hb"></div>`;      // (a number kept on the line of the word after it: «20,000 | ريال» split across lines otherwise)
     fitNumbers();
   }
   // enlarged, a big figure wider than its card is set smaller to fit it, as iOS fits a label to its width (a balance in
@@ -1004,13 +1381,65 @@ export function createPhone({ host }) {
     if (to === 'sell' && id) { HJ.camel = id; HJ.ask = null; }
     if (to === 'haraj' && st.screen === 'home') {
       HJ.tab = 'market';      // (the app opened afresh: what is for sale)
-      const f = unseenFound();
+      const f = G && G.findings[0];
       if (f) {
-        FOUND_SEEN.add(foundKey(f)); HJ.msg = foundWords(f.name, [f.kind], f.fine, null, myCamel(f.camel)?.sex === 'male');
+        HJ.msg = foundWords(f.name, [f.kind], f.fine, null, myCamel(f.camel)?.sex === 'male');
+        engine?.dispatch({ type: 'markFindingsTold', count: 1 }).catch((err) => console.warn('phone:', err));
         sr.textContent = `${HJ.msg.title}. ${HJ.msg.line}`.replace(/<[^>]+>/g, '');      // (said as the other answers are)
       }
     }
     if (to === 'bankMonth' && t.dataset.month) { BK.month = t.dataset.month; BK.data = null; loadMonth(); }
+    // المزاين: a festival's page, or an entry's day or result (its festival's page asked of the engine)
+    if (to === 'mazayen' && st.screen === 'home') { SEEN.open = [...new Set([...SEEN.open, ...openFests().map((f) => f.id)])]; saveSeen(); }
+    if ((to === 'fest' && id) || ((to === 'day' || to === 'result') && t.dataset.f)) {
+      const fid = to === 'fest' ? id : t.dataset.f;
+      if (fid !== MZ.fest) { MZ.page = MZ.text = null; MZ.fest = fid; }
+      if (to !== 'fest') MZ.entry = { round: t.dataset.o, camel: id };
+      loadFest();
+    }
+    if (to === 'enter') MZ.sel = null;
+    if (to === 'strength' && t.dataset.k) CH.kind = t.dataset.k;
+    // the treatment man's messages read as his chat opens
+    if (to === 'chat' && G && G.dealer.unread && engine) engine.dispatch({ type: 'readMessages' }).catch((err) => console.warn('phone:', err));
+  }
+  // a festival's page asked of the engine (again when the festivals change while it is open); a late answer for another
+  // festival is dropped
+  async function loadFest() {
+    if (!engine || !MZ.fest || !engine.festival) return;
+    const ask = ++MZ.asked, id = MZ.fest, rev = G ? G.sections.festivals : null;
+    let r = null;
+    try { r = await engine.festival(id); } catch (err) { console.warn('phone:', err); }
+    if (ask !== MZ.asked || id !== MZ.fest) return;
+    MZ.rev = rev;
+    // (the same page again, the festivals having changed elsewhere: not drawn again)
+    const text = r && r.ok && r.festival ? JSON.stringify(r.festival) : null;
+    if (text && text === MZ.text) return;
+    if (text) { MZ.page = r.festival; MZ.text = text; }
+    if (live() && MZ_PAGE.has(st.screen)) redrawKept();
+  }
+  const MZ_PAGE = new Set(['fest', 'enter', 'day', 'result']);
+  // what the المزاين and chat screens show changes only with the festivals, the notices, the day, the money (a debt's
+  // card) and the treatments: another snapshot leaves them as they are
+  // (by screen: the list counts days to each round; registering's refusals move with the money and the day, so its page
+  // is asked again then; a round's day and its result show the debt's card; the chat shows the messages, the
+  // treatments bought and whether a round is still to come)
+  const mzKey = (g, v) => {
+    if (!g) return '';
+    const offer = () => { const ms = g.dealer.messages; for (let i = ms.length - 1; i >= 0; i--) if (ms[i].roundDay > g.today && g.yard.some((c) => c.id === ms[i].camel)) return ms[i].camel; return ''; };
+    if (v === 'mazayen') return [g.sections.festivals, g.date, g.bannedThrough].join('|');
+    if (v === 'fest') return [g.sections.festivals, g.today > (MZ.page ? MZ.page.festival.closesOn : 0)].join('|');
+    if (v === 'enter') return [g.sections.festivals, g.date, g.cash].join('|');
+    if (v === 'day' || v === 'result') return [g.sections.festivals, g.cash < 0 ? g.cash : 0, g.farm.account.owed].join('|');
+    return [g.sections.notices, g.tamperings.length, offer(), g.cash < 0].join('|');
+  };
+  // drawn again with the keyboard's place kept (the page comes a moment after it opens)
+  function redrawKept() {
+    const f = root.activeElement, inScr = f && scr.contains(f);
+    const key = inScr ? keyOf(f) : null, go = inScr ? f.dataset.go : null;
+    if (!redraw(true)) return;
+    if (!inScr) return;
+    const again = [...scr.querySelectorAll('[data-act], [data-go]')].find((x) => (key && x.dataset.act ? keyOf(x) === key : go && x.dataset.go === go));
+    focusIn(again || scr.querySelector('.back') || dev);
   }
   // البنك: the month opened, its kinds asked of the engine (again when money moves while it is open); an answer that
   // comes after another was asked for is dropped
@@ -1038,11 +1467,12 @@ export function createPhone({ host }) {
   const bankKey = (g) => (g ? [g.sections.bank, g.cash, g.date, g.farm.milk.sold > 0.05].join('|') : '');
   // the screens the game's numbers fill are drawn again when they change, the scroll kept
   const live = () => st.state !== 'closed';      // (every screen shows the game's own numbers)
-  function redraw() {
+  function redraw(same = false) {
     const sc = scr.querySelector('.body'), top = sc ? sc.scrollTop : 0;
-    show(st.screen);
+    if (show(st.screen, same) === false) return false;
     const again = scr.querySelector('.body');
     if (again) again.scrollTop = top;
+    return true;
   }
   // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen);
   // a refusal is said on the screen, and what was not taken stays in the order
@@ -1053,8 +1483,10 @@ export function createPhone({ host }) {
     // an order's second tap on the same button within DOUBLE_TAP of its answer (by the tap's own time, not when it is
     // handled) is dropped before anything is cleared: «سوم» tapped twice used two tries, and the dropped tap wiped the
     // seller's answer (the reviews). Other buttons, and the steppers, are not held back
-    const LOCAL = kind === 'step' || kind === 'tab' || kind === 'bidStep' || kind === 'askStep';
-    const twice = { quick: `quick:${HJ.camel}`, accept: `accept:${t.dataset.o}`, unlist: `unlist:${t.dataset.id}` }[kind];
+    const LOCAL = kind === 'step' || kind === 'tab' || kind === 'bidStep' || kind === 'askStep' || kind === 'mzsel';
+    // what cannot be undone is asked twice: a sale, taking a listing down, withdrawing an entry, registering (it costs
+    // the trucking), a treatment (illegal, and money)
+    const twice = { quick: `quick:${HJ.camel}`, accept: `accept:${t.dataset.o}`, unlist: `unlist:${t.dataset.id}`, withdraw: `withdraw:${t.dataset.id}`, enter: `enter:${t.dataset.id}`, tamper: `tamper:${t.dataset.k}:${t.dataset.p}` }[kind];
     if (!LOCAL && (twice == null || HJ.sure === twice) && keyOf(t) === orderKey && at - orderAt < DOUBLE_TAP) return;
     // الحراج: a sale asked twice (the first tap readies it: HJ.sure); any other tap stands it down. [next]: the screen
     // to go to once the order is done (a camel bought or sold goes back to the market's list)
@@ -1067,7 +1499,7 @@ export function createPhone({ host }) {
     HJ.sure = twice != null && !ready ? twice : null;
     clearTimeout(sureTimer);
     if (HJ.sure) { sureAt = now; const key = HJ.sure; sureTimer = setTimeout(() => { if (HJ.sure === key) { HJ.sure = null; if (live()) redraw(); } }, SURE_FOR); }
-    if (kind !== 'tab' && kind !== 'bidStep' && kind !== 'askStep') HJ.msg = null;      // (the seller's answer stays while the haggle is set again)
+    if (kind !== 'tab' && kind !== 'bidStep' && kind !== 'askStep' && kind !== 'mzsel') HJ.msg = null;      // (the seller's answer stays while the haggle is set again)
     let next = null;
     let ordered = false;
     const done = () => {
@@ -1085,6 +1517,7 @@ export function createPhone({ host }) {
       const k = t.dataset.s; ORD[k] = Math.max(0, (ORD[k] ?? 0) + Number(t.dataset.d)); done(); return;
     }
     if (kind === 'tab') { HJ.tab = t.dataset.p; done(); return; }
+    if (kind === 'mzsel') { MZ.sel = t.dataset.id; done(); return; }
     if (kind === 'bidStep') { const l = listingOf(HJ.listing); if (l) HJ.bid += Number(t.dataset.d) * stepOf(l.askPrice); done(); return; }
     if (kind === 'askStep') { const c = myCamel(HJ.camel); if (c) HJ.ask += Number(t.dataset.d) * stepOf(c.estimateHigh); done(); return; }
     if (twice != null && !ready) { done(); return; }      // (the first tap of a sale: it asks again)
@@ -1100,6 +1533,33 @@ export function createPhone({ host }) {
       else if (kind === 'list' || kind === 'quick') await sell(kind);
       else if (kind === 'accept' || kind === 'decline') await answer(kind, t.dataset.o);
       else if (kind === 'unlist' && await send({ type: 'cancelListing', listing: t.dataset.id })) HJ.msg = { good: true, title: 'شلت الإعلان', line: 'الحلال باقي بعزبتك.' };
+      else if (kind === 'withdraw') {
+        const e = myEntries().find((x) => x.camel === t.dataset.id && x.round === t.dataset.o);
+        if (e && await send({ type: 'withdrawEntry', festival: t.dataset.f, round: t.dataset.o, camel: t.dataset.id })) {
+          const late = G.today > e.fest.closesOn, c = myCamel(e.camel) || e;
+          HJ.msg = { good: true, title: `سحبت ${esc(e.name)} من ${roundTitle(e.kind, e.cat)}`, line: late ? `بعد الإغلاق ما ${her(c, 'ترجع تسجّلها', 'ترجع تسجّله')} بهالمهرجان.` : `تقدر ${her(c, 'تسجّلها', 'تسجّله')} مرة ثانية لين يقفل التسجيل.` };
+        }
+      } else if (kind === 'enter') {
+        const x = MZ.page && MZ.page.register.find((y) => y.camel.id === t.dataset.id), r = x && pageRound(x.round);
+        if (x && r) {
+          const res = await engine.dispatch({ type: 'enterRound', festival: MZ.page.festival.id, round: r.id, camels: [x.camel.id] });
+          if (res.ok) {
+            const fee = (res.events || []).find((e) => e.type === 'entered')?.fee || 0, c = x.camel;
+            HJ.msg = { good: true, title: `سجّلت ${esc(c.name)} ب${roundTitle(r.kind, r.cat)}`, line: `${her(c, 'شوطها', 'شوطه')} ${dd(r.day)}${fee ? `، وانخصم ${n0(fee)} ريال رسوم التأخير` : ''}، ${her(c, 'ونقلها', 'ونقله')} ينخصم يوم الشوط.` };
+            MZ.sel = null; next = 'mazayen';
+          } else ERR = why(x.camel, res.error || { code: '' });
+        }
+      } else if (kind === 'tamper') {
+        const o = dealerOffer();
+        if (o) {
+          const res = await engine.dispatch({ type: 'tamper', camel: o.c.id, kind: t.dataset.k, strength: Number(t.dataset.p) });
+          if (res.ok) next = 'chat';
+          else {
+            const code = res.error?.code, p = res.error?.params || {};
+            ERR = code === 'insufficientFunds' ? `رصيدك ما يكفي: يبي ${n0(p.needed ?? 0)} ريال.` : code === 'alreadyTreated' ? her(o.c, 'فيها هالنوع من قبل.', 'فيه هالنوع من قبل.') : code === 'enteredInContest' ? her(o.c, 'هي بالمهرجان اليوم.', 'هو بالمهرجان اليوم.') : 'جرّب مرة ثانية.';
+          }
+        }
+      }
       else if (kind === 'feed' || kind === 'week') {
         const b = sup('barley'), a = sup('alfalfa');
         let [nb, na] = kind === 'week' ? fitRoom(suggest(b, 1), suggest(a, 1), b, a, storeRoom(G.farm, b, a)) : [ORD.barley, ORD.alfalfa];
@@ -1160,7 +1620,6 @@ export function createPhone({ host }) {
     function refusedSale(r, who = null) {
       if (r.ok || r.error?.code !== 'saleRefused') return false;
       const ev = (r.events || []).find((e) => e.type === 'saleRefused');
-      for (const e of r.events || []) if (e.type === 'tamperingFound') FOUND_SEEN.add(foundKey(e));
       HJ.msg = ev ? foundWords(ev.name, ev.kinds, ev.fine, who || ev.buyer, myCamel(ev.camel)?.sex === 'male') : foundWords('', [], r.error.params?.fine ?? 0, null);
       return true;
     }
@@ -1232,6 +1691,9 @@ export function createPhone({ host }) {
         redrawBank(); return;
       }
       if (st.screen === 'bank' && was && bankKey(was) === bankKey(G)) return;
+      if (MZ_SCREENS.has(st.screen) && was && mzKey(was, st.screen) === mzKey(G, st.screen)) return;
+      if (MZ_PAGE.has(st.screen) && G) { loadFest(); return; }      // (drawn when the page comes)
+      if (MZ_SCREENS.has(st.screen)) { redrawKept(); return; }
       if (st.screen === 'bank') redrawBank(); else redraw();
     },      // (the word after an order, and a sale readied, are for their day)
     setEngine: (e) => { engine = e; },
