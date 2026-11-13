@@ -45,13 +45,37 @@ class Judging {
   };
 
   /// Weighted overall look (0–100): the basis of value and judging.
+  /// Worked out once for a camel and a day and kept (the festival page and
+  /// the snapshot ask for a herd's looks again and again), again when
+  /// anything it is made of changes: the day, the condition, the health or a
+  /// treatment.
   static double quality(Camel c, GameDay today) {
+    final key = _lookKey(c, today);
+    final kept = _looks[c];
+    if (kept != null && kept.$1 == key) return kept.$2;
     var sum = 0.0;
     for (final t in Trait.values) {
       sum += observed(c, t, today) * t.weight;
     }
+    _looks[c] = (key, sum);
     return sum;
   }
+
+  static final _looks = Expando<(Object, double)>('looks');
+
+  static Object _lookKey(Camel c, GameDay today) => (
+    today.value,
+    c.condition,
+    c.health.index,
+    Object.hashAll([
+      for (final t in c.treatments) ...[
+        t.kind.index,
+        t.strength,
+        t.on,
+        t.until,
+      ],
+    ]),
+  );
 
   /// Breeding-value quality (hidden).
   static double geneticQuality(Map<Trait, double> genes) {

@@ -52,7 +52,10 @@ class SnapshotJson {
       'minAsk': Balance.minAskPrice,
     },
     'breedingSeason': s.breedingSeason,
-    'recentEvents': [for (final e in s.recentEvents) e.toJson()],
+    // a place's score is the judges' mark, never announced (hidden)
+    'recentEvents': [
+      for (final e in s.recentEvents) e.toJson()..remove('score'),
+    ],
     'bank': bank(s.bank),
   };
 
@@ -140,6 +143,9 @@ class SnapshotJson {
           'cannot': x.cannot?.name,
         },
     ],
+    // the merchant's account: what is owed for feed, water and the vet,
+    // and its limit (the debt itself is the cash below zero)
+    'account': {'owed': f.onAccount, 'limit': f.accountLimit},
     'milk': {
       'camels': [
         for (final m in f.milk.camels)

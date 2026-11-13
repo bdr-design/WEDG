@@ -14,7 +14,9 @@ import '../common/time.dart';
 /// [95]). Botox is the cheat caught most, then the fillers (real).
 ///
 /// (balance) Everything else is a game choice: [traits], the features it
-/// raises; [experts] and [medical], the chance the tampering experts and
+/// raises (the one it works on, those beside it, and the overall look,
+/// الوقفة: a finer face or coat lifts the whole camel's bearing; spread so a
+/// strong one is not lost against the 100 a feature is held at); [experts] and [medical], the chance the tampering experts and
 /// the medical committee find a light treatment (a stronger one is found
 /// more often: Tampering.detectChance); [lastsDays], how long it shows and
 /// can be found; [price], what the secret vet takes for a light one.
@@ -22,7 +24,7 @@ enum TamperKind {
   botox(
     'بوتوكس',
     fineCap: 100000,
-    traits: {Trait.lips, Trait.nose},
+    traits: {Trait.lips, Trait.nose, Trait.head, Trait.stance},
     experts: 0.20,
     medical: 0.25,
     lastsDays: 120,
@@ -31,7 +33,7 @@ enum TamperKind {
   filler(
     'فيلر',
     fineCap: 100000,
-    traits: {Trait.head, Trait.nose},
+    traits: {Trait.head, Trait.nose, Trait.lips, Trait.neck, Trait.stance},
     experts: 0.15,
     medical: 0.22,
     lastsDays: 180,
@@ -40,7 +42,7 @@ enum TamperKind {
   hormones(
     'هرمونات',
     fineCap: 100000,
-    traits: {Trait.hump},
+    traits: {Trait.hump, Trait.fore, Trait.hind, Trait.stance},
     experts: 0.04,
     medical: 0.25,
     lastsDays: 45,
@@ -49,7 +51,7 @@ enum TamperKind {
   lipStretch(
     'شد الشفة',
     fineCap: 100000,
-    traits: {Trait.lips},
+    traits: {Trait.lips, Trait.head, Trait.stance},
     experts: 0.22,
     medical: 0.08,
     lastsDays: 365,
@@ -58,7 +60,7 @@ enum TamperKind {
   teethFiling(
     'برد الأسنان',
     fineCap: 30000,
-    traits: {Trait.head},
+    traits: {Trait.head, Trait.lips, Trait.stance},
     experts: 0.18,
     medical: 0.10,
     lastsDays: 365,
@@ -67,7 +69,7 @@ enum TamperKind {
   tailCut(
     'قص الذيل',
     fineCap: 30000,
-    traits: {Trait.hind},
+    traits: {Trait.hind, Trait.back, Trait.stance},
     experts: 0.28,
     medical: 0.0,
     lastsDays: 365,
@@ -76,7 +78,7 @@ enum TamperKind {
   dye(
     'الصبغ',
     fineCap: 30000,
-    traits: {Trait.coat},
+    traits: {Trait.coat, Trait.stance},
     experts: 0.20,
     medical: 0.10,
     lastsDays: 30,

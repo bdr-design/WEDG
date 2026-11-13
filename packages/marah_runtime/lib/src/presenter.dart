@@ -83,7 +83,7 @@ class Presenter {
       mine += r.myEntries.length;
       final p = r.prizes.first;
       if (p > top) top = p;
-      for (final row in r.results ?? const <ResultRow>[]) {
+      for (final row in r.results ?? const <ResultView>[]) {
         if (row.ownerId != viewer) continue;
         prizes += row.prize;
         final rank = row.rank;
@@ -157,6 +157,8 @@ class Presenter {
       feedPlan: me.farm.feedPlan,
       dailyFeed: v.dailyFeed.value,
       monthlyWages: v.monthlyWages.value,
+      onAccount: v.onAccount,
+      accountLimit: v.accountLimit(needs),
       supplies: [
         for (final s in Supply.values)
           SupplySummary(
