@@ -1,6 +1,8 @@
 // البنك's reading of the ledger (views/money.dart): its figures are the
 // ledger's own sums, a sale goes with its commission, the biggest kind, the
 // months' edges, the day-one state, and ten years.
+import 'dart:convert';
+
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/src/sim.dart';
 import 'package:marah_domain/testing.dart';
@@ -54,9 +56,20 @@ void expectAddsUp(Game g) {
     final outs = m.lines.where((l) => l.amount <= 0);
     expect(m.income, ins.fold(0, (n, l) => n + l.amount));
     expect(m.spent, -outs.fold(0, (n, l) => n + l.amount));
-    final fresh = v.moneyMonth(m.month)!;
-    expect(fresh.lines, m.lines, reason: 'kept ${m.month} == read afresh');
+    expect(v.moneyMonth(m.month)!.lines, m.lines, reason: 'row == opened');
   }
+  // the kept months read as the whole ledger read afresh (a game opened again)
+  final again = GameView(
+    GameState.fromJson(
+      jsonDecode(jsonEncode(g.state.toJson())) as Map<String, Object?>,
+    ),
+    g.me.id,
+  );
+  expect(
+    [for (final m in again.moneyMonths) m.lines],
+    [for (final m in months) m.lines],
+    reason: 'kept == read afresh',
+  );
   final t = v.moneyToday;
   expect(t.income - t.spent, v.todayNet.value, reason: 'today == todayNet');
 }
@@ -171,6 +184,43 @@ void main() {
     // a festival the world has forgotten: the reason without a name
     expect((trip.trip, trip.name), (TripReason.festival, null));
     expectAddsUp(g);
+  });
+
+  test('a camel renamed reads the same on the month\'s row and opened', () {
+    final g = newGame();
+    final me = g.me.id;
+    final v0 = GameView(g.state, me);
+    final l =
+        (v0.market.toList()
+              ..sort((a, b) => a.askPrice.value.compareTo(b.askPrice.value)))
+            .first;
+    expect(g.dispatch(BuyListing(me, l.id)).ok, isTrue);
+    g.advanceTo(GameDay.ofDate(DateTime.utc(2026, 11, 3)));
+    String rowName() => GameView(
+      g.state,
+      me,
+    ).moneyMonths.firstWhere((m) => m.month == '2026-10').top.name!;
+    expect(rowName(), l.camel.name); // (October kept)
+    expect(g.dispatch(RenameCamel(me, l.camel.id, 'غزالة')).ok, isTrue);
+    expect(rowName(), 'غزالة');
+    final opened = GameView(g.state, me).moneyMonth('2026-10')!;
+    expect(opened.top.name, 'غزالة');
+  });
+
+  test('the ledger never goes back: a row with an earlier day is caught', () {
+    final g = newGame();
+    g.advanceDays(3);
+    expect(g.dispatch(OrderSupply(g.me.id, Supply.alfalfa, 1)).ok, isTrue);
+    expect(checkInvariants(g.state), isEmpty);
+    g.me.ledger.add(
+      LedgerEntry(
+        day: g.today - 1,
+        category: LedgerCategory.vet,
+        amount: const Riyal(-10),
+      ),
+    );
+    g.me.cash = g.me.cash + const Riyal(-10);
+    expect(checkInvariants(g.state), contains(startsWith('ledger goes back')));
   });
 
   test('a balance under zero adds up as any other', () {

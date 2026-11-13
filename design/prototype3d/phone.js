@@ -1142,10 +1142,17 @@ export function createPhone({ host }) {
       if (G && snapshot && snapshot.today !== G.today) HJ.msg = HJ.sure = null;
       const was = G; G = snapshot;
       if (!live()) return;
-      const bank = st.screen === 'bank' || st.screen === 'bankMonth';
-      if (st.screen === 'bankMonth' && G && G.sections.bank !== BK.rev) loadMonth();      // (money moved: the month's kinds read again)
-      if (bank && was && bankKey(was) === bankKey(G)) return;
-      if (bank) redrawBank(); else redraw();
+      if (st.screen === 'bankMonth') {
+        // a past month does not change: asked once; this month (or the one that has just ended) is asked again when
+        // money moved, drawn when the answer comes, not before with its old figures; otherwise drawn again only as the
+        // month turns (its «لين اليوم»)
+        const mon = (g) => (g ? g.date.slice(0, 7) : '');
+        if (G && (BK.month === mon(G) || BK.month === mon(was)) && G.sections.bank !== BK.rev) { loadMonth(); return; }
+        if (was && mon(was) === mon(G)) return;
+        redrawBank(); return;
+      }
+      if (st.screen === 'bank' && was && bankKey(was) === bankKey(G)) return;
+      if (st.screen === 'bank') redrawBank(); else redraw();
     },      // (the word after an order, and a sale readied, are for their day)
     setEngine: (e) => { engine = e; },
     get state() { return st.state; }, get big() { return st.state === 'big'; },

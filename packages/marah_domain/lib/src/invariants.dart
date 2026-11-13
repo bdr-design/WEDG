@@ -1,5 +1,6 @@
 import 'model/camel.dart';
 import 'model/game_state.dart';
+import 'views/money.dart';
 
 /// Rules that must hold after every command and every day. Tests and the
 /// long-run simulation check them; a violation is always a bug.
@@ -11,6 +12,18 @@ List<String> checkInvariants(GameState s) {
     final sum = p.ledger.fold<int>(0, (a, l) => a + l.amount.value);
     if (sum != p.cash.value) {
       problems.add('cash ${p.cash.value} != ledger sum $sum for ${p.id.value}');
+    }
+    // the ledger is written in order: a row's day never before the last's,
+    // and a month's roll-up row not before an earlier month's rows (the
+    // bank reads it so: views/money.dart)
+    for (var i = 1; i < p.ledger.length; i++) {
+      final a = p.ledger[i - 1], b = p.ledger[i];
+      final ka = a.month ?? Money.monthOf(a.day);
+      final kb = b.month ?? Money.monthOf(b.day);
+      if (b.day < a.day || kb.compareTo(ka) < 0) {
+        problems.add('ledger goes back at row $i for ${p.id.value}');
+        break;
+      }
     }
   }
   for (final l in w.listings.values) {

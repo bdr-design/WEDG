@@ -161,51 +161,83 @@ class Money {
   /// Every month with money in or out, the newest first.
   ///
   /// Read for every snapshot, so the months before this one are kept once
-  /// read (1.1 ms a snapshot at 1,128 rows otherwise, ten years of the long
-  /// run): the ledger only ever grows at its end, by today's rows and this
-  /// month's roll-up rows (Sim.pay, Sim.bill), so a past month never
-  /// changes. Only this month's rows, at the end, are read again; a new
-  /// month, or a ledger that did not grow from the one read (a game opened
-  /// again), reads the whole ledger once.
+  /// read, by their sums, counts and refs (1.1 ms a snapshot at 1,128 rows
+  /// otherwise, ten years of the long run): the ledger only ever grows at its
+  /// end, by today's rows and this month's roll-up rows (Sim.pay, Sim.bill;
+  /// checkInvariants holds every writer to it), so a past month's rows never
+  /// change. Only this month's rows, at the end, are read again; a month
+  /// that ends adds its rows to the kept ones, and a ledger that is not the
+  /// one read grown at its end (a game opened again) is read whole once. The names (a camel's, a festival's) are looked up as the
+  /// months are given, so a camel renamed or a festival the world has
+  /// forgotten reads the same here and in the month opened.
   static List<MonthMoney> months(GameState s, OwnerId owner) {
     final p = s.players[owner]!;
-    final ledger = p.ledger;
-    final now = monthOf(s.world.day);
-    var c = _past[ledger];
-    if (c == null || c.month != now || ledger.length < c.rows) {
-      final by = <String, List<LedgerEntry>>{};
-      var rows = 0;
-      for (final e in ledger) {
-        final k = e.month ?? monthOf(e.day);
-        if (k.compareTo(now) >= 0) break;
-        rows++;
-        if (e.category == LedgerCategory.opening) continue;
-        (by[k] ??= []).add(e);
-      }
-      final keys = by.keys.toList()..sort((a, b) => b.compareTo(a));
-      c = _Past(now, rows, [for (final k in keys) _month(s, p, k, by[k]!)]);
-      _past[ledger] = c;
-    }
-    final current = [
-      for (var i = c.rows; i < ledger.length; i++)
-        if (ledger[i].category != LedgerCategory.opening) ledger[i],
+    final c = _kept(s, p);
+    final current = _currentRows(p, c);
+    return [
+      if (current.isNotEmpty) _named(s, _sums(s, c.month, current)),
+      for (final m in c.list) _named(s, m),
     ];
-    return [if (current.isNotEmpty) _month(s, p, now, current), ...c.list];
+  }
+
+  /// One month, or null when it has no money in or out: a past month from
+  /// the kept ones, this month from its rows at the ledger's end.
+  static MonthMoney? month(GameState s, OwnerId owner, String month) {
+    final p = s.players[owner]!;
+    final c = _kept(s, p);
+    if (month == c.month) {
+      final current = _currentRows(p, c);
+      return current.isEmpty ? null : _named(s, _sums(s, month, current));
+    }
+    final m = c.byMonth[month];
+    return m == null ? null : _named(s, m);
   }
 
   static final _past = Expando<_Past>('money months');
 
-  /// One month, or null when it has no money in or out.
-  static MonthMoney? month(GameState s, OwnerId owner, String month) {
-    final p = s.players[owner]!;
-    final rows = [
-      for (final e in p.ledger)
-        if (e.category != LedgerCategory.opening &&
-            (e.month ?? monthOf(e.day)) == month)
-          e,
-    ];
-    return rows.isEmpty ? null : _month(s, p, month, rows);
+  /// The months before this one, read again when the month has turned or the
+  /// ledger is not the one read grown at its end.
+  static _Past _kept(GameState s, PlayerState p) {
+    final ledger = p.ledger;
+    final now = monthOf(s.world.day);
+    var c = _past[ledger];
+    // the ledger read before, grown at its end (the same row where the kept
+    // part ended, nothing after it from before that month)
+    final grown =
+        c != null &&
+        ledger.length >= c.rows &&
+        (c.rows == 0 || identical(ledger[c.rows - 1], c.last)) &&
+        (ledger.length == c.rows || _key(ledger.last).compareTo(c.month) >= 0);
+    if (grown && c.month == now) return c;
+    if (!grown || c.month.compareTo(now) > 0) {
+      c = _Past('', 0, null, const [], const {});
+    }
+    // the months that have ended since: their rows added to the kept ones
+    final by = <String, List<LedgerEntry>>{};
+    var rows = c.rows;
+    for (var i = c.rows; i < ledger.length; i++) {
+      final e = ledger[i];
+      final k = _key(e);
+      if (k.compareTo(now) >= 0) break;
+      rows++;
+      if (e.category == LedgerCategory.opening) continue;
+      (by[k] ??= []).add(e);
+    }
+    final keys = by.keys.toList()..sort((a, b) => b.compareTo(a));
+    final list = [for (final k in keys) _sums(s, k, by[k]!), ...c.list];
+    final kept = _Past(now, rows, rows == 0 ? null : ledger[rows - 1], list, {
+      for (final m in list) m.month: m,
+    });
+    _past[ledger] = kept;
+    return kept;
   }
+
+  static String _key(LedgerEntry e) => e.month ?? monthOf(e.day);
+
+  static List<LedgerEntry> _currentRows(PlayerState p, _Past c) => [
+    for (var i = c.rows; i < p.ledger.length; i++)
+      if (p.ledger[i].category != LedgerCategory.opening) p.ledger[i],
+  ];
 
   /// Today's money in and out by kind ([milkToday]: the day's milk, which
   /// the ledger keeps in its month's single row). Its net is
@@ -217,7 +249,7 @@ class Money {
   ) {
     final sums = <MoneyKind, int>{};
     // (from the end: the rows are in the order written, their days never
-    // going back)
+    // going back: checkInvariants)
     for (final e in p.ledger.reversed) {
       if (e.day < today) break;
       if (e.day != today || e.category == LedgerCategory.milk) continue;
@@ -227,80 +259,50 @@ class Money {
     if (milkToday != 0) sums[MoneyKind.milk] = milkToday;
     var income = 0, spent = 0;
     for (final v in sums.values) {
-      if (v > 0)
+      if (v > 0) {
         income += v;
-      else
+      } else {
         spent -= v;
+      }
     }
     return (income: income, spent: spent);
   }
 
-  static MonthMoney _month(
-    GameState s,
-    PlayerState p,
-    String month,
-    List<LedgerEntry> rows,
-  ) {
+  /// A month's rows as sums, counts and refs, its kinds in the screen's order
+  /// (money in, the biggest first; then money out, the biggest first).
+  static _MonthSums _sums(GameState s, String month, List<LedgerEntry> rows) {
     final by = <MoneyKind, List<LedgerEntry>>{};
     for (final e in rows) {
       (by[kindOf(e.category)!] ??= []).add(e);
     }
-    final lines = [
-      for (final MapEntry(:key, :value) in by.entries) _line(s, p, key, value),
+    final kinds = [
+      for (final MapEntry(:key, :value) in by.entries)
+        _kindSums(s, rows, key, value),
     ];
-    final ins = lines.where((l) => l.amount > 0).toList()
+    final ins = kinds.where((k) => k.amount > 0).toList()
       ..sort((a, b) => b.amount.compareTo(a.amount));
-    final outs = lines.where((l) => l.amount <= 0).toList()
+    final outs = kinds.where((k) => k.amount <= 0).toList()
       ..sort((a, b) => a.amount.compareTo(b.amount));
-    return MonthMoney(
-      month: month,
-      income: ins.fold(0, (n, l) => n + l.amount),
-      spent: -outs.fold(0, (n, l) => n + l.amount),
-      lines: [...ins, ...outs],
-    );
+    return _MonthSums(month, [...ins, ...outs]);
   }
 
-  static MoneyLine _line(
+  static _KindSums _kindSums(
     GameState s,
-    PlayerState p,
+    List<LedgerEntry> month,
     MoneyKind kind,
     List<LedgerEntry> rows,
   ) {
-    final amount = rows.fold(0, (n, e) => n + e.amount.value);
     // the rows that count (a sale's commission rides with its sale)
     final own = kind == MoneyKind.sale
         ? rows.where((e) => e.category == LedgerCategory.sale).toList()
         : rows;
     final one = own.length == 1 ? own.first : null;
-    final w = s.world;
-    String? camelName(String? ref) =>
-        ref == null ? null : w.camels[CamelId(ref)]?.name;
-    String? festivalName(String? ref) {
-      if (ref == null) return null;
-      return w.festivals[FestivalId(ref)]?.name;
-    }
-
-    TripReason? trip;
-    String? name;
-    switch (kind) {
-      case MoneyKind.sale || MoneyKind.purchase:
-        name = camelName(one?.ref);
-      case MoneyKind.transport when one != null:
-        trip = _trip(s, p, one);
-        name = trip == TripReason.festival
-            ? festivalName(one.ref)
-            : camelName(one.ref);
-      case MoneyKind.prize:
-        name = festivalName(one?.ref);
-      default:
-        break;
-    }
     final sale = kind == MoneyKind.sale;
-    return MoneyLine(
+    return _KindSums(
       kind: kind,
-      amount: amount,
+      amount: rows.fold(0, (n, e) => n + e.amount.value),
       count: own.length,
-      name: name,
+      ref: one?.ref,
       day: kind == MoneyKind.milk || kind == MoneyKind.wages ? null : one?.day,
       price: sale ? own.fold<int>(0, (n, e) => n + e.amount.value) : null,
       fee: sale
@@ -308,7 +310,9 @@ class Money {
                 .where((e) => e.category == LedgerCategory.commission)
                 .fold<int>(0, (n, e) => n + e.amount.value)
           : null,
-      trip: trip,
+      trip: kind == MoneyKind.transport && one != null
+          ? _trip(s, month, one)
+          : null,
       facilities: kind == MoneyKind.construction
           ? [
               for (final e in rows)
@@ -320,12 +324,57 @@ class Money {
     );
   }
 
-  /// A transport row's reason, from the rows written with it: a purchase of
-  /// the same camel that day (trucked home), else a camel of the player's
-  /// (his female trucked to a stud: a camel a player has had is never
-  /// forgotten by the world), else a festival's (there and back).
-  static TripReason _trip(GameState s, PlayerState p, LedgerEntry t) {
-    for (final e in p.ledger) {
+  /// A month as the screens show it, its names looked up now.
+  static MonthMoney _named(GameState s, _MonthSums m) {
+    final w = s.world;
+    String? camelName(String? ref) =>
+        ref == null ? null : w.camels[CamelId(ref)]?.name;
+    String? festivalName(String? ref) =>
+        ref == null ? null : w.festivals[FestivalId(ref)]?.name;
+    var income = 0, spent = 0;
+    final lines = <MoneyLine>[];
+    for (final k in m.kinds) {
+      if (k.amount > 0) {
+        income += k.amount;
+      } else {
+        spent -= k.amount;
+      }
+      lines.add(
+        MoneyLine(
+          kind: k.kind,
+          amount: k.amount,
+          count: k.count,
+          name: switch (k.kind) {
+            MoneyKind.sale || MoneyKind.purchase => camelName(k.ref),
+            MoneyKind.transport =>
+              k.trip == TripReason.festival
+                  ? festivalName(k.ref)
+                  : camelName(k.ref),
+            MoneyKind.prize => festivalName(k.ref),
+            _ => null,
+          },
+          day: k.day,
+          price: k.price,
+          fee: k.fee,
+          trip: k.trip,
+          facilities: k.facilities,
+        ),
+      );
+    }
+    return MonthMoney(
+      month: m.month,
+      income: income,
+      spent: spent,
+      lines: lines,
+    );
+  }
+
+  /// A transport row's reason, from the rows of its month written with it: a
+  /// purchase of the same camel that day (trucked home), else a camel of the
+  /// player's (his female trucked to a stud: a camel a player has had is
+  /// never forgotten by the world), else a festival's (there and back).
+  static TripReason _trip(GameState s, List<LedgerEntry> month, LedgerEntry t) {
+    for (final e in month) {
       if (e.day == t.day &&
           e.category == LedgerCategory.purchase &&
           e.ref == t.ref) {
@@ -347,10 +396,45 @@ bool _sameList<T>(List<T> a, List<T> b) {
   return true;
 }
 
-/// The months before [month] as read when the ledger had [rows] rows.
+/// The months before [month] as read when the ledger had [rows] rows, the
+/// last of them [last].
 class _Past {
-  _Past(this.month, this.rows, this.list);
+  _Past(this.month, this.rows, this.last, this.list, this.byMonth);
   final String month;
   final int rows;
-  final List<MonthMoney> list;
+  final LedgerEntry? last;
+  final List<_MonthSums> list;
+  final Map<String, _MonthSums> byMonth;
+}
+
+/// A month's kinds by their sums, counts and refs (no names: looked up as
+/// the month is given).
+class _MonthSums {
+  _MonthSums(this.month, this.kinds);
+  final String month;
+  final List<_KindSums> kinds;
+}
+
+class _KindSums {
+  const _KindSums({
+    required this.kind,
+    required this.amount,
+    required this.count,
+    required this.ref,
+    required this.day,
+    required this.price,
+    required this.fee,
+    required this.trip,
+    required this.facilities,
+  });
+
+  final MoneyKind kind;
+  final int amount;
+  final int count;
+  final String? ref;
+  final GameDay? day;
+  final int? price;
+  final int? fee;
+  final TripReason? trip;
+  final List<Facility> facilities;
 }
