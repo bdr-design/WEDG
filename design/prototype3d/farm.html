@@ -604,12 +604,6 @@ async function loadLod(file) {
   for (let i = 0; i < str.length; i++) bin[i] = str.charCodeAt(i);          // (a plain loop: Uint8Array.from with a callback took about 0.5 s for the 6.5 MB interior)
   return new GLTFLoader().parseAsync(bin.buffer, '');
 }
-const coatMats = new Map();
-function coatMaterial(src, lod, coat) {
-  const key = lod + coat;
-  if (!coatMats.has(key)) { const m = src.clone(); m.color.set(COATS[coat].tint); if (coat === 'majaheem') m.roughness = 0.78; coatMats.set(key, m); }
-  return coatMats.get(key);
-}
 
 // One copy of the coat's pictures for all three detail levels. The middle and far levels' own copies are the same
 // atlas made smaller (against the near copy scaled down: 51 dB PSNR for the normal map, 36 dB for the colour, measured
@@ -637,82 +631,276 @@ function shareCoatMaps(T) {
     m.needsUpdate = true;
   });
 }
-// the herd's group: the scene's own walk of matrices does not go into it (each camel updates its own, on the frames its
-// animation steps: Camel.update); it stands at the origin, so a camel's place is its own
+// The herd (ADR 0005, "The herd in three tiers", as measured here). Every camel is drawn by one instanced draw per
+// detail level, and its shadow by one more per caster level, so 40 camels cost at most 3 draws in the picture and 2 in
+// the shadow map, where each was a skinned mesh of its own (40 camels: 254 draws in the worst frame, 2 camels: 178).
+// The bones of an instance come from one of two places:
+// - the clips baked once at load, 60 frames a second, into a texture of bone matrices (577 frames x 38 bones, 1.4 MB),
+//   read between the two nearest frames: within 0.65 mm of the mixer's pose at every vertex (err.cjs, 120 poses);
+// - while one clip fades into another (half a second), its own skeleton and mixer, as before, the clips blended by
+//   three.js, the bone matrices copied each frame into a row of a small texture (16 rows): two baked poses mixed matrix
+//   by matrix are up to 58 cm off the mixer's blend (a neck swung from grazing to walking takes the chord, not the arc).
+//   At most 16 at once, the nearest first; past that (16 of the herd turning in the same half second) a fade is drawn
+//   from the baked poses mixed.
+// A camel's clip, time and fade are its own (Camel.play and Camel.update keep them as three.js's mixer kept them), so
+// both draw the same pose at the same moment; the pooled skeletons only turn a fading camel's state into bones.
+// (The third tier, impostors past 150 m, is not needed: the yard's 40 cost 3 draws at any distance.)
+const HERD_FPS = 60;
+const LIVE_MAX = 16;
+const CLIPS = ['graze', 'idle', 'walk'];
+const FEET = ['ffootL', 'ffootR', 'hfootL', 'hfootR'];
+// the herd's group holds each camel's place (and the box a tap hits); the scene's own walk of matrices does not go into
+// it (each camel updates its own, Camel.update); it stands at the origin, so a camel's place is its own
 const herd = new THREE.Group(); herd.name = 'herd'; herd.updateMatrixWorld = () => {}; scene.add(herd);
+let HERD = null;      // the herd's drawing, once the detail levels have loaded (buildHerd)
+
+// a skeleton and its mixer, without meshes: a fading camel's pose
+function herdRig(T) {
+  const rig = SkeletonUtils.clone(T[0].scene);
+  rig.rotation.y = -Math.PI / 2;
+  const g = new THREE.Group(); g.add(rig);
+  let skel = null; const meshes = [];
+  rig.traverse((n) => { if (n.isSkinnedMesh && !skel) skel = n.skeleton; if (n.isMesh) meshes.push(n); });
+  for (const m of meshes) m.parent.remove(m);
+  const mixer = new THREE.AnimationMixer(rig);
+  const acts = CLIPS.map((name) => { const a = mixer.clipAction(T[0].animations.find((c) => c.name === name)); a.timeScale = 0; a.play(); a.setEffectiveWeight(0); return a; });
+  return { g, skel, mixer, acts, feet: FEET.map((n) => rig.getObjectByName(n)), row: -1, camel: null };
+}
+// the rig's bones in a camel's pose: each clip at its time and weight, as the mixer blended them
+function poseRig(r, c) {
+  const wOut = c.clipOut ? 1 - c.fade / c.fadeLen : 0;
+  for (let k = 0; k < CLIPS.length; k++) {
+    const a = r.acts[k], name = CLIPS[k];
+    const w = name === c.clip ? 1 - wOut : name === c.clipOut ? wOut : 0;
+    a.setEffectiveWeight(w);
+    if (w > 0) a.time = name === c.clip ? c.tIn : c.tOut;
+  }
+  r.mixer.update(0);
+  r.g.updateMatrixWorld(true);
+  r.skel.update();
+}
+
+// the vertex shader's skinning, from the baked frames or a near camel's row (three.js's own skinning chunks, the bones
+// read from these textures; the instance matrix places the camel)
+const HERD_PARS = /* glsl */`
+attribute vec4 skinIndex;
+attribute vec4 skinWeight;
+attribute vec4 herdAnim;      // the current clip's frame, the clip fading out's frame, its weight, the near row (or -1)
+uniform highp sampler2D herdBake;
+uniform highp sampler2D herdLive;
+uniform mat4 herdBind;
+mat4 herdBaked(const in int row, const in int i) {
+  int x = i * 4;
+  return mat4(texelFetch(herdBake, ivec2(x, row), 0), texelFetch(herdBake, ivec2(x + 1, row), 0), texelFetch(herdBake, ivec2(x + 2, row), 0), texelFetch(herdBake, ivec2(x + 3, row), 0));
+}
+mat4 herdAt(const in float f, const in int i) {
+  float r = floor(f), a = f - r;
+  return herdBaked(int(r), i) * (1.0 - a) + herdBaked(int(r) + 1, i) * a;
+}
+mat4 herdBone(const in float fi) {
+  int i = int(fi);
+  if (herdAnim.w >= 0.0) {
+    int x = i * 4, row = int(herdAnim.w);
+    return mat4(texelFetch(herdLive, ivec2(x, row), 0), texelFetch(herdLive, ivec2(x + 1, row), 0), texelFetch(herdLive, ivec2(x + 2, row), 0), texelFetch(herdLive, ivec2(x + 3, row), 0));
+  }
+  mat4 m = herdAt(herdAnim.x, i);
+  if (herdAnim.z > 0.0) m = m * (1.0 - herdAnim.z) + herdAt(herdAnim.y, i) * herdAnim.z;
+  return m;
+}
+`;
+const HERD_BASE = 'mat4 boneMatX = herdBone(skinIndex.x); mat4 boneMatY = herdBone(skinIndex.y); mat4 boneMatZ = herdBone(skinIndex.z); mat4 boneMatW = herdBone(skinIndex.w);';
+const HERD_NORMAL = `mat4 skinMatrix = (skinWeight.x * boneMatX + skinWeight.y * boneMatY + skinWeight.z * boneMatZ + skinWeight.w * boneMatW) * herdBind;
+objectNormal = vec4(skinMatrix * vec4(objectNormal, 0.0)).xyz;
+#ifdef USE_TANGENT
+objectTangent = vec4(skinMatrix * vec4(objectTangent, 0.0)).xyz;
+#endif`;
+const HERD_SKIN = `vec4 skinVertex = herdBind * vec4(transformed, 1.0);
+transformed = (boneMatX * skinVertex * skinWeight.x + boneMatY * skinVertex * skinWeight.y + boneMatZ * skinVertex * skinWeight.z + boneMatW * skinVertex * skinWeight.w).xyz;`;
+function herdShader(m, U, bind, coat) {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.herdBake = U.bake; sh.uniforms.herdLive = U.live; sh.uniforms.herdBind = { value: bind };
+    sh.vertexShader = sh.vertexShader.replace('#include <skinning_pars_vertex>', HERD_PARS + (coat ? 'attribute float herdRough;\nvarying float vHerdRough;' : ''))
+      .replace('#include <skinbase_vertex>', HERD_BASE + (coat ? '\nvHerdRough = herdRough;' : '')).replace('#include <skinnormal_vertex>', HERD_NORMAL).replace('#include <skinning_vertex>', HERD_SKIN);
+    // the coat's roughness by instance (the dark majaheem's is its own: 0.78)
+    if (coat) sh.fragmentShader = sh.fragmentShader.replace('#include <roughnessmap_pars_fragment>', '#include <roughnessmap_pars_fragment>\nvarying float vHerdRough;')
+      .replace('#include <roughnessmap_fragment>', THREE.ShaderChunk.roughnessmap_fragment.replace('= roughness;', '= vHerdRough;'));
+  };
+  m.customProgramCacheKey = () => 'herd' + (coat ? 1 : 0);
+  return m;
+}
+
+function buildHerd(T) {
+  // the clips baked: each at 60 frames a second, its last frame at its end (the clips loop)
+  const start = {}, frames = {}, dur = {};
+  let rows = 0;
+  for (const name of CLIPS) { dur[name] = T[0].animations.find((c) => c.name === name).duration; frames[name] = Math.round(dur[name] * HERD_FPS); start[name] = rows; rows += frames[name] + 1; }
+  const pool = Array.from({ length: LIVE_MAX }, (_, i) => Object.assign(herdRig(T), { row: i }));
+  const nb = pool[0].skel.bones.length, rowF = nb * 16;
+  const bake = new Float32Array(rowF * rows), feetBake = new Float32Array(rows * 12);
+  const ref = pool[0], probe = { clip: null, clipOut: null, tIn: 0, tOut: 0, fade: 0, fadeLen: 1 };
+  for (const name of CLIPS) {
+    for (let k = 0; k <= frames[name]; k++) {
+      probe.clip = name; probe.tIn = k === frames[name] ? dur[name] : k / HERD_FPS;
+      poseRig(ref, probe);
+      const row = start[name] + k;
+      bake.set(ref.skel.boneMatrices, row * rowF);
+      for (let f = 0; f < 4; f++) { const e = ref.feet[f].matrixWorld.elements; feetBake[row * 12 + f * 3] = e[12]; feetBake[row * 12 + f * 3 + 1] = e[13]; feetBake[row * 12 + f * 3 + 2] = e[14]; }
+    }
+  }
+  const bakeTex = new THREE.DataTexture(bake, nb * 4, rows, THREE.RGBAFormat, THREE.FloatType); bakeTex.needsUpdate = true;
+  const live = new Float32Array(rowF * LIVE_MAX);
+  const liveTex = new THREE.DataTexture(live, nb * 4, LIVE_MAX, THREE.RGBAFormat, THREE.FloatType); liveTex.needsUpdate = true;
+  const U = { bake: { value: bakeTex }, live: { value: liveTex } };
+
+  // the detail levels' meshes and materials (one material each: the coat's tint and roughness go by instance)
+  const skinned = T.map((t) => { let m = null; t.scene.traverse((n) => { if (n.isSkinnedMesh && !m) m = n; }); return m; });
+  const roughness = skinned[0].material.roughness;
+  const coatMat = skinned.map((s) => { const m = s.material.clone(); m.color.set('#ffffff'); return herdShader(m, U, s.bindMatrix, true); });
+  const depthMat = skinned.map((s) => herdShader(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }), U, s.bindMatrix, false));
+  // a shadow-only caster's material: drawn in the shadow map only (as SHADOW_ONLY: hidden while the frame's list is made)
+  const casterMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }); casterMat.visible = false; SHADOW_MATS.set('herd', casterMat);
+  // the five draws: the picture at each level (the full and middle levels take the shadows falling on them, as before),
+  // and the shadow cast by the 8k level for a camel drawn at the full one, by the 1.5k level for the others (as the
+  // stand-ins did)
+  const kinds = [[0, 'coat'], [1, 'coat'], [2, 'coat'], [1, 'shadow'], [2, 'shadow']];
+  let cap = 0, meshes = [];
+  function make(n) {
+    for (const m of meshes) { scene.remove(m); m.dispose(); }
+    cap = n;
+    meshes = kinds.map(([li, kind]) => {
+      const src = skinned[li].geometry, g = new THREE.BufferGeometry();
+      for (const k of ['position', 'normal', 'uv', 'skinIndex', 'skinWeight']) if (src.attributes[k]) g.setAttribute(k, src.attributes[k]);
+      g.setIndex(src.index);
+      g.setAttribute('herdAnim', new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4).setUsage(THREE.DynamicDrawUsage));
+      const coat = kind === 'coat';
+      if (coat) g.setAttribute('herdRough', new THREE.InstancedBufferAttribute(new Float32Array(n), 1).setUsage(THREE.DynamicDrawUsage));
+      const m = new THREE.InstancedMesh(g, coat ? coatMat[li] : casterMat, n);
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      if (coat) { m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage); }
+      else m.customDepthMaterial = depthMat[li];
+      m.castShadow = !coat; m.receiveShadow = coat && li <= 1;
+      m.frustumCulled = false; m.count = 0; m.visible = false; m.matrixAutoUpdate = false;
+      m.name = `herd ${kind} ${li}`;
+      m.userData.anim = g.attributes.herdAnim.array; m.userData.rough = coat ? g.attributes.herdRough.array : null;
+      scene.add(m);
+      return m;
+    });
+  }
+  make(64);
+  const tint = Object.fromEntries(Object.entries(COATS).map(([k, c]) => [k, new THREE.Color(c.tint)]));
+  const frustum = new THREE.Frustum(), proj = new THREE.Matrix4(), sphere = new THREE.Sphere(), foot = new THREE.Vector3();
+  const order = [], n = [0, 0, 0, 0, 0];
+  const put = (mi, c, f0, f1, w, row) => {
+    const m = meshes[mi], i = n[mi]++, a = m.userData.anim;
+    c.root.matrixWorld.toArray(m.instanceMatrix.array, i * 16);
+    a[i * 4] = f0; a[i * 4 + 1] = f1; a[i * 4 + 2] = w; a[i * 4 + 3] = row;
+    if (m.userData.rough) { const t = tint[c.coat], ca = m.instanceColor.array; ca[i * 3] = t.r; ca[i * 3 + 1] = t.g; ca[i * 3 + 2] = t.b; m.userData.rough[i] = c.coat === 'majaheem' ? 0.78 : roughness; }
+  };
+  // a foot's place in the camel's own frame, from the baked frames (the two frames either side, two clips while one fades)
+  const bakedFoot = (c, f, out) => {
+    const at = (name, t, k) => { const p = start[name] + t * HERD_FPS, r = Math.floor(p), a = p - r, o = r * 12 + f * 3; return feetBake[o + k] * (1 - a) + feetBake[o + 12 + k] * a; };
+    const w = c.clipOut ? 1 - c.fade / c.fadeLen : 0;
+    return out.set(
+      at(c.clip, c.tIn, 0) * (1 - w) + (w ? at(c.clipOut, c.tOut, 0) * w : 0),
+      at(c.clip, c.tIn, 1) * (1 - w) + (w ? at(c.clipOut, c.tOut, 1) * w : 0),
+      at(c.clip, c.tIn, 2) * (1 - w) + (w ? at(c.clipOut, c.tOut, 2) * w : 0));
+  };
+  return {
+    dur, pool,
+    bytes: bake.byteLength + live.byteLength,
+    // the yard changed: the list the skeletons go by, the skeletons of camels gone back in the pool, room for more
+    sync(list) {
+      for (const r of pool) if (r.camel && !list.includes(r.camel)) { r.camel.rig = null; r.camel = null; }
+      order.length = 0; for (const c of list) order.push(c);
+      if (list.length > cap) make(Math.max(list.length, cap * 2));
+    },
+    // each frame after the camels' own update: the fading camels posed by their skeletons, the rest from the baked
+    // frames; the footprints from either
+    pose() {
+      for (let i = 1; i < order.length; i++) { const c = order[i]; let j = i - 1; while (j >= 0 && order[j].d > c.d) { order[j + 1] = order[j]; j--; } order[j + 1] = c; }      // (nearly in order from the frame before: a few steps)
+      let k = 0;
+      for (const c of order) if (c.rig && !c.clipOut) { c.rig.camel = null; c.rig = null; }      // (its fade is over)
+      for (const c of order) {
+        // a skeleton for a fade from its first frame, the nearest first, while there are any free (never taken over
+        // mid-fade: the pose would jump from the baked blend to the mixer's)
+        if (c.fadeNew && !c.rig && k < LIVE_MAX) { let r = 0; while (pool[r].camel) r++; if (r < pool.length) { pool[r].camel = c; c.rig = pool[r]; } }
+        c.fadeNew = false;
+        if (!c.rig) continue;
+        k++;
+        poseRig(c.rig, c);
+        live.set(c.rig.skel.boneMatrices, c.rig.row * rowF);
+      }
+      if (k) liveTex.needsUpdate = true;
+      for (const c of order) {
+        if (c.clip !== 'walk' || c.li >= 2 || c.speed <= 0.2) continue;
+        for (let f = 0; f < 4; f++) {
+          if (c.rig) foot.setFromMatrixPosition(c.rig.feet[f].matrixWorld); else bakedFoot(c, f, foot);
+          foot.applyMatrix4(c.root.matrixWorld);
+          const down = foot.y < 0.07 * (c.scale || 1);
+          if (down && !c.contact[f]) footfall(foot, c.root.rotation.y, c.d < 60);
+          c.contact[f] = down;
+        }
+      }
+    },
+    // just before the frame is drawn, with its camera: each camel in sight goes into its level's draw, each in the sun's
+    // shadow area into its caster's
+    draw(cam) {
+      cam.updateMatrixWorld();
+      frustum.setFromProjectionMatrix(proj.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+      sun.updateMatrixWorld(); sun.target.updateMatrixWorld(); sun.shadow.updateMatrices(sun);
+      const sf = sun.shadow.getFrustum();
+      n.fill(0);
+      for (const c of order) {
+        const s = c.scale || 1, p = c.root.position;
+        sphere.center.set(p.x, p.y + 1.1 * s, p.z); sphere.radius = 2.6 * s;      // (covers every pose)
+        const f0 = start[c.clip] + c.tIn * HERD_FPS, f1 = c.clipOut ? start[c.clipOut] + c.tOut * HERD_FPS : 0, w = c.clipOut ? 1 - c.fade / c.fadeLen : 0, row = c.rig ? c.rig.row : -1;
+        if (frustum.intersectsSphere(sphere)) put(c.li, c, f0, f1, w, row);
+        if (sf.intersectsSphere(sphere)) put(c.li === 0 ? 3 : 4, c, f0, f1, w, row);
+      }
+      for (let i = 0; i < meshes.length; i++) {
+        const m = meshes[i], g = m.geometry;
+        m.count = n[i]; m.visible = n[i] > 0;
+        if (!n[i]) continue;
+        m.instanceMatrix.needsUpdate = true; g.attributes.herdAnim.needsUpdate = true;
+        if (m.instanceColor) { m.instanceColor.needsUpdate = true; g.attributes.herdRough.needsUpdate = true; }
+      }
+    },
+    // under the loading screen: each draw's shader made and its mesh sent to the GPU once (drawn first when the herd came
+    // near, a mesh went up and a shader was made mid-play: the owner's phone stuttered by the herd, 12 Nov)
+    warm() {
+      const m4 = new THREE.Matrix4().makeTranslation(-24.5, 0, -13.5);
+      for (const m of meshes) { m.count = 1; m.visible = true; m4.toArray(m.instanceMatrix.array, 0); m.userData.anim.set([start.idle, 0, 0, -1]); m.instanceMatrix.needsUpdate = true; m.geometry.attributes.herdAnim.needsUpdate = true; }
+      renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
+      for (const m of meshes) { m.count = 0; m.visible = false; }
+    },
+  };
+}
 class Camel {
-  constructor(t, spec) {
+  constructor(spec) {
     Object.assign(this, spec);
     this.root = new THREE.Group();
     this.root.position.set(spec.x, 0, spec.z);
     this.root.rotation.y = spec.heading;
     this.root.scale.setScalar(spec.scale || 1);
     herd.add(this.root);
-    // one skeleton and one mixer drive all three detail levels; the 8k mesh casts the shadow even when the 40k one is shown
-    const rig = SkeletonUtils.clone(t[0].scene);
-    rig.rotation.y = -Math.PI / 2; this.root.add(rig);
-    let skel = null; rig.traverse((n) => { if (n.isSkinnedMesh && !skel) skel = n.skeleton; });
-    this.mixer = new THREE.AnimationMixer(rig);
-    this.acts = {}; for (const c of t[0].animations) this.acts[c.name] = this.mixer.clipAction(c);
-    this.feet = ['ffootL', 'ffootR', 'hfootL', 'hfootR'].map((n) => rig.getObjectByName(n)).filter(Boolean);
-    const sameBones = (a) => a.bones.length === skel.bones.length && a.bones.every((b, i) => b.name === skel.bones[i].name);
-    const sphere = new THREE.Sphere(new THREE.Vector3(0, 1.1, 0), 2.6);     // covers every pose, for culling
-    this.lods = t.map((tpl, li) => {
-      const o = li === 0 ? rig : SkeletonUtils.clone(tpl.scene);
-      if (li > 0) { o.rotation.y = -Math.PI / 2; this.root.add(o); }
-      const meshes = [];
-      o.traverse((n) => {
-        if (!n.isMesh) return;
-        if (li > 0 && n.isSkinnedMesh && sameBones(n.skeleton)) n.bind(skel, n.bindMatrix);
-        n.castShadow = li === 2; n.receiveShadow = li <= 1;      /* (the 8k level too: a camel in a shade past its full level's 8 m was drawn as in full sun, 20% brighter, the review) */ n.material = coatMaterial(n.material, li, spec.coat);
-        n.boundingSphere = sphere.clone(); n.visible = false; meshes.push(n);
-      });
-      return { o, meshes };
-    });
-    // shadow stand-ins, invisible on screen (they write no colour or depth) but cast into the shadow map:
-    // up close the 8k mesh casts for the 40k one, in the middle distance the 1.5k mesh casts for the 8k one
-    const standIn = (L) => L.meshes.map((m) => { const c = m.clone(); c.material = SHADOW_ONLY; c.visible = false; c.castShadow = true; c.receiveShadow = false; m.parent.add(c); return c; });
-    this.shadowFor = [standIn(this.lods[1]), standIn(this.lods[2]), []];
-    // The frame's CPU work for the bones (the owner's phone ran at 30 frames a second; the bones were 3,876 of the
-    // scene's 4,992 objects, recomputed and walked every frame):
-    // - the two lighter levels' own bones drive nothing (their meshes are bound to the main skeleton above): taken out
-    //   (76 of each camel's 114);
-    // - the main skeleton's bones are kept out of the renderer's walk (they are never drawn; nothing hangs from them);
-    // - the camel's matrices are recomputed only on the frames its animation steps (every frame up close, every 2nd past
-    //   48 m, every 4th past 150 m), not by the scene's walk every frame (the herd's group keeps it out); far off its place then moves in steps of a
-    //   few centimetres, under a pixel there;
-    // - the skeleton's matrices and its bone texture are redone only on those frames, here, straight after the bones
-    //   move (three.js redid and re-sent them every frame for every camel drawn, and only once a frame by its count,
-    //   which the shadow pass moves on before it draws: on the frame after each shadow redraw it skipped them, and every
-    //   camel in sight was drawn with the frame before's pose, the head 22-27 cm behind, at 30 fps 15 poses a second).
-    const top = (o) => { const r = []; o.traverse((n) => { if (n.isBone && !(n.parent && n.parent.isBone)) r.push(n); }); return r; };
-    for (let li = 1; li < this.lods.length; li++) {
-      const L = this.lods[li];
-      if (L.meshes.every((m) => !m.isSkinnedMesh || m.skeleton === skel)) for (const b of top(L.o)) b.parent.remove(b);
-    }
-    for (const b of top(rig)) b.visible = false;
-    this.redo = skel.update.bind(skel); skel.update = () => {};
-    this.li = -1; this.clip = null; this.speed = 0; this.timer = R(2, 9); this.animDt = 0; this.frame = Math.floor(R(0, 4));
+    this.li = 2; this.d = Infinity; this.rig = null;
+    // the camel's animation, as three.js's mixer kept it: the clip and its time, and the clip fading out, its time and
+    // how far its fade has gone (HERD draws the pose from these)
+    this.clip = null; this.tIn = 0; this.clipOut = null; this.tOut = 0; this.fade = 0; this.fadeLen = 0.5; this.walkScale = 1;
+    this.speed = 0; this.timer = R(2, 9);
     this.mode = spec.home === 'graze' ? 'graze' : 'idle';
     this.target = null; this.contact = [true, true, true, true];
     const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.3, 3.0), new THREE.MeshBasicMaterial({ visible: false }));
     hit.position.y = 1.1; hit.userData.camel = this; this.root.add(hit); this.hit = hit;
-    this.setLod(2); this.play(this.mode === 'graze' ? 'graze' : 'idle', 0);
-    this.acts[this.clip].time = R(0, 3);
+    this.play(this.mode === 'graze' ? 'graze' : 'idle', 0);
+    this.tIn = R(0, 3);
+    this.root.updateMatrixWorld();
   }
-  setLod(i) {
-    if (i === this.li) return;
-    if (this.li >= 0) for (const m of this.lods[this.li].meshes) m.visible = false;
-    this.li = i;
-    for (const m of this.lods[i].meshes) m.visible = true;
-    this.shadowFor.forEach((list, li) => { for (const m of list) m.visible = li === i; });
-  }
+  // a clip begins at its start, the one before fading out over `fade` seconds (crossFadeTo, without warping)
   play(name, fade = 0.5) {
     if (this.clip === name) return;
-    const next = this.acts[name];
-    next.reset().play();
-    if (this.clip && fade > 0) this.acts[this.clip].crossFadeTo(next, fade, false); else if (this.clip) this.acts[this.clip].stop();
-    this.clip = name;
+    if (this.clip && fade > 0) { this.clipOut = this.clip; this.tOut = this.tIn; this.fade = 0; this.fadeLen = fade; this.fadeNew = true; } else this.clipOut = null;
+    this.clip = name; this.tIn = 0;
   }
   pickTarget() {
     const b = this.home === 'graze' ? GRAZE : this.pen;
@@ -745,20 +933,16 @@ class Camel {
     pos.x += Math.sin(h) * this.speed * dt; pos.z += Math.cos(h) * this.speed * dt;
     const d = camPos.distanceTo(pos);
     const b0 = (this === selected ? LOD_NEAR_OPEN : LOD_D[0]) * (this.li > 0 ? 0.97 : 1.03), b1 = LOD_D[1] * (this.li > 1 ? 0.97 : 1.03);
-    this.setLod(d < b0 ? 0 : d < b1 ? 1 : 2);
-    if (this.clip === 'walk') this.acts.walk.timeScale = Math.max(0.25, this.speed / SPEED);
-    // full rate up close, every 2nd frame past 48 m, every 4th past 150 m (the time adds up, so the pace is unchanged)
-    this.animDt += dt; this.frame++;
-    const every = d < 48 ? 1 : d < 150 ? 2 : 4;
-    if (this.frame % every === 0 || !this.placed) { this.mixer.update(this.animDt); this.animDt = 0; this.root.updateMatrixWorld(true); this.redo(); this.placed = true; }
-    if (this.clip === 'walk' && this.li < 2 && this.speed > 0.2) {
-      for (let i = 0; i < this.feet.length; i++) {
-        const w = this.feet[i].getWorldPosition(tmpV);
-        const down = w.y < 0.07 * (this.scale || 1);
-        if (down && !this.contact[i]) footfall(w, h, d < 60);
-        this.contact[i] = down;
-      }
+    this.li = d < b0 ? 0 : d < b1 ? 1 : 2; this.d = d;
+    if (this.clip === 'walk') this.walkScale = Math.max(0.25, this.speed / SPEED);
+    // the clips' times go on (the walk's with the camel's pace), and a fade with them
+    const len = HERD.dur;
+    this.tIn += dt * (this.clip === 'walk' ? this.walkScale : 1); if (this.tIn >= len[this.clip]) this.tIn %= len[this.clip];
+    if (this.clipOut) {
+      this.tOut += dt * (this.clipOut === 'walk' ? this.walkScale : 1); if (this.tOut >= len[this.clipOut]) this.tOut %= len[this.clipOut];
+      this.fade += dt; if (this.fade >= this.fadeLen) this.clipOut = null;
     }
+    this.root.updateMatrixWorld();
   }
 }
 const tmpV = new THREE.Vector3(), tmpTo = new THREE.Vector3(), tmpAway = new THREE.Vector3(), UPV = new THREE.Vector3(0, 1, 0);
@@ -831,12 +1015,13 @@ function syncYard() {
     const spot = () => [R(rect.x0 + 2, rect.x1 - 2), R(rect.z0 + 2, rect.z1 - 2)];
     if (!c) {
       const [x, z] = spot();
-      c = new Camel(LODS, { id: card.id, coat: CAT_COAT[card.category], male: card.sex === 'male', home: 'pen', pen: rect, x, z, heading: R(0, 6.28), scale: sizeOf(card.ageDays) });
+      c = new Camel({ id: card.id, coat: CAT_COAT[card.category], male: card.sex === 'male', home: 'pen', pen: rect, x, z, heading: R(0, 6.28), scale: sizeOf(card.ageDays) });
       camels.push(c);
     } else if (c.pen !== rect) { const [x, z] = spot(); c.pen = rect; c.root.position.set(x, 0, z); c.mode = 'idle'; c.target = null; }
     if (c.scale !== sizeOf(card.ageDays)) { c.scale = sizeOf(card.ageDays); c.root.scale.setScalar(c.scale); }      // (a calf grows)
     Object.assign(c, cardInfo(card));
   }
+  HERD.sync(camels);
 }
 window.__farm = { setGame: (snap) => setGame(snap) };      // (for the browser tests: a snapshot as the engine would send it)
 function setGame(snap) {
@@ -1440,20 +1625,8 @@ function tapWorld(x, y) {
 Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   shareCoatMaps(T);
   LODS = T;
-  // one camel of each coat, for warming its pictures and shaders below (taken out after: the farm's camels are the
-  // engine's, syncYard, and come once it starts)
-  const warmers = Object.keys(COATS).map((coat) => new Camel(T, { coat, home: 'pen', pen: P.calves, x: -24.5, z: -13.5, heading: 0 }));
-  // the full and middle detail levels and their shadow stand-ins sent to the GPU now, under the loading screen, once for
-  // each coat: drawn first when a camel came near, their meshes (about 1.5 MB) went up and a shader was made mid-play
-  // (counted by the herd, where the owner's phone stuttered, 12 Nov). Their meshes are shared, so one camel a coat does it.
-  const warm = [], coatsSeen = new Set();
-  for (const cm of warmers) {
-    if (coatsSeen.has(cm.coat)) continue; coatsSeen.add(cm.coat);
-    for (const li of [0, 1]) for (const m of [...cm.lods[li].meshes, ...cm.shadowFor[li]]) { warm.push([m, m.visible, m.frustumCulled]); m.visible = true; m.frustumCulled = false; }
-  }
-  renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
-  for (const [m, v, f] of warm) { m.visible = v; m.frustumCulled = f; }
-  for (const cm of warmers) herd.remove(cm.root);
+  HERD = buildHerd(T);
+  HERD.warm();
   syncYard();
   renderer.shadowMap.needsUpdate = true;
   $('status').hidden = true;
@@ -1598,6 +1771,7 @@ function tick(now) {
   const tGame = cpu ? performance.now() : 0;
   const dt = Math.min(clock.getDelta(), 0.05);
   for (const c of camels) c.update(dt, camera.position);
+  if (HERD) HERD.pose();
   const playing = play ? play.update(dt) : false;
   { const on = !playing && !phone.big; if (controls.enabled !== on) controls.enabled = on; }      // (the map's controls off in play, and under the enlarged phone, where the scene is not drawn: left on, a thumb on the walk stick or a pedal swung the camera with it)
   // follow without stealing the viewer's control of the angle
@@ -1671,6 +1845,7 @@ function tick(now) {
   if (shadowMoved || carMoving || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
   if (!playing) { controls.dampingFactor = 1 - Math.exp(-dt * 3.1); controls.update(); placeLabels(); }      // (OrbitControls eases by the frame: 0.05 a frame at 60 fps, the same in seconds at any rate)
   const tDraw = cpu ? performance.now() : 0;
+  if (HERD && !phone.big) HERD.draw(camera);
   if (!phone.big) renderer.render(scene, camera);      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
   if (cpu && meter.ready && now >= meter.ready && !phone.big) { const g = tDraw - tGame, d = performance.now() - tDraw; cpu.game[Math.min(399, Math.round(g * 4))]++; cpu.draw[Math.min(399, Math.round(d * 4))]++; cpu.sg += g; cpu.sd += d; cpu.n++; }      // (not while the enlarged phone stops the drawing)
   requestAnimationFrame(tick);
