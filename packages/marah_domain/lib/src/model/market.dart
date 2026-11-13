@@ -37,7 +37,9 @@ class Listing {
     required this.listedOn,
     required this.expiresOn,
     Map<String, int>? bargains,
-  }) : bargains = bargains ?? {};
+    Map<String, int>? checks,
+  }) : bargains = bargains ?? {},
+       checks = checks ?? {};
 
   final ListingId id;
   final CamelId camelId;
@@ -53,6 +55,10 @@ class Listing {
   /// Bargaining attempts per buyer (owner id -> count).
   final Map<String, int> bargains;
 
+  /// Vet's looks before buying per buyer (owner id -> count): each, on its
+  /// own day, a fresh look (CheckListing).
+  final Map<String, int> checks;
+
   Map<String, Object?> toJson() => {
     'id': id.value,
     'camel': camelId.value,
@@ -63,6 +69,7 @@ class Listing {
     'listedOn': listedOn.value,
     'expiresOn': expiresOn.value,
     'bargains': bargains,
+    if (checks.isNotEmpty) 'checks': checks,
   };
 
   static Listing fromJson(Map<String, Object?> j) => Listing(
@@ -75,6 +82,9 @@ class Listing {
     listedOn: GameDay(j['listedOn']! as int),
     expiresOn: GameDay(j['expiresOn']! as int),
     bargains: (j['bargains']! as Map<String, Object?>).map(
+      (k, v) => MapEntry(k, v! as int),
+    ),
+    checks: ((j['checks'] as Map<String, Object?>?) ?? const {}).map(
       (k, v) => MapEntry(k, v! as int),
     ),
   );

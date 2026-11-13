@@ -157,6 +157,7 @@ class ListingCard {
     required this.isMine,
     required this.offers,
     this.knownTreatments = const [],
+    this.timesChecked = 0,
   });
 
   final ListingId id;
@@ -178,6 +179,9 @@ class ListingCard {
   /// Treatments in her the player's vet found (never one he was not told).
   final List<TamperKind> knownTreatments;
 
+  /// How many times the player's vet has looked at her.
+  final int timesChecked;
+
   @override
   bool operator ==(Object other) =>
       other is ListingCard &&
@@ -192,7 +196,8 @@ class ListingCard {
       other.bargainsLeft == bargainsLeft &&
       other.isMine == isMine &&
       _listEquals(other.offers, offers) &&
-      _listEquals(other.knownTreatments, knownTreatments);
+      _listEquals(other.knownTreatments, knownTreatments) &&
+      other.timesChecked == timesChecked;
 
   @override
   int get hashCode => Object.hash(

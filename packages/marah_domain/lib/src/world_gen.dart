@@ -132,9 +132,9 @@ class WorldGen {
   Listing addMarketListing(Rng rng) {
     final owner = randomOwner(rng);
     final camel = makeCamel(rng, owner: owner.id, mean: marketMean(rng));
-    // some sellers have their camel treated, as rivals at the festivals do
-    // (GDD 7.1; the owner, 13 Nov 2026: a buyer may buy one unknowingly)
-    if (rng.chance(Balance.rivalTamperChance)) {
+    // some sellers have their camel treated (GDD 7.1; the owner, 13 Nov
+    // 2026: a buyer may buy one unknowingly)
+    if (rng.chance(Balance.marketTamperChance)) {
       final kind = rng.pick(TamperKind.values);
       final on = sim.today - rng.range(0, kind.lastsDays ~/ 2);
       camel.treatments.add(

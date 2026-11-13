@@ -1097,6 +1097,7 @@ void main() {
           final told = r.events.whereType<ListingChecked>().single.found;
           final v = GameView(g.state, g.me.id);
           expect(v.listingOf(c.id)!.knownTreatments, told);
+          expect(v.listingOf(c.id)!.timesChecked, 1);
           if (told.isNotEmpty) found++;
           // no one else is told
           final other = c.treatments.where(
@@ -1105,7 +1106,7 @@ void main() {
           expect(other, isEmpty);
         }
       }
-      expect(treated / listings, closeTo(Balance.rivalTamperChance, 0.04));
+      expect(treated / listings, closeTo(Balance.marketTamperChance, 0.03));
       expect(checked, greaterThan(0));
       expect(found / checked, closeTo(Balance.vetCheckChance, 0.35));
     });

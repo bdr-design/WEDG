@@ -792,6 +792,9 @@ Result _checkListing(Sim sim, PlayerState p, CheckListing cmd) {
     LedgerCategory.vet,
     ref: c.id.value,
   );
+  // each look on its own day is a fresh one (a second opinion; the same
+  // day's looks agree)
+  l.checks[p.id.value] = (l.checks[p.id.value] ?? 0) + 1;
   final rng = sim.rng(['vet-check', c.id.value, p.id.value]);
   final found = <TamperKind>[];
   for (final t in c.treatments) {

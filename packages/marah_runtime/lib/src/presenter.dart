@@ -61,6 +61,7 @@ class Presenter {
     bargainsLeft: v.bargainsLeft(l.id),
     isMine: l.sellerId == viewer,
     knownTreatments: l.knownTreatments,
+    timesChecked: l.timesChecked,
     offers: l.sellerId == viewer
         ? [
             for (final o in v.offersOn(l.id))
