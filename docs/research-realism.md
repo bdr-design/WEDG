@@ -233,6 +233,68 @@ Checked against search results; most news hosts cannot be opened from here, so a
 - **Water tanks:** a vertical 6,000 L polyethylene tank (Zamil) SAR 2,835 in a 2026 price list (confirmed in a search summary [125]); a 30,000 L vertical tank SAR 14,110 in the maker's own store (Marjan, confirmed in a search summary [126]). Pens, shades and feed stores for camels: no price found (uncertain).
 - **Camels' water a day:** FAO gives about 4.5 L a day on autumn browse, 13 L in spring and 30 L on salty pasture, and up to ten days without water on straw and concentrates (confirmed [112]); penned camels with free water in Oman drank 17.0–30.4 L a day, 24.1 on average (confirmed [113], not a winter study).
 
+## 8. Hunting (الصيد), searched 13 Nov 2026
+
+**Method.** Every page fetch failed again (mewa.gov.sa, ncw.gov.sa, saudipedia.com, sabq.org, okaz.com.sa, ajel.sa and faolex.fao.org do not resolve from this session), so everything below comes from the text of search results, as in sections 1 to 7. "(confirmed [n])" means the search summary of source n says it. The executive regulation itself (اللائحة التنفيذية لصيد الكائنات الفطرية البرية, published by MEWA and on faolex as sau203308) and the Weapons and Ammunition Law (نظام الأسلحة والذخائر, royal decree M/45 of 25/7/1426) could not be opened, so their exact wording is not checked. To check them, allow www.mewa.gov.sa, laws.boe.gov.sa, ncw.gov.sa and faolex.fao.org.
+
+**The season and the licence**
+- **Season dates:** the National Center for Wildlife (المركز الوطني لتنمية الحياة الفطرية, NCW) opened the 2026–2027 sustainable hunting season on 1 September 2026; it runs to 31 January 2027 (confirmed [127][128][129]). The 2025–2026 season ran 1 September 2025 to 31 January 2026 (confirmed [133]); 2024–2025 the same (confirmed [134]). It is the sixth regulated season since 2021 (confirmed [128]).
+- **Two halves:** autumn 1 September to 30 November and winter 1 December to 31 January, each with its own species list (confirmed [140], the 2023 lists; that 2026–27 keeps the split is reported in a search summary of [140] and not otherwise confirmed).
+- **This season's changes:** 30 permitted native species (up from 29), the national quota up 11 %, the number of licences up 34 %, and falconry permits now tied to a falcon ownership certificate or falcon passport (جواز الصقر) (confirmed [127][128][131]).
+- **Who may get a permit:** holders of licensed hunting guns of the air and gas type (بنادق الصيد المرخصة من نوع «الساكتون الهوائية والغازية») and falconers registered with the Saudi Falcons Club (نادي الصقور السعودي) (confirmed [131][128]).
+- **How:** through NCW's «فطري» platform (eservices.ncw.gov.sa), signing in with the national single sign-on (النفاذ الوطني), choosing the service «إصدار تصريح صيد» and the kind, such as sustainable land hunting (confirmed [131]). The permit is personal and not transferable (confirmed in a search summary of the regulation, [164]). The hunter must carry the hunting permit and the weapon's licence and show them to inspectors (confirmed [131]).
+- **Permit fee and bag limit per hunter:** not found from an official source. The permit states the numbers allowed, the seasons, the times, the means and its validity (confirmed for a royal reserve's draft rules [162]). A general site gives SAR 300–1,500 for bird permits and another SAR 100 a season or 200 permanent for falconry (uncertain, weak sources [160]).
+- **Hunting by day only:** night hunting is banned, from one hour before sunset to one hour after sunrise (confirmed [135]).
+
+**What may be hunted**
+- **The full 2026–27 list of 30 species was not found** (uncertain). The 2023 lists (confirmed [140]):
+  - **Autumn (1 Sep – 30 Nov), with air rifles:** quail (السمان), chukar (الحجل), sand partridge (الحجل الرملي), rock dove (الحمام الجبلي), the collared doves (اليمام المطوق) and the palm dove (يمام النخيل), chestnut-bellied sandgrouse (القطا كستنائي البطن) and other sandgrouse.
+  - **With falcons only:** the Eurasian stone-curlew (الكروان الصخري) (confirmed [140]).
+  - **Winter (1 Dec – 31 Jan):** a list with falcons that the summary gives as small birds (تميرة الماء، درسة قمحية، قبرة سماوية، حميراء سوداء) (uncertain: the summary is cut off and the list looks garbled).
+- **القمري:** the European turtle dove (القميري الأوروبي) has been banned since September 2023 because it is threatened worldwide (confirmed [141]). What Najd calls «قمري» in speech may be the collared or palm doves, which are on the permitted list (uncertain: a reading of the names, not a source).
+- **الحبارى (houbara):** globally Vulnerable on the IUCN list and on CITES Appendix I (confirmed [165]). It is hunted with falcons in the falconry zones of the licensed fenced hunting estates (محازات الصيد البري المستدام) (confirmed [142]). The houbara breeding programme began in 1986 and the surplus of the breeding centres goes to sustainable hunting (confirmed [142]); NCW gave the first private houbara breeding permit, aiming at 15,000 birds by 2026 (confirmed [144]). In 2021 the Falcons Club opened houbara to falcons only, from 1 November 2021 to 31 January 2022, no firearms (confirmed [143]). Whether houbara may be hunted in open land this season: not found (uncertain). A fine of SAR 25,000 is listed beside houbara in the regulation's table, context unclear (uncertain [164]).
+- **الأرانب (hares), الضب (spiny-tailed lizard), الجربوع:** the hunting estates have dog zones whose game is hares, jerboas and the dhub (confirmed [142]). Whether hares or dhub are on the open-land season list: not found (uncertain). The 2021 fines table gives SAR 18,000 per hare and SAR 3,000 per dhub (confirmed [139]); Arab News calls the dhub threatened, the IUCN category not checked (uncertain).
+- **Fenced hunting estates (المحازات):** fenced sites with set entrances and exits, licensed by NCW, in three kinds: falconry zones (houbara, stone-curlew, curlew), dog zones (hare, jerboa, dhub) and professional zones (Arabian oryx, sand and mountain gazelles, Nubian ibex) (confirmed [142]).
+
+**What is never hunted**
+- **Endangered species, permanently:** among them the Arabian oryx, the reem gazelle, the Nubian ibex, the Arabian leopard and the Arabian wolf, and 19 endemic bird species and threatened migratory birds (confirmed [134]). Also never: hyenas, jackals, caracal, sand cat, honey badger (confirmed in a search summary of [139]). All birds of prey (الطيور الجارحة) (confirmed [135]).
+- **Fines per animal (2021 table):** Arabian leopard SAR 400,000; Arabian wolf, striped hyena or jackal 80,000; Nubian ibex 60,000; idmi (mountain) gazelle 35,000; reem gazelle 25,000; hare 18,000; dhub 3,000 (confirmed [139]). Arabian oryx 90,000 or 70,000 and rock hyrax 25,000 or 18,000, the sources disagree (uncertain). The worst cases (endangered species) go up to 10 years' prison and SAR 30 million (confirmed in a search summary [136]; not checked against the law's text).
+
+**Where hunting is banned**
+- Inside the bounds of cities, villages, centres, farms (المزارع), rest houses (الاستراحات) and any inhabited place; near cities and military, industrial and vital sites; inside protected areas and the giga-projects (NEOM, Qiddiya, Red Sea); and along the whole coast to 20 km inland (confirmed [127][129][134][135]). An older rule also left out the Empty Quarter (uncertain: an old regulation [135]).
+- **Royal reserves:** eight in all; the King Abdulaziz Royal Reserve was formed in 2018 from the al-Tanhat and al-Khafs reserves and is about 15,700 km² (Saudipedia) or 28,340 km² (WDPA), the sources disagree (confirmed [153]). Hunting without a permit in a royal reserve: SAR 10,000; hunting in a banned place 5,000 (confirmed [152]). Two Gulf nationals were fined SAR 65,000 in the Prince Mohammed bin Salman Royal Reserve for attempting to hunt without a permit with a bird-calling device (confirmed [135]).
+- **Camels in the royal reserves (belongs to this game):** grazing camels where grazing is banned in the King Abdulaziz Royal Reserve is fined SAR 500 per head (متن); cases of 18, 24 and 50 head are reported (confirmed [152]). Entering a natural reserve without a permit: SAR 5,000 (confirmed [152]). Grazing permits at روضة التنهات allow camels only, at most 50 head, the permit carried at all times, no fires (confirmed in a search summary of [152]). A MEWA report gives SAR 200 per head for overgrazing in protected or non-grazing areas, which differs (uncertain).
+
+**Means allowed and banned**
+- **Allowed:** air and gas rifles that work without gunpowder, firing by gas pressure or a spring («الساكتون»), licensed in the user's own name (confirmed [131][132]); licensed falcons of falconers registered with the Falcons Club (confirmed [135][128]); hunting dogs (السلق, salukis) (confirmed in a search summary of [135]; the dog zones of [142] agree; the regulation's article not seen).
+- **Banned:** any means that takes more than one animal or bird at a time, shotguns and spread-shot guns (بنادق الرش، الشوزن) and nets; gases, vehicle exhaust, flooding burrows; luring and calling devices; taking more than one bird at the same shot (confirmed [127][130][134]).
+- **Selling game:** showing or selling hunted animals without a licence is one of the regulation's listed offences (confirmed [166]); the fine for it was not in the summary (uncertain). So in the real Kingdom hunted game is not a lawful income.
+- **Fines by means (the regulation's table, as reported in 2021):** shotguns, nets, traps and snares SAR 100,000; hunting from any moving vehicle 100,000; **firearms (الأسلحة النارية) 80,000**; gas, smoke, electric devices, chemicals and poisons 80,000; luring devices 50,000; glue and bright lights 10,000; hunting without a permit 10,000 (also not carrying the permit while hunting); hunting in a banned place or time 5,000 (confirmed [136][137]). The Environmental Security Forces keep citing up to SAR 100,000 for shotguns (confirmed [138]).
+- **Inside the King Abdulaziz Royal Reserve,** reported fines per bird: pigeon SAR 1,000, sandgrouse 2,000, «الدخل» 5,000 (uncertain: a search summary that did not say which of [154]'s pages).
+
+**Rifles, automatic weapons and the Kalashnikov**
+- **Hunting with any powder firearm is banned.** The Public Prosecution says hunting with banned means «كالأسلحة النارية» is not allowed (confirmed [137]); NCW's permitted guns are only those without gunpowder (confirmed [132]). Under the Weapons Law, using a firearm for hunting, even a licensed one, is reported as up to one year's prison and SAR 5,000 (art. 41) (confirmed in a search summary [137]; the paragraph's text not seen). On top comes the environmental fine of SAR 80,000 (confirmed [136]). **So hunting with a Kalashnikov is illegal twice: as a firearm in hunting, and as the weapon itself (next point).**
+- **The Kalashnikov is a war weapon (سلاح حربي) in the law's terms if it is automatic.** The law defines war weapons as firearms, ammunition and equipment designed for war, such as machine guns (الرشاشات), cannons and rockets, and every weapon other than individual firearms (confirmed [145]). Carrying, owning, buying or selling a war weapon or its ammunition: up to 15 years' prison and SAR 150,000, or either (Saudipedia [145]; not checked against the law's text). The law does not name the Kalashnikov (confirmed [145]). **Whether a semi-automatic civilian AK can be licensed as an individual firearm in the Kingdom: not found** (uncertain).
+- **Individual firearms (الأسلحة النارية الفردية):** "firearms for use by one person, such as pistols and rifles, as the regulation sets out" (confirmed [145]). A licence is given to a Saudi aged at least 22, with no criminal record or security restriction, fit to use it, and after a toxicology test (the date this was added was not found); applied for through Absher (أبشر) and the weapons directorate, bringing the weapon without ammunition (confirmed [146]). Fees are per weapon (confirmed in a search summary [146]). Owning an individual firearm or its ammunition without a licence: up to 18 months and SAR 6,000 (art. 40) (confirmed [137]). Air rifles are also licensed: their import, sale and purchase are limited to licensed Saudis (confirmed [163]).
+- **Firing in public or at occasions** (weddings, celebrations) is a crime warranting arrest (Public Prosecutor's decision) (confirmed [147]).
+- **How many guns people hold:** the Small Arms Survey's 2017 estimate is 16.7 civilian guns per 100 people, about 5.5 million (confirmed in a search summary [161]); Gulf News reports experts linking new shop licensing to widespread illegal handguns and assault weapons (confirmed [161], undated).
+
+**The herd, wolves and stray dogs**
+- **The Arabian wolf is endangered and protected;** killing one is SAR 80,000 per animal (confirmed [139][150]). Wolves climb into pens and can kill several sheep or goats at once; retaliation after attacks has long happened (confirmed [149]). NCW's magazine says farmers often target wolves for attacking livestock, and some are killed and hung from trees as a warning to others (confirmed [148]); a researcher counted about 50 wolves hung in trees over 20 years (confirmed [148], translated from Dutch). Herders use guard dogs, traditional enclosures and herdsmen at times of high risk (confirmed [149]). A 2004 estimate gave 500–600 wolves in the Kingdom (confirmed [148]).
+- **No rule found that lets a herder shoot a wolf attacking his herd** (uncertain: not found, not confirmed absent). A herder in Makkah poisoned a camel carcass thinking of wolves or stray dogs and killed an Arabian leopard, and was investigated; poisoning any animal is banned (confirmed [150]).
+- **Stray dogs:** attacks on people are reported in al-Ahsa, Buraidah, al-Aflaj and Riyadh; the municipal ministry told municipalities to use capture, vaccination, sterilisation and release, and ordered an end to poisoned baits (confirmed [151]). Nothing found on shooting stray dogs or on dogs attacking camels (uncertain).
+- **What a herder at an عزبة really keeps, and why:** not found from a reliable source (uncertain). The common belief that herders keep a rifle against wolves is not confirmed; the sources found speak of guard dogs, pens and herdsmen [149].
+
+**The hunting trip (المقناص) and falconry**
+- **المقناص** is a hunting trip in the open with trained birds of prey; September and early October are the «الدعو» stage, when the bird passes to the falconer and is trained daily for the season; the kit includes السبوق، البرقع، الدس، الوكر، القفص، الميزان، الملواح, the beak (البوز) is trimmed and a tracker fitted (confirmed [155]).
+- **The trip:** several four-wheel-drive cars, two or three men to a car, looking for houbara tracks; camps in the desert (confirmed in search summaries of [155][156]). Before cars, falconers hunted from camelback; the main quarry was houbara, hares and stone-curlews (الكراوين) (confirmed [155], a falconer's own account).
+- **Wild falcons:** trapping (طرح، شبك) falcons without a permit is banned in all regions, including the peregrine (الشاهين); fines SAR 10,000, nets and snares 100,000 (confirmed [156]). A ministry decision of 20/7/2023 reportedly allows trapping migrating saker (الحر) and peregrine (الشاهين) with a licence (uncertain, a weak source [160]). Trappers camp for more than two months in the Hamad desert of the Northern Borders during the falcon passage (confirmed [156]).
+- **Falcon markets:** the international falcon breeders' auction at Malham north of Riyadh ran 5–25 August 2026 with sales above SAR 33 million; its top bird, a Canadian falcon, sold for SAR 1.3 million, second to SAR 1.75 million in 2021 (confirmed in a search summary [158]). The National Falcon Centre's auction of locally trapped falcons runs 1 October to 30 November (confirmed [157]). Farm-bred sakers from a British breeder were around SAR 19,000 a bird (confirmed [158]).
+- **Falconry events:** the King Abdulaziz Falconry Festival at Malham: 25 December 2025 to 10 January 2026 last time, with more than 5,200 falcons and 800,000 visitors (confirmed [157]); the 2026 edition is reported for 17–30 November 2026, with prizes above SAR 38 million in the ملواح (lure-flying race) and مزاين (beauty) contests (uncertain: one result, not confirmed by a second). The Falcons Club Cup 21–28 December; the Saudi Falcons and Hunting Exhibition in Riyadh 1–10 October 2026 (confirmed in search summaries [157]).
+- **Abroad:** Gulf falconers hunt houbara in Pakistan each winter, mainly December to February, under special permits (confirmed [159]).
+
+**Beside the camel calendar (from sections 4 and 7):** the hunting season (1 Sep – 31 Jan) covers the الوسم rains (from 16 Oct), the falcon passage and auctions (Oct–Nov), the falconry festival (Nov or Dec–Jan), the camel festival (Dec – early Jan) and the start of mating (Nov). The summer (Feb–Aug) has no hunting season.
+
 ---
 
 ## Sources
@@ -362,3 +424,43 @@ Checked against search results; most news hosts cannot be opened from here, so a
 124. https://www.tridge.com/intelligences/camel-milk/SA/production
 125. https://www.pricesworld.net/اسعار-خزانات-المياه
 126. https://store.marjangroup.com/?p=7946
+127. https://sabq.org/article/vqssrr9
+128. https://english.ajel.sa/news/9zbkbifel ; https://www.arabnews.com/green-blue/saudi-arabia-expands-hunting-rules-to-30-species-3000076
+129. https://www.okaz.com.sa/local/na/2263829 ; https://www.okaz.com.sa/local/na/2263945
+130. https://www.okaz.com.sa/local/na/2263842
+131. https://ajel.sa/misc/pn3w52ls1 ; https://ajel.sa/thehour/8j62aj89b
+132. https://ncw.gov.sa/en/news/ncw-hunting-season-2026-2027
+133. https://ncw.gov.sa/en/news/Launch_of_the_hunting_season_in_the_Kingdom_2025_2026 ; https://alriyadhdaily.com/article/609c0b78f5174dc48edb3d5cc6ab9d07
+134. https://ncw.gov.sa/magazine/en/article/a-complete-guide-to-safe-enjoyable-and-responsible-hunting/ ; https://www.ncw.gov.sa/en/hunting
+135. https://www.okaz.com.sa/local/na/2223957
+136. https://www.almowaten.net/2021/03/الأمن-البيئي-عقوبة-استخدام-وسائل-صيد-م/ ; https://sabq.org/article/oPEwyzm
+137. https://www.okaz.com.sa/news/na/2083790 ; https://ajel.sa/local/gzrj9d
+138. https://sabq.org/article/hfne6yQ
+139. https://www.alarabiya.net/saudi-today/2021/02/19/قيمة-غرامات-صيد-الحيوانات-البرية-في-السعودية ; https://al-marsd.com/article/29851 ; https://ajel.sa/local/4vlzwj ; https://www.alwatan.com.sa/article/1068732 ; https://www.arabnews.pk/node/2548766
+140. https://saudipedia.com/article/14162/حكومة-وسياسة/المياه-والزراعة/قائمة-بالطيور-المسموح-صيدها-في-السعودية ; https://www.alwatan.com.sa/article/1152764
+141. https://www.alarabiya.net/saudi-today/2023/09/03/السعودية-منع-صيد-طائر-القميري-المهدد-بالانقراض-عالمياً
+142. https://saudipedia.com/محازات-الصيد-البري-المستدام-في-السعودية ; https://saudipedia.com/en/sustainable-wild-hunting-reserves-in-saudi-arabia
+143. https://www.al-madina.com/article/752903
+144. https://www.okaz.com.sa/news/local/2146901
+145. https://saudipedia.com/ar/نظام-الأسلحة-والذخائر-في-السعودية
+146. https://gulfnews.com/world/gulf/saudi/saudi-arabia-links-gun-licence-to-drug-test-1.1730553855668 ; https://www.okaz.com.sa/news/local/2173211
+147. https://www.okaz.com.sa/news/local/2204994 ; https://www.zawya.com/en/legal/crime-and-security/possession-of-a-weapon-and-shooting-is-a-crime-warranting-arrest-saudis-public-prosecution-emm4p2r0
+148. https://ncw.gov.sa/magazine/?p=1908 ; https://outofedenwalk.nationalgeographic.org/nl/2013-11-last-predator-nl/ ; https://www.arabnews.pk/node/2626070
+149. https://panthera.org/blog-post/how-wecancoexist-arabian-desert-carnivores
+150. https://saudipedia.com/الذئب-العربي
+151. https://ajel.sa/local/qyt3hc ; https://www.alwatan.com.sa/article/1071211
+152. https://sabq.org/article/DRGifM1 ; https://www.alyaum.com/articles/6669708
+153. https://saudipedia.com/en/council-of-royal-reserves ; https://protectedplanet.net/11956
+154. https://sabq.org/article/ilyqxb1 ; https://www.okaz.com.sa/local/na/2233340 (the search summary did not say which)
+155. https://saudipedia.com/ما-المقناص؟ ; https://sabq.org/article/Be0r0kS
+156. https://www.okaz.com.sa/ampArticle/2216798 ; https://sfc.org.sa/sa/en/news/403 ; https://www.youm7.com/story/2020/10/10/الموسم-السنوى-سعوديون-ينصبون-شباكهم-لصيد-أغلى-أنواع-الصقور-فى/5014899 ; https://www.alwatan.com.sa/article/1100637
+157. https://sabq.org/saudia/0nhm8xhz04 ; https://sabq.org/article/LvxejhK ; https://ajel.sa/local/3w9lde3qwk
+158. https://www.aleqt.com/الأخبار/مزاد-الرياض-يحول-الصقور-من-رمز-للتراث-إلى-أصول-استثمارية-13051 ; https://www.aleqt.com/الأخبار/بريطاني-يستثمر-في-الريش-السعودي-ب-20-صقرا-في-مزاد-الرياض-12975
+159. https://www.arabnews.pk/node/1798051 ; https://www.dawn.com/news/amp/1302648
+160. https://small-projects.org/ترخيص-صيد-صقور ; https://saudiavoice.com/news3815.html
+161. https://www.Wikipedia.org/wiki/Number_of_guns_per_capita_by_country (Small Arms Survey 2017) ; https://gulfnews.com/world/gulf/saudi/saudis-act-to-curb-illegal-firearms-1.516397
+162. https://istitlaa.ncc.gov.sa/ar/Civil/itba/RegulationofHuntingwildorganismsintheITBA/Pages/default.aspx
+163. https://www.uqn.gov.sa/details?p=17352
+164. https://www.mewa.gov.sa/ar/InformationCenter/DocsCenter/RulesLibrary/Documents/اللائحة%20التنفيذية%20لصيد%20الكائنات%20الفطرية%20البرية.pdf ; https://faolex.fao.org/docs/pdf/sau203308.pdf
+165. https://datazone.birdlife.org/species/factsheet/asian-houbara-chlamydotis-macqueenii/details
+166. https://www.mewa.gov.sa/ar/MediaCenter/News/Pages/News1972020.aspx ; https://www.okaz.com.sa/ampArticle/2058236
