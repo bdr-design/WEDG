@@ -20,9 +20,19 @@ void main(List<String> args) {
     // the old start's money (SAR 600,000; a game starts with 20,000 since
     // 13 Nov 2026), so the run grows a herd and enters festivals as before
     grant(game, 580000);
+    // an honest bot (one caught is barred six seasons, and the run would
+    // stop testing the festivals); the cheating is tested in festival_test
     final bot = Bot(game);
     final watch = Stopwatch()..start();
-    final problem = bot.run(years * 52);
+    String? problem;
+    var caught = 0;
+    for (var w = 0; w < years * 52 && problem == null; w++) {
+      for (final e in bot.week()) {
+        if (e is TamperingFound) caught++;
+      }
+      final p = checkInvariants(game.state);
+      if (p.isNotEmpty) problem = 'week $w: ${p.first}';
+    }
     watch.stop();
     final me = game.me;
     final herd = game.state.world.aliveOwnedBy(me.id).length;
@@ -34,6 +44,8 @@ void main(List<String> args) {
       'seed $seed: ${problem ?? 'ok'} | cash ${me.cash.value} | '
       'herd $herd | placings $placings | commands ${bot.commands} '
       '(${bot.refused} refused) | registry ${game.state.world.camels.length} '
+      '| entries ${bot.entriesBySeason.values.fold(0, (a, b) => a + b)} in '
+      '${bot.entriesBySeason.length} seasons, caught $caught '
       '| ${watch.elapsedMilliseconds} ms',
     );
     if (problem != null) failed = true;

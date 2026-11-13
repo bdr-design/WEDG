@@ -24,19 +24,32 @@ void grant(Game game, int amount) =>
 /// A scripted player that uses every feature, for long-run simulations and
 /// tests. It plays sensibly, not optimally.
 class Bot {
-  Bot(this.game);
+  Bot(this.game, {this.cheats = false});
 
   final Game game;
+
+  /// Treats its فردي camel now and then (GDD 7.1). Off by default: a bot
+  /// caught is barred six seasons, and the long runs would stop testing the
+  /// festivals (the review of e2775ff).
+  final bool cheats;
   int commands = 0;
   int refused = 0;
 
   OwnerId get me => game.me.id;
   GameView get view => GameView(game.state, me);
 
+  /// Its festival entries, by season (the year the season's autumn is in).
+  final Map<int, int> entriesBySeason = {};
+
   Result _do(Command c) {
     final r = game.dispatch(c);
     commands++;
     if (!r.ok) refused++;
+    for (final e in r.events.whereType<Entered>()) {
+      final d = e.day.date;
+      final season = d.month >= 9 ? d.year : d.year - 1;
+      entriesBySeason[season] = (entriesBySeason[season] ?? 0) + 1;
+    }
     return r;
   }
 
@@ -117,9 +130,9 @@ class Bot {
 
     // Enter camels that fit open rounds (its one فردي camel among them),
     // when the trucking to the festivals is affordable; a bull with his
-    // offspring in الفحل وإنتاجه. Now and then its فردي camel is secretly
-    // treated first (GDD 7.1), so the checks and the fines run too.
-    final festivals = v.me.cash.value > 60000
+    // offspring in الفحل وإنتاجه. A cheating bot ([cheats]) now and then has
+    // its فردي camel secretly treated first (GDD 7.1).
+    final festivals = v.me.cash.value > 15000
         ? v.festivals.where((f) => f.registrationOpen(v.today))
         : const <FestivalView>[];
     for (final f in festivals) {
@@ -130,6 +143,7 @@ class Bot {
           if (!r.kind.single) continue;
           if (view.canEnter(f.id, r.id, [c.id]) != null) continue;
           if (r.kind.roundClass == RoundClass.fardi &&
+              cheats &&
               commands % 4 == 0 &&
               view.canTamper(c.id, TamperKind.dye, 1) == null) {
             _do(Tamper(me, c.id, TamperKind.dye, 1));

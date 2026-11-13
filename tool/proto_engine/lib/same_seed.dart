@@ -121,9 +121,10 @@ int _extras(Game game, int week, Map<String, int> done) {
       }
     }
   }
-  // a secret treatment now and then (the bot's own are rare), so the
-  // checks, the fines and the bans run on both platforms
-  if (week % 13 == 6 && v.herd.isNotEmpty) {
+  // secret treatments after the run's last festival (Tabuk's, June 2028),
+  // so the bot's festivals are not cut short by a ban, while the treatment,
+  // its wearing off and a catch outside the festivals run on both platforms
+  if (week >= 86 && week % 4 == 2 && v.herd.isNotEmpty) {
     send(Tamper(me, v.herd.last.id, TamperKind.values[week % 7], 1 + week % 3));
   }
   if (week % 5 == 2) {
