@@ -292,8 +292,14 @@ enum LedgerCategory {
   /// The secret vet's price for a treatment (GDD 7.1).
   tampering,
 
-  /// A fine for a treatment found (GDD 7.1).
+  /// A fine for a treatment found (GDD 7.1): at a festival (its ref the
+  /// festival) or outside one, by the vet or the daily look (its ref the
+  /// camel).
   fine,
+
+  /// A fine for a treatment found by a buyer's or the broker's examination
+  /// before paying (its ref the camel; the owner's decision 12).
+  fineAtSale,
 }
 
 /// One money movement. Recurring costs (feed, wages) are kept as one row per

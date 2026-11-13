@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/src/sim.dart';
+import 'package:marah_domain/src/world_gen.dart';
 import 'package:marah_domain/testing.dart';
 import 'package:test/test.dart';
 
@@ -186,6 +187,76 @@ void main() {
     expectAddsUp(g);
   });
 
+  test('the festivals\' money: a trip there reads as the festival\'s, a late '
+      'fee, a treatment and each fine by what it was for', () {
+    final g = newGame();
+    grant(g, 1000000);
+    g.me.farm
+      ..storeKg = 1 << 30
+      ..tankL = 1 << 30
+      ..barleyKg = 1e8
+      ..alfalfaKg = 1e8
+      ..waterL = 1e9;
+    final w = g.state.world;
+    final f = w.festivals.values.firstWhere(
+      (f) => f.tier == FestivalTier.grand,
+    );
+    final r = f.rounds.firstWhere(
+      (r) => r.kind == RoundKind.mafareed && r.sex == Sex.female,
+    );
+    final sim = Sim(g.state);
+    final c = WorldGen(sim).makeCamel(
+      sim.rng(['money-fest']),
+      owner: g.me.id,
+      mean: 75,
+      category: r.category,
+      sex: Sex.female,
+      ageDays: AgeClass.mafrood.minDays + 150 - r.day.daysSince(g.today),
+    )..acquiredOn = g.today - 200;
+    c.genes[Trait.coat] = 80;
+    // a late entry (after the closing), so its fee is in the ledger too
+    g.advanceTo(f.closesOn + 1);
+    expect(g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id])).ok, isTrue);
+    g.advanceTo(r.day);
+    final month = Money.monthOf(r.day);
+    MoneyLine line(MoneyKind k) => GameView(
+      g.state,
+      g.me.id,
+    ).moneyMonth(month)!.lines.firstWhere((l) => l.kind == k);
+    final trip = line(MoneyKind.transport);
+    expect((trip.trip, trip.name), (TripReason.festival, f.name));
+    final fee = GameView(g.state, g.me.id)
+        .moneyMonth(Money.monthOf(f.closesOn + 1))!
+        .lines
+        .firstWhere((l) => l.kind == MoneyKind.entryFee);
+    expect((fee.name, fee.amount), (f.name, -Balance.lateEntryFee));
+    // a treatment, and a fine of each reason, each its own month's one row
+    final s0 = Sim(g.state);
+    g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 2, 2)));
+    s0.pay(g.me, const Riyal(-5000), LedgerCategory.tampering, ref: c.id.value);
+    expect(line2(g, '2027-02', MoneyKind.tampering).name, c.name);
+    g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 3, 2)));
+    s0.pay(g.me, const Riyal(-13400), LedgerCategory.fine, ref: c.id.value);
+    final out = line2(g, '2027-03', MoneyKind.fine);
+    expect((out.fineFor, out.name), (FineReason.outside, c.name));
+    g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 4, 2)));
+    s0.pay(
+      g.me,
+      const Riyal(-13400),
+      LedgerCategory.fineAtSale,
+      ref: c.id.value,
+    );
+    final sale = line2(g, '2027-04', MoneyKind.fine);
+    expect((sale.fineFor, sale.name), (FineReason.sale, c.name));
+    final f2 = w.festivals.values.firstWhere((x) => !x.done);
+    g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 5, 2)));
+    s0.pay(g.me, const Riyal(-30000), LedgerCategory.fine, ref: f2.id.value);
+    final fest = line2(g, '2027-05', MoneyKind.fine);
+    expect((fest.fineFor, fest.name), (FineReason.festival, f2.name));
+    expect(checkInvariants(g.state), isEmpty);
+    expectAddsUp(g);
+  });
+
   test('a camel renamed reads the same on the month\'s row and opened', () {
     final g = newGame();
     final me = g.me.id;
@@ -285,3 +356,8 @@ void main() {
     expectAddsUp(g);
   });
 }
+
+MoneyLine line2(Game g, String month, MoneyKind k) => GameView(
+  g.state,
+  g.me.id,
+).moneyMonth(month)!.lines.firstWhere((l) => l.kind == k);

@@ -91,6 +91,7 @@ class SnapshotJson {
     if (l.price != null) 'price': l.price,
     if (l.fee != null) 'fee': l.fee,
     if (l.trip != null) 'trip': l.trip!.name,
+    if (l.fineFor != null) 'fineFor': l.fineFor!.name,
     if (l.facilities.isNotEmpty)
       'facilities': [for (final f in l.facilities) f.name],
   };

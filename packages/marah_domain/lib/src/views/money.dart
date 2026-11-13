@@ -37,6 +37,11 @@ enum MoneyKind {
 /// the same day), else it is a festival's (there and back).
 enum TripReason { purchase, mating, festival }
 
+/// What a fine was for: a treatment found at a festival, outside one (the
+/// vet, the daily look), or at a sale (the buyer's or the broker's
+/// examination).
+enum FineReason { festival, outside, sale }
+
 /// One kind of money in a month (or a day): its sum and what the screen
 /// says under it.
 class MoneyLine {
@@ -49,6 +54,7 @@ class MoneyLine {
     this.price,
     this.fee,
     this.trip,
+    this.fineFor,
     this.facilities = const [],
   });
 
@@ -76,6 +82,9 @@ class MoneyLine {
   /// One transport row's reason.
   final TripReason? trip;
 
+  /// One fine row's reason.
+  final FineReason? fineFor;
+
   /// What was built (construction).
   final List<Facility> facilities;
 
@@ -90,6 +99,7 @@ class MoneyLine {
       other.price == price &&
       other.fee == fee &&
       other.trip == trip &&
+      other.fineFor == fineFor &&
       _sameList(other.facilities, facilities);
 
   @override
@@ -102,6 +112,7 @@ class MoneyLine {
     price,
     fee,
     trip,
+    fineFor,
     Object.hashAll(facilities),
   );
 }
@@ -162,7 +173,7 @@ class Money {
     LedgerCategory.studFee => MoneyKind.studFee,
     LedgerCategory.entryFee => MoneyKind.entryFee,
     LedgerCategory.tampering => MoneyKind.tampering,
-    LedgerCategory.fine => MoneyKind.fine,
+    LedgerCategory.fine || LedgerCategory.fineAtSale => MoneyKind.fine,
   };
 
   /// The opening balance (every opening row: one in a game).
@@ -330,6 +341,13 @@ class Money {
       trip: kind == MoneyKind.transport && one != null
           ? _trip(s, month, one)
           : null,
+      fineFor: kind == MoneyKind.fine && one != null
+          ? (one.category == LedgerCategory.fineAtSale
+                ? FineReason.sale
+                : s.world.festivals.containsKey(FestivalId(one.ref ?? ''))
+                ? FineReason.festival
+                : FineReason.outside)
+          : null,
       facilities: kind == MoneyKind.construction
           ? [
               for (final e in rows)
@@ -367,13 +385,19 @@ class Money {
               k.trip == TripReason.festival
                   ? festivalName(k.ref)
                   : camelName(k.ref),
-            MoneyKind.prize => festivalName(k.ref),
+            MoneyKind.prize || MoneyKind.entryFee => festivalName(k.ref),
+            MoneyKind.tampering => camelName(k.ref),
+            MoneyKind.fine =>
+              k.fineFor == FineReason.festival
+                  ? festivalName(k.ref)
+                  : camelName(k.ref),
             _ => null,
           },
           day: k.day,
           price: k.price,
           fee: k.fee,
           trip: k.trip,
+          fineFor: k.fineFor,
           facilities: k.facilities,
         ),
       );
@@ -442,6 +466,7 @@ class _KindSums {
     required this.price,
     required this.fee,
     required this.trip,
+    required this.fineFor,
     required this.facilities,
   });
 
@@ -453,5 +478,6 @@ class _KindSums {
   final int? price;
   final int? fee;
   final TripReason? trip;
+  final FineReason? fineFor;
   final List<Facility> facilities;
 }

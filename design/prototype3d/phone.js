@@ -237,6 +237,8 @@ const NOUN = {
   mating: ['تلقيح واحد', 'تلقيحين', 'تلقيحات', 'تلقيح'],   // (a stud's fee, one a mating)
   build: ['منشأة وحدة', 'منشأتين', 'منشآت', 'منشأة'],
   time: ['مرة وحدة', 'مرتين', 'مرات', 'مرة'],
+  entry: ['تسجيل واحد', 'تسجيلين', 'تسجيلات', 'تسجيل'],  // (البنك: a late festival entry's fee)
+  fine: ['غرامة وحدة', 'غرامتين', 'غرامات', 'غرامة'],
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const days = (n) => count(n, 'day');
@@ -719,6 +721,17 @@ const KIND = {
   construction: { name: 'البناء', icon: 'build', line: (l) => (l.facilities?.length === l.count ? l.facilities.map(FAC_NAME).join('، ') : count(l.count, 'build')) },
   vet: { name: 'البيطري', icon: 'user', line: (l) => count(l.count, 'treat') },
   studFee: { name: 'أجرة الفحل', icon: 'camel', line: (l) => count(l.count, 'mating') },
+  // the festivals (GDD 7): a late entry's fee by its festival
+  entryFee: { name: 'رسوم التسجيل المتأخر', icon: 'camel', line: (l) => (one(l) && l.name ? esc(l.name) : count(l.count, 'entry')) },
+  // the player's own spending on a camel treated, said plainly by her name (never as something the bank offers)
+  tampering: { name: 'تجميل', icon: 'camel', line: (l) => (one(l) && l.name ? `تجميل ${esc(l.name)}` : count(l.count, 'time')) },
+  // a fine names what it was for: found at a festival, outside one (the vet, the daily look), or at a sale
+  fine: { name: 'غرامات', icon: 'bank', line: (l) => {
+    if (!one(l) || !l.fineFor) return count(l.count, 'fine');
+    if (l.fineFor === 'festival') return l.name ? `غرامة تجميل في ${esc(l.name)}` : 'غرامة تجميل في المزاين';
+    if (l.fineFor === 'sale') return l.name ? `غرامة بيع ${esc(l.name)}` : 'غرامة بيع';
+    return l.name ? `غرامة تجميل ${esc(l.name)}` : 'غرامة تجميل';
+  } },
 };
 // a kind this phone has no words for yet (the engine may add one before the phone knows it): said plainly, never broken
 const OTHER = { name: 'حركة ثانية', icon: 'bank', line: (l) => (one(l) && l.day ? dayName(l.day) : count(l.count, 'time')) };
@@ -729,6 +742,8 @@ function biggest(l) {
   const a = n0(Math.abs(l.amount));
   if (l.kind === 'purchase' && one(l) && l.name) return `شراء ${esc(l.name)} ${a} ريال`;
   if (l.kind === 'sale' && one(l) && l.name) return `بيع ${esc(l.name)}، وصلك ${a} ريال`;
+  if (l.kind === 'tampering' && one(l) && l.name) return `تجميل ${esc(l.name)} ${a} ريال`;
+  if (l.kind === 'fine' && one(l)) return `${KIND.fine.line(l)} ${a} ريال`;
   return `${kindOf(l.kind).name} ${a} ريال`;
 }
 // today: the net as the home widget says it; the split on a grey line under it when money moved both ways; green only

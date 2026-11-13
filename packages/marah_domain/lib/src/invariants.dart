@@ -24,7 +24,6 @@ List<String> checkInvariants(GameState s) {
         problems.add('ledger goes back at row $i for ${p.id.value}');
         break;
       }
-      }
     }
     // the merchant's account: never below zero, never more than the money
     // is below zero (it is part of that debt, and clears with it)

@@ -759,7 +759,13 @@ class TamperingSystem implements DailySystem {
   /// fine on the camel's owner [p] (whoever had it done), the name lost in
   /// the family, the news; no festival ban (the festivals' committees did
   /// not find it).
-  static int foundOutside(Sim sim, PlayerState p, Camel c, Tampering t) {
+  static int foundOutside(
+    Sim sim,
+    PlayerState p,
+    Camel c,
+    Tampering t, {
+    bool atSale = false,
+  }) {
     // the director's reading of the owner's decisions 7 and 12, awaiting
     // his confirmation: outside a festival the fine falls only on an owner
     // who had her treated or knew of it; one who did not is told (it joins
@@ -787,7 +793,7 @@ class TamperingSystem implements DailySystem {
     sim.pay(
       p,
       const Riyal(-Balance.outsideFine),
-      LedgerCategory.fine,
+      atSale ? LedgerCategory.fineAtSale : LedgerCategory.fine,
       ref: c.id.value,
     );
     lowerReputation(p, c.category, Balance.reputationCaughtOutside);

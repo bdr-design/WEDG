@@ -373,7 +373,7 @@ Err? _examined(
   if (found.isEmpty) return null;
   var fine = 0;
   for (final t in found) {
-    fine += TamperingSystem.foundOutside(sim, seller, c, t);
+    fine += TamperingSystem.foundOutside(sim, seller, c, t, atSale: true);
   }
   sim.emit(
     SaleRefused(
