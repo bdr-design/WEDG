@@ -1,4 +1,4 @@
-// المزاين in the phone: a DESIGN for the owner's approval (not built yet, not in phone.js). Seven screens in nine
+// المزاين in the phone: the DESIGN the owner approved for building on 13 Nov 2026 (not built yet, not in phone.js). Seven screens in nine
 // views, as the phone draws them at the owner's screen (956 x 440, the phone enlarged), in the phone's own CSS and
 // pieces (design/prototype3d/phone.js) plus the approved chat's (design/ui/phone.html):
 //   1 fests       the festivals: the one open for registration, the player's entry (withdraw), what is coming and when
@@ -29,6 +29,26 @@
 // preliminary judging (the owner, 13 Nov). If none is found the view is left out and the run says so.
 // Copied from the engine, not sent by it: the treatments' and the features' Arabic names (TamperKind.label,
 // Trait.label), the round kinds' names, and the stages' names.
+// What the phone's build needs from the engine (snapshot, festival page, events), from this design:
+//  - festival(id) in engine.js (the worker's op 'festival' answers it; engine.js gives dispatch only);
+//  - for each of the player's camels that cannot enter a festival: its own round and the refusal's code and params
+//    (ownershipTooRecent, wrongAgeClass, tooFewCalvings, sick, listedForSale, wrongCategory...), without a real entry;
+//  - camels still on the truck in the herd list (the snapshot's yard leaves them out);
+//  - each festival's highest first prize over the rounds a player can enter, with that round's kind (topPrize is
+//    over every round, the group ones included);
+//  - ownerName on result rows (the places carry an owner's id only; this design reads the names from the save);
+//  - Arabic labels: the treatments (TamperKind.label), the features (Trait.label), the round kinds, the stages, and
+//    where each treatment is done (WHERE below is copied);
+//  - reputation as a band per colour family (it is a number today);
+//  - the round's day paced through the day: each stage's hour, or an order the phone can pace (the owner, 13 Nov:
+//    the six stages told one by one, الصبح، الظهر، العصر، المغرب, a notice with each; the hours a game choice). The
+//    engine judges a round at once and gives the field after each stage and the player's removal stage;
+//  - the dealer's message as an event after a registration (the owner, 13 Nov: cheating lives in a secret dealer's
+//    chat in a new «المحادثات» app; the festival's own app never offers it), with the camel and the round;
+//  - the risk in bands only (festivalRisk, foundMostlyBy: there), never a chance;
+//  - the declared sale's fields (a camel bought treated without knowing, the owner's decision 15) and the errors
+//    the screens must say: ownTreatment, nothingToDeclare, saleRefused {fine}, accountFull {needed, limit, owed},
+//    inDebt {debt}; and farm.account {owed, limit} (there).
 // To draw again: build the prototype (THREE_DIR=<three@0.170.0 package> python3 tool/proto_app/assemble.py), serve
 // tool/proto_app/assets/web on a port (8765 by default, or PORT=<port>), and run
 // `NODE_PATH=$(npm root -g) node design/ui/phone_mazayen.cjs` from the repository's root; it writes
