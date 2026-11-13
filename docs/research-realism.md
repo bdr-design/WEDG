@@ -228,6 +228,9 @@ Checked against search results; most news hosts cannot be opened from here, so a
 - **الوسم:** the season of the first rains (الوسمي) begins about 16 October and lasts 52 days, to about 6 December; its rains green the ground and bring up grass and truffles (confirmed [114][115]).
 - **The winter seasons after it:** المربعانية from 7 December for 40 days, الشبط from 15 January (26 days), العقارب from 10 February (39 days by one account) (confirmed in search summaries of [116][117], the dates of the researcher الحصيني; they move a day or so between years).
 - **سهيل:** its rising begins its season about 24 August in central Arabia, for 53 days, the summer's heat breaking (confirmed [118][119]). Between العقارب and سهيل the folk names (الحميمين، الذراعين، الكنة، الثريا، الجوزاء، المرزم، الكليبين) vary in their dates by source and year (uncertain).
+- **A she-camel's milk (searched 13 Nov 2026):** the common average is no more than about 5 L a day, said the head of camels at the PIF's dairy company in 2026 (confirmed [120]). In the traditional Saudi system the calf nurses freely for its first three months (a study at the Al-Jouf camel centre, Al-Saiady and others, confirmed in a search summary [121]); a Saudi herd study recorded hand milking twice a day (Khalil and Al-Sobayil 2006, confirmed in a search summary [122]). Lactations of about 190 to 404 days are reported across studies (confirmed in a search summary [123]).
+- **Milk's price from the farm:** not found from a reliable source. A trade-data site gives a Saudi farm-gate price of about USD 2,270 a tonne for 2019, about SAR 8.5 a litre (uncertain, an aggregator [124]); a forum comment gives 10–15 riyals a litre bought locally (uncertain [85]).
+- **Water tanks:** a vertical 6,000 L polyethylene tank (Zamil) SAR 2,835 in a 2026 price list (confirmed in a search summary [125]); a 30,000 L vertical tank SAR 14,110 in the maker's own store (Marjan, confirmed in a search summary [126]). Pens, shades and feed stores for camels: no price found (uncertain).
 - **Camels' water a day:** FAO gives about 4.5 L a day on autumn browse, 13 L in spring and 30 L on salty pasture, and up to ten days without water on straw and concentrates (confirmed [112]); penned camels with free water in Oman drank 17.0–30.4 L a day, 24.1 on average (confirmed [113], not a winter study).
 
 ---
@@ -352,3 +355,10 @@ Checked against search results; most news hosts cannot be opened from here, so a
 117. https://www.sayidaty.net/node/816856
 118. https://sabq.org/saudia/s4jey8eiho
 119. https://www.emaratalyoum.com/local-section/other/2026-08-17-1.2074728
+120. https://www.aleqt.com/الشركات/إنتاجية-الإبل-من-الحليب-في-السعودية-ترتفع-320-خلال-3-سنوات-11046
+121. https://core.ac.uk/download/357535971.pdf
+122. https://fagr.stafpu.bu.edu.eg/Animal Production/1101/publications/Maher Hasab El-Nabi Khalil_2006 - Quantitative Genetic Analysis and Evaluation for Lactation Traits in Saudi Camels.pdf
+123. https://www.fao.org/3/x6528e/X6528E02.htm
+124. https://www.tridge.com/intelligences/camel-milk/SA/production
+125. https://www.pricesworld.net/اسعار-خزانات-المياه
+126. https://store.marjangroup.com/?p=7946
