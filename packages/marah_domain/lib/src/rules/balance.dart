@@ -428,9 +428,13 @@ class Balance {
   /// among five, about 13,400 each (research section 7, [100]).
   static const outsideFine = 13400;
 
-  /// (balance) A rival's entry is treated with this chance (the field's
-  /// cheats, GDD 7.1: rivals cheat too), at a strength drawn from 1 to 3.
-  static const rivalTamperChance = 0.04;
+  /// (balance, fitted to the real counts) A rival's entry is treated with
+  /// this chance (GDD 7.1: rivals cheat too), at a strength drawn from 1 to
+  /// 3; and a camel offered in الحراج. Fitted so the grand festival's cases
+  /// fall between 2023's 62 and 2021's 147 (research section 3, [97][34]):
+  /// 63 to 77 measured over five seeds, near the later year's as the checks
+  /// tightened.
+  static const rivalTamperChance = 0.09;
 
   /// (balance) A rival's entry the stage 2 check removes (its colour or its
   /// teeth), and how far the final judging's second look moves a mark.
