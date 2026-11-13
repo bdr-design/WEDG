@@ -1,4 +1,5 @@
-// البنك on the engine: a design to show the owner (awaiting his approval), drawn as phone_haraj.cjs drew الحراج: the
+// البنك on the engine, approved by the owner on 13 Nov 2026 (the month rows by their biggest movement, option B; السعي
+// folded into its sale), built in design/prototype3d/phone.js. Drawn as phone_haraj.cjs drew الحراج: the
 // real phone's CSS and pieces (design/prototype3d/phone.js) plus the approved design's bank styles (phone_bank.css,
 // from design/ui/phone.html), at the owner's screen (956 x 440, the phone enlarged), every figure the engine's own.
 // The figures: phone_bank_data.dart plays a new game (seed 4242, القصيم, وضح: the prototype's fixed game) forward
@@ -174,11 +175,10 @@ function month(m, ym) {
 }
 
 const SCREENS = [
-  ['day1', main(M.day1)],
-  ['october', main(M.october)],
+  ['day1', main(M.day1, true)],
+  ['october', main(M.october, true)],
   ['october_month', month(M.october, '2026-10')],
-  ['april', main(M.april)],
-  ['april_alt', main(M.april, true)],
+  ['april', main(M.april, true)],      // (the owner's option B, 13 Nov 2026: each month by its biggest movement)
   ['november', month(M.april, '2026-11')],
   ['february', month(M.april, '2027-02')],
 ];
