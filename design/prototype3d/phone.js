@@ -297,7 +297,7 @@ function foundWords(name, kinds, fine, who, male) {
   const off = who ? 'البيعة انلغت' : '';
   const rest = fine > 0
     ? `وانكتبت عليك غرامة ${n0(fine)} ريال.`
-    : `ما تتغرم لأنك ما دريت، والحين صرت تدري. التجميل يروح مع الوقت، ولو ${hf('بعتها', 'بعته')} قبل وانكشف تتغرم.`;
+    : `ما تتغرم لأنك ما دريت، والحين صرت تدري. التجميل يروح مع الوقت، ولو ${hf('بعتها', 'بعته')} ساكت قبل وانكشف تتغرم.`;
   return { title, line: off ? `${off}، ${rest}` : rest };
 }
 // treatments found while the phone was shut (the daily look, the vet): told once on الحراج's answer card, the oldest
@@ -450,7 +450,7 @@ function feedScreen() {
     const [wb, wa] = fitRoom(suggest(b, 1), suggest(a, 1), b, a, room), wt = wb * b.unitPrice + wa * a.unitPrice;
     const week = wt > 0 && onAccount(wt) != null;
     return `<div class="body">${nav()}<div class="title">العلف</div>${errCard()}
-      ${alertCard('حساب التاجر وصل حده', `${accountFullLine()}${week ? ` يكفي لأسبوع: ${[wb ? count(wb, 'bag') : '', wa ? count(wa, 'bale') : ''].filter(Boolean).join(' و')}.` : ''}`)}
+      ${alertCard('حساب التاجر وصل حده', `حده ${n0(G.farm.account.limit)} ريال: بيع من حلالك أو سدد.${week ? ` يكفي لأسبوع: ${[wb ? count(wb, 'bag') : '', wa ? count(wa, 'bale') : ''].filter(Boolean).join(' و')}.` : ''}`)}
       ${week ? `<button class="btn ghost two" data-act="week"><span>اطلب لأسبوع</span><span>${n0(wt)} ريال</span></button>` : ''}
       ${store}${heading(ordered)}${rows(canUp)}
       <div class="order"><span><small>المجموع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div></div>`;
