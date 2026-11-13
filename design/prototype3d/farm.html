@@ -864,7 +864,10 @@ const PEN_ORDER = ['calves', 'main', 'young', 'bull', 'sick', 'spare'];
 const PEN_NAMES = { calves: 'الحوش', main: 'الشبك الثاني', young: 'الشبك الثالث', bull: 'الشبك الرابع', sick: 'الشبك الخامس', spare: 'الشبك السادس' };
 const penRoom = (key) => (key === 'calves' ? 6 : 10);      // (the engine's: the first pen 6 head, each bought one 10)
 // (the first pen's pin at its far side: at its middle it fell on the feed shade's and the tank's pins, and one hid the other)
-const pen = (key) => ({ key, name: PEN_NAMES[key], rect: P[key], facility: PEN_FACILITY[key], icon: 'pen', p: key === 'calves' ? new THREE.Vector3((P.calves.x0 + P.calves.x1) / 2, 2.6, P.calves.z0 + 2) : mid(P[key], 2.6), max: 280,
+// (the pins where they are seen apart at the default view: الحوش's at its far side, clear of the water's and the feed's
+// pins on its near corners; the first pen bought (main) at its own far side, else الحوش's pin stood on it, the review)
+const PEN_PIN = { calves: () => new THREE.Vector3((P.calves.x0 + P.calves.x1) / 2, 2.6, P.calves.z0 + 2), main: () => new THREE.Vector3((P.main.x0 + P.main.x1) / 2, 2.6, P.main.z0 + 5) };
+const pen = (key) => ({ key, name: PEN_NAMES[key], rect: P[key], facility: PEN_FACILITY[key], icon: 'pen', p: PEN_PIN[key] ? PEN_PIN[key]() : mid(P[key], 2.6), max: 280,
   text: () => `${PEN_NAMES[key]} · ${inPenOf(P[key]).length}`,
   open() { const list = inPenOf(P[key]), w = supOf('water');
     return { sub: `يشيل ${heads(penRoom(key)).join(' ').trim()}`, stats: herdStats(list, ['الحوض', !w ? '…' : w.amount > 0 ? 'فيه ماء' : 'فاضي', '', w && w.amount <= 0 ? 'warn' : '']), html: list.length ? camelList('في الشبك', list) : '', actions: [closer(this)] }; } });
