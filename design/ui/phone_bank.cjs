@@ -119,21 +119,25 @@ function check(m) {      // the figures add up: the opening and every month's ne
 DATA.moments.forEach(check);
 
 const nav = () => `<div class="nav"><button class="back">${svg('back')}رجوع</button></div>`;
-const inOut = (inn, out) => [inn ? `دخل ${n0(inn)} ريال` : '', out ? `صرفت ${n0(out)} ريال` : ''].filter(Boolean).join(' · ');
-// today's line: the net first in the home widget's own words, then, when money moved both ways, what came in and
-// what went out; green only when money only came in (as the widget's «دخل اليوم»)
+// what came in and what went out (a month's, a day's split): «دخل … · طلع …»; «دخل اليوم / صرفت اليوم» is the day's
+// net only, as the home widget has it
+const inOut = (inn, out) => [inn ? `دخل ${n0(inn)} ريال` : '', out ? `طلع ${n0(out)} ريال` : ''].filter(Boolean).join(' · ');
+// today's line: the net in the home widget's own words; when money moved both ways, what came in and what went out
+// on a grey line of its own under it, as each month's row has it (one line holding both read as two «دخل»); green
+// only when money only came in (as the widget's «دخل اليوم»)
 function todayLine(t) {
   const net = t.inn - t.out;
   const head = net > 0 ? `دخل اليوم ${n0(net)} ريال` : net < 0 ? `صرفت اليوم ${n0(-net)} ريال` : t.inn ? 'اليوم ما زاد ولا نقص' : 'ما فيه حركة اليوم';
-  const both = t.inn && t.out ? ` · دخل ${n0(t.inn)} وطلع ${n0(t.out)}` : '';
-  return `<div class="ln${t.inn && !t.out ? ' pos' : !t.inn && !t.out ? ' ink2' : ''}">${head}${both}</div>`;
+  const both = t.inn && t.out ? `<div class="ln ink2">${inOut(t.inn, t.out)}</div>` : '';
+  return `<div class="ln${t.inn && !t.out ? ' pos' : !t.inn && !t.out ? ' ink2' : ''}">${head}</div>${both}`;
 }
 // a month's biggest kind, named (the alternative main screen: where the money went)
 function biggest(g) {
   const k = g.ks.slice().sort((a, b) => Math.abs(b.v) - Math.abs(a.v))[0];
   const r = one(k.rows.filter((x) => x.cat !== 'commission'));
-  const what = k.kind === 'purchase' && r && named(r) ? `شراء ${r.refName}` : k.kind === 'sale' && r && named(r) ? `بيع ${r.refName}` : KIND[k.kind].name;
-  return { k, text: `${what} ${n0(Math.abs(k.v))} ريال` };
+  // (a sale by what reached the player: its price less السعي, said so)
+  const text = k.kind === 'purchase' && r && named(r) ? `شراء ${r.refName} ${n0(-k.v)} ريال` : k.kind === 'sale' && r && named(r) ? `بيع ${r.refName}، وصلك ${n0(k.v)} ريال` : `${KIND[k.kind].name} ${n0(Math.abs(k.v))} ريال`;
+  return { k, text };
 }
 
 // the bank's main screen: the balance, today's money, each month's in and out and net (this month first), and the
@@ -144,7 +148,7 @@ function main(m, alt = false) {
   const mrow = (g) => {
     const net = g.inn - g.out, isCur = g.ym === ym, top = alt ? biggest(g) : null;
     const line = alt ? `أكبرها: ${top.text}` : inOut(g.inn, g.out);
-    return `<div class="row"><span class="lead">${svg(alt ? KIND[top.k.kind].icon : 'cal')}</span><b>${isCur ? `${mon(g.ym)} · هالشهر` : monthName(g.ym)}</b><span class="amt${net > 0 ? ' pos' : ''}">${sg(net)}</span><small>${line}</small></div>`;
+    return `<div class="row"><span class="lead${alt && top.k.v < 0 ? ' out' : ''}">${svg(alt ? KIND[top.k.kind].icon : 'cal')}</span><b>${isCur ? `${mon(g.ym)} · هالشهر` : monthName(g.ym)}</b><span class="amt${net > 0 ? ' pos' : ''}">${sg(net)}</span><small>${line}</small></div>`;
   };
   // the milk buyer's word only when the day's milking sells some (the milk app's own rule: farm.milk.sold)
   const first = op.day === m.today ? `بديت اليوم برصيد ${n0(op.amount)} ريال.${m.milkSold > 0.05 ? ' حليب ناقتك أول دخل لك: يمر المشتري بكرة وياخذه.' : ''}` : `بديت اللعبة ${dayName(op.date)} ${op.date.slice(0, 4)} برصيد ${n0(op.amount)} ريال.`;
