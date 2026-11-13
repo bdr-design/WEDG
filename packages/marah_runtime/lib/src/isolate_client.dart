@@ -117,6 +117,9 @@ class IsolateEngineClient with PushStreams implements EngineClient {
   Future<FestivalDetail?> festivalDetail(FestivalId id) =>
       _ask((rid) => FestivalDetailReq(rid, id));
   @override
+  Future<MonthMoney?> bankMonth(String month) =>
+      _ask((rid) => BankMonthReq(rid, month));
+  @override
   Future<HerdPage?> herdPage(HerdQuery query) =>
       _ask((rid) => HerdPageReq(rid, query));
   @override
@@ -193,6 +196,8 @@ Future<Object?> _handle(EngineCore core, Request message) async {
       return core.camelDetail(camel);
     case FestivalDetailReq(:final festival):
       return core.festivalDetail(festival);
+    case BankMonthReq(:final month):
+      return core.bankMonth(month);
     case HerdPageReq(:final query):
       return core.herdPage(query);
     case PauseReq():

@@ -203,6 +203,13 @@ class EngineCore {
     return g == null ? null : Presenter(g.state, g.me.id).camelDetail(id);
   });
 
+  /// One month of البنك, opened (BankSummary carries every month's net and
+  /// biggest kind only).
+  Future<MonthMoney?> bankMonth(String month) => _serial(() async {
+    final g = _game;
+    return g == null ? null : Presenter(g.state, g.me.id).bankMonth(month);
+  });
+
   Future<FestivalDetail?> festivalDetail(FestivalId id) => _serial(() async {
     final g = _game;
     return g == null ? null : Presenter(g.state, g.me.id).festivalDetail(id);

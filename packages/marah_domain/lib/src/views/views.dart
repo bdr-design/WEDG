@@ -20,6 +20,7 @@ import '../rules/provisions.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
 import '../systems/systems.dart';
+import 'money.dart';
 
 /// One nursing camel's milk today, as the player sees it.
 class MilkView {
@@ -338,6 +339,20 @@ class GameView {
             .fold(0, (n, e) => n + e.amount.value) +
         milkIncomeToday,
   );
+
+  /// The bank (Money): every month's money in and out by kind, the newest
+  /// first; today's money in and out; the opening balance.
+  List<MonthMoney> get moneyMonths => Money.months(_state, viewer);
+
+  MonthMoney? moneyMonth(String month) => Money.month(_state, viewer, month);
+
+  ({int income, int spent}) get moneyToday =>
+      Money.today(me, today, milkIncomeToday);
+
+  Riyal get openingBalance => Riyal(Money.opening(me));
+
+  /// The day the game began.
+  GameDay get startedOn => _state.startedOn;
 
   /// Today's milk: each nursing camel's litres, what her calf keeps and
   /// what was sold.

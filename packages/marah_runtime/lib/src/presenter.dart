@@ -266,6 +266,17 @@ class Presenter {
         ),
     ];
     final festivals = [for (final f in v.festivals) festival(f)];
+    final money = v.moneyToday;
+    final bank = BankSummary(
+      opening: v.openingBalance.value,
+      startedOn: v.startedOn,
+      todayIn: money.income,
+      todayOut: money.spent,
+      months: [
+        for (final m in v.moneyMonths)
+          BankMonthRow(month: m.month, net: m.net, top: m.top),
+      ],
+    );
 
     final p = previous;
     int bump(int? old, bool same) => old == null ? 1 : (same ? old : old + 1);
@@ -298,6 +309,7 @@ class Presenter {
         p?.sections.news,
         p != null && _sameEvents(p.recentEvents, events),
       ),
+      bank: bump(p?.sections.bank, p != null && p.bank == bank),
     );
 
     return PlayerSnapshot(
@@ -321,6 +333,7 @@ class Presenter {
       openOffers: v.openOffers,
       breedingSeason: v.breedingSeason,
       recentEvents: List.unmodifiable(events),
+      bank: bank,
     );
   }
 
@@ -459,6 +472,10 @@ class Presenter {
 
   /// Details of a camel the player may look at: their own, one for sale, or
   /// a stud bull on offer. Anything else is not theirs to inspect.
+  /// One month of البنك, its kinds, when it is opened (null: no money moved
+  /// in it).
+  MonthMoney? bankMonth(String month) => view.moneyMonth(month);
+
   CamelDetail? camelDetail(CamelId id) {
     final v = view;
     final c = v.camel(id);

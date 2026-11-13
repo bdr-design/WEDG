@@ -30,6 +30,9 @@ abstract interface class EngineClient {
   Future<CamelDetail?> camelDetail(CamelId id);
   Future<FestivalDetail?> festivalDetail(FestivalId id);
 
+  /// One month of البنك ('YYYY-MM'), when it is opened.
+  Future<MonthMoney?> bankMonth(String month);
+
   /// One page of the player's herd, filtered and sorted in the engine.
   Future<HerdPage?> herdPage(HerdQuery query);
 
@@ -123,6 +126,8 @@ class InlineEngineClient with PushStreams implements EngineClient {
   @override
   Future<FestivalDetail?> festivalDetail(FestivalId id) =>
       core.festivalDetail(id);
+  @override
+  Future<MonthMoney?> bankMonth(String month) => core.bankMonth(month);
   @override
   Future<HerdPage?> herdPage(HerdQuery query) => core.herdPage(query);
   @override

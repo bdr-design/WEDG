@@ -25,6 +25,8 @@ import 'worker_backend.dart';
 ///   save as the worker last wrote it. A start that cannot read the save
 ///   (saveUnreadable) leaves no engine: the page may start again.
 /// * `{op: 'dispatch', id, command: {type, ...}}` (commands_json.dart).
+/// * `{op: 'bankMonth', id, month: 'YYYY-MM'}`: one month of البنك, opened
+///   (`month`: SnapshotJson.moneyMonth, or null when no money moved in it).
 /// * `{op: 'flush' | 'pause' | 'resume' | 'openPrevious', id}`;
 ///   `{op: 'startOver', id, newGame}`.
 /// * `{op: 'stored', seq, ok, error}`: the page kept write `seq`, or could not
@@ -150,6 +152,16 @@ class WorkerHost {
                 ? {'code': r.error.code.name, 'params': r.error.params}
                 : null,
             'events': [for (final e in r.events) e.toJson()],
+          });
+        case 'bankMonth':
+          final month = m['month'];
+          if (month is! String || !RegExp(r'^\d{4}-\d{2}$').hasMatch(month)) {
+            return _reply(id, {'ok': false, 'error': 'badMonth'});
+          }
+          final got = await core.bankMonth(month);
+          _reply(id, {
+            'ok': true,
+            'month': got == null ? null : SnapshotJson.moneyMonth(got),
           });
         case 'flush':
           await core.flush();

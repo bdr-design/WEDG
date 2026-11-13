@@ -30,6 +30,7 @@ class SnapshotJson {
       'studs': s.sections.studs,
       'festivals': s.sections.festivals,
       'news': s.sections.news,
+      'bank': s.sections.bank,
     },
     'market': [for (final l in s.market) listing(l)],
     'myListings': [for (final l in s.myListings) listing(l)],
@@ -46,6 +47,43 @@ class SnapshotJson {
     },
     'breedingSeason': s.breedingSeason,
     'recentEvents': [for (final e in s.recentEvents) e.toJson()],
+    'bank': bank(s.bank),
+  };
+
+  /// البنك's main screen: the opening balance, today's money in and out, and
+  /// every month's net with its biggest kind (newest first).
+  static Map<String, Object?> bank(BankSummary b) => {
+    'opening': b.opening,
+    'startedOn': _date(b.startedOn),
+    'todayIn': b.todayIn,
+    'todayOut': b.todayOut,
+    'months': [
+      for (final m in b.months)
+        {'month': m.month, 'net': m.net, 'top': moneyLine(m.top)},
+    ],
+  };
+
+  /// One month opened: what came in, what went out, each kind.
+  static Map<String, Object?> moneyMonth(MonthMoney m) => {
+    'month': m.month,
+    'in': m.income,
+    'out': m.spent,
+    'lines': [for (final l in m.lines) moneyLine(l)],
+  };
+
+  /// A kind of money: its sum and count, and what its line says (the fields
+  /// a kind does not have are left out).
+  static Map<String, Object?> moneyLine(MoneyLine l) => {
+    'kind': l.kind.name,
+    'amount': l.amount,
+    'count': l.count,
+    if (l.name != null) 'name': l.name,
+    if (l.day != null) 'day': _date(l.day!),
+    if (l.price != null) 'price': l.price,
+    if (l.fee != null) 'fee': l.fee,
+    if (l.trip != null) 'trip': l.trip!.name,
+    if (l.facilities.isNotEmpty)
+      'facilities': [for (final f in l.facilities) f.name],
   };
 
   static Map<String, Object?> farm(FarmSummary f) => {

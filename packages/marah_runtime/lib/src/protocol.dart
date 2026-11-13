@@ -141,6 +141,13 @@ final class HerdPageReq extends Request {
   final HerdQuery query;
 }
 
+final class BankMonthReq extends Request {
+  const BankMonthReq(super.id, this.month);
+
+  /// 'YYYY-MM'.
+  final String month;
+}
+
 final class FestivalDetailReq extends Request {
   const FestivalDetailReq(super.id, this.festival);
   final FestivalId festival;

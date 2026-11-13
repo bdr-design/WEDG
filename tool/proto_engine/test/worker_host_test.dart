@@ -395,4 +395,33 @@ void main() {
     );
     await page.call('pause');
   });
+
+  test('البنك: a month opened as the page asks for it', () async {
+    final page = Page();
+    await page.call('start', {'newGame': newGame});
+    final snap =
+        (await page.waitFor((m) => m['type'] == 'snapshot'))['snapshot']!
+            as Map<String, Object?>;
+    final me = snap['playerId'];
+    expect(me, isNotNull);
+    final r = await page.call('dispatch', {
+      'command': {'type': 'orderSupply', 'supply': 'alfalfa', 'units': 1},
+    });
+    expect(r['ok'], isTrue);
+    final month = (snap['date']! as String).substring(0, 7);
+    final got = await page.call('bankMonth', {'month': month});
+    expect(got['ok'], isTrue);
+    final m = got['month']! as Map<String, Object?>;
+    expect(m['month'], month);
+    expect((m['lines']! as List).single, containsPair('kind', 'feed'));
+    expect(
+      await page.call('bankMonth', {'month': '1999-01'}),
+      containsPair('month', null),
+    );
+    expect(
+      await page.call('bankMonth', {'month': 'May'}),
+      containsPair('error', 'badMonth'),
+    );
+    await page.call('pause');
+  });
 }

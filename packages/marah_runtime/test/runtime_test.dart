@@ -411,8 +411,62 @@ void main() {
       expect(after.market, before.market);
       expect(after.festivals, before.festivals);
       expect(after.studs, before.studs);
+      expect(after.bank, before.bank, reason: 'no money moved');
       await e.close();
     });
+  });
+
+  group('البنك', () {
+    test(
+      'day one, money moving, a month opened, in the snapshot JSON',
+      () async {
+        final pushes = <Push>[];
+        final e = EngineCore(
+          store: SaveStore(MemoryBackend()),
+          emit: pushes.add,
+        );
+        await e.newGame(params);
+        PlayerSnapshot last() => pushes.whereType<SnapshotPush>().last.snapshot;
+        var j = SnapshotJson.snapshot(last());
+        // day one: the opening balance, nothing in or out, no month yet
+        expect(j['bank'], {
+          'opening': Balance.startingCash,
+          'startedOn': j['date'],
+          'todayIn': 0,
+          'todayOut': 0,
+          'months': <Object?>[],
+        });
+        final before = last().sections.bank;
+        final me = last().playerId;
+        expect(
+          (await e.dispatch(OrderSupply(me, Supply.alfalfa, 2))).ok,
+          isTrue,
+        );
+        expect(last().sections.bank, before + 1);
+        final b = last().bank;
+        expect(b.todayOut, -last().todayNet);
+        expect(b.months.single.top.kind, MoneyKind.feed);
+        expect(b.months.single.net, last().cash - Balance.startingCash);
+        j = SnapshotJson.snapshot(last());
+        final month = ((j['bank']! as Map)['months']! as List).first as Map;
+        expect(month['top'], {
+          'kind': 'feed',
+          'amount': b.months.single.net,
+          'count': 1,
+          'day': j['date'],
+        });
+        // the month opened, as the page asks for it
+        final m = await e.bankMonth(month['month'] as String);
+        expect(SnapshotJson.moneyMonth(m!), {
+          'month': month['month'],
+          'in': 0,
+          'out': -b.months.single.net,
+          'lines': [month['top']],
+        });
+        expect(await e.bankMonth('1999-01'), isNull);
+        await e.close();
+      },
+    );
   });
 
   group('Recovery', () {

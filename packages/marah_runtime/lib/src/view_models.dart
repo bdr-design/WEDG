@@ -733,6 +733,7 @@ class PlayerSnapshot {
     required this.openOffers,
     required this.breedingSeason,
     required this.recentEvents,
+    required this.bank,
   });
 
   /// Increases with every snapshot; older ones can be dropped.
@@ -775,6 +776,75 @@ class PlayerSnapshot {
 
   /// The player's latest news, newest last.
   final List<DomainEvent> recentEvents;
+
+  /// البنك's main screen.
+  final BankSummary bank;
+}
+
+/// البنك's main screen (the owner's approved design of 13 Nov 2026,
+/// design/ui/phone_bank.jpg): the opening balance, today's money in and out
+/// (their net is [PlayerSnapshot.todayNet]), and every month's net with the
+/// kind that moved the most money. A month's kinds are asked for when it is
+/// opened (EngineCore.bankMonth), so the snapshot grows by one short row a
+/// game month.
+class BankSummary {
+  const BankSummary({
+    required this.opening,
+    required this.startedOn,
+    required this.todayIn,
+    required this.todayOut,
+    required this.months,
+  });
+
+  final int opening;
+  final GameDay startedOn;
+  final int todayIn;
+  final int todayOut;
+
+  /// The newest first.
+  final List<BankMonthRow> months;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BankSummary &&
+      other.opening == opening &&
+      other.startedOn == startedOn &&
+      other.todayIn == todayIn &&
+      other.todayOut == todayOut &&
+      _listEquals(other.months, months);
+
+  @override
+  int get hashCode => Object.hash(
+    opening,
+    startedOn,
+    todayIn,
+    todayOut,
+    Object.hashAll(months),
+  );
+}
+
+/// One month on البنك's main screen: its net and its biggest kind.
+class BankMonthRow {
+  const BankMonthRow({
+    required this.month,
+    required this.net,
+    required this.top,
+  });
+
+  /// 'YYYY-MM'.
+  final String month;
+  final int net;
+  final MoneyLine top;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BankMonthRow &&
+      other.month == month &&
+      other.net == net &&
+      other.top == top;
+
+  @override
+  int get hashCode => Object.hash(month, net, top);
 }
 
 /// One camel in full, requested when its page opens.
@@ -985,6 +1055,7 @@ class SectionRevisions {
     required this.studs,
     required this.festivals,
     required this.news,
+    required this.bank,
   });
 
   final int farm;
@@ -993,4 +1064,5 @@ class SectionRevisions {
   final int studs;
   final int festivals;
   final int news;
+  final int bank;
 }
