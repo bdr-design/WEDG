@@ -277,7 +277,12 @@ void main() {
     final page = Page();
     await page.call('start', {'newGame': newGame, 'timeScale': 1e6});
     final d0 = page.today;
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+    // the world moves on its own: waited for, not timed (a loaded machine
+    // only slows it; a clock that does not move still fails)
+    await page.waitFor(
+      (m) => m['type'] == 'snapshot' && page.today > d0 + 5,
+      within: const Duration(seconds: 15),
+    );
     expect(page.today, greaterThan(d0 + 5));
     await page.call('pause');
     final d1 = page.today;
@@ -406,18 +411,30 @@ void main() {
     final page = Page(answerAfter: const Duration(milliseconds: 20));
     await page.call('start', {'newGame': newGame, 'timeScale': 1e6});
     await Future<void>.delayed(const Duration(seconds: 2));
-    final sw = Stopwatch()..start();
-    await page.call('dispatch', {
+    // counted in the world's ticks, not in milliseconds (a loaded machine
+    // stretches both alike): a command waits behind a tick or two at most;
+    // ticks queued behind the slow saves would come out as many snapshots
+    // before its reply
+    int ticksBefore(int id, int from) => page.messages
+        .sublist(from)
+        .takeWhile((m) => !(m['type'] == 'reply' && m['id'] == id))
+        .where((m) => m['type'] == 'snapshot')
+        .length;
+
+    final before = page.messages.length;
+    final id = page.send('dispatch', {
       'command': {'type': 'setCalfShare', 'share': 'all'},
     });
+    await page.answer(id);
     expect(
-      sw.elapsedMilliseconds,
-      lessThan(600),
+      ticksBefore(id, before),
+      lessThanOrEqualTo(3),
       reason: 'waited behind ticks',
     );
-    sw.reset();
-    await page.call('pause');
-    expect(sw.elapsedMilliseconds, lessThan(600));
+    final before2 = page.messages.length;
+    final pause = page.send('pause');
+    await page.answer(pause);
+    expect(ticksBefore(pause, before2), lessThanOrEqualTo(3));
   });
 
   test('startOver with bad settings is refused, not thrown', () async {
