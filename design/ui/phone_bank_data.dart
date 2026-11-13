@@ -1,5 +1,6 @@
 // The bank design's data (design/ui/phone_bank.cjs): a new game played forward by the rules engine itself, its
-// ledger read at three moments: day one, a month in (milk and feed only), and six and a half months in. Nothing here
+// ledger read at three moments: day one; 22 October after that day's orders (money in and out the same day: the
+// milk, an alfalfa order and a tanker); and 15 April 2027, six and a half months in. Nothing here
 // is example content: every row is one the engine wrote (Sim.pay, Sim.bill). Only the player's choices are scripted,
 // a careful beginner's (a game choice, for the picture):
 //   * feed and water topped up to three weeks when under ten days, as the bot does (packages/marah_domain/lib/src/
@@ -35,19 +36,38 @@ void main(List<String> args) {
   final log = <String>[];
 
   // the moment as the bank would show it: the balance, today's net (GameView.todayNet, as the home widget has it),
-  // and every ledger row, its camel or festival named where it has one
+  // the milk sold at today's milking (what the milk app reads: farm.milk.sold), and every ledger row with what its
+  // ref points at: a camel or a festival by its name, a facility by its enum name (the screens name it as the العزبة
+  // app does), never the raw id (null when the ref is found nowhere). A transport row's reason is not in the ledger:
+  // it is read here from the rows beside it (a purchase of the same camel that day: the camel trucked home; a
+  // festival's id: there and back; else a mating's: the female trucked to the stud, handlers.dart _mate).
   void take(String key) {
     final v = view();
     final w = game.state.world;
-    String? refName(String? ref) {
-      if (ref == null) return null;
-      for (final c in w.camels.values) {
-        if (c.id.value == ref) return c.name;
-      }
+    final ledger = v.me.ledger;
+    ({String? kind, String? name}) refOf(String? ref) {
+      if (ref == null) return (kind: null, name: null);
+      final c = w.camels[CamelId(ref)];
+      if (c != null) return (kind: 'camel', name: c.name);
       for (final f in w.festivals.values) {
-        if (f.id.value == ref) return f.name;
+        if (f.id.value == ref) return (kind: 'festival', name: f.name);
       }
-      return ref; // (a facility's name)
+      for (final f in Facility.values) {
+        if (f.name == ref) return (kind: 'facility', name: f.name);
+      }
+      return (kind: null, name: null);
+    }
+
+    String? why(LedgerEntry l) {
+      if (l.category != LedgerCategory.transport) return null;
+      if (refOf(l.ref).kind == 'festival') return 'festival';
+      final bought = ledger.any(
+        (x) =>
+            x.category == LedgerCategory.purchase &&
+            x.ref == l.ref &&
+            x.day == l.day,
+      );
+      return bought ? 'purchase' : 'mating';
     }
 
     (out['moments']! as List).add({
@@ -58,16 +78,19 @@ void main(List<String> args) {
       'todayNet': v.todayNet.value,
       'milkIncomeToday': v.milkIncomeToday,
       'milkThisMonth': v.milkThisMonth.value,
+      'milkSold': v.milk.fold<double>(0, (n, m) => n + m.sold),
       'herd': v.herd.length,
       'ledger': [
-        for (final l in v.me.ledger)
+        for (final l in ledger)
           {
             'day': l.day.value,
             'date': l.day.date.toIso8601String().substring(0, 10),
             'cat': l.category.name,
             'amount': l.amount.value,
             'ref': l.ref,
-            'refName': refName(l.ref),
+            'refKind': refOf(l.ref).kind,
+            'refName': refOf(l.ref).name,
+            'why': why(l),
             'month': l.month,
           },
       ],
@@ -115,6 +138,7 @@ void main(List<String> args) {
     final v = view();
     final d = v.today.date;
     topUp();
+    if (d.month == 10 && d.day == 22) take('october');
     if (d.month == 11 && d.day == 20) {
       final cash = v.me.cash.value;
       final pick =
@@ -189,8 +213,6 @@ void main(List<String> args) {
     game.advanceDays(1);
     final problems = checkInvariants(game.state);
     if (problems.isNotEmpty) throw StateError(problems.first);
-    final t = game.today.date;
-    if (t.month == 10 && t.day == 27) take('october');
   }
   take('april');
   out['log'] = log;
