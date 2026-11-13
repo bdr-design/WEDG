@@ -195,6 +195,10 @@ class Money {
 
   static final _past = Expando<_Past>('money months');
 
+  /// Ledger rows read into the kept months so far (for the tests: a read
+  /// that keeps them reads none; a month that ends reads its own rows only).
+  static int keptRowsRead = 0;
+
   /// The months before this one, read again when the month has turned or the
   /// ledger is not the one read grown at its end.
   static _Past _kept(GameState s, PlayerState p) {
@@ -220,6 +224,7 @@ class Money {
       final k = _key(e);
       if (k.compareTo(now) >= 0) break;
       rows++;
+      keptRowsRead++;
       if (e.category == LedgerCategory.opening) continue;
       (by[k] ??= []).add(e);
     }

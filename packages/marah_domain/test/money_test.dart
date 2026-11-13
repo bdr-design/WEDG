@@ -258,11 +258,30 @@ void main() {
             ..sort((a, b) => b.compareTo(a)))
         m,
     ]);
-    final watch = Stopwatch()..start();
+    // the months before this one are read once, not again at every snapshot
+    // (counted, not timed: the work itself)
+    final read = Money.keptRowsRead;
     for (var i = 0; i < 100; i++) {
-      v.moneyMonths;
+      GameView(g.state, g.me.id).moneyMonths;
     }
-    // the months before this one are read once (a snapshot reads them)
-    expect(watch.elapsedMicroseconds / 100, lessThan(500));
+    expect(Money.keptRowsRead, read, reason: '100 reads, no row read again');
+    // a new row this month does not read the past again
+    expect(g.dispatch(OrderSupply(g.me.id, Supply.alfalfa, 1)).ok, isTrue);
+    GameView(g.state, g.me.id).moneyMonths;
+    expect(Money.keptRowsRead, read, reason: 'a row this month');
+    // a month that ends reads its own rows only, not the whole ledger
+    final rows = g.me.ledger.length;
+    g.advanceTo(
+      GameDay.ofDate(
+        DateTime.utc(g.today.date.year, g.today.date.month + 1, 2),
+      ),
+    );
+    GameView(g.state, g.me.id).moneyMonths;
+    expect(
+      Money.keptRowsRead - read,
+      inInclusiveRange(1, g.me.ledger.length - rows + 60),
+    );
+    expect(Money.keptRowsRead - read, lessThan(rows ~/ 4));
+    expectAddsUp(g);
   });
 }
