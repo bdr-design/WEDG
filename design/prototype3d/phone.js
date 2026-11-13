@@ -294,6 +294,7 @@ const NOUN = {
   message: ['رسالة وحدة', 'رسالتين', 'رسايل', 'رسالة'],   // («المحادثات»'s badge)
   fest: ['مهرجان واحد', 'مهرجانين', 'مهرجانات', 'مهرجان'],
   edition: ['دورة وحدة', 'دورتين', 'دورات', 'دورة'],
+  bull: ['فحل واحد', 'فحلين', 'فحول', 'فحل'],
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const days = (n) => count(n, 'day');
@@ -908,7 +909,7 @@ const WHERE = { botox: 'بشفايف', filler: 'بخشم', hormones: 'بسنام
 const ew = (e, f, m, pl = m) => ((e.head || 1) > 1 ? pl : e.sex === 'male' ? m : f);
 const where = (e, k) => ew(e, `${WHERE[k]}ها`, `${WHERE[k]}ه`, `${WHERE[k]} واحد منهم`);
 // the counting noun of a round's entries: نياق in a she-camels' round, روس in a males' or a group's
-const fieldNoun = (e) => ((e.head || 1) > 1 || e.sex === 'male' ? 'head' : 'camel');
+const fieldNoun = (e) => ((e.head || 1) > 1 ? 'bull' : e.sex === 'male' ? 'head' : 'camel');      // (الفحل وإنتاجه: its entries are the bulls)
 const STRENGTH = ['خفيف', 'وسط', 'قوي'];
 const theTamper = (k) => (/ /.test(TAMPER[k]) ? TAMPER[k] : `ال${TAMPER[k]}`);
 const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join('، ')} و${xs[xs.length - 1]}`);
@@ -1569,7 +1570,8 @@ export function createPhone({ host }) {
           const res = await engine.dispatch({ type: 'enterRound', festival: MZ.page.festival.id, round: r.id, camels: [x.camel.id, ...(x.group || []).map((k) => k.id)] });
           if (res.ok) {
             const fee = (res.events || []).find((e) => e.type === 'entered')?.fee || 0, c = x.camel;
-            HJ.msg = { good: true, title: `سجّلت ${esc(c.name)} ب${roundTitle(r.kind, r.cat)}`, line: `${her(c, 'شوطها', 'شوطه')} ${dd(r.day)}${fee ? `، وانخصم ${n0(fee)} ريال رسوم التأخير` : ''}، ${her(c, 'ونقلها', 'ونقله')} ينخصم يوم الشوط.` };
+            const group = (x.group || []).length > 0;
+            HJ.msg = { good: true, title: `سجّلت ${esc(c.name)} ب${roundTitle(r.kind, r.cat)}`, line: `${her(c, 'شوطها', 'شوطه')} ${dd(r.day)}${fee ? `، وانخصم ${n0(fee)} ريال رسوم التأخير` : ''}، ${group ? 'ونقلهم' : her(c, 'ونقلها', 'ونقله')} ينخصم يوم الشوط.` };
             MZ.sel = null; next = 'mazayen';
           } else ERR = why(x.camel, res.error || { code: '' });
         }

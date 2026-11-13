@@ -994,7 +994,11 @@ class ContestSystem implements DailySystem {
     for (var i = 0; i < r.rivals; i++) {
       final c = _Competitor(
         owner: _rivalOwner(gen, rng, f),
-        name: randomCamelName(rng, female: r.sex != Sex.male),
+        // (الفحل وإنتاجه's entries are named by their bulls)
+        name: randomCamelName(
+          rng,
+          female: r.sex != Sex.male && r.kind != RoundKind.fahal,
+        ),
         head: r.size,
       );
       if (rng.chance(Balance.rivalTamperChance)) {
