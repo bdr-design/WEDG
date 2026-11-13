@@ -1,5 +1,6 @@
 import 'common/ids.dart';
 import 'model/player.dart';
+import 'model/tampering.dart';
 
 /// Everything a player can ask the world to do. Commands carry ids and
 /// amounts only, never prices or offers the server should look up itself,
@@ -119,16 +120,32 @@ final class SetCalfShare extends Command {
 
 // --------------------------------------------------------------- contests
 
+/// Registers [camels] in a round: one for a single round, the bull then
+/// his offspring for الفحل وإنتاجه. After the festival's closing it is a
+/// late entry, with its fee, until 72 hours before the round.
 final class EnterRound extends Command {
-  const EnterRound(super.actor, this.festival, this.round, this.camel);
+  const EnterRound(super.actor, this.festival, this.round, this.camels);
   final FestivalId festival;
   final RoundId round;
-  final CamelId camel;
+  final List<CamelId> camels;
 }
 
+/// Withdraws the entry [camel] is in (until the day before its round).
+/// After the closing its camels cannot be entered again at that festival.
 final class WithdrawEntry extends Command {
   const WithdrawEntry(super.actor, this.festival, this.round, this.camel);
   final FestivalId festival;
   final RoundId round;
   final CamelId camel;
+}
+
+// --------------------------------------------------------------- cheating
+
+/// Has [camel] secretly treated ([strength] 1 light to 3 heavy): it looks
+/// better on judging day, and may be found (GDD 7.1).
+final class Tamper extends Command {
+  const Tamper(super.actor, this.camel, this.kind, this.strength);
+  final CamelId camel;
+  final TamperKind kind;
+  final int strength;
 }

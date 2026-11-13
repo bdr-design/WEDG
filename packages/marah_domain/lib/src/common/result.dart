@@ -37,6 +37,36 @@ enum ErrorCode {
   roundOwnerLimit,
   notEntered,
 
+  /// The owner is barred from festivals ({'through'}: the last season of
+  /// the ban), or the camel is ([camelBanned]): GDD 7.1.
+  banned,
+  camelBanned,
+
+  /// A crossbred camel: the festivals take pure ones only.
+  crossbred,
+
+  /// A group round's entry is not its size ({'size'}).
+  wrongGroupSize,
+
+  /// الفحل وإنتاجه: a camel that is not the bull's own offspring.
+  notOffspring,
+
+  /// جل takes a she-camel from her second calf ({'calvings'}).
+  tooFewCalvings,
+
+  /// The owner has his one فردي camel entered at the festival already (one
+  /// camel in one فردي round, the owner's decision of 13 Nov 2026).
+  oneFardiRound,
+
+  /// A group round: not open to players yet (the owner, 13 Nov 2026).
+  notYet,
+
+  /// Withdrawn after the closing: its class was fixed then (GDD 7).
+  scratched,
+
+  /// The camel has that treatment already.
+  alreadyTreated,
+
   /// An order would overfill the feed store or the water tank ({'room'}: units
   /// that still fit).
   storeFull,

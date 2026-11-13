@@ -7,6 +7,7 @@
 library;
 
 import '../model/player.dart';
+import '../model/tampering.dart';
 
 class Balance {
   const Balance._();
@@ -300,15 +301,107 @@ class Balance {
   static const studsOffSeason = 4;
 
   // ------------------------------------------------------------ contests
-  /// (balance) Ownership must be registered this long before judging unless
-  /// the camel was born on the farm.
+  // The Saudi round system (GDD 7, research-realism sections 2 to 4); the
+  // round types, their sizes and prizes are in RoundKind and ContestRules.
+
+  /// (balance) Ownership must be registered this long before the round
+  /// unless the camel was born on the farm (the chip is the only ownership
+  /// document, real; how long before is the game's).
   static const ownershipDaysBeforeJudging = 30;
 
-  /// (balance) Max entries per owner in one round.
+  /// (balance) An owner's camels in his one فردي round (GDD 7 gives one فردي
+  /// round per owner, not how many camels in it).
   static const maxEntriesPerOwnerInRound = 3;
 
-  static const registrationClosesBeforeJudging = 7;
+  /// (field) A late entry is taken until 72 hours before its round, with a
+  /// fee (research section 4, [43]). (balance) The fee, SAR 1,000 a head
+  /// (not found), and the normal closing, 7 days before the festival begins.
+  static const lateEntryHoursBefore = 72;
+  static const lateEntryFee = 1000;
+  static const registrationClosesBeforeStart = 7;
+
+  /// (balance) Registration opens this long before the festival begins.
   static const registrationOpensBefore = 30;
   static const grandRegistrationOpensBefore = 45;
   static const judgesPerPanel = 5;
+
+  /// (field) The grand festival runs from 1 December to 3 January (the 9th
+  /// and 10th editions, research section 4). (balance) The regional ones
+  /// run four days and the local ones two.
+  static const regionalFestivalDays = 4;
+  static const localFestivalDays = 2;
+
+  /// (balance) Stage 1: a chip that does not read as the registration's.
+  static const chipMismatchChance = 0.002;
+
+  /// (balance) Stage 2: a camel whose coat shows under this (0 to 100) is
+  /// not pure in its colour; one within [teethMarginDays] of its age class's
+  /// edge on the day may be read by the teeth as the other class, with this
+  /// chance (real: the age is checked by the teeth, research section 4).
+  static const colourPurityMin = 30.0;
+  static const teethMarginDays = 30;
+  static const teethMisreadChance = 0.10;
+
+  /// (balance) Stage 3: the preliminary judging keeps this share of the
+  /// field, and at least [preliminaryKeepsAtLeast] entries.
+  static const preliminaryKeeps = 0.5;
+  static const preliminaryKeepsAtLeast = 10;
+
+  /// (field) Results of الفحل وإنتاجه come only after the DNA tests confirm
+  /// the offspring are his (research section 2, [17]). (balance) In 10 days.
+  static const dnaDays = 10;
+
+  // ------------------------------------------------------------ cheating
+  // GDD 7.1 (the owner, 12 Nov 2026). The kinds and their fine caps are real
+  // (TamperKind); the rest is the game's.
+
+  /// (balance) Points (0 to 100) a treatment adds to each feature it works
+  /// on, for each level of strength (1 to 3), on judging day.
+  static const tamperGainPerLevel = 4.0;
+
+  /// (field) Caught at a festival: disqualified, fined, and the owner and
+  /// his camels barred from this edition and at least five more (research
+  /// section 3, [27][102]); the ban covers every festival in the game (the
+  /// owner, 13 Nov 2026).
+  static const banEditionsAfter = 5;
+
+  /// (balance) A treatment can be found outside the festivals too, in the
+  /// market or by the vet (GDD 7.1; the case is real: in 2018 MEWA fined
+  /// five people SAR 67,000 in all, section 7 [100]): a chance a day for each
+  /// treatment showing, times its strength; four times that while the camel
+  /// is listed for sale; this chance when the vet treats the camel.
+  static const outsideCatchPerDay = 0.0004;
+  static const outsideCatchListedFactor = 4.0;
+  static const vetCatchChance = 0.15;
+
+  /// (field) Fined outside a festival: the 2018 case's average, SAR 67,000
+  /// among five, about 13,400 each (research section 7, [100]).
+  static const outsideFine = 13400;
+
+  /// (balance) A rival's entry is treated with this chance (the field's
+  /// cheats, GDD 7.1: rivals cheat too), at a strength drawn from 1 to 3.
+  static const rivalTamperChance = 0.04;
+
+  /// (balance) A rival's entry the stage 2 check removes (its colour or its
+  /// teeth), and how far the final judging's second look moves a mark.
+  static const rivalBreedCheckChance = 0.02;
+  static const finalLookSd = 0.8;
+
+  /// The fine for a treatment found at a festival: (field) up to the kind's
+  /// cap (TamperKind.fineCap); (balance) scaled by its strength, a heavy one
+  /// the cap (the director's direction, 13 Nov 2026), to the riyal's
+  /// thousand.
+  static int tamperFine(TamperKind kind, int strength) =>
+      ((kind.fineCap * strength / 3) / 1000).round() * 1000;
+
+  // ------------------------------------------------------------ reputation
+  /// (balance) الصيت (GDD 8) in each family, 0 to 100: where it starts;
+  /// what a place adds (first, second or third, the rest of the top ten)
+  /// times the festival's tier level; what being caught takes.
+  static const startingReputation = 10.0;
+  static const reputationForFirst = 4.0;
+  static const reputationForPodium = 2.0;
+  static const reputationForTopTen = 0.5;
+  static const reputationCaught = 25.0;
+  static const reputationCaughtOutside = 10.0;
 }

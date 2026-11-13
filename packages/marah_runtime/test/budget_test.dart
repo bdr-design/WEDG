@@ -79,6 +79,16 @@ void main() {
     );
   });
 
+  test('a festival\'s page stays under 250 ms at 10,000 head', () {
+    final f = g.state.world.festivals.values.firstWhere(
+      (f) => f.tier == FestivalTier.grand,
+    );
+    expect(
+      avgMs(() => Presenter(g.state, g.me.id).festivalDetail(f.id), 3),
+      lessThan(250),
+    );
+  });
+
   test('measured values', () {
     final day = avgMs(() => g.advanceDays(1), 10);
     final snap = avgMs(() => Presenter(g.state, g.me.id).snapshot(1), 5);
@@ -86,10 +96,18 @@ void main() {
       () => Presenter(g.state, g.me.id).herdPage(const HerdQuery()),
       5,
     );
+    final grand = g.state.world.festivals.values.firstWhere(
+      (f) => f.tier == FestivalTier.grand,
+    );
+    final fest = avgMs(
+      () => Presenter(g.state, g.me.id).festivalDetail(grand.id),
+      3,
+    );
     // ignore: avoid_print
     print(
       '10k head: day ${day.toStringAsFixed(1)} ms, snapshot '
-      '${snap.toStringAsFixed(1)} ms, page ${page.toStringAsFixed(1)} ms',
+      '${snap.toStringAsFixed(1)} ms, page ${page.toStringAsFixed(1)} ms, '
+      'festival ${fest.toStringAsFixed(1)} ms',
     );
   });
 }

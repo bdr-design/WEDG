@@ -20,6 +20,15 @@ enum MoneyKind {
   construction,
   vet,
   studFee,
+
+  /// A late festival entry's fee (GDD 7).
+  entryFee,
+
+  /// The player's own spending on a secret treatment (GDD 7.1).
+  tampering,
+
+  /// A fine for a treatment found (GDD 7.1).
+  fine,
 }
 
 /// Why a camel or a herd was trucked: the ledger keeps the transport row's
@@ -151,6 +160,9 @@ class Money {
     LedgerCategory.construction => MoneyKind.construction,
     LedgerCategory.vet => MoneyKind.vet,
     LedgerCategory.studFee => MoneyKind.studFee,
+    LedgerCategory.entryFee => MoneyKind.entryFee,
+    LedgerCategory.tampering => MoneyKind.tampering,
+    LedgerCategory.fine => MoneyKind.fine,
   };
 
   /// The opening balance (every opening row: one in a game).

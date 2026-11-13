@@ -161,6 +161,7 @@ class Camel {
     this.crossbred = false,
     this.purchasePrice = 0,
     this.lastPlayerOwner,
+    this.bannedThrough,
     List<Placing>? placings,
   }) : placings = placings ?? [];
 
@@ -203,6 +204,11 @@ class Camel {
   /// breeds it and kept after it is sold, so its record is never dropped.
   OwnerId? lastPlayerOwner;
 
+  /// Barred from festivals through this season (the year its autumn falls
+  /// in), kept when the camel is sold on: a treatment found on it or on a
+  /// camel of its owner's (GDD 7.1; research section 3, [102]).
+  int? bannedThrough;
+
   /// Everything that can change after the camel is created, in a fixed
   /// order. The store compares this with what it last wrote and rewrites
   /// the row only when something differs (exact, no hashing).
@@ -229,6 +235,7 @@ class Camel {
     purchasePrice,
     placings.length,
     lastPlayerOwner?.value,
+    bannedThrough,
   ];
   final List<Placing> placings;
 
@@ -270,6 +277,7 @@ class Camel {
     'crossbred': crossbred,
     'purchasePrice': purchasePrice,
     'lastPlayerOwner': lastPlayerOwner?.value,
+    'bannedThrough': bannedThrough,
     'placings': [for (final p in placings) p.toJson()],
   };
 
@@ -312,6 +320,7 @@ class Camel {
       lastPlayerOwner: j['lastPlayerOwner'] == null
           ? null
           : OwnerId(j['lastPlayerOwner']! as String),
+      bannedThrough: j['bannedThrough'] as int?,
       placings: [
         for (final p in j['placings']! as List<Object?>)
           Placing.fromJson(p! as Map<String, Object?>),

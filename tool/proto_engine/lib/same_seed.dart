@@ -49,7 +49,7 @@ Iterable<String> sameSeedLines({
 /// The commands the bot never sends, so the check runs them too: the feed
 /// plan changed, the calves' share of the milk, a camel renamed, a camel listed and its offers declined, then
 /// taken off the market, a female put to the farm's own bull, an entry
-/// withdrawn. Returns how many went through, and counts them by kind in
+/// withdrawn, a camel secretly treated. Returns how many went through, and counts them by kind in
 /// [done].
 int _extras(Game game, int week, Map<String, int> done) {
   final me = game.me.id;
@@ -121,10 +121,15 @@ int _extras(Game game, int week, Map<String, int> done) {
       }
     }
   }
+  // a secret treatment now and then (the bot's own are rare), so the
+  // checks, the fines and the bans run on both platforms
+  if (week % 13 == 6 && v.herd.isNotEmpty) {
+    send(Tamper(me, v.herd.last.id, TamperKind.values[week % 7], 1 + week % 3));
+  }
   if (week % 5 == 2) {
     for (final f in v.festivals.where((f) => f.registrationOpen(v.today))) {
       for (final r in f.rounds) {
-        final mine = r.entries.where((e) => e.ownerId == me);
+        final mine = r.myEntries;
         if (mine.isNotEmpty) {
           send(WithdrawEntry(me, f.id, r.id, mine.first.camelId));
           return ok;

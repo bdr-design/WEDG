@@ -4,6 +4,7 @@ import 'common/ids.dart';
 import 'common/time.dart';
 import 'model/contest.dart';
 import 'model/player.dart';
+import 'model/tampering.dart';
 
 /// Why a camel died.
 /// Why a camel died: an illness, old age, a young calf's death in its first
@@ -277,6 +278,8 @@ sealed class DomainEvent {
         name: j['name']! as String,
         festival: j['festival']! as String,
         round: RoundId(j['round']! as String),
+        head: (j['head'] as int?) ?? 1,
+        fee: (j['fee'] as int?) ?? 0,
       ),
       'withdrawn' => Withdrawn(
         day,
@@ -309,6 +312,64 @@ sealed class DomainEvent {
         camel: camel,
         festival: j['festival']! as String,
         prizes: j['prizes']! as int,
+      ),
+      'entryRemoved' => EntryRemoved(
+        day,
+        owner: owner,
+        camel: camel,
+        name: j['name']! as String,
+        festival: j['festival']! as String,
+        round: RoundId(j['round']! as String),
+        stage: Stage.values.byName(j['stage']! as String),
+        reason: RemovalReason.values.byName(j['reason']! as String),
+      ),
+      'resultsPending' => ResultsPending(
+        day,
+        owner: owner,
+        camel: camel,
+        festival: j['festival']! as String,
+        round: RoundId(j['round']! as String),
+        announceOn: GameDay(j['announceOn']! as int),
+      ),
+      'tampered' => Tampered(
+        day,
+        owner: owner,
+        camel: camel,
+        name: j['name']! as String,
+        kind: TamperKind.values.byName(j['kind']! as String),
+        strength: j['strength']! as int,
+        price: j['price']! as int,
+      ),
+      'tamperingFound' => TamperingFound(
+        day,
+        owner: owner,
+        camel: camel,
+        name: j['name']! as String,
+        kind: TamperKind.values.byName(j['kind']! as String),
+        festival: j['festival'] as String?,
+        stage: j['stage'] == null
+            ? null
+            : Stage.values.byName(j['stage']! as String),
+        fine: j['fine']! as int,
+        bannedThrough: j['bannedThrough'] as int?,
+      ),
+      'cheatNews' => CheatNews(
+        day,
+        owner: owner,
+        camel: camel,
+        ownerName: j['ownerName']! as String,
+        name: j['name']! as String,
+        kind: TamperKind.values.byName(j['kind']! as String),
+        festival: j['festival'] as String?,
+        fine: j['fine']! as int,
+      ),
+      'festivalIntegrity' => FestivalIntegrity(
+        day,
+        owner: owner,
+        camel: camel,
+        festival: j['festival']! as String,
+        cases: j['cases']! as int,
+        fines: j['fines']! as int,
       ),
       final other => throw FormatException('unknown event type $other'),
     };
@@ -936,10 +997,18 @@ final class Entered extends DomainEvent {
     required this.name,
     required this.festival,
     required this.round,
+    this.head = 1,
+    this.fee = 0,
   });
   final String name;
   final String festival;
   final RoundId round;
+
+  /// Camels in the entry (a group's head).
+  final int head;
+
+  /// A late entry's fee (0 for one in time).
+  final int fee;
   @override
   String get type => 'entered';
   @override
@@ -947,6 +1016,8 @@ final class Entered extends DomainEvent {
     'name': name,
     'festival': festival,
     'round': round.value,
+    'head': head,
+    'fee': fee,
   };
 }
 
@@ -1030,5 +1101,173 @@ final class FestivalSummary extends DomainEvent {
   Map<String, Object?> fieldsToJson() => {
     'festival': festival,
     'prizes': prizes,
+  };
+}
+
+/// A stage of the festival day removed one of the owner's entries ([camel]
+/// is the entry's first camel).
+final class EntryRemoved extends DomainEvent {
+  const EntryRemoved(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.name,
+    required this.festival,
+    required this.round,
+    required this.stage,
+    required this.reason,
+  });
+  final String name;
+  final String festival;
+  final RoundId round;
+  final Stage stage;
+  final RemovalReason reason;
+  @override
+  String get type => 'entryRemoved';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'name': name,
+    'festival': festival,
+    'round': round.value,
+    'stage': stage.name,
+    'reason': reason.name,
+  };
+}
+
+/// الفحل وإنتاجه judged: its places come on [announceOn], once the DNA tests
+/// are back.
+final class ResultsPending extends DomainEvent {
+  const ResultsPending(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.festival,
+    required this.round,
+    required this.announceOn,
+  });
+  final String festival;
+  final RoundId round;
+  final GameDay announceOn;
+  @override
+  String get type => 'resultsPending';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'festival': festival,
+    'round': round.value,
+    'announceOn': announceOn.value,
+  };
+}
+
+/// The owner had a camel secretly treated (his own news only).
+final class Tampered extends DomainEvent {
+  const Tampered(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.name,
+    required this.kind,
+    required this.strength,
+    required this.price,
+  });
+  final String name;
+  final TamperKind kind;
+  final int strength;
+  final int price;
+  @override
+  String get type => 'tampered';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'name': name,
+    'kind': kind.name,
+    'strength': strength,
+    'price': price,
+  };
+}
+
+/// A treatment on one of the owner's camels was found: at a festival
+/// ([festival], [stage]; with the ban through [bannedThrough]) or outside
+/// one, in the market or by the vet ([festival] null).
+final class TamperingFound extends DomainEvent {
+  const TamperingFound(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.name,
+    required this.kind,
+    required this.festival,
+    required this.stage,
+    required this.fine,
+    required this.bannedThrough,
+  });
+  final String name;
+  final TamperKind kind;
+  final String? festival;
+  final Stage? stage;
+  final int fine;
+  final int? bannedThrough;
+  @override
+  String get type => 'tamperingFound';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'name': name,
+    'kind': kind.name,
+    'festival': festival,
+    'stage': stage?.name,
+    'fine': fine,
+    'bannedThrough': bannedThrough,
+  };
+}
+
+/// Public news: an owner's camel found treated (GDD 7.1: the news reaches
+/// the rivals; the rivals' own cases come this way too).
+final class CheatNews extends DomainEvent {
+  const CheatNews(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.ownerName,
+    required this.name,
+    required this.kind,
+    required this.festival,
+    required this.fine,
+  });
+  final String ownerName;
+  final String name;
+  final TamperKind kind;
+  final String? festival;
+  final int fine;
+  @override
+  String get type => 'cheatNews';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'ownerName': ownerName,
+    'name': name,
+    'kind': kind.name,
+    'festival': festival,
+    'fine': fine,
+  };
+}
+
+/// Public news at a festival's end: how many treatments its committees
+/// found and the fines (as the real festivals report, GDD 7.1).
+final class FestivalIntegrity extends DomainEvent {
+  const FestivalIntegrity(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.festival,
+    required this.cases,
+    required this.fines,
+  });
+  final String festival;
+  final int cases;
+  final int fines;
+  @override
+  String get type => 'festivalIntegrity';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'festival': festival,
+    'cases': cases,
+    'fines': fines,
   };
 }

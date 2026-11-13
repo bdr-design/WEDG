@@ -240,36 +240,49 @@ class StudCard {
       Object.hashAll([id, bull, ownerName, region, fee, transport, until]);
 }
 
+/// A festival on the player's list (GDD 7).
 class FestivalCard {
   const FestivalCard({
     required this.id,
     required this.name,
     required this.region,
     required this.tier,
+    required this.season,
     required this.opensOn,
     required this.closesOn,
-    required this.judgedOn,
+    required this.startsOn,
+    required this.endsOn,
     required this.done,
     required this.rounds,
     required this.myEntries,
     required this.topPrize,
     required this.myBestRank,
     required this.myPrizes,
+    required this.late,
+    required this.bannedThrough,
   });
 
   final FestivalId id;
   final String name;
   final Region region;
   final FestivalTier tier;
+  final int season;
   final GameDay opensOn;
+
+  /// The closing: after it an entry is late, with its fee.
   final GameDay closesOn;
-  final GameDay judgedOn;
+  final GameDay startsOn;
+  final GameDay endsOn;
   final bool done;
   final int rounds;
   final int myEntries;
   final int topPrize;
   final int? myBestRank;
   final int myPrizes;
+  final bool late;
+
+  /// The player is barred from it, through this season (GDD 7.1).
+  final int? bannedThrough;
 
   @override
   bool operator ==(Object other) =>
@@ -278,15 +291,19 @@ class FestivalCard {
       other.name == name &&
       other.region == region &&
       other.tier == tier &&
+      other.season == season &&
       other.opensOn == opensOn &&
       other.closesOn == closesOn &&
-      other.judgedOn == judgedOn &&
+      other.startsOn == startsOn &&
+      other.endsOn == endsOn &&
       other.done == done &&
       other.rounds == rounds &&
       other.myEntries == myEntries &&
       other.topPrize == topPrize &&
       other.myBestRank == myBestRank &&
-      other.myPrizes == myPrizes;
+      other.myPrizes == myPrizes &&
+      other.late == late &&
+      other.bannedThrough == bannedThrough;
 
   @override
   int get hashCode => Object.hashAll([
@@ -294,16 +311,59 @@ class FestivalCard {
     name,
     region,
     tier,
+    season,
     opensOn,
     closesOn,
-    judgedOn,
+    startsOn,
+    endsOn,
     done,
     rounds,
     myEntries,
     topPrize,
     myBestRank,
     myPrizes,
+    late,
+    bannedThrough,
   ]);
+}
+
+/// One of the player's own secret treatments and its risk (GDD 7.1): never
+/// in anyone else's snapshot.
+class TamperingCard {
+  const TamperingCard({
+    required this.camel,
+    required this.camelName,
+    required this.kind,
+    required this.strength,
+    required this.until,
+    required this.festivalCatch,
+    required this.monthlyOutside,
+    required this.fineIfFound,
+  });
+
+  final CamelId camel;
+  final String camelName;
+  final TamperKind kind;
+  final int strength;
+  final GameDay until;
+
+  /// The chance a festival finds it (both stages), and outside one in a
+  /// month.
+  final double festivalCatch;
+  final double monthlyOutside;
+  final int fineIfFound;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TamperingCard &&
+      other.camel == camel &&
+      other.camelName == camelName &&
+      other.kind == kind &&
+      other.strength == strength &&
+      other.until == until;
+
+  @override
+  int get hashCode => Object.hash(camel, camelName, kind, strength, until);
 }
 
 /// One supply in the farm's store or tank (GDD 4.3: feed and water run out
@@ -730,6 +790,9 @@ class PlayerSnapshot {
     required this.myListings,
     required this.studs,
     required this.festivals,
+    required this.reputation,
+    required this.bannedThrough,
+    required this.tamperings,
     required this.openOffers,
     required this.breedingSeason,
     required this.recentEvents,
@@ -771,6 +834,15 @@ class PlayerSnapshot {
   final List<ListingCard> myListings;
   final List<StudCard> studs;
   final List<FestivalCard> festivals;
+
+  /// الصيت in each family (GDD 8), 0 to 100.
+  final Map<ColorCategory, double> reputation;
+
+  /// The player is barred from festivals through this season, or null.
+  final int? bannedThrough;
+
+  /// The player's own secret treatments showing now.
+  final List<TamperingCard> tamperings;
   final int openOffers;
   final bool breedingSeason;
 
@@ -890,29 +962,68 @@ class CamelDetail {
   final int? quickSalePrice;
 }
 
+/// A round as the player sees it (GDD 7).
 class RoundCard {
   const RoundCard({
     required this.id,
+    required this.kind,
     required this.category,
     required this.sex,
-    required this.age,
+    required this.size,
+    required this.day,
+    required this.lastEntryDay,
+    required this.legacyAge,
+    required this.enterable,
     required this.prizes,
     required this.rivals,
     required this.myEntries,
     required this.eligible,
+    required this.entryFee,
+    required this.judged,
+    required this.announced,
+    required this.announceOn,
+    required this.field,
+    required this.caught,
     required this.results,
   });
 
   final RoundId id;
-  final ColorCategory category;
-  final Sex sex;
-  final AgeClass age;
+  final RoundKind kind;
+  final ColorCategory? category;
+  final Sex? sex;
+
+  /// The head an entry shows (الفحل وإنتاجه: the bull and his offspring).
+  final int size;
+  final GameDay day;
+  final GameDay lastEntryDay;
+
+  /// A round planned before save v8: its one age class.
+  final AgeClass? legacyAge;
+
+  /// A player may enter it now (the group rounds come later).
+  final bool enterable;
   final List<int> prizes;
   final int rivals;
-  final List<CamelCard> myEntries;
 
-  /// The player's camels that may enter this round right now.
+  /// The player's entries, each its camels.
+  final List<List<CamelCard>> myEntries;
+
+  /// The player's camels that may enter now: for a single round each alone;
+  /// for الفحل وإنتاجه the bulls that may, with their offspring.
   final List<CamelCard> eligible;
+
+  /// A head's fee if entered today (a late entry's), else 0.
+  final int entryFee;
+  final bool judged;
+  final bool announced;
+  final GameDay? announceOn;
+
+  /// Entries left after each stage (Stage order).
+  final List<int>? field;
+  final int caught;
+
+  /// The places once announced (others' rows without marks), and the
+  /// player's own removals.
   final List<ResultRow>? results;
 }
 

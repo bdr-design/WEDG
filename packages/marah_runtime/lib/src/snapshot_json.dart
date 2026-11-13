@@ -36,6 +36,12 @@ class SnapshotJson {
     'myListings': [for (final l in s.myListings) listing(l)],
     'studs': [for (final x in s.studs) stud(x)],
     'festivals': [for (final f in s.festivals) festival(f)],
+    'reputation': {
+      for (final e in s.reputation.entries) e.key.name: _tenth(e.value),
+    },
+    'bannedThrough': s.bannedThrough,
+    'tamperings': [for (final t in s.tamperings) tampering(t)],
+    'festivalRules': festivalRules(),
     'openOffers': s.openOffers,
     // الحراج's rules the screens say (Balance): the broker's commission on a
     // sale he brokers, how long a listing stays, how long an offer holds
@@ -250,16 +256,99 @@ class SnapshotJson {
     'name': f.name,
     'region': f.region.name,
     'tier': f.tier.name,
+    'season': f.season,
     'opensOn': f.opensOn.value,
     'closesOn': f.closesOn.value,
-    'judgedOn': f.judgedOn.value,
+    'startsOn': f.startsOn.value,
+    'endsOn': f.endsOn.value,
     'done': f.done,
     'rounds': f.rounds,
     'myEntries': f.myEntries,
     'topPrize': f.topPrize,
     'myBestRank': f.myBestRank,
     'myPrizes': f.myPrizes,
+    'late': f.late,
+    'bannedThrough': f.bannedThrough,
   };
+
+  /// A festival's page (the phone's المزاين app asks for it when opened):
+  /// its rounds, the player's entries and the camels that may enter, the
+  /// day's stages and the places once announced.
+  static Map<String, Object?> festivalDetail(FestivalDetail d) => {
+    'festival': festival(d.card),
+    'distanceKm': d.distanceKm,
+    'transportPerHead': d.transportPerHead,
+    'rounds': [
+      for (final r in d.rounds)
+        {
+          'id': r.id.value,
+          'kind': r.kind.name,
+          'cat': r.category?.name,
+          'sex': r.sex?.name,
+          'size': r.size,
+          'day': r.day.value,
+          'lastEntryDay': r.lastEntryDay.value,
+          'legacyAge': r.legacyAge?.name,
+          'enterable': r.enterable,
+          'prizes': r.prizes,
+          'rivals': r.rivals,
+          'myEntries': [
+            for (final e in r.myEntries) [for (final c in e) camel(c)],
+          ],
+          'eligible': [for (final c in r.eligible) camel(c)],
+          'entryFee': r.entryFee,
+          'judged': r.judged,
+          'announced': r.announced,
+          'announceOn': r.announceOn?.value,
+          'field': r.field,
+          'caught': r.caught,
+          'results': r.results == null
+              ? null
+              : [for (final row in r.results!) row.toJson()],
+        },
+    ],
+  };
+
+  static Map<String, Object?> tampering(TamperingCard t) => {
+    'camel': t.camel.value,
+    'camelName': t.camelName,
+    'kind': t.kind.name,
+    'strength': t.strength,
+    'until': t.until.value,
+    'festivalCatch': _hundredth(t.festivalCatch),
+    'monthlyOutside': _hundredth(t.monthlyOutside),
+    'fineIfFound': t.fineIfFound,
+  };
+
+  /// The festival rules the screens say (Balance, TamperKind): the late
+  /// fee, the hours before a round it closes, the ban's length, and each
+  /// treatment's price, fine cap, features and the chance a festival finds
+  /// it at each strength.
+  static Map<String, Object?> festivalRules() => {
+    'lateEntryFee': Balance.lateEntryFee,
+    'lateEntryHoursBefore': Balance.lateEntryHoursBefore,
+    'banEditionsAfter': Balance.banEditionsAfter,
+    'dnaDays': Balance.dnaDays,
+    'tamperKinds': [
+      for (final k in TamperKind.values)
+        {
+          'kind': k.name,
+          'fineCap': k.fineCap,
+          'traits': [for (final t in k.traits) t.name],
+          'lastsDays': k.lastsDays,
+          'price': [
+            for (var s = 1; s <= 3; s++) ContestRules.tamperPrice(k, s),
+          ],
+          'fine': [for (var s = 1; s <= 3; s++) Balance.tamperFine(k, s)],
+          'festivalCatch': [
+            for (var s = 1; s <= 3; s++)
+              _hundredth(ContestRules.festivalCatchChance(k, s)),
+          ],
+        },
+    ],
+  };
+
+  static double _hundredth(double v) => (v * 100).roundToDouble() / 100;
 
   /// To a tenth: a litre to a tenth is what the screens show, and the full
   /// doubles were most of the milk's bytes.

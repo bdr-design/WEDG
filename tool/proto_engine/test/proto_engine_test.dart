@@ -46,8 +46,20 @@ void main() {
       {'type': 'setShepherds', 'count': 3},
       {'type': 'buildFacility', 'facility': 'tank'},
       {'type': 'setCalfShare', 'share': 'quarter'},
-      {'type': 'enterRound', 'festival': 'f1', 'round': 'r1', 'camel': 'c6'},
+      {
+        'type': 'enterRound',
+        'festival': 'f1',
+        'round': 'r1',
+        'camels': ['c6'],
+      },
+      {
+        'type': 'enterRound',
+        'festival': 'f1',
+        'round': 'r2',
+        'camels': ['c7', 'c8', 'c9'],
+      },
       {'type': 'withdrawEntry', 'festival': 'f1', 'round': 'r1', 'camel': 'c6'},
+      {'type': 'tamper', 'camel': 'c6', 'kind': 'botox', 'strength': 2},
     ];
 
     test('every command reads and writes back the same', () {
@@ -58,7 +70,7 @@ void main() {
         expect(commandToJson(c), j);
       }
       final types = {for (final j in every) j['type']};
-      expect(types, hasLength(18)); // every kind of command
+      expect(types, hasLength(19)); // every kind of command
     });
 
     test('the actor is always the player, whatever the JSON says', () {
@@ -90,6 +102,9 @@ void main() {
         {'type': 'bargain', 'listing': 'l1', 'amount': 9.007199254740992e15},
         {'type': 'treat', 'camel': 7},
         {'type': 'enterRound', 'festival': 'f1', 'camel': 'c1'},
+        {'type': 'enterRound', 'festival': 'f1', 'round': 'r1', 'camels': 'c1'},
+        {'type': 'tamper', 'camel': 'c1', 'kind': 'magic', 'strength': 1},
+        {'type': 'tamper', 'camel': 'c1', 'kind': 'dye', 'strength': 1.5},
       ]) {
         expect(commandFromJson(me, j), isNull, reason: '$j');
       }

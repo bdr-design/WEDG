@@ -73,19 +73,20 @@ class Presenter {
         : const [],
   );
 
-  FestivalCard festival(Festival f) {
+  FestivalCard festival(FestivalView f) {
     var mine = 0;
     int? best;
     var prizes = 0;
     var top = 0;
     for (final r in f.rounds) {
-      mine += r.entries.where((e) => e.ownerId == viewer).length;
-      final p = ContestRules.prizes(f.tier, r.age).first;
+      mine += r.myEntries.length;
+      final p = r.prizes.first;
       if (p > top) top = p;
       for (final row in r.results ?? const <ResultRow>[]) {
         if (row.ownerId != viewer) continue;
         prizes += row.prize;
-        if (best == null || row.rank < best) best = row.rank;
+        final rank = row.rank;
+        if (rank != null && (best == null || rank < best)) best = rank;
       }
     }
     return FestivalCard(
@@ -93,17 +94,35 @@ class Presenter {
       name: f.name,
       region: f.region,
       tier: f.tier,
+      season: f.season,
       opensOn: f.opensOn,
       closesOn: f.closesOn,
-      judgedOn: f.judgedOn,
+      startsOn: f.startsOn,
+      endsOn: f.endsOn,
       done: f.done,
       rounds: f.rounds.length,
       myEntries: mine,
       topPrize: top,
       myBestRank: best,
       myPrizes: prizes,
+      late: f.late,
+      bannedThrough: f.bannedThrough,
     );
   }
+
+  List<TamperingCard> tamperings(GameView v) => [
+    for (final t in v.tamperings)
+      TamperingCard(
+        camel: t.camel.id,
+        camelName: t.camel.name,
+        kind: t.kind,
+        strength: t.strength,
+        until: t.until,
+        festivalCatch: t.festivalCatch,
+        monthlyOutside: t.monthlyOutside,
+        fineIfFound: t.fineIfFound,
+      ),
+  ];
 
   /// Builds the snapshot. Each section's revision moves only when its
   /// content differs from [previous], so screens rebuild only what changed.
@@ -277,6 +296,8 @@ class Presenter {
           BankMonthRow(month: m.month, net: m.net, top: m.top),
       ],
     );
+    final reputation = v.reputation;
+    final tampers = tamperings(v);
 
     final p = previous;
     int bump(int? old, bool same) => old == null ? 1 : (same ? old : old + 1);
@@ -303,7 +324,11 @@ class Presenter {
       studs: bump(p?.sections.studs, p != null && _same(p.studs, studs)),
       festivals: bump(
         p?.sections.festivals,
-        p != null && _same(p.festivals, festivals),
+        p != null &&
+            _same(p.festivals, festivals) &&
+            _same(p.tamperings, tampers) &&
+            p.bannedThrough == v.bannedThrough &&
+            ColorCategory.values.every((c) => p.reputation[c] == reputation[c]),
       ),
       news: bump(
         p?.sections.news,
@@ -330,6 +355,9 @@ class Presenter {
       myListings: myListings,
       studs: studs,
       festivals: festivals,
+      reputation: reputation,
+      bannedThrough: v.bannedThrough,
+      tamperings: tampers,
       openOffers: v.openOffers,
       breedingSeason: v.breedingSeason,
       recentEvents: List.unmodifiable(events),
@@ -391,8 +419,9 @@ class Presenter {
       for (final f in state.world.festivals.values)
         if (!f.done)
           for (final r in f.rounds)
-            for (final e in r.entries)
-              if (e.ownerId == viewer) e.camelId,
+            if (!r.judged)
+              for (final e in r.entries)
+                if (e.ownerId == viewer) ...e.camels,
     };
     for (final c in herd) {
       if (c.sex == Sex.female) {
@@ -506,35 +535,100 @@ class Presenter {
 
   FestivalDetail? festivalDetail(FestivalId id) {
     final v = view;
-    final f = state.world.festivals[id];
+    final f = v.festival(id);
     if (f == null) return null;
-    final km = v.me.farm.region.roadKmTo(f.region);
     final herd = v.herd;
+    final byId = {for (final c in herd) c.id: c};
+    // the best first: a round lists the best few that may enter
+    final best = [for (final c in herd) (c, c.quality)]
+      ..sort((a, b) {
+        final k = b.$2.compareTo(a.$2);
+        return k != 0 ? k : a.$1.id.value.compareTo(b.$1.id.value);
+      });
+    final ranked = [for (final (c, _) in best) c];
     return FestivalDetail(
       card: festival(f),
-      distanceKm: km,
-      transportPerHead: Balance.transportCost(km, 1) * 2,
+      distanceKm: f.distanceKm,
+      transportPerHead: Balance.transportCost(f.distanceKm, 1) * 2,
       rounds: [
         for (final r in f.rounds)
           RoundCard(
             id: r.id,
+            kind: r.kind,
             category: r.category,
             sex: r.sex,
-            age: r.age,
-            prizes: ContestRules.prizes(f.tier, r.age),
+            size: r.size,
+            day: r.day,
+            lastEntryDay: r.lastEntryDay,
+            legacyAge: r.legacyAge,
+            enterable: r.enterable,
+            prizes: r.prizes,
             rivals: r.rivals,
             myEntries: [
-              for (final e in r.entries)
-                if (e.ownerId == viewer && v.camel(e.camelId) != null)
-                  card(v.camel(e.camelId)!, v),
+              for (final e in r.myEntries)
+                [
+                  for (final c in e.camels)
+                    if (byId[c] case final cv?) card(cv, v),
+                ],
             ],
-            eligible: [
-              for (final c in herd)
-                if (v.canEnter(f.id, r.id, c.id) == null) card(c, v),
-            ],
-            results: r.results == null ? null : List.unmodifiable(r.results!),
+            eligible: _eligible(v, f, r, ranked),
+            entryFee: v.entryFee(f.id, 1),
+            judged: r.judged,
+            announced: r.announced,
+            announceOn: r.announceOn,
+            field: r.field,
+            caught: r.caught,
+            results: r.results,
           ),
       ],
     );
+  }
+
+  /// How many camels a round lists that may enter it (the best by look).
+  static const eligibleShown = 20;
+
+  /// The best of the player's camels ([herd], best first) that may enter [r]
+  /// now, [eligibleShown] at most (none once it no longer takes entries):
+  /// each alone for a single round; for الفحل وإنتاجه each bull that may,
+  /// shown with his first offspring in the herd.
+  List<CamelCard> _eligible(
+    GameView v,
+    FestivalView f,
+    RoundView r,
+    List<CamelView> herd,
+  ) {
+    if (v.mayEnter(f.id, r.id) != null) return const [];
+    final out = <CamelCard>[];
+    if (r.kind == RoundKind.fahal) {
+      final kids = <CamelId, List<CamelId>>{};
+      for (final c in herd) {
+        final sire = c.sire?.id;
+        if (sire != null) (kids[sire] ??= []).add(c.id);
+      }
+      for (final c in herd) {
+        if (out.length >= eligibleShown) break;
+        final mine = kids[c.id];
+        if (c.sex != Sex.male || mine == null || mine.length < r.size - 1) {
+          continue;
+        }
+        final group = [c.id, ...mine.take(r.size - 1)];
+        if (v.canEnter(f.id, r.id, group) == null) out.add(card(c, v));
+      }
+      return out;
+    }
+    final age = r.legacyAge;
+    for (final c in herd) {
+      if (out.length >= eligibleShown) break;
+      // the cheap checks first: a herd of thousands, rounds by the dozen
+      final days = r.day.daysSince(c.born);
+      if ((r.category == null || c.category == r.category) &&
+          (r.sex == null || c.sex == r.sex) &&
+          (age != null ||
+              ContestRules.ageFits(r.kind, AgeClass.fromDays(days), days)) &&
+          v.canEnter(f.id, r.id, [c.id]) == null) {
+        out.add(card(c, v));
+      }
+    }
+    return out;
   }
 }

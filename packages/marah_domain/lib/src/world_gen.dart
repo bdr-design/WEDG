@@ -9,6 +9,7 @@ import 'model/camel.dart';
 import 'model/contest.dart';
 import 'model/market.dart';
 import 'rules/balance.dart';
+import 'rules/contest_rules.dart';
 import 'rules/genetics.dart';
 import 'rules/judging.dart';
 import 'rules/names.dart';
@@ -180,32 +181,43 @@ class WorldGen {
 
   // ------------------------------------------------------------ festivals
 
-  /// (balance) The season's festivals (month numbers past 12 fall in the next
-  /// year); most run in the cool months, and Tabuk's in June, as the real one
-  /// (GDD 4.4).
+  /// (balance) The season's festivals and the day each begins (month
+  /// numbers past 12 fall in the next year); most run in the cool months,
+  /// Tabuk's in June, as the real one (GDD 4.4). (field) The grand festival
+  /// begins on 1 December (research section 4).
   static List<(String, Region, FestivalTier, int, int)> seasonPlan(int year) =>
       [
         ('مزاين حائل', Region.hail, FestivalTier.regional, 10, 18),
         ('مزاين القصيم', Region.qassim, FestivalTier.local, 11, 8),
         ('مزاين الجوف', Region.jouf, FestivalTier.regional, 11, 29),
-        ('مهرجان المزاين الكبير', Region.riyadh, FestivalTier.grand, 13, 10),
+        ('مهرجان المزاين الكبير', Region.riyadh, FestivalTier.grand, 12, 1),
         ('مزاين الأحساء', Region.sharqiya, FestivalTier.regional, 14, 7),
         ('مزاين الشمال', Region.northern, FestivalTier.local, 14, 28),
         ('مزاين تبوك', Region.tabuk, FestivalTier.local, 18, 14),
         ('مزاين نجران', Region.najran, FestivalTier.regional, 15, 28),
       ];
 
+  /// The festival's last day: (field) the grand one's on 3 January (the 9th
+  /// and 10th editions, research section 4), (balance) the others' by
+  /// [Balance.regionalFestivalDays] and [Balance.localFestivalDays].
+  static GameDay lastDay(FestivalTier tier, GameDay starts) => switch (tier) {
+    FestivalTier.grand => GameDay.ofDate(DateTime.utc(starts.year + 1, 1, 3)),
+    FestivalTier.regional => starts + (Balance.regionalFestivalDays - 1),
+    FestivalTier.local => starts + (Balance.localFestivalDays - 1),
+  };
+
   /// Schedules the season starting in autumn of [year].
   void planSeason(int year) {
     final w = sim.world;
     final rng = sim.rng(['season', year]);
     for (final (name, region, tier, month, day) in seasonPlan(year)) {
-      final judged = GameDay.ofDate(
+      final starts = GameDay.ofDate(
         DateTime.utc(year + (month - 1) ~/ 12, (month - 1) % 12 + 1, day),
       );
-      if (judged <= sim.today + 8) continue;
+      if (starts <= sim.today + 8) continue;
+      final ends = lastDay(tier, starts);
       final opens =
-          judged -
+          starts -
           (tier == FestivalTier.grand
               ? Balance.grandRegistrationOpensBefore
               : Balance.registrationOpensBefore);
@@ -214,10 +226,12 @@ class WorldGen {
         name: name,
         region: region,
         tier: tier,
+        season: year,
         opensOn: opens < sim.today ? sim.today : opens,
-        closesOn: judged - Balance.registrationClosesBeforeJudging,
-        judgedOn: judged,
-        rounds: _rounds(rng, tier),
+        closesOn: starts - Balance.registrationClosesBeforeStart,
+        startsOn: starts,
+        endsOn: ends,
+        rounds: _rounds(rng, tier, starts, ends),
       );
       w.festivals[f.id] = f;
     }
@@ -225,59 +239,82 @@ class WorldGen {
     sim.emit(SeasonPlanned(sim.today, year: year));
   }
 
-  List<ContestRound> _rounds(Rng rng, FestivalTier tier) {
+  /// (balance) A festival's programme. The grand one: for each colour, الفردي
+  /// دق and جل, مفاريد and دق of القعدان and البكار; for each colour a جمل of
+  /// 40, 60 and 80 head (100 for الحمر and الشقح: research section 2, the
+  /// 2020 sizes) and a منقية of 15, 20 or 30; then منقية الجزيرة (30),
+  /// الهجيج and الطبع (15), البداوة (40) and الفحل وإنتاجه (the bull and his
+  /// offspring). A regional one: five colours' individual rounds, a جمل of 20
+  /// for each and الفحل وإنتاجه. A local one: three colours' الفردي and
+  /// مفاريد. The individual rounds come first, the groups after, منقية
+  /// الجزيرة on the last day; each on its own day, spread over the festival.
+  List<ContestRound> _rounds(
+    Rng rng,
+    FestivalTier tier,
+    GameDay starts,
+    GameDay ends,
+  ) {
     final categories = switch (tier) {
       FestivalTier.grand => ColorCategory.values,
       FestivalTier.regional =>
         rng.shuffled(ColorCategory.values).take(5).toList(),
       FestivalTier.local => rng.shuffled(ColorCategory.values).take(3).toList(),
     };
-    final ages = switch (tier) {
-      FestivalTier.grand => const [
-        AgeClass.mafrood,
-        AgeClass.haq,
-        AgeClass.laqi,
-        AgeClass.jatha,
-        AgeClass.thani,
-        AgeClass.fater,
-      ],
-      FestivalTier.regional => const [
-        AgeClass.haq,
-        AgeClass.laqi,
-        AgeClass.jatha,
-        AgeClass.thani,
-        AgeClass.fater,
-      ],
-      FestivalTier.local => const [
-        AgeClass.laqi,
-        AgeClass.jatha,
-        AgeClass.fater,
-      ],
-    };
-    final rounds = <ContestRound>[];
+    // (kind, colour, sex, size)
+    final plan = <(RoundKind, ColorCategory?, Sex?, int)>[];
     for (final cat in categories) {
-      for (final age in ages) {
-        rounds.add(
-          ContestRound(
-            id: sim.world.ids.round(),
-            category: cat,
-            sex: Sex.female,
-            age: age,
-            rivals: _fieldSize(rng, tier),
-          ),
-        );
-      }
+      plan
+        ..add((RoundKind.fardiDiq, cat, Sex.female, 1))
+        ..add((RoundKind.fardiJil, cat, Sex.female, 1))
+        ..add((RoundKind.mafareed, cat, Sex.female, 1))
+        ..add((RoundKind.mafareed, cat, Sex.male, 1));
       if (tier != FestivalTier.local) {
-        rounds.add(
-          ContestRound(
-            id: sim.world.ids.round(),
-            category: cat,
-            sex: Sex.male,
-            age: AgeClass.fater,
-            rivals: _fieldSize(rng, tier) ~/ 2,
-          ),
-        );
+        plan
+          ..add((RoundKind.diq, cat, Sex.female, 1))
+          ..add((RoundKind.diq, cat, Sex.male, 1));
       }
+    }
+    if (tier == FestivalTier.grand) {
+      for (final cat in categories) {
+        final big = cat == ColorCategory.homr || cat == ColorCategory.shoqh
+            ? 100
+            : 80;
+        for (final n in [40, 60, big]) {
+          plan.add((RoundKind.jamal, cat, Sex.female, n));
+        }
+        plan.add((RoundKind.manqiya, cat, Sex.female, rng.pick([15, 20, 30])));
+      }
+      plan
+        ..add((RoundKind.badawa, null, Sex.female, 40))
+        ..add((RoundKind.hajij, null, Sex.female, 15))
+        ..add((RoundKind.tabaa, null, null, 15));
+    } else if (tier == FestivalTier.regional) {
+      for (final cat in categories) {
+        plan.add((RoundKind.jamal, cat, Sex.female, 20));
+      }
+    }
+    if (tier != FestivalTier.local) {
+      plan.add((RoundKind.fahal, null, null, 1 + ContestRules.fahalOffspring));
+    }
+    if (tier == FestivalTier.grand) {
+      plan.add((RoundKind.jazeera, null, Sex.female, 30));
+    }
+    final days = ends.daysSince(starts) + 1;
+    final rounds = <ContestRound>[];
+    for (var i = 0; i < plan.length; i++) {
+      final (kind, cat, sex, size) = plan[i];
+      final fardi = kind.single || kind == RoundKind.fahal;
+      rounds.add(
+        ContestRound(
+          id: sim.world.ids.round(),
+          kind: kind,
+          category: cat,
+          sex: sex,
+          size: size,
+          day: i == plan.length - 1 ? ends : starts + i * days ~/ plan.length,
+          rivals: fardi ? _fieldSize(rng, tier) : _groupField(rng, tier),
+        ),
+      );
     }
     return rounds;
   }
@@ -286,5 +323,10 @@ class WorldGen {
     FestivalTier.grand => rng.range(28, 44),
     FestivalTier.regional => rng.range(16, 28),
     FestivalTier.local => rng.range(9, 16),
+  };
+
+  static int _groupField(Rng rng, FestivalTier tier) => switch (tier) {
+    FestivalTier.grand => rng.range(8, 16),
+    _ => rng.range(4, 10),
   };
 }

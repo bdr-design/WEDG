@@ -19,7 +19,7 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 7;
+  static const currentVersion = 8;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
@@ -31,6 +31,7 @@ class SaveCodec {
     4: _v4ToV5,
     5: _v5ToV6,
     6: _v6ToV7,
+    7: _v7ToV8,
   };
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
@@ -316,6 +317,81 @@ class SaveCodec {
           'room': 1,
         }
         ..['building'] = <Object?>[];
+    }
+    return data;
+  }
+
+  /// v7 to v8 (the Saudi round system and cheating, GDD 7 and 7.1; the
+  /// owner's decisions of 13 Nov 2026): no one is barred and no camel is;
+  /// no player has a treatment, and his name in each family (الصيت) starts
+  /// where a new game's does. A festival planned before keeps its rounds as
+  /// they were registered, all on its old judging day: each round a single
+  /// round of its colour, sex and one age class (kept as legacyAge, its
+  /// eldest class taking every older camel, as v7 judged it), its kind the
+  /// nearest Saudi one (مفاريد for مفرود; for حق to جذعة الفردي دق, or دق
+  /// for a male; past that الفردي جل, or دق for a male, as no adult male
+  /// round but الفحل's exists), every entry one camel in time; a judged
+  /// round's places announced and paid. Its season is the year of the
+  /// autumn its judging day falls in. The day numbers are from 1 January
+  /// 2026 (written here so the step never depends on today's classes).
+  static Map<String, Object?> _v7ToV8(Map<String, Object?> input) {
+    final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
+    final world = data['world']! as Map<String, Object?>;
+    world['bans'] = <String, Object?>{};
+    for (final c in (world['camels'] as List<Object?>?) ?? const []) {
+      (c! as Map<String, Object?>)['bannedThrough'] = null;
+    }
+    for (final pl in (data['players'] as List<Object?>?) ?? const []) {
+      (pl! as Map<String, Object?>)
+        ..['tamperings'] = <Object?>[]
+        ..['reputation'] = <String, Object?>{};
+    }
+    const young = {'haq', 'laqi', 'jatha'};
+    for (final fe in (world['festivals'] as List<Object?>?) ?? const []) {
+      final f = fe! as Map<String, Object?>;
+      final judged = f.remove('judgedOn')! as int;
+      final date = DateTime.utc(2026).add(Duration(days: judged));
+      f
+        ..['season'] = date.month >= 9 ? date.year : date.year - 1
+        ..['startsOn'] = judged
+        ..['endsOn'] = judged
+        ..['scratched'] = <Object?>[];
+      for (final ro in f['rounds']! as List<Object?>) {
+        final r = ro! as Map<String, Object?>;
+        final age = r.remove('age')! as String;
+        final female = r['sex'] == 'female';
+        final results = r['results'] as List<Object?>?;
+        r
+          ..['kind'] = age == 'mafrood'
+              ? 'mafareed'
+              : young.contains(age)
+              ? (female ? 'fardiDiq' : 'diq')
+              : (female ? 'fardiJil' : 'diq')
+          ..['size'] = 1
+          ..['day'] = judged
+          ..['legacyAge'] = age
+          ..['entries'] = [
+            for (final e
+                in (r['entries']! as List<Object?>)
+                    .cast<Map<String, Object?>>())
+              {
+                'owner': e['owner'],
+                'camels': [e['camel']],
+                'late': false,
+              },
+          ]
+          ..['field'] = null
+          ..['caught'] = 0
+          ..['fines'] = 0
+          ..['announceOn'] = null
+          ..['paid'] = results != null;
+        for (final row in results ?? const <Object?>[]) {
+          (row! as Map<String, Object?>)
+            ..['removedAt'] = null
+            ..['reason'] = null
+            ..['head'] = 1;
+        }
+      }
     }
     return data;
   }
