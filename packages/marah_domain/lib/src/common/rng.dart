@@ -20,22 +20,32 @@ class Rng {
   /// from the seed XORed into the offset basis, and the seed's first byte,
   /// added next, cancelled its own low byte: seeds 1, 2 and 200 drew the same
   /// streams for every key without an id, the review of 57ab698.)
-  static int hashKey(int seed, List<Object> key) {
+  static int hashKey(int seed, List<Object> key) =>
+      hashMore(hashStart(seed), key);
+
+  /// The hash of [seed] alone, to go on with [hashMore]: hashKey(seed, a + b)
+  /// is hashMore(hashMore(hashStart(seed), a), b), so a key's fixed first
+  /// parts are hashed once for many draws (the herd's appraisals).
+  static int hashStart(int seed) {
     var h = 0x811C9DC5;
-    void add(int byte) {
-      h ^= byte & 0xFF;
+    for (var i = 0; i < 4; i++) {
+      h ^= (seed >> (8 * i)) & 0xFF;
       h = _imul(h, 0x01000193);
     }
+    return h;
+  }
 
-    for (var i = 0; i < 4; i++) {
-      add(seed >> (8 * i));
-    }
+  /// [h] carried on over [key]'s parts.
+  static int hashMore(int h, List<Object> key) {
     for (final part in key) {
       for (final unit in part.toString().codeUnits) {
-        add(unit);
-        add(unit >> 8);
+        h ^= unit & 0xFF;
+        h = _imul(h, 0x01000193);
+        h ^= (unit >> 8) & 0xFF;
+        h = _imul(h, 0x01000193);
       }
-      add(0x1F); // separator
+      h ^= 0x1F; // separator
+      h = _imul(h, 0x01000193);
     }
     return h & 0xFFFFFFFF;
   }

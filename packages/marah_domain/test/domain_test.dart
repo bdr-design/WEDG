@@ -1046,8 +1046,40 @@ void main() {
       // neither the sum nor one camel's value can be read back from it
       expect(after, isNot(exact()));
       expect(after - before, isNot(value));
-      // and it stays near the truth: within the 15% the appraisals keep to
-      expect((after / exact() - 1).abs(), lessThanOrEqualTo(0.16));
+      // it is the sum of the appraisals behind each camel's range
+      final herd = g.state.world.aliveOwnedBy(g.me.id);
+      final heard = herd.fold<double>(
+        0,
+        (a, c) =>
+            a + CamelView.appraise(c, g.today, g.me.id, g.state.world.seed),
+      );
+      expect(after, marketRound(heard).value);
+      expect(
+        CamelView.appraiseAll(herd, g.today, g.me.id, g.state.world.seed),
+        closeTo(heard, 1e-6),
+      );
+    });
+
+    test('a calf is a حوار while it suckles, whatever its age class', () {
+      // the owner, 13 Nov 2026: «حوار لين ينفطم»
+      final g = newGame();
+      final w = g.state.world;
+      final calf = w
+          .aliveOwnedBy(g.me.id)
+          .firstWhere((c) => c.ageDays(g.today) < 365);
+      expect(calf.ageClass(g.today), AgeClass.makhlool);
+      expect(Milk.suckling(calf, w, g.today), isTrue);
+      expect(GameView(g.state, g.me.id).suckling(calf.id), isTrue);
+      // not at a year, and not once its mother is gone
+      expect(
+        Milk.suckling(calf, w, calf.born + Balance.lactationDays),
+        isFalse,
+      );
+      final dam = w.camels[calf.dam!.id]!;
+      expect(g.dispatch(QuickSale(g.me.id, dam.id)).ok, isTrue);
+      expect(Milk.suckling(calf, w, g.today), isFalse);
+      // its age class, which the contests go by, is unchanged
+      expect(calf.ageClass(g.today), AgeClass.makhlool);
     });
 
     test('seller stops after three bargains', () {

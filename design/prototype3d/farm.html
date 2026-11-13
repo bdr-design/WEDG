@@ -768,7 +768,7 @@ const tmpV = new THREE.Vector3(), tmpTo = new THREE.Vector3(), tmpAway = new THR
 let LODS = null;      // the camel's three detail levels, once loaded
 // a camel's size by its age, against a grown one's (a game choice, unsourced: a newborn stands about half a grown
 // camel's height, a yearling three quarters; the CIRAD growth study has the heights by age in its charts only, and
-// weights alone, 33 kg at birth and 286 kg at a year (Kamoun, ICAR), give no height). Smooth, so a calf does not jump
+// weights by age give no height). Smooth, so a calf does not jump
 // a size on the day it crosses a year (the re-review)
 const SIZE_AT = [[0, 0.55], [365, 0.75], [730, 0.85], [1095, 0.92], [1460, 1]];
 const sizeOf = (d) => {
@@ -786,7 +786,7 @@ function cardInfo(card) {
   const parts = [];
   if (sick) parts.push(female ? 'مريضة، تبي علاج' : 'مريض، يبي علاج'); else if (treated) parts.push('تحت العلاج');
   if (due != null) parts.push(due <= 1 ? 'تولد بكرة' : `عشار، تولد بعد ${days(due).join(' ')}`);
-  if (mine) parts.push(mine.calfName ? `مرضع، حوارها ${mine.calfName}` : 'تحلب');
+  if (mine) parts.push(mine.calfName ? `مرضع، ${mine.calfSex === 'female' ? 'حوارتها' : 'حوارها'} ${mine.calfName}` : 'تحلب');
   if (mother) parts.push(female ? `ترضع من أمها ${mother.name}` : `يرضع من أمه ${mother.name}`);
   return {
     name: card.name, age: card.ageName, card, sick: sick || treated, due,

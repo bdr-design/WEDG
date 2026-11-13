@@ -519,10 +519,14 @@ class MilkCamel {
     required this.calfName,
     required this.litres,
     required this.sold,
+    this.calfSex,
   });
 
   final CamelId id;
   final String name;
+
+  /// Her calf's sex (the words for it: حوارها, حوارتها), or null.
+  final Sex? calfSex;
 
   /// Days since she calved.
   final int days;
@@ -541,13 +545,14 @@ class MilkCamel {
       other.name == name &&
       other.days == days &&
       other.calfId == calfId &&
+      other.calfSex == calfSex &&
       other.calfName == calfName &&
       other.litres == litres &&
       other.sold == sold;
 
   @override
   int get hashCode =>
-      Object.hash(id, name, days, calfId, calfName, litres, sold);
+      Object.hash(id, name, days, calfId, calfSex, calfName, litres, sold);
 }
 
 /// The farm's milk (the owner, 13 Nov 2026: sold every day; the player

@@ -103,15 +103,33 @@ class CamelView {
 
   /// The appraisal behind [estimate]: [c]'s value as [viewer] hears it this
   /// week, a few percent off the true value.
-  static double appraise(Camel c, GameDay today, OwnerId viewer, int seed) {
+  static double appraise(Camel c, GameDay today, OwnerId viewer, int seed) =>
+      _appraised(c, today, appraisalKey(seed, viewer));
+
+  /// The fixed part of [viewer]'s appraisals' key, hashed once for a herd.
+  static int appraisalKey(int seed, OwnerId viewer) =>
+      Rng.hashMore(Rng.hashStart(seed), ['appraise', viewer.value]);
+
+  static double _appraised(Camel c, GameDay today, int key) {
     final value = Valuation.value(c, today).value.toDouble();
-    final rng = Rng.keyed(seed, [
-      'appraise',
-      viewer.value,
-      c.id.value,
-      today.value ~/ 7,
-    ]);
+    final rng = Rng(Rng.hashMore(key, [c.id.value, today.value ~/ 7]));
     return value * (1 + clampDouble(rng.normal(sd: 0.06), -0.15, 0.15));
+  }
+
+  /// [herd]'s worth as [viewer] hears it: the sum of the appraisals behind
+  /// each camel's range.
+  static double appraiseAll(
+    Iterable<Camel> herd,
+    GameDay today,
+    OwnerId viewer,
+    int seed,
+  ) {
+    final key = appraisalKey(seed, viewer);
+    var sum = 0.0;
+    for (final c in herd) {
+      sum += _appraised(c, today, key);
+    }
+    return sum;
   }
 }
 
@@ -377,19 +395,13 @@ class GameView {
     return handlers.quickSalePrice(c, _sim);
   }
 
-  /// The herd's worth as the viewer hears it: the true values' sum, off by
-  /// a few percent the same way for the whole herd that week (the market's
-  /// mood as he hears it), never the exact sum (the review: with it, buying
-  /// or selling one camel moved it by that camel's exact value). One draw for
-  /// the herd, not one a camel: a draw for each of 10,000 head added a
-  /// quarter to the snapshot's cost in JavaScript (the re-review).
-  Riyal get herdValue {
-    final sum = _w
-        .aliveOwnedBy(viewer)
-        .fold<int>(0, (a, c) => a + Valuation.value(c, today).value);
-    final rng = Rng.keyed(_w.seed, ['herd', viewer.value, today.value ~/ 7]);
-    return marketRound(
-      sum * (1 + clampDouble(rng.normal(sd: 0.06), -0.15, 0.15)),
-    );
-  }
+  /// The herd's worth as the viewer hears it: the sum of the appraisals
+  /// behind each camel's range, so it sits within their ranges' sum (the
+  /// re-review: one draw for the whole herd put it outside them one week in
+  /// nine), and never the exact values' sum (with it, buying or selling one
+  /// camel moved it by that camel's exact value). The key's fixed part is
+  /// hashed once for the herd.
+  Riyal get herdValue => marketRound(
+    CamelView.appraiseAll(_w.aliveOwnedBy(viewer), today, viewer, _w.seed),
+  );
 }

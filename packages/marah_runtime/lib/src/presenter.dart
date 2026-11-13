@@ -212,6 +212,7 @@ class Presenter {
               days: m.days,
               calfId: m.calf?.id,
               calfName: m.calf?.name,
+              calfSex: m.calf?.sex,
               litres: m.litres,
               sold: m.sold,
             ),

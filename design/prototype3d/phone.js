@@ -430,7 +430,7 @@ function milkScreen() {
   const total = M.litres, sold = M.incomeToday / M.price, kept = Math.max(0, total - sold);
   const calves = cs.filter((c) => c.calfName).length;
   // a calf by its own sex: حوارها, or حوارتها for a she-calf (the re-review: the alert said حوارتها, this screen حوارها)
-  const calfWord = (m) => (G.yard.find((x) => x.id === m.calfId)?.sex === 'female' ? 'حوارتها' : 'حوارها');
+  const calfWord = (m) => (m.calfSex === 'female' ? 'حوارتها' : 'حوارها');
   const one = cs.find((c) => c.calfName);
   const keptTo = calves > 1 ? 'للحيران' : `ل${one ? calfWord(one) : 'حوارها'}`;
   if (!cs.length) {
@@ -633,8 +633,7 @@ function sellScreen() {
   HJ.ask = Math.max(min, HJ.ask);
   const fee = Math.round(HJ.ask * G.haraj.commission), what = doing(c);
   const dam = G.farm.milk.camels.find((m) => m.id === c.id && m.calfName);
-  const calf = dam && G.yard.find((x) => x.id === dam.calfId);
-  const cf = (f, m) => (calf && calf.sex === 'female' ? f : m);      // (the calf's own sex)
+  const cf = (f, m) => (dam && dam.calfSex === 'female' ? f : m);      // (the calf's own sex, from the engine: not only the yard's 40)
   // the asking price against the appraisals: above them, fewer buyers come (Balance.buyerInterest); below, money left
   const hint = HJ.ask > c.estimateHigh * 1.15 ? 'سعرك فوق تقديرهم بواجد: السومات تقل.' : HJ.ask < c.estimateLow ? 'سعرك تحت تقديرهم.' : '';
   const sure = HJ.sure === `quick:${c.id}`;
@@ -670,7 +669,7 @@ function myListings() {
 const herdWord = () => {
   if (!G) return '';
   const m = G.farm.milk.camels;
-  return G.herd.total === 2 && m.length === 1 && m[0].calfName ? 'ناقة وحوارها' : unitWord(G.herd.total, 'head');
+  return G.herd.total === 2 && m.length === 1 && m[0].calfName ? (m[0].calfSex === 'female' ? 'ناقة وحوارتها' : 'ناقة وحوارها') : unitWord(G.herd.total, 'head');
 };
 
 const S = {
@@ -850,28 +849,34 @@ export function createPhone({ host }) {
   }
   // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen);
   // a refusal is said on the screen, and what was not taken stays in the order
-  let engine = null, busy = false, sureAt = 0, sureTimer = 0, orderAt = 0;
+  let engine = null, busy = false, sureAt = 0, sureTimer = 0, orderAt = 0, orderKey = '';
   const keyOf = (t) => ['act', 's', 'd', 'p', 't', 'f', 'o', 'id'].map((k) => t.dataset[k] ?? '').join('|');
-  async function act(t) {
+  async function act(t, at = performance.now()) {
     const kind = t.dataset.act, focused = root.activeElement === t ? keyOf(t) : null;
-    ERR = null;
+    // an order's second tap on the same button within DOUBLE_TAP of its answer (by the tap's own time, not when it is
+    // handled) is dropped before anything is cleared: «سوم» tapped twice used two tries, and the dropped tap wiped the
+    // seller's answer (the reviews). Other buttons, and the steppers, are not held back
+    const LOCAL = kind === 'step' || kind === 'tab' || kind === 'bidStep' || kind === 'askStep';
+    const twice = { quick: `quick:${HJ.camel}`, accept: `accept:${t.dataset.o}`, unlist: `unlist:${t.dataset.id}` }[kind];
+    if (!LOCAL && (twice == null || HJ.sure === twice) && keyOf(t) === orderKey && at - orderAt < DOUBLE_TAP) return;
     // الحراج: a sale asked twice (the first tap readies it: HJ.sure); any other tap stands it down. [next]: the screen
     // to go to once the order is done (a camel bought or sold goes back to the market's list)
     // (the second tap comes at least DOUBLE_TAP after the first, else a double tap sold at once; a readied sale stands
     // down by itself after SURE_FOR, as the phone shrinks, and as the day turns: the review)
-    const twice = { quick: `quick:${HJ.camel}`, accept: `accept:${t.dataset.o}`, unlist: `unlist:${t.dataset.id}` }[kind];
-    const now = performance.now();
+    const now = at;
     if (twice != null && HJ.sure === twice && now - sureAt < DOUBLE_TAP) return;
+    ERR = null;
     const ready = twice != null && HJ.sure === twice;
     HJ.sure = twice != null && !ready ? twice : null;
     clearTimeout(sureTimer);
     if (HJ.sure) { sureAt = now; const key = HJ.sure; sureTimer = setTimeout(() => { if (HJ.sure === key) { HJ.sure = null; if (live()) redraw(); } }, SURE_FOR); }
     if (kind !== 'tab' && kind !== 'bidStep' && kind !== 'askStep') HJ.msg = null;      // (the seller's answer stays while the haggle is set again)
     let next = null;
+    let ordered = false;
     const done = () => {
-      // said to a screen reader once, when an order is answered (not again at each stepper's press)
-      const said = HJ.msg ? `${HJ.msg.title}. ${HJ.msg.line}`.replace(/<[^>]+>/g, '') : ERR || '';
-      if (said && said !== sr.textContent) sr.textContent = said;
+      // said to a screen reader when an order is answered, the same words again for a new answer (the region is emptied
+      // as the order goes), and not at a stepper's press
+      if (ordered) sr.textContent = HJ.msg ? `${HJ.msg.title}. ${HJ.msg.line}`.replace(/<[^>]+>/g, '') : ERR || '';
       if (!live()) return;
       if (next) { show(next); if (focused) focusIn(scr.querySelector('.back') || dev); return; }
       redraw();
@@ -886,9 +891,8 @@ export function createPhone({ host }) {
     if (kind === 'bidStep') { const l = listingOf(HJ.listing); if (l) HJ.bid += Number(t.dataset.d) * stepOf(l.askPrice); done(); return; }
     if (kind === 'askStep') { const c = myCamel(HJ.camel); if (c) HJ.ask += Number(t.dataset.d) * stepOf(c.estimateHigh); done(); return; }
     if (twice != null && !ready) { done(); return; }      // (the first tap of a sale: it asks again)
-    if (now - orderAt < DOUBLE_TAP) return;      // (an order's second tap, as its answer was just drawn: «سوم» tapped twice used two tries, the re-review)
     if (!engine || !G || busy) return;
-    busy = true;
+    busy = true; sr.textContent = '';
     const send = async (command) => { const r = await engine.dispatch(command); if (!r.ok) ERR = refusal(r, command); return r.ok; };
     try {
       if (kind === 'plan' && t.dataset.p !== G.farm.feedPlan) await send({ type: 'setFeedPlan', plan: t.dataset.p });
@@ -913,8 +917,8 @@ export function createPhone({ host }) {
       ERR = 'ما وصل الطلب، جرّب مرة ثانية.';
       console.warn('phone:', err);
     } finally {
-      busy = false; orderAt = performance.now();
-      done();
+      busy = false; orderAt = performance.now(); orderKey = keyOf(t);
+      ordered = true; done();
     }
     // a purchase, at the asking price or by a haggle: the seller's answer is said on the camel's page (a lower price, or
     // no); one bought goes back to the list, with the word that it comes tomorrow
@@ -963,7 +967,9 @@ export function createPhone({ host }) {
     }
   }
   scr.addEventListener('keydown', (e) => {
-    if (e.repeat) return;      // (a key held: its repeats are not more presses; held, Enter sold a readied camel, the re-review)
+    // a key held: its repeats are not more presses, and the browser's own click for each is stopped too (held, Enter
+    // clicked once a repeat and Space once on release, and sold a readied camel: the reviews)
+    if (e.repeat) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-act], [data-go]')) e.preventDefault(); return; }
     const a = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-act]');
     if (a) { e.preventDefault(); act(a); return; }
     const t = (e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-go]');
@@ -978,7 +984,7 @@ export function createPhone({ host }) {
     // under the finger: not taken (the review: a double tap on a market row bought the camel under it)
     if (e.detail !== 0 && performance.now() - shownAt < DOUBLE_TAP) return;
     const a = e.target.closest('[data-act]');
-    if (a) { if (!a.disabled) act(a); return; }
+    if (a) { if (!a.disabled) act(a, e.timeStamp); return; }
     const t = e.target.closest('[data-go], .back');
     if (!t) return;
     pick(t); show(t.dataset.go || 'home');
