@@ -24,6 +24,13 @@ List<String> checkInvariants(GameState s) {
         problems.add('ledger goes back at row $i for ${p.id.value}');
         break;
       }
+      }
+    }
+    // the merchant's account: never below zero, never more than the money
+    // is below zero (it is part of that debt, and clears with it)
+    final debt = p.cash.isNegative ? -p.cash.value : 0;
+    if (p.onAccount < 0 || p.onAccount > debt) {
+      problems.add('account ${p.onAccount} outside 0..$debt for ${p.id.value}');
     }
   }
   for (final l in w.listings.values) {

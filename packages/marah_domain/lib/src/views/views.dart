@@ -146,6 +146,7 @@ class ListingView {
     this.transport,
     this.knownTreatments,
   ) : id = listing.id,
+      timesChecked = listing.checks[camel._viewer.value] ?? 0,
       askPrice = listing.askPrice,
       region = listing.region,
       expiresOn = listing.expiresOn,
@@ -167,6 +168,10 @@ class ListingView {
   /// Treatments in her the viewer's vet found (CheckListing); never one he
   /// was not told of.
   final List<TamperKind> knownTreatments;
+
+  /// How many times the viewer's vet has looked at her (so the phone can
+  /// say "checked N times, nothing found").
+  final int timesChecked;
 }
 
 class StudView {

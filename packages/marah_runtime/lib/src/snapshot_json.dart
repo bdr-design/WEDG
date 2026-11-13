@@ -238,6 +238,7 @@ class SnapshotJson {
     'isMine': l.isMine,
     if (l.knownTreatments.isNotEmpty)
       'treatments': [for (final k in l.knownTreatments) k.name],
+    if (l.timesChecked > 0) 'checked': l.timesChecked,
     'offers': [
       for (final o in l.offers)
         {
