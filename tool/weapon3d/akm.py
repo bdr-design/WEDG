@@ -302,8 +302,11 @@ class Build:
                 for lp, u, v in zip(f.loops, us, fr):
                     lp[uv].uv = (u, v0 + mv + v / 2.0 * (v1 - v0 - 2 * mv))
             else:
-                a = [co.x * 0.0131 + co.z * 0.0173 + co.y * 0.0071 for co in cos]
-                b = [co.y * 0.0193 + co.z * 0.0117 + co.x * 0.0057 for co in cos]
+                # laid flat on the side the face looks to (square, so the steel's grain is not drawn out)
+                n = f.normal
+                i, j = ((0, 2) if abs(n.y) >= max(abs(n.x), abs(n.z)) else (0, 1) if abs(n.z) >= abs(n.x) else (1, 2))
+                a = [co[i] / 76.0 for co in cos]
+                b = [co[j] / 76.0 for co in cos]
                 k = max(1.0, (max(a) - min(a)) * 1.001, (max(b) - min(b)) * 1.001)      # the same both ways: no streaks
                 a, b = fit(a, k), fit(b, k)
                 for lp, x, y in zip(f.loops, a, b):
