@@ -158,6 +158,9 @@ const CSS = `
   .msgc.good { box-shadow: inset 0 0 0 1.5px #bfe3d2; }
   .msgc .lead { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--acc-soft); color: var(--acc); grid-row: span 2; align-self: start; }
   .msgc b { font-size: 13.5px; } .msgc small { font-size: 11.5px; color: var(--ink2); }
+  .row.ord.full .stp { grid-row: 1; }      /* (a price's stepper: its line under it as well, not squeezed beside it) */
+  .row.ord.full small { grid-column: 2 / 4; }
+  .nw { white-space: nowrap; }
 `;
 
 const I = {
@@ -549,7 +552,7 @@ function marketList() {
   if (!list.length) return '<div class="note">ما فيه شي معروض اليوم. يجي حلال جديد كل يوم.</div>';
   const item = (l) => {
     const c = l.camel;
-    return `<div class="it" data-go="listing" data-id="${esc(l.id)}" role="button" tabindex="0" aria-label="${titleOf(c)} بـ ${n0(l.askPrice)} ريال"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${REGION[l.region]} · ${esc(l.sellerName)} · النقل ${n0(l.transport)} ريال</small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)}</small></div>`;
+    return `<div class="it" data-go="listing" data-id="${esc(l.id)}" role="button" tabindex="0" aria-label="${titleOf(c)} بـ ${n0(l.askPrice)} ريال"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${REGION[l.region]} · ${esc(l.sellerName)} · <span class="nw">النقل ${n0(l.transport)} ريال</span></small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)}</small></div>`;
   };
   return `<div class="note" style="margin-top:-4px">${count(list.length, 'head')} معروض · رصيدك ${n0(G.cash)} ريال</div>
     <div class="lst">${list.map(item).join('')}</div>`;
@@ -575,7 +578,7 @@ function listingScreen() {
   ].join('');
   const why = full ? 'عزبتك مليانة: ابنِ شبك من العزبة.' : poor ? `رصيدك ${n0(G.cash)} ريال ما يكفي.` : '';
   const canBuy = !full && !poor;
-  const bidRow = `<div class="group"><div class="row ord"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} عند ${esc(l.sellerName)}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
+  const bidRow = `<div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} عند ${esc(l.sellerName)}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
   return `<div class="body">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${msgCard()}${errCard()}
     <div class="it big"><span class="ph">${photo(c)}</span>${facts}</div>
     <div class="tank"><small>اللي تدفعه</small>
@@ -624,7 +627,7 @@ function sellScreen() {
     <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small>${what ? `<small>${what}</small>` : ''}</div>
     ${dam ? alertCard(`حوارها ${esc(dam.calfName)} يرضع منها`, 'لو بعتها يضعف بدون حليب أمه، خصوصًا قبل 3 شهور.') : ''}
     <div class="sec">${her(c, 'اعرضها', 'اعرضه')} بالحراج</div>
-    <div class="group"><div class="row ord"><span class="lead">${svg('haraj')}</span><b>سعرك</b><span class="stp"><button data-act="askStep" data-d="-1" aria-label="سعر أقل" ${HJ.ask - k >= min ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.ask)}</b> <span>ريال</span></span><button data-act="askStep" data-d="1" aria-label="سعر أكثر">${svg('plus')}</button></span><small>السعي ${n0(fee)} ريال · يوصلك ${n0(HJ.ask - fee)}</small></div></div>
+    <div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سعرك</b><span class="stp"><button data-act="askStep" data-d="-1" aria-label="سعر أقل" ${HJ.ask - k >= min ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.ask)}</b> <span>ريال</span></span><button data-act="askStep" data-d="1" aria-label="سعر أكثر">${svg('plus')}</button></span><small>السعي ${n0(fee)} ريال · يوصلك ${n0(HJ.ask - fee)}</small></div></div>
     ${hint ? `<div class="note">${hint}</div>` : ''}
     <button class="btn pri wide" data-act="list">${her(c, 'اعرضها', 'اعرضه')} بـ ${n0(HJ.ask)}</button>
     <div class="note">تجيك السومات بإعلاناتي، وتقبل أو ترفض. الإعلان يبقى ${days(G.haraj.listingDays)}.</div>
