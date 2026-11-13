@@ -5,8 +5,8 @@
 // owner, 13 Nov); a tap outside it makes it small again. It shows the player's own game only, from the rules engine
 // (setGame), and sends the player's orders to it (setEngine): the home screen (the date and its season, the balance,
 // the herd), الوايت and العلف (approved 12 Nov: design/ui/phone_supplies.html), الحليب and العزبة (13 Nov:
-// design/ui/phone_start_*.jpg) and الحراج (13 Nov: design/ui/phone_haraj.jpg). The design's other screens
-// (design/ui/phone.html: bank, auction, a talk with a buyer, weather) and the other apps come in as each works on the
+// design/ui/phone_start_*.jpg), الحراج (13 Nov: design/ui/phone_haraj.jpg) and البنك (13 Nov: design/ui/phone_bank.jpg).
+// The design's other screens (design/ui/phone.html: auction, a talk with a buyer, weather) and the other apps come in as each works on the
 // engine; until then they are not shown (the owner, 13 Nov: no example content in a new game).
 // Light: plain DOM in a shadow root (its styles and the page's cannot touch each other), no canvas, no blur; while it
 // is enlarged the page stops drawing the 3D scene (farm.html).
@@ -134,6 +134,16 @@ const CSS = `
   .seg span { cursor: pointer; }
   .hs .datebar { align-self: center; font-size: 12px; font-weight: 700; color: #2b2116; background: rgba(255,255,255,.7); border-radius: 12px; padding: 4px 12px; text-align: center; }
   .datebar span { white-space: nowrap; }
+  /* ---------- البنك (approved 13 Nov 2026: design/ui/phone_bank.jpg, its styles from design/ui/phone.html) ---------- */
+  .balance { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
+  .balance small { font-size: 12px; color: var(--ink2); font-weight: 500; }
+  .balance .v { font: 700 30px/1.1 "Alexandria", sans-serif; margin-top: 2px; letter-spacing: -.01em; white-space: nowrap; }
+  .balance .v span { font-size: 15px; font-weight: 600; color: var(--ink2); margin-inline-start: 4px; }
+  .balance .ln { font-size: 12px; font-weight: 500; }
+  .balance .v.bad { color: var(--red); }      /* (a balance under zero: what the player owes, «عليك») */
+  .row .amt { grid-row: span 2; font: 600 14px/1 "Alexandria", sans-serif; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
+  .row .amt.pos { color: var(--acc); }
+  .row .lead.out { background: #f1f1f4; color: #55555b; }
   /* ---------- الحراج (approved 13 Nov 2026: design/ui/phone_haraj.jpg, its list styles from design/ui/phone.html) ---------- */
   .seg.two { grid-template-columns: 1fr 1fr; }
   .seg .dot { display: inline-block; min-width: 17px; height: 17px; border-radius: 9px; background: var(--red); color: #fff; font: 700 10.5px/17px "Alexandria", sans-serif; text-align: center; padding: 0 4px; margin-inline-start: 3px; font-style: normal; vertical-align: 1px; }
@@ -188,6 +198,7 @@ const I = {
     user: '<circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c.6-3.3 3-5 6.5-5s5.9 1.7 6.5 5"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     talk: '<path d="M4 5.5h16v10H9l-5 4z"/>',
+    bank: '<path d="M3.5 9.5 12 4l8.5 5.5"/><path d="M5.5 10v7.5M10 10v7.5M14 10v7.5M18.5 10v7.5"/><path d="M3.5 20h17"/>',
   };
 const svg = (k) => `<svg class="i" viewBox="0 0 24 24">${I[k]}</svg>`;
 // the status bar: the time is the player's own clock (kept to the minute while the phone is out)
@@ -195,7 +206,7 @@ const clockText = () => { const d = new Date(); return `${d.getHours() % 12 || 1
 const sbar = () => `<div class="sbar"><span class="clk">${clockText()}</span><span class="r"><svg width="16" height="11" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35"/></svg><span class="bat"></span></span></div>`;
 // the top bar: رجوع goes home, or to the screen [to] (الحراج's pages, one inside another)
 const nav = (end = '', to = '') => `<div class="nav"><button class="back"${to ? ` data-go="${to}"` : ''}>${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
-const APP_GO = { water: 'water', feed: 'feed', milk: 'milk', build: 'build', haraj: 'haraj' };      // the apps that open a screen
+const APP_GO = { water: 'water', feed: 'feed', milk: 'milk', build: 'build', haraj: 'haraj', bank: 'bank' };      // the apps that open a screen
 const badgeSaid = (extra, k) => { const m = extra.match(/class="bd">(\d+)</); return !m ? '' : k === 'haraj' ? `، ${count(Number(m[1]), 'bid')}` : k === 'water' ? '، الماء يخلص' : m[1] === '1' ? '، صنف يخلص' : '، الشعير والبرسيم يخلصون'; };
 const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra, k)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge)
 
@@ -207,7 +218,7 @@ const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${AP
 let G = null, ERR = null;
 const ORD = { barley: null, alfalfa: null };
 const n0 = (v) => Math.round(v).toLocaleString('en-US');
-// the GDD's counting rule (8): one and two by the word, 3 to 10 the plural, 11 and up the singular
+// the GDD's counting rule (9, «الكتابة»): one and two by the word, 3 to 10 the plural, 11 and up the singular
 const NOUN = {
   day: ['يوم واحد', 'يومين', 'أيام', 'يوم'],
   bag: ['كيس واحد', 'كيسين', 'أكياس', 'كيس'],
@@ -219,6 +230,13 @@ const NOUN = {
   camel: ['ناقة وحدة', 'ناقتين', 'نياق', 'ناقة'],
   year: ['سنة وحدة', 'سنتين', 'سنين', 'سنة'],
   bid: ['سومة وحدة', 'سومتين', 'سومات', 'سومة'],
+  order: ['طلب واحد', 'طلبين', 'طلبات', 'طلب'],          // (البنك: a feed or water order)
+  trip: ['نقلة وحدة', 'نقلتين', 'نقلات', 'نقلة'],         // (a truck's trip: a camel home, to a stud, to a festival)
+  treat: ['علاج واحد', 'علاجين', 'علاجات', 'علاج'],       // (the vet's treatment)
+  prize: ['جائزة وحدة', 'جائزتين', 'جوائز', 'جائزة'],
+  mating: ['تلقيح واحد', 'تلقيحين', 'تلقيحات', 'تلقيح'],   // (a stud's fee, one a mating)
+  build: ['منشأة وحدة', 'منشأتين', 'منشآت', 'منشأة'],
+  time: ['مرة وحدة', 'مرتين', 'مرات', 'مرة'],
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const days = (n) => count(n, 'day');
@@ -666,6 +684,90 @@ function myListings() {
   }).join('') + `<div class="note">السوم يبقى ${days(G.haraj.offerDays)}، وإذا ما قبلته يروح.</div>`;
 }
 
+// ---------------------------------------------------------------- البنك (approved 13 Nov 2026: design/ui/phone_bank.jpg)
+// The player's money from the engine's ledger: the balance, today's money (its net in the home widget's words, and what
+// came in and went out when it moved both ways), every month with its net and the kind that moved the most money (the
+// owner's option B), the opening balance in a line; and a month opened, its kinds, money in and out apart. A sale is
+// what reached the player, its price and السعي in its line (the owner: السعي goes with its sale). The month's kinds come
+// from the engine when it is opened (engine.bankMonth: the snapshot carries each month's net and biggest kind only).
+// BK: the month opened ('YYYY-MM'), its kinds as the engine gave them, and the bank revision they were read at.
+const BK = { month: null, data: null, rev: null, asked: 0 };
+const dayName = (iso) => `${Number(iso.slice(8, 10))} ${MONTH[Number(iso.slice(5, 7)) - 1]}`;
+const monName = (ym) => MONTH[Number(ym.slice(5, 7)) - 1];
+const monthName = (ym) => `${monName(ym)} ${ym.slice(0, 4)}`;
+const signed = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + n0(Math.abs(v));
+const inOut = (inn, out) => [inn ? `دخل ${n0(inn)} ريال` : '', out ? `طلع ${n0(out)} ريال` : ''].filter(Boolean).join(' · ');
+const FAC_NAME = (f) => (f === 'pen' ? 'شبك' : FAC[f]?.name ?? '');
+// each kind: its name, its icon, and the line under it (the line's fields as the engine gives them)
+const one = (l) => l.count === 1;
+const KIND = {
+  milk: { name: 'الحليب', icon: 'milk', line: (l, cur) => (cur ? 'ينباع كل يوم، لين اليوم' : 'ينباع كل يوم') },
+  sale: { name: 'بيع حلال', icon: 'camel', line: (l) => {
+    const what = one(l) && l.name ? `${esc(l.name)} بـ ${n0(l.price)}` : `${count(l.count, 'head')} بـ ${n0(l.price)}`;
+    return l.fee ? `${what} · السعي ${n0(l.fee)}` : one(l) && l.day ? `${what} · ${dayName(l.day)}` : what;
+  } },
+  prize: { name: 'جوائز المزاين', icon: 'camel', line: (l) => (one(l) && l.name ? esc(l.name) : count(l.count, 'prize')) },
+  purchase: { name: 'شراء حلال', icon: 'camel', line: (l) => (one(l) && l.name ? `${esc(l.name)} · ${dayName(l.day)}` : count(l.count, 'head')) },
+  transport: { name: 'النقل', icon: 'truck', line: (l) => {
+    if (!one(l) || !l.trip) return count(l.count, 'trip');
+    if (l.trip === 'festival') return `${l.name ? esc(l.name) : 'المزاين'}، رايح جاي`;
+    return l.name ? (l.trip === 'purchase' ? `نقل ${esc(l.name)} لعزبتك` : `نقل ${esc(l.name)} للفحل`) : count(1, 'trip');
+  } },
+  feed: { name: 'العلف', icon: 'feed', line: (l) => count(l.count, 'order') },
+  water: { name: 'الوايت', icon: 'water', line: (l) => count(l.count, 'order') },
+  wages: { name: 'رواتب الرعاة', icon: 'user', line: () => 'تنخصم أول الشهر' },
+  construction: { name: 'البناء', icon: 'build', line: (l) => (l.facilities?.length === l.count ? l.facilities.map(FAC_NAME).join('، ') : count(l.count, 'build')) },
+  vet: { name: 'البيطري', icon: 'user', line: (l) => count(l.count, 'treat') },
+  studFee: { name: 'أجرة الفحل', icon: 'camel', line: (l) => count(l.count, 'mating') },
+};
+// a kind this phone has no words for yet (the engine may add one before the phone knows it): said plainly, never broken
+const OTHER = { name: 'حركة ثانية', icon: 'bank', line: (l) => (one(l) && l.day ? dayName(l.day) : count(l.count, 'time')) };
+const kindOf = (k) => KIND[k] || OTHER;
+// a month's biggest kind on the main screen («أكبرها: …»): a camel bought or sold by its name, a sale by what reached
+// the player
+function biggest(l) {
+  const a = n0(Math.abs(l.amount));
+  if (l.kind === 'purchase' && one(l) && l.name) return `شراء ${esc(l.name)} ${a} ريال`;
+  if (l.kind === 'sale' && one(l) && l.name) return `بيع ${esc(l.name)}، وصلك ${a} ريال`;
+  return `${kindOf(l.kind).name} ${a} ريال`;
+}
+// today: the net as the home widget says it; the split on a grey line under it when money moved both ways; green only
+// when money only came in
+function todayLines() {
+  const B = G.bank, inn = B.todayIn, out = B.todayOut, net = inn - out;
+  const head = net > 0 ? `دخل اليوم ${n0(net)} ريال` : net < 0 ? `صرفت اليوم ${n0(-net)} ريال` : inn ? 'اليوم ما زاد ولا نقص' : 'ما فيه حركة اليوم';
+  return `<div class="ln${inn && !out ? ' pos' : !inn && !out ? ' ink2' : ''}">${head}</div>${inn && out ? `<div class="ln ink2">${inOut(inn, out)}</div>` : ''}`;
+}
+function bankScreen() {
+  if (!G) return `<div class="body">${nav()}<div class="title">البنك</div>${waiting()}</div>`;
+  const B = G.bank, now = G.date.slice(0, 7);
+  const row = (m) => {
+    const t = m.top, k = kindOf(t.kind), cur = m.month === now, name = cur ? `${monName(m.month)} · هالشهر` : monthName(m.month);
+    return `<div class="row" data-go="bankMonth" data-month="${m.month}" role="button" tabindex="0" aria-label="${name}، ${m.net < 0 ? 'صرفت' : 'دخلك'} ${n0(Math.abs(m.net))} ريال"><span class="lead${t.amount < 0 ? ' out' : ''}">${svg(k.icon)}</span><b>${name}</b><span class="amt${m.net > 0 ? ' pos' : ''}">${signed(m.net)}</span><small>أكبرها: ${biggest(t)}</small></div>`;
+  };
+  const first = B.startedOn === G.date
+    ? `بديت اليوم برصيد ${n0(B.opening)} ريال.${G.farm.milk.sold > 0.05 ? ' حليب ناقتك أول دخل لك: يمر المشتري بكرة وياخذه.' : ''}`
+    : `بديت اللعبة ${dayName(B.startedOn)} ${B.startedOn.slice(0, 4)} برصيد ${n0(B.opening)} ريال.`;
+  return `<div class="body">${nav()}<div class="title">البنك</div>
+    <div class="balance">${G.cash < 0 ? `<small>عليك</small><div class="v bad"><b class="fit">${n0(-G.cash)}</b><span>ريال</span></div>` : `<small>رصيدك</small><div class="v"><b class="fit">${n0(G.cash)}</b><span>ريال</span></div>`}${todayLines()}</div>
+    ${B.months.length ? `<div class="sec">الشهور</div><div class="group">${B.months.map(row).join('')}</div>` : ''}
+    <div class="note">${first}</div></div>`;
+}
+function bankMonthScreen() {
+  const ym = BK.month, m = BK.data;
+  if (!G || !ym || !m) return `<div class="body">${nav('', 'bank')}<div class="title">${ym ? monthName(ym) : 'البنك'}</div>${waiting()}</div>`;
+  const cur = ym === G.date.slice(0, 7), net = m.in - m.out;
+  const line = (l) => { const k = kindOf(l.kind); return `<div class="row"><span class="lead${l.amount < 0 ? ' out' : ''}">${svg(k.icon)}</span><b>${k.name}</b><span class="amt${l.amount > 0 ? ' pos' : ''}">${signed(l.amount)}</span><small>${k.line(l, cur)}</small></div>`; };
+  const ins = m.lines.filter((l) => l.amount > 0), outs = m.lines.filter((l) => l.amount <= 0);
+  // a month without milk says so
+  const noMilk = m.lines.some((l) => l.kind === 'milk') ? '' : `<div class="row"><span class="lead out">${svg('milk')}</span><b>الحليب</b><span class="amt"></span><small>ما فيه حليب ${cur ? 'هالشهر' : `في ${monName(ym)}`}</small></div>`;
+  return `<div class="body">${nav('', 'bank')}<div class="title">${monthName(ym)}</div>
+    <div class="balance"><small>${cur ? 'الصافي لين اليوم' : 'الصافي'}</small><div class="v${net > 0 ? ' pos' : ''}"><bdi dir="ltr">${signed(net)}</bdi><span>ريال</span></div>
+      <div class="ln ink2">${inOut(m.in, m.out)}</div></div>
+    <div class="sec">الدخل</div><div class="group">${ins.map(line).join('')}${noMilk}</div>
+    ${outs.length ? `<div class="sec">المصروف</div><div class="group">${outs.map(line).join('')}</div>` : ''}</div>`;
+}
+
 const herdWord = () => {
   if (!G) return '';
   const m = G.farm.milk.camels;
@@ -678,7 +780,7 @@ const S = {
     // the example content of the design's screens, are not shown until they work on the engine)
     home: () => `<div class="body"><div class="hs">${dateLine()}
       <div class="widgets">
-        <div class="wg"><small>الرصيد</small><div class="big2"><b class="fit">${G ? n0(G.cash) : '…'}</b></div><div class="ln ink2">ريال</div><div class="ln${G && !G.todayNet ? ' ink2' : ''}">${!G ? '' : G.todayNet > 0 ? `<span class="pos">دخل اليوم ${n0(G.todayNet)}</span>` : G.todayNet < 0 ? `صرفت اليوم ${n0(-G.todayNet)}` : 'ما فيه حركة اليوم'}</div></div>
+        <div class="wg" data-go="bank" role="button" tabindex="0" aria-label="الرصيد ${G ? n0(G.cash) : ''} ريال، البنك"><small>الرصيد</small><div class="big2"><b class="fit">${G ? n0(G.cash) : '…'}</b></div><div class="ln ink2">ريال</div><div class="ln${G && !G.todayNet ? ' ink2' : ''}">${!G ? '' : G.todayNet > 0 ? `<span class="pos">دخل اليوم ${n0(G.todayNet)}</span>` : G.todayNet < 0 ? `صرفت اليوم ${n0(-G.todayNet)}` : 'ما فيه حركة اليوم'}</div></div>
         <div class="wg"><small>الحلال</small><div class="big2"><b class="fit">${G ? n0(G.herd.total) : '…'}</b></div><div class="ln ink2">${herdWord()}</div><div class="ln ink2">${G && G.herd.total ? `قيمته ${n0(G.herdValue)} ريال` : ''}</div></div>
       </div>
       <div class="apps">
@@ -687,6 +789,7 @@ const S = {
         ${app('milk', 'الحليب')}
         ${app('build', 'العزبة')}
         ${app('haraj', 'الحراج', badge(G ? G.openOffers : 0))}
+        ${app('bank', 'البنك')}
       </div></div></div>`,
     water: waterScreen,
     feed: feedScreen,
@@ -696,6 +799,8 @@ const S = {
     listing: listingScreen,
     pick: pickScreen,
     sell: sellScreen,
+    bank: bankScreen,
+    bankMonth: bankMonthScreen,
   };
 
 export function createPhone({ host }) {
@@ -721,7 +826,7 @@ export function createPhone({ host }) {
     for (const e of scr.querySelectorAll('.fit')) {
       e.style.fontSize = '';
       if (st.state !== 'big') continue;
-      const card = e.closest('.wg, .tank');      // (the box that holds it)
+      const card = e.closest('.wg, .tank, .balance');      // (the box that holds it)
       let pad = 0;
       for (let q = e.parentElement; q; q = q.parentElement) { const c = getComputedStyle(q); pad += parseFloat(c.paddingLeft) + parseFloat(c.paddingRight); if (q === card) break; }
       const across = (q) => { const r = q.getBoundingClientRect(); return turned() ? r.height : r.width; };      // (along the phone's width on the screen: turned, the screen's height)
@@ -838,7 +943,32 @@ export function createPhone({ host }) {
     if (to === 'listing' && id) { HJ.listing = id; HJ.bid = null; }
     if (to === 'sell' && id) { HJ.camel = id; HJ.ask = null; }
     if (to === 'haraj' && st.screen === 'home') HJ.tab = 'market';      // (the app opened afresh: what is for sale)
+    if (to === 'bankMonth' && t.dataset.month) { BK.month = t.dataset.month; BK.data = null; loadMonth(); }
   }
+  // البنك: the month opened, its kinds asked of the engine (again when money moves while it is open); an answer that
+  // comes after another was asked for is dropped
+  async function loadMonth() {
+    if (!engine || !BK.month) return;
+    const ask = ++BK.asked, month = BK.month, rev = G ? G.sections.bank : null;
+    let r = null;
+    try { r = await engine.bankMonth(month); } catch (err) { console.warn('phone:', err); }
+    if (ask !== BK.asked || month !== BK.month) return;
+    BK.rev = rev;
+    if (r && r.ok && r.month) BK.data = r.month;
+    else if (r && r.ok) { BK.month = null; BK.data = null; if (live() && st.screen === 'bankMonth') show('bank'); return; }      // (no money in it: not a month the list has)
+    if (live() && st.screen === 'bankMonth') redrawBank();
+  }
+  // a bank screen drawn again with the keyboard's place kept (its kinds come a moment after the month opens, and a
+  // snapshot redraws it: the control that had the focus is the same one drawn again)
+  function redrawBank() {
+    const f = root.activeElement, inScr = f && scr.contains(f);
+    const sel = !inScr ? null : f.classList.contains('back') ? '.back' : f.dataset.month ? `[data-month="${f.dataset.month}"]` : f.dataset.go ? `[data-go="${f.dataset.go}"]` : null;
+    redraw();
+    if (inScr) focusIn((sel && scr.querySelector(sel)) || scr.querySelector('.back') || dev);
+  }
+  // what the bank's screens show changes only with the bank's revision, the balance, the day, or (day one's line)
+  // whether the day's milk is sold: another snapshot leaves them as they are
+  const bankKey = (g) => (g ? [g.sections.bank, g.cash, g.date, g.farm.milk.sold > 0.05].join('|') : '');
   // the screens the game's numbers fill are drawn again when they change, the scroll kept
   const live = () => st.state !== 'closed';      // (every screen shows the game's own numbers)
   function redraw() {
@@ -1008,7 +1138,15 @@ export function createPhone({ host }) {
     setPlay: (on) => { st.play = on; if (st.state !== 'closed') layout(); },
     onChange: (f) => listeners.add(f),
     /** The engine's newest view of the game (engine.js), and the engine to send the player's orders to. */
-    setGame: (snapshot) => { if (G && snapshot && snapshot.today !== G.today) HJ.msg = HJ.sure = null; G = snapshot; if (live()) redraw(); },      // (the word after an order, and a sale readied, are for their day)
+    setGame: (snapshot) => {
+      if (G && snapshot && snapshot.today !== G.today) HJ.msg = HJ.sure = null;
+      const was = G; G = snapshot;
+      if (!live()) return;
+      const bank = st.screen === 'bank' || st.screen === 'bankMonth';
+      if (st.screen === 'bankMonth' && G && G.sections.bank !== BK.rev) loadMonth();      // (money moved: the month's kinds read again)
+      if (bank && was && bankKey(was) === bankKey(G)) return;
+      if (bank) redrawBank(); else redraw();
+    },      // (the word after an order, and a sale readied, are for their day)
     setEngine: (e) => { engine = e; },
     get state() { return st.state; }, get big() { return st.state === 'big'; },
   };

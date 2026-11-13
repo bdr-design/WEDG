@@ -113,6 +113,8 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
     get snapshot() { return last; },
     /** A command as JSON ({type, ...}: tool/proto_engine/lib/commands_json.dart); resolves to {ok, error, events}. */
     dispatch: (command) => call('dispatch', { command }),
+    /** One month of البنك ('YYYY-MM'), when it is opened: resolves to {ok, month: {month, in, out, lines} or null}. */
+    bankMonth: (month) => call('bankMonth', { month }),
     /** Saves now; resolves when the save has been kept. */
     flush: () => call('flush'),
     /** After a save that could not be read: the last one that was. */
