@@ -294,6 +294,15 @@ Checked against search results; most news hosts cannot be opened from here, so a
 - **Falconry events:** the King Abdulaziz Falconry Festival at Malham: 25 December 2025 to 10 January 2026 last time, with more than 5,200 falcons and 800,000 visitors (confirmed [157]); the 2026 edition is reported for 17–30 November 2026, with prizes above SAR 38 million in the ملواح (lure-flying race) and مزاين (beauty) contests (uncertain: one result, not confirmed by a second). The Falcons Club Cup 21–28 December; the Saudi Falcons and Hunting Exhibition in Riyadh 1–10 October 2026 (confirmed in search summaries [157]).
 - **Abroad:** Gulf falconers hunt houbara in Pakistan each winter, mainly December to February, under special permits (confirmed [159]).
 
+**Falcon contests (searched 13 Nov 2026, after the owner chose to build them)**
+- **The two contests:** the King Abdulaziz Falconry Festival (مهرجان الملك عبدالعزيز للصقور) at Malham is built on الملواح, a 400 m lure race timed from the release point (السناح) to the lure, and المزاين, the beauty contest (confirmed [169][170][171]). An older edition used 300 m (confirmed in a search summary [169]).
+- **الملواح's classes:** owners (الملاك), amateurs (الهواة), professionals (المحترفين) and elite (النخبة), with Saudi and international rounds, and rounds for young falconers, women and schools (confirmed [169][171]). Species: الحر، الشاهين، الجير شاهين، الجير تبع، الجير بيور، القرموشة; a saker must span at least 16 inches; locally bred sakers are allowed (confirmed in a search summary [169]). Ages: فرخ (under a year) and قرناس (over a year) (confirmed [169]). Entries per falconer: up to 8 per age class, or 6 per class for professionals, or 12 in all, the sources differ by edition (uncertain [169][174]).
+- **المزاين's judging:** 100 points over seven parts: head, shoulder (العاتق), throat (النحر), back, size, colour and الوسرة; the weight of each part was not found (confirmed [172], SPA; weights uncertain). Three Saudi judges (confirmed [173], SPA). Classes: الحر and الجير بيور, each فرخ and قرناس; a sea-peregrine قرناس class and a locally bred حر فرخ class were added later; in 2026 rounds for Mongolian falcons sold at the Riyadh exhibition (confirmed [172][175]). Proof of ownership is required and at most five falcons per round (confirmed [175], one source).
+- **Prizes, 2025 edition:** more than SAR 38 million over 1,012 prizes in 139 rounds (confirmed [170][176]), with King Abdulaziz cups, a sword and the King's شلفا for the winners (confirmed [169]). الملواح: about SAR 4.7 million for the Saudi qualifying rounds, as much for the international, and more than 16.3 million for the cup rounds of Saudi amateurs, owners and professionals (confirmed in a search summary [169], one source); Saudi heats SAR 12.4 million (confirmed [176]). المزاين: SAR 625,000 a round, 300,000 first, 175,000 second, 100,000 third (confirmed [177], one source). Saudipedia's older total is SAR 17.6 million (an earlier edition, [176]).
+- **Dates:** 25 Dec 2025 – 10 Jan 2026 last time (confirmed [169][157]); 17–30 Nov 2026 this time (two search summaries of [157], the Falcons Club's own page not opened; uncertain). Registration last time ran from the opening for about a week to ten days (confirmed in a search summary [157]). Other events: a ملواح race 4–9 Oct 2026, the Falcons Club Cup 21–28 Dec 2026 (confirmed in search summaries [157]); a separate ملواح race in Riyadh with SAR 600,000 in prizes (confirmed [178]).
+- **Doping:** the National Falcon Centre held a 2026 workshop with the Saudi anti-doping committee on doping rules and tests in falcon contests; caffeine derivatives led the substances found (confirmed [179]). The penalties in the Saudi contests were not found; a UAE contest's rules disqualify the falcon, fine the owner AED 10,000 and suspend him (confirmed [180], UAE, not Saudi).
+- **Not found:** winning times in الملواح, the weight of each beauty part, the entry fee, the Saudi doping penalties, and the rules text itself (sfc.org.sa could not be opened).
+
 **Beside the camel calendar (from sections 4 and 7):** the hunting season (1 Sep – 31 Jan) covers the الوسم rains (from 16 Oct), the falcon passage and auctions (Oct–Nov), the falconry festival (Nov or Dec–Jan), the camel festival (Dec – early Jan) and the start of mating (Nov). The summer (Feb–Aug) has no hunting season.
 
 ---
@@ -467,3 +476,15 @@ Checked against search results; most news hosts cannot be opened from here, so a
 166. https://www.mewa.gov.sa/ar/MediaCenter/News/Pages/News1972020.aspx ; https://www.okaz.com.sa/ampArticle/2058236
 167. https://ajel.sa/local/9nlks9sxb
 168. https://sabq.org/saudia/q7m8tr
+169. https://sfc.org.sa/king-abdulaziz-festival-of-falconry/al-mallwah-competition/ ; https://ajel.sa/local/8jri8bbhx4 ; https://x.com/KNews2030_KSA/status/1998459438408282387 (the search summary did not separate them)
+170. https://www.spa.gov.sa/N2473615
+171. https://sabq.org/article/uyf96c0
+172. https://www.spa.gov.sa/2166238 ; https://www.spa.gov.sa/2166464
+173. https://www.spa.gov.sa/1880785
+174. https://www.okaz.com.sa/sport/na/2169032
+175. https://sanews.sa/14077557/
+176. https://www.spa.gov.sa/en/N2482434 ; https://saudipedia.com/en/king-abdulaziz-falconry-festival ; https://www.einpresswire.com/article/878433266/king-abdulaziz-falconry-festival-2025-launches-with-falconers-from-nine-countries
+177. https://www.urdupoint.com/arabic/story/2116677.html
+178. https://english.aawsat.com/varieties/5196111-melwah-falcon-race-concludes-riyadh-sar600000-prizes
+179. https://sabq.org/article/pSmAX0D
+180. https://www.annahar.com/sports/362470/منشطات-الصقور-هل-وصلت-فة-الغش-الرياضي-إلى-سباقات-الطيور

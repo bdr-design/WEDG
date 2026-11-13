@@ -9,9 +9,9 @@
 
 ## Decided by the owner (13 Nov 2026)
 
-Only these three points are decided; everything below them stays a proposal. The GDD text
-for them is drafted in [gdd_hunting_section.md](gdd_hunting_section.md) for the director to
-move into `docs/GDD.md` after the owner reads it.
+Only these points are decided; everything else stays a proposal. The GDD text for them
+is drafted in [gdd_hunting_section.md](gdd_hunting_section.md) for the director to move
+into `docs/GDD.md` after the owner reads it.
 
 The owner chose these options; their exact text, as he read it, is the decision:
 
@@ -21,17 +21,30 @@ The owner chose these options; their exact text, as he read it, is the decision:
    > «المقناص بالصقر: تشتري صقر من المزاد، تطلع له جواز وتصريح فطري، تدعيه، وتطلع بالجيب في الموسم. وبعده الساكتون.»
 3. **Wolves and stray dogs (option D):**
    > «تدخل: خطر نادر بالليل على الحيران، يقل بالشبك والراعي وكلب الحراسة. اللي يقتل الذيب يتغرم إذا انمسك.»
+4. **The Kalashnikov's penalty in the game (question 7):**
+   > «غرامة ومصادرة بس: ينصادر وتتغرم وينزل صيتك، بدون منع من المهرجانات.»
 
-The director also relays that hunting comes as a pastime that costs money (question 1).
-Anything beyond these words (amounts, chances, how prison plays) is a game choice or an
-open question, not the owner's decision.
+   No prison and no absence from the farm. This is lighter than the law (up to 15 years
+   and SAR 150,000 [145]): a game choice the owner made.
+5. **Killing a wolf (question 9):**
+   > «ما يقلل الخطر: لو قتلت ذيب يجي غيره والخطر مثل ما هو، والغرامة المتوقعة أكبر من قيمة الحيران. الحماية الصح تبقى الشبك والراعي وكلب الحراسة.»
+6. **Names in the game (question 8):**
+   > «أسماء عامة: «تصريح الصيد»، «نادي الصقور» بدون ذكر التطبيق الحقيقي، مثل ما سوينا بأسماء المهرجانات في تصميم المزاين.»
 
-**A constraint for the build (from the review):** a player who kills wolves would lose
-fewer calves, so killing would pay in practice. Killing a wolf must never pay: it does not
-lower the danger afterwards, and the expected fine outweighs any calves it could save.
-This is put to the owner as question 9.
+   So the game does not name فطري or أبشر as its apps. This file and the research keep the
+   real names, because they are the sources.
+7. **Falcon contests (option E, question 5):**
+   > «مع المقناص: تنبني المسابقات مع المقناص من البداية. شغل أكبر ويصير للصقور خط دخل.»
 
-Still open: questions 4, 5, 7, 8 and 9 in section 7.
+   So hunting is no longer only a cost. Game itself is still never sold [166], but الملواح
+   and مزاين الصقور are the one lawful income from falcons, with their prizes and the
+   falcon's resale.
+
+The director also relays that hunting comes as a pastime (question 1). Anything beyond
+these words (amounts, chances) is a game choice or an open question, not the owner's
+decision.
+
+Still open: question 4 (aiming with the air rifle) and question 10 (cheating in falcon contests) in section 7.
 
 ## 0. Read these official pages before anything here is adopted
 
@@ -189,7 +202,7 @@ Firing it adds a muzzle flash (one short-lived quad) and a sound.
   (or the budget is raised and measured). It is shown only in an event, so the cost is
   close to zero otherwise.
 
-### E. Falcons as a second contest line (later, if ever)
+### E. Falcons as a second contest line (decided: built with A from the start)
 
 The falconry festival at Malham has a lure race (الملواح) and a beauty contest (مزاين
 الصقور), with prizes reported above SAR 38 million [157], and falcons are a market of their
@@ -227,37 +240,42 @@ player's, and it is real.
 
 ## 7. Questions for the owner (recommendation first, then the line to put to him)
 
-1. **Hunting earns no money.** Selling game is an offence [166], so hunting is a cost and a
+1. **(Decided: a pastime, with falcon contests as income, see the top.) Hunting earns no money.** Selling game is an offence [166], so hunting is a cost and a
    pastime. *Recommended:* yes, as a pastime and a cost, with money coming only from
    falcons if E comes later.
    > الصيد ما يجيب فلوس، لأن بيع الصيد مخالفة: تبيه يدخل هواية تصرف عليها؟ نقترح نعم.
-2. **The Kalashnikov.** *Recommended:* C2, allowed with its real risk as cheating is in
+2. **(Decided, see the top.) The Kalashnikov.** *Recommended:* C2, allowed with its real risk as cheating is in
    7.1, and never a lawful hunting tool. C1 is the realist's alternative. Note that the
    seller and price would be our invention.
    > الكلاش سلاح حربي، واقتناه بحد ذاته مخالفة عقوبتها لين 15 سنة سجن و150 ألف، وما ينباع نظامي، والصيد فيه ممنوع: تبيه يدخل اللعبة مع خطره مثل الغش، ولا ما يدخل أبد؟ نقترح يدخل مع خطره.
-3. **Which hunting comes first.** *Recommended:* A (المقناص with a falcon), then B (air
+3. **(Decided, see the top.) Which hunting comes first.** *Recommended:* A (المقناص with a falcon), then B (air
    rifle).
    > نبدأ بالمقناص بالصقر (مزاد، جواز، تصريح فطري، الدعو، طلعة بالجيب) وبعده الساكتون؟
 4. **Aiming in B.** *Recommended:* a tap on the flock and a result by chance and the
    rifle's reach, with no crosshair game.
    > في الساكتون: تضغط على السرب والنتيجة حسب الحظ ومدى البندقية، ولا تبي تنشن بنفسك؟ النيشان يقرّبها للعبة رماية ويثقّل شوي.
-5. **Falcon contests (E).** *Recommended:* not now; the camels stay the centre.
+5. **(Decided: built with المقناص from the start, against the recommendation; see the top.) Falcon contests (E).** *Recommended was:* not now; the camels stay the centre.
    > مسابقات الصقور (الملواح والمزاين) نخليها بعدين عشان تبقى الإبل الأساس؟
-6. **Predators at the herd (D).** *Recommended:* yes, with the real defences (pen,
+6. **(Decided, see the top.) Predators at the herd (D).** *Recommended:* yes, with the real defences (pen,
    herdsman, guard dog), and shooting a wolf is an offence.
    > فيه حالة وحدة لقيناها: ذيب سحب حوار عمره 3 أيام من حظيرة جنوب الأفلاج بالليل، والمربين قالوا إنها غريبة. نخلي الذيب والكلاب الضالة خطر نادر بالليل على الحيران (كم مرة يصير اختيار لعب)، والحماية شبك وراعي وكلب حراسة، وقتل الذيب غرامته 80 ألف: توافق؟
-7. **Prison for the war weapon.** The real penalty is up to 15 years. Any replacement is a
+7. **(Decided: a fine and seizure only, see the top.) Prison for the war weapon.** The real penalty is up to 15 years. Any replacement is a
    game choice lighter than the law. *Recommended:* the owner chooses, knowing that:
    heavy fine with the weapon taken and a festival ban (as in 7.1), or a pause while the
    herdsman runs the farm.
    > عقوبة الكلاش الحقيقية سجن لين 15 سنة: نخليها غرامة ومصادرة ومنع من المهرجانات، ولا فترة يمسك فيها الراعي العزبة؟ الاثنين أخف من الواقع.
-8. **Real names in the phone** (فطري, أبشر, نادي الصقور). *Recommended:* the real names as
+8. **(Decided: generic names, against the recommendation; see the top.) Real names in the phone** (فطري, أبشر, نادي الصقور). *Recommended:* the real names as
    text, without their logos, as the game already names the real festivals.
    > نكتب أسماء التطبيقات الحقيقية (فطري، أبشر، نادي الصقور) بدون شعاراتهم؟
-9. **Killing a wolf must not pay.** *Recommended:* killing one never lowers the danger
+9. **(Decided, see the top.) Killing a wolf must not pay.** *Recommended:* killing one never lowers the danger
    afterwards (new wolves come as before), and the chance of the 80,000 fine is set so its
    expected cost is above the value of the calves it could save.
    > لو اللاعب يقتل الذيب بيقل اللي ينفقد من الحيران، فيصير القتل مربح. نقترح إن قتله ما يقلل الخطر بعده، وإن الغرامة المتوقعة (80 ألف) أكثر من قيمة الحيران اللي ممكن يحميها: توافق؟
+10. **Cheating in falcon contests (new, with E decided).** Doping checks are real and
+   caffeine derivatives lead what is found [179]; the Saudi penalty was not found (a UAE
+   contest disqualifies the falcon, fines AED 10,000 and suspends the owner [180]).
+   *Recommended:* no falcon cheating for now, until the real penalty is found.
+   > فيه فحص منشطات حقيقي في مسابقات الصقور، بس عقوبته عندنا ما لقيناها: نخلي الغش في الصقور ما يدخل الحين لين نلقاها؟
 
 ## 8. Not confirmed
 
