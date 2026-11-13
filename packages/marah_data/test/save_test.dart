@@ -476,7 +476,10 @@ void main() {
         for (final r in f.rounds) ...r.entries,
     ];
     expect(entries, isNotEmpty);
-    expect(state.players.values.first.tamperings, isNotEmpty);
+    expect(
+      state.world.camels.values.where((c) => c.treatments.isNotEmpty),
+      isNotEmpty,
+    );
     expect(state.world.bans, isNotEmpty);
   });
 
@@ -530,7 +533,6 @@ void main() {
       final state = GameState.fromJson(out);
       expect(checkInvariants(state), isEmpty);
       final p = state.players.values.first;
-      expect(p.tamperings, isEmpty);
       expect(p.reputation, isEmpty);
       expect(state.world.bans, isEmpty);
       final f = state.world.festivals.values.firstWhere(
@@ -557,6 +559,61 @@ void main() {
         isTrue,
       );
       expect(checkInvariants(g.state), isEmpty);
+    });
+
+    test('each old round to its nearest Saudi kind, its age kept', () {
+      final data = v7();
+      final world = data['world']! as Map<String, Object?>;
+      final f = (world['festivals']! as List)
+          .cast<Map<String, Object?>>()
+          .firstWhere((f) => f['done'] == false);
+      final rounds = f['rounds']! as List;
+      const ages = [
+        'mafrood',
+        'haq',
+        'laqi',
+        'jatha',
+        'thani',
+        'rubaa',
+        'fater',
+      ];
+      var n = 0;
+      for (final sex in ['female', 'male']) {
+        for (final age in ages) {
+          rounds.add({
+            'id': 'r-map-${n++}',
+            'cat': 'wodh',
+            'sex': sex,
+            'age': age,
+            'rivals': 10,
+            'entries': <Object?>[],
+            'results': null,
+          });
+        }
+      }
+      final state = GameState.fromJson(SaveCodec.migrations[7]!(data));
+      final kinds = {
+        for (final fe in state.world.festivals.values)
+          for (final r in fe.rounds)
+            if (r.id.value.startsWith('r-map-'))
+              '${r.sex!.name} ${r.legacyAge!.name}': r.kind,
+      };
+      expect(kinds, {
+        'female mafrood': RoundKind.mafareed,
+        'female haq': RoundKind.fardiDiq,
+        'female laqi': RoundKind.fardiDiq,
+        'female jatha': RoundKind.fardiDiq,
+        'female thani': RoundKind.fardiJil,
+        'female rubaa': RoundKind.fardiJil,
+        'female fater': RoundKind.fardiJil,
+        'male mafrood': RoundKind.mafareed,
+        'male haq': RoundKind.diq,
+        'male laqi': RoundKind.diq,
+        'male jatha': RoundKind.diq,
+        'male thani': RoundKind.diq,
+        'male rubaa': RoundKind.diq,
+        'male fater': RoundKind.diq,
+      });
     });
 
     test('the judged round keeps its places, announced and paid', () {

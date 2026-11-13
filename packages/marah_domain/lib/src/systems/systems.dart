@@ -2,7 +2,6 @@ import '../catalog/catalog.dart';
 import '../common/ids.dart';
 import '../common/money.dart';
 import '../common/rng.dart';
-import '../common/time.dart';
 import '../events.dart';
 import '../model/camel.dart';
 import '../model/contest.dart';
@@ -480,10 +479,6 @@ void releaseCamel(Sim sim, Camel c) {
       r.entries.removeWhere((e) => e.camels.isEmpty);
     }
   }
-  // a treatment goes with the camel: its new owner does not know of it
-  for (final p in sim.state.players.values) {
-    p.tamperings.removeWhere((t) => t.camelId == c.id);
-  }
 }
 
 // ------------------------------------------------------------- breeding
@@ -640,7 +635,13 @@ class MarketSystem implements DailySystem {
       final c = w.camels[l.camelId];
       if (c == null || !c.isAlive) continue;
       final r = sim.rng(['buyers', l.id.value]);
-      final value = Valuation.value(c, sim.today).value;
+      // the seller's name in the family moves what buyers offer (GDD 8)
+      final value =
+          (Valuation.value(c, sim.today).value *
+                  Balance.reputationPriceFactor(
+                    sim.player(l.sellerId)!.reputationIn(c.category),
+                  ))
+              .round();
       final ratio = l.askPrice.value / (value <= 0 ? 1 : value);
       final p = clampDouble(
         Balance.buyerInterest / (ratio * ratio * ratio),
@@ -717,26 +718,26 @@ class MarketSystem implements DailySystem {
 
 /// A treatment can be found outside the festivals too, in the market or by
 /// the vet (GDD 7.1): each day, for each treatment showing on a player's
-/// camel, a small chance (Balance), more while the camel is listed for sale.
-/// Spent treatments leave the list.
+/// camel (his own doing or not: it goes with the camel), a small chance
+/// (Balance), more while the camel is listed for sale. Spent treatments
+/// leave the camel.
 class TamperingSystem implements DailySystem {
   const TamperingSystem();
 
   @override
   void run(Sim sim) {
-    for (final p in sim.state.players.values) {
-      if (p.tamperings.isEmpty) continue;
-      p.tamperings.removeWhere((t) => sim.today > t.until);
-      for (final t in [...p.tamperings]) {
-        final c = sim.world.camels[t.camelId];
-        if (c == null || !c.isAlive || c.ownerId != p.id) {
-          p.tamperings.remove(t);
-          continue;
-        }
-        final listed = sim.world.listings.values.any((l) => l.camelId == c.id);
+    final w = sim.world;
+    Set<CamelId>? listed;
+    for (final c in w.camels.values) {
+      if (c.treatments.isEmpty) continue;
+      c.treatments.removeWhere((t) => sim.today > t.until);
+      final p = sim.player(c.ownerId);
+      if (p == null || !c.isAlive) continue;
+      listed ??= {for (final l in w.listings.values) l.camelId};
+      for (final t in [...c.treatments]) {
         if (sim
             .rng(['tamper-out', c.id.value, t.kind.name])
-            .chance(outsideChance(t, listed: listed))) {
+            .chance(outsideChance(t, listed: listed.contains(c.id)))) {
           foundOutside(sim, p, c, t);
         }
       }
@@ -751,10 +752,11 @@ class TamperingSystem implements DailySystem {
       (listed ? Balance.outsideCatchListedFactor : 1);
 
   /// A treatment found outside a festival (the market, the vet): MEWA's
-  /// fine, the name lost in the family, the news; no festival ban (the
-  /// festivals' committees did not find it).
+  /// fine on the camel's owner [p] (whoever had it done), the name lost in
+  /// the family, the news; no festival ban (the festivals' committees did
+  /// not find it).
   static void foundOutside(Sim sim, PlayerState p, Camel c, Tampering t) {
-    p.tamperings.remove(t);
+    c.treatments.remove(t);
     sim.pay(
       p,
       const Riyal(-Balance.outsideFine),
@@ -869,23 +871,6 @@ class ContestSystem implements DailySystem {
     }
   }
 
-  /// What the panel sees of [c] on [day]: the eye's look with the owner's
-  /// treatments showing that day (GDD 7.1: they act on judging day).
-  static Map<Trait, double> judgedLooks(Camel c, PlayerState? p, GameDay day) {
-    final looks = Judging.observedAll(c, day);
-    for (final t in p?.tamperings ?? const <Tampering>[]) {
-      if (t.camelId != c.id || !t.activeOn(day)) continue;
-      for (final trait in t.kind.traits) {
-        looks[trait] = clampDouble(
-          looks[trait]! + Balance.tamperGainPerLevel * t.strength,
-          0,
-          100,
-        );
-      }
-    }
-    return looks;
-  }
-
   static OwnerId _rivalOwner(WorldGen gen, Rng rng, Festival f) {
     final w = gen.sim.world;
     var o = gen.randomOwner(rng).id;
@@ -979,9 +964,8 @@ class ContestSystem implements DailySystem {
         }
         continue;
       }
-      final p = sim.player(c.owner);
       for (final camel in c.camels) {
-        if (judgedLooks(camel, p, r.day)[Trait.coat]! <
+        if (Judging.observed(camel, Trait.coat, r.day) <
             Balance.colourPurityMin) {
           remove(c, Stage.breedColourAge, RemovalReason.colour);
           break;
@@ -1029,14 +1013,15 @@ class ContestSystem implements DailySystem {
           remove(c, stage, RemovalReason.sick);
           continue;
         }
+        // the one who entered her answers for it (the owner, 13 Nov 2026:
+        // the treatment goes with the camel, the buyer carries its risk)
         final p = sim.player(c.owner);
         if (p == null) continue;
         final found =
             [
                   for (final camel in c.camels)
-                    for (final t in p.tamperings)
-                      if (t.camelId == camel.id && t.activeOn(r.day))
-                        (camel, t),
+                    for (final t in camel.treatments)
+                      if (t.activeOn(r.day)) (camel, t),
                 ]
                 .where(
                   (x) => rng.chance(
@@ -1114,7 +1099,8 @@ class ContestSystem implements DailySystem {
     }
     r
       ..results = rows
-      ..field = field;
+      ..field = field
+      ..entrants = comps.length;
     if (r.kind == RoundKind.fahal) {
       r.announceOn = r.day + Balance.dnaDays;
       for (final o in {
@@ -1193,21 +1179,19 @@ class ContestSystem implements DailySystem {
       }
       final kind = c.kind;
       if (kind != null) {
-        final weight = kind.traits.fold(0.0, (s, t) => s + t.weight);
         c.score = clampDouble(
-          c.score + Balance.tamperGainPerLevel * c.strength * weight,
+          c.score + Balance.tamperLiftPerLevel * c.strength,
           0,
           100,
         );
       }
       return;
     }
-    final p = sim.player(c.owner);
     final judged = [
       for (final camel in c.camels)
         Judging.judge(
           rng,
-          judgedLooks(camel, p, r.day),
+          Judging.observedAll(camel, r.day),
           judges: Balance.judgesPerPanel,
         ),
     ];
@@ -1244,7 +1228,7 @@ class ContestSystem implements DailySystem {
     r
       ..caught += 1
       ..fines += fine;
-    p.tamperings.remove(t);
+    camel.treatments.remove(t);
     sim.pay(p, Riyal(-fine), LedgerCategory.fine, ref: f.id.value);
     if ((w.bans[p.id] ?? -1) < through) w.bans[p.id] = through;
     for (final c in w.aliveOwnedBy(p.id)) {
@@ -1324,7 +1308,7 @@ class ContestSystem implements DailySystem {
   static void _announce(Sim sim, Festival f, ContestRound r) {
     r.paid = true;
     final w = sim.world;
-    final of = r.field?.last ?? 0;
+    final of = r.entrants;
     for (final row in r.results!) {
       final rank = row.rank;
       final id = row.camelId;

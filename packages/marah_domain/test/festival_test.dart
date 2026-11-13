@@ -4,6 +4,7 @@ import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/src/model/camel.dart';
 import 'package:marah_domain/src/rules/eligibility.dart';
 import 'package:marah_domain/src/rules/judging.dart';
+import 'package:marah_domain/src/rules/valuation.dart';
 import 'package:marah_domain/src/sim.dart';
 import 'package:marah_domain/src/systems/systems.dart';
 import 'package:marah_domain/src/world_gen.dart';
@@ -94,6 +95,8 @@ Camel offspringOf(Game g, Camel bull, ContestRound r) {
 }
 
 Err refused(Game g, Command c) => g.dispatch(c) as Err;
+
+Sim sim(Game g) => Sim(g.state);
 
 void main() {
   group('The programme (GDD 7, research section 4)', () {
@@ -683,26 +686,37 @@ void main() {
       expect(ContestRules.outsideRisk(3), RiskBand.low);
     });
 
-    test('a treatment costs its price, raises its features on judging day '
-        'only, and is the owner\'s secret', () {
+    test('a treatment costs its price, makes her look finer to every eye '
+        'while it lasts, and is the owner\'s secret', () {
       final g = newGame();
       final f = grand(g);
       final r = roundOf(f, RoundKind.fardiDiq);
       final c = camelFor(g, r);
+      // features low enough that the treatment's points are not cut at 100
+      for (final t in TamperKind.botox.traits) {
+        c.genes[t] = 40;
+        c.env[t] = 0;
+      }
       final cash = g.me.cash.value;
       final before = Judging.observedAll(c, g.today);
+      final value = Valuation.value(c, g.today).value;
       expect(g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 2)).ok, isTrue);
       expect(cash - g.me.cash.value, TamperKind.botox.price * 2);
       expect(g.me.ledger.last.category, LedgerCategory.tampering);
-      // the eye (buyers, the market) sees no change
-      expect(Judging.observedAll(c, g.today), before);
-      final judged = ContestSystem.judgedLooks(c, g.me, g.today);
+      // the judges and the buyers alike see her finer (the owner, 13 Nov)
+      final after = Judging.observedAll(c, g.today);
+      final gain = Balance.tamperTraitGain(TamperKind.botox, 2);
       for (final t in Trait.values) {
-        final gain = TamperKind.botox.traits.contains(t)
-            ? Balance.tamperGainPerLevel * 2
-            : 0;
-        expect(judged[t], closeTo((before[t]! + gain).clamp(0, 100), 1e-9));
+        final up = TamperKind.botox.traits.contains(t) ? gain : 0;
+        expect(after[t], closeTo((before[t]! + up).clamp(0, 100), 1e-9));
       }
+      expect(Valuation.value(c, g.today).value, greaterThan(value));
+      // the lift on the weighted look is the level's, whatever the kind
+      final untreated = Camel.fromJson(c.toJson()..remove('treatments'));
+      expect(
+        Judging.quality(c, g.today) - Judging.quality(untreated, g.today),
+        closeTo(Balance.tamperLiftPerLevel * 2, 1e-9),
+      );
       expect(
         refused(g, Tamper(g.me.id, c.id, TamperKind.botox, 1)).error.code,
         ErrorCode.alreadyTreated,
@@ -717,10 +731,12 @@ void main() {
         v.tamperings.single.festivalRisk,
         ContestRules.festivalRisk(TamperKind.botox, 2),
       );
+      // no one else is told
+      expect(c.treatments.single.knownBy, [g.me.id]);
       // it wears off
       g.advanceDays(TamperKind.botox.lastsDays);
       expect(GameView(g.state, g.me.id).tamperings, isEmpty);
-      expect(g.me.tamperings, isEmpty);
+      expect(c.treatments, isEmpty);
     });
 
     test(
@@ -781,7 +797,7 @@ void main() {
             (e) => e.ownerName == g.me.name,
           );
           expect(news.single.owner, isNull);
-          expect(g.me.tamperings, isEmpty);
+          expect(c.treatments, isEmpty);
           // barred from the festivals of this season and five more, not later
           final w = g.state.world;
           Festival at(int season) => Festival(
@@ -832,12 +848,11 @@ void main() {
     );
 
     test('found outside a festival: the fine, the name, the news, no ban', () {
-      const t = Tampering(
-        camelId: CamelId('c'),
+      final t = Tampering(
         kind: TamperKind.dye,
         strength: 2,
-        on: GameDay(0),
-        until: GameDay(10),
+        on: const GameDay(0),
+        until: const GameDay(10),
       );
       expect(
         TamperingSystem.outsideChance(t, listed: false),
@@ -914,6 +929,213 @@ void main() {
       }
       expect(news, greaterThan(0));
       expect(barred, greaterThan(0));
+    });
+  });
+
+  group('The review of e2775ff and the owner\'s answers (13 Nov)', () {
+    test('one الفحل وإنتاجه entry an owner', () {
+      final g = newGame();
+      final f = grand(g);
+      g.advanceTo(f.opensOn);
+      final r = roundOf(f, RoundKind.fahal);
+      List<CamelId> group() {
+        final bull = camelFor(g, r, sex: Sex.male);
+        return [
+          bull.id,
+          for (var i = 0; i < 5; i++) offspringOf(g, bull, r).id,
+        ];
+      }
+
+      expect(g.dispatch(EnterRound(g.me.id, f.id, r.id, group())).ok, isTrue);
+      expect(
+        refused(g, EnterRound(g.me.id, f.id, r.id, group())).error.code,
+        ErrorCode.roundOwnerLimit,
+      );
+    });
+
+    test('an entry is withdrawn until the day before its round, not on it', () {
+      final g = newGame();
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+      final c = camelFor(g, r);
+      g.advanceTo(f.opensOn);
+      g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
+      g.advanceTo(r.day - 1);
+      // a day of the round itself, before it is run (the day's systems run
+      // after the commands): refused
+      g.state.world.day = r.day;
+      expect(
+        refused(g, WithdrawEntry(g.me.id, f.id, r.id, c.id)).error.code,
+        ErrorCode.notFound,
+      );
+      g.state.world.day = r.day - 1;
+      expect(g.dispatch(WithdrawEntry(g.me.id, f.id, r.id, c.id)).ok, isTrue);
+    });
+
+    test('stage 1 removes a group short of its camels', () {
+      final g = newGame();
+      final f = grand(g);
+      g.advanceTo(f.opensOn);
+      final r = roundOf(f, RoundKind.fahal);
+      final bull = camelFor(g, r, sex: Sex.male, mean: 90);
+      final kids = [for (var i = 0; i < 5; i++) offspringOf(g, bull, r)];
+      g.dispatch(
+        EnterRound(g.me.id, f.id, r.id, [bull.id, ...kids.map((k) => k.id)]),
+      );
+      // one of the offspring dies before the day
+      final sim = Sim(g.state);
+      kids.last
+        ..status = CamelStatus.dead
+        ..endedOn = g.today;
+      releaseCamel(sim, kids.last);
+      expect(r.entries.single.camels, hasLength(5));
+      final out = g.advanceTo(r.day).whereType<EntryRemoved>().single;
+      expect((out.stage, out.reason), (Stage.chipWitness, RemovalReason.short));
+    });
+
+    test('"5th of N" counts the round\'s entrants, not its finalists', () {
+      final g = newGame();
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
+      final c = camelFor(g, r, mean: 92)..condition = 90;
+      g.advanceTo(f.opensOn);
+      g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
+      final placed = g.advanceTo(r.day).whereType<Placed>().single;
+      expect(r.entrants, r.rivals + 1);
+      expect(placed.of, r.entrants);
+      expect(c.placings.single.of, r.entrants);
+      expect(r.field!.last, lessThan(r.entrants));
+    });
+
+    test('a treatment goes with the camel: the buyer, unknowing, answers for '
+        'it if he enters her', () {
+      for (var seed = 0; seed < 40; seed++) {
+        final g = newGame(seed);
+        final f = grand(g);
+        final r = roundOf(f, RoundKind.fardiDiq, cat: ColorCategory.wodh);
+        final c = camelFor(g, r, mean: 85);
+        // treated by its former owner, someone outside the game's players
+        c
+          ..ownerId = g.state.world.owners.keys.first
+          ..treatments.add(
+            Tampering(
+              kind: TamperKind.botox,
+              strength: 3,
+              on: g.today,
+              until: g.today + 200,
+            ),
+          );
+        expect(GameView(g.state, g.me.id).tamperings, isEmpty);
+        // now the player's (bought in time to enter), still unknowing
+        c
+          ..ownerId = g.me.id
+          ..acquiredOn = g.today - 200;
+        expect(GameView(g.state, g.me.id).tamperings, isEmpty);
+        g.advanceTo(f.opensOn);
+        g.dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]));
+        final found = g
+            .advanceTo(r.day)
+            .whereType<TamperingFound>()
+            .firstOrNull;
+        if (found == null) continue;
+        expect(found.camel, c.id);
+        expect(found.fine, Balance.tamperFine(TamperKind.botox, 3));
+        expect(g.state.world.bans[g.me.id], f.season + 5);
+        return;
+      }
+      fail('never found');
+    });
+
+    test('sellers in الحراج cheat at the rivals\' rate; a vet\'s look before '
+        'buying may find it, and only the buyer is told', () {
+      var treated = 0, listings = 0, found = 0, checked = 0;
+      for (var seed = 0; seed < 12; seed++) {
+        final g = newGame(seed);
+        g.advanceDays(120);
+        for (final l in g.state.world.listings.values.toList()) {
+          final c = g.state.world.camels[l.camelId]!;
+          if (sim(g).isPlayer(l.sellerId)) continue;
+          listings++;
+          if (!c.treatments.any((t) => t.activeOn(g.today))) continue;
+          treated++;
+          final before = g.me.cash.value;
+          final r = g.dispatch(CheckListing(g.me.id, l.id));
+          expect(r.ok, isTrue);
+          checked++;
+          expect(before - g.me.cash.value, Balance.vetCheckFee);
+          final told = r.events.whereType<ListingChecked>().single.found;
+          final v = GameView(g.state, g.me.id);
+          expect(v.listingOf(c.id)!.knownTreatments, told);
+          if (told.isNotEmpty) found++;
+          // no one else is told
+          final other = c.treatments.where(
+            (t) => t.knownBy.any((o) => o != g.me.id),
+          );
+          expect(other, isEmpty);
+        }
+      }
+      expect(treated / listings, closeTo(Balance.rivalTamperChance, 0.04));
+      expect(checked, greaterThan(0));
+      expect(found / checked, closeTo(Balance.vetCheckChance, 0.35));
+    });
+
+    test('a fine larger than the money: the balance below zero, no camel '
+        'bought and nothing built, feed and water still come', () {
+      final g = newGame();
+      // a fine of 5,000 more than the money
+      grant(g, -g.me.cash.value - 5000);
+      expect(g.me.cash.isNegative, isTrue);
+      final l = g.state.world.listings.values.first;
+      expect(
+        refused(g, BuyListing(g.me.id, l.id)).error.code,
+        ErrorCode.inDebt,
+      );
+      expect(
+        refused(g, BuildFacility(g.me.id, Facility.pen)).error.code,
+        ErrorCode.inDebt,
+      );
+      g.me.farm
+        ..barleyKg = 0
+        ..alfalfaKg = 0
+        ..storeKg = 1000;
+      expect(g.dispatch(OrderSupply(g.me.id, Supply.barley, 2)).ok, isTrue);
+      expect(checkInvariants(g.state), isEmpty);
+    });
+
+    test('الصيت: strong sales raise it, and it moves what buyers pay', () {
+      expect(Balance.reputationPriceFactor(Balance.startingReputation), 1);
+      expect(Balance.reputationPriceFactor(100), closeTo(1.18, 1e-9));
+      expect(Balance.reputationPriceFactor(0), closeTo(0.98, 1e-9));
+      final g = newGame();
+      final c = g.state.world.camels.values.firstWhere(
+        (c) => c.ownerId == g.me.id && c.isAlive,
+      );
+      final low = GameView(g.state, g.me.id).quickSalePrice(c.id)!.value;
+      g.me.reputation[c.category] = 100;
+      final high = GameView(g.state, g.me.id).quickSalePrice(c.id)!.value;
+      expect(high / low, closeTo(1.18, 0.05));
+      // a strong sale: an offer well over her value, accepted
+      g.me.reputation.remove(c.category);
+      final value = Valuation.value(c, g.today).value;
+      expect(g.dispatch(ListForSale(g.me.id, c.id, value * 2)).ok, isTrue);
+      final listing = g.state.world.listings.values.firstWhere(
+        (l) => l.camelId == c.id,
+      );
+      final buyer = g.state.world.owners.keys.first;
+      final o = Offer(
+        id: const OfferId('o-test'),
+        listingId: listing.id,
+        buyerId: buyer,
+        amount: Riyal((value * 1.5).round()),
+        madeOn: g.today,
+        expiresOn: g.today + 3,
+      );
+      g.state.world.offers[o.id] = o;
+      expect(g.dispatch(AcceptOffer(g.me.id, o.id)).ok, isTrue);
+      expect(
+        g.me.reputationIn(c.category),
+        Balance.startingReputation + Balance.reputationForStrongSale,
+      );
     });
   });
 

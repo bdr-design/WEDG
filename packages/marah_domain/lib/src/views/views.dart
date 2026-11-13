@@ -137,8 +137,13 @@ class CamelView {
 
 /// A market listing as buyers see it: never the seller's floor price.
 class ListingView {
-  ListingView._(Listing listing, this.camel, this.sellerName, this.transport)
-    : id = listing.id,
+  ListingView._(
+    Listing listing,
+    this.camel,
+    this.sellerName,
+    this.transport,
+    this.knownTreatments,
+  ) : id = listing.id,
       askPrice = listing.askPrice,
       region = listing.region,
       expiresOn = listing.expiresOn,
@@ -156,6 +161,10 @@ class ListingView {
 
   /// Trucking it to the viewer's farm.
   final Riyal transport;
+
+  /// Treatments in her the viewer's vet found (CheckListing); never one he
+  /// was not told of.
+  final List<TamperKind> knownTreatments;
 }
 
 class StudView {
@@ -208,12 +217,19 @@ class GameView {
     return l == null ? null : _listing(l);
   }
 
-  ListingView _listing(Listing l) => ListingView._(
-    l,
-    _view(_w.camels[l.camelId]!),
-    ownerName(l.sellerId),
-    Riyal(handlers.transportToFarm(me, l)),
-  );
+  ListingView _listing(Listing l) {
+    final c = _w.camels[l.camelId]!;
+    return ListingView._(
+      l,
+      _view(c),
+      ownerName(l.sellerId),
+      Riyal(handlers.transportToFarm(me, l)),
+      [
+        for (final t in c.treatments)
+          if (t.activeOn(today) && t.knownBy.contains(viewer)) t.kind,
+      ],
+    );
+  }
 
   /// Bargaining attempts the viewer has left on a listing.
   int bargainsLeft(ListingId id) =>
@@ -267,11 +283,13 @@ class GameView {
     for (final c in ColorCategory.values) c: me.reputationIn(c),
   };
 
-  /// The player's own secret treatments showing now, with their risk.
+  /// The secret treatments in the player's camels that he knows of (his
+  /// own, or found by his vet), showing now, with their risk.
   List<TamperingView> get tamperings => [
-    for (final t in me.tamperings)
-      if (t.activeOn(today) && _w.camels[t.camelId] != null)
-        TamperingView._(t, _view(_w.camels[t.camelId]!)),
+    for (final c in _w.aliveOwnedBy(viewer))
+      for (final t in c.treatments)
+        if (t.activeOn(today) && t.knownBy.contains(viewer))
+          TamperingView._(t, _view(c)),
   ];
 
   DomainError? canTamper(CamelId camel, TamperKind kind, int strength) =>

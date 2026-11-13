@@ -309,8 +309,9 @@ class Balance {
   /// document, real; how long before is the game's).
   static const ownershipDaysBeforeJudging = 30;
 
-  /// (balance) An owner's camels in his one فردي round (GDD 7 gives one فردي
-  /// round per owner, not how many camels in it).
+  /// (balance) An owner's camels in one round of مفاريد or دق (القعدان or
+  /// البكار); الفردي takes one camel of his a festival (the owner, 13 Nov
+  /// 2026), الفحل وإنتاجه one entry.
   static const maxEntriesPerOwnerInRound = 3;
 
   /// (field) A late entry is taken until 72 hours before its round, with a
@@ -355,9 +356,18 @@ class Balance {
   // GDD 7.1 (the owner, 12 Nov 2026). The kinds and their fine caps are real
   // (TamperKind); the rest is the game's.
 
-  /// (balance) Points (0 to 100) a treatment adds to each feature it works
-  /// on, for each level of strength (1 to 3), on judging day.
-  static const tamperGainPerLevel = 4.0;
+  /// (balance) What a treatment adds to a camel's weighted look (0 to 100),
+  /// for each level of strength (1 to 3), shared among the features it works
+  /// on (the owner, 13 Nov 2026: a strong one lifts a middling camel a few
+  /// places, as in the real thing). It shows to every eye, the judges' and
+  /// the buyers' (she looks finer, and fetches more), while it lasts.
+  static const tamperLiftPerLevel = 3.0;
+
+  /// The points it adds to each of its features.
+  static double tamperTraitGain(TamperKind kind, int strength) =>
+      tamperLiftPerLevel *
+      strength /
+      kind.traits.fold(0.0, (s, t) => s + t.weight);
 
   /// (field) Caught at a festival: disqualified, fined, and the owner and
   /// his camels barred from this edition and at least five more (research
@@ -373,6 +383,12 @@ class Balance {
   static const outsideCatchPerDay = 0.0004;
   static const outsideCatchListedFactor = 4.0;
   static const vetCatchChance = 0.15;
+
+  /// (balance) A vet's look at a camel for sale before buying (not found):
+  /// its price, and the chance it finds each treatment (a deliberate look,
+  /// more than [vetCatchChance] when treating an illness).
+  static const vetCheckFee = 500;
+  static const vetCheckChance = 0.6;
 
   /// (field) Fined outside a festival: the 2018 case's average, SAR 67,000
   /// among five, about 13,400 each (research section 7, [100]).
@@ -404,4 +420,15 @@ class Balance {
   static const reputationForTopTen = 0.5;
   static const reputationCaught = 25.0;
   static const reputationCaughtOutside = 10.0;
+
+  /// (balance) A sale this far over the camel's value is a strong one (GDD
+  /// 8: الصيت grows with wins and strong sales), and adds this.
+  static const strongSaleOver = 1.1;
+  static const reputationForStrongSale = 1.0;
+
+  /// (balance) What الصيت does to what buyers and the broker pay for the
+  /// player's camels of the family (GDD 8): 0.2% a point from where it
+  /// starts, +18% at 100, -2% at 0.
+  static double reputationPriceFactor(double reputation) =>
+      1 + 0.002 * (reputation - startingReputation);
 }

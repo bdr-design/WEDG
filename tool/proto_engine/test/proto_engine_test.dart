@@ -60,6 +60,7 @@ void main() {
       },
       {'type': 'withdrawEntry', 'festival': 'f1', 'round': 'r1', 'camel': 'c6'},
       {'type': 'tamper', 'camel': 'c6', 'kind': 'botox', 'strength': 2},
+      {'type': 'checkListing', 'listing': 'l3'},
     ];
 
     test('every command reads and writes back the same', () {
@@ -70,7 +71,7 @@ void main() {
         expect(commandToJson(c), j);
       }
       final types = {for (final j in every) j['type']};
-      expect(types, hasLength(19)); // every kind of command
+      expect(types, hasLength(20)); // every kind of command
     });
 
     test('the actor is always the player, whatever the JSON says', () {

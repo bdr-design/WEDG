@@ -8,6 +8,7 @@ import 'events.dart';
 import 'model/camel.dart';
 import 'model/contest.dart';
 import 'model/market.dart';
+import 'model/tampering.dart';
 import 'rules/balance.dart';
 import 'rules/contest_rules.dart';
 import 'rules/genetics.dart';
@@ -131,6 +132,20 @@ class WorldGen {
   Listing addMarketListing(Rng rng) {
     final owner = randomOwner(rng);
     final camel = makeCamel(rng, owner: owner.id, mean: marketMean(rng));
+    // some sellers have their camel treated, as rivals at the festivals do
+    // (GDD 7.1; the owner, 13 Nov 2026: a buyer may buy one unknowingly)
+    if (rng.chance(Balance.rivalTamperChance)) {
+      final kind = rng.pick(TamperKind.values);
+      final on = sim.today - rng.range(0, kind.lastsDays ~/ 2);
+      camel.treatments.add(
+        Tampering(
+          kind: kind,
+          strength: rng.range(1, 3),
+          on: on,
+          until: on + (kind.lastsDays - 1),
+        ),
+      );
+    }
     final value = Valuation.value(camel, sim.today).value.toDouble();
     final l = Listing(
       id: sim.world.ids.listing(),

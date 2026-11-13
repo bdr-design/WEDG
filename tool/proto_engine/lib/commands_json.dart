@@ -66,6 +66,7 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         RoundId(_str(j['round'])),
         CamelId(_str(j['camel'])),
       ),
+      'checkListing' => CheckListing(me, ListingId(_str(j['listing']))),
       'tamper' => Tamper(
         me,
         CamelId(_str(j['camel'])),
@@ -157,6 +158,10 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'festival': festival.value,
     'round': round.value,
     'camel': camel.value,
+  },
+  CheckListing(:final listing) => {
+    'type': 'checkListing',
+    'listing': listing.value,
   },
   Tamper(:final camel, :final kind, :final strength) => {
     'type': 'tamper',
