@@ -83,8 +83,11 @@ class Game {
     final gen = WorldGen(sim);
     final rng = sim.rng(['setup']);
     // The start (the owner, 13 Nov 2026): one nursing she-camel of the
-    // chosen colour family, seven years old, in calf again, and her calf of
-    // four months (its
+    // chosen colour family, seven years old, in calf again, and her calf,
+    // born and conceived in their season (the owner, 13 Nov: «خلها
+    // بموسمها»): (field) camels are bred from November to April
+    // (Balance.breedingMonths), so calves come in winter; hers was born on 15
+    // January, eight and a half months before the game's 1 October start (its
     // first three months of free nursing behind it, so her milk is sold from
     // the first day). (balance) An ordinary camel, as a beginner's is: bred
     // to a mean of 42 she is worth about 14,500 to 23,000, her pregnancy in
@@ -99,15 +102,21 @@ class Game {
       sex: Sex.female,
       ageDays: 7 * 365 + 40,
     );
-    final calfAge = 120;
-    // and in calf again (the owner, 13 Nov 2026: her milk ends eight months
-    // in, and on the rest after calving her next calf came a year and a half
-    // later): (field) mated within three months of calving, which shortens
-    // the interval between calves to about 15 months (the rest the engine
-    // gives every other camel, Balance.postCalvingRestDays, makes the usual
-    // 22 to 23 months); here 60 days after it, checked and confirmed, due a
-    // gestation later, about ten and a half months in
-    final matedOn = start - (calfAge - 60);
+    // (the latest 15 January at least the free nursing's 90 days back)
+    var born = GameDay.ofDate(DateTime.utc(start.year, 1, 15));
+    if (start.daysSince(born) <= Balance.freeNursingDays) {
+      born = GameDay.ofDate(DateTime.utc(start.year - 1, 1, 15));
+    }
+    final calfAge = start.daysSince(born);
+    // and in calf again (the owner, 13 Nov 2026: on the rest after calving
+    // her next calf came a year and a half later): (field) mated within three
+    // months of calving, which shortens the interval between calves to about
+    // 15 months (the rest the engine gives every other camel,
+    // Balance.postCalvingRestDays, makes the usual 22 to 23 months); here 60
+    // days after it, in March, in the season, checked and confirmed, due a
+    // gestation later, at the end of March: her milk ends in mid-January, a
+    // year from calving, and comes again with the next calf
+    final matedOn = born + 60;
     dam
       ..acquiredOn = start - 400
       ..lastPlayerOwner = playerId

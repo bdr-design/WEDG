@@ -336,20 +336,21 @@ void main() {
     test('an order is paid at the real price and arrives the next day', () {
       final g = newGame(4);
       final cash = g.me.cash.value;
-      final r = g.dispatch(OrderSupply(g.me.id, Supply.barley, 10));
+      // (eight bags: the start's feed shade holds a month's need and 460 kg)
+      final r = g.dispatch(OrderSupply(g.me.id, Supply.barley, 8));
       expect(r.ok, isTrue);
-      // the bag's price in whole riyals, as the player sees it, times ten
+      // the bag's price in whole riyals, as the player sees it, times eight
       final bag = (Balance.barleyBagPrice * g.me.farm.region.feed).round();
-      expect(cash - g.me.cash.value, bag * 10);
+      expect(cash - g.me.cash.value, bag * 8);
       expect(
-        GameView(g.state, g.me.id).unitPrice(Supply.barley).value * 10,
+        GameView(g.state, g.me.id).unitPrice(Supply.barley).value * 8,
         cash - g.me.cash.value,
       );
       final before = g.me.farm.barleyKg;
       final events = g.advanceDays(1);
-      expect(events.whereType<SupplyDelivered>().single.units, 10);
-      // ten bags in, a day's ration out
-      expect(g.me.farm.barleyKg, greaterThan(before + 400));
+      expect(events.whereType<SupplyDelivered>().single.units, 8);
+      // eight bags in, a day's ration out
+      expect(g.me.farm.barleyKg, greaterThan(before + 320));
     });
 
     test('the ration is dry matter, ordered by the weight delivered', () {
@@ -876,9 +877,16 @@ void main() {
       expect(g.me.farm.tankL, Balance.startingTankL);
       expect(v.milk, hasLength(1));
       expect(v.milk.single.calf!.id, calf.id);
-      // in calf again (the owner, 13 Nov): due about ten and a half months in
+      // calved and in calf again in the season (the owner, 13 Nov: «خلها
+      // بموسمها»): born on 15 January, mated in March, due at the end of the
+      // next March
+      expect(calf.born.date, DateTime.utc(2026, 1, 15));
       expect(dam.pregnant, isTrue);
-      expect(dam.dueOn!.daysSince(g.today), Balance.gestationDays - 60);
+      final p = g.state.world.camels[dam.id]!.pregnancy!;
+      expect(Eligibility.isBreedingSeason(p.matedOn), isTrue);
+      expect(p.matedOn.date, DateTime.utc(2026, 3, 16));
+      expect(dam.dueOn!.date.month, 3);
+      expect(dam.dueOn!.daysSince(p.matedOn), Balance.gestationDays);
       expect(v.market.length, greaterThan(20));
       expect(v.studs, isNotEmpty);
       expect(v.festivals, isNotEmpty);
