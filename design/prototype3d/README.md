@@ -90,10 +90,15 @@ in the code, and the numbers are in
   camels cost at most 3 + 2 draws. The bones come from the three clips baked
   at load into a texture of bone matrices (60 frames a second). While a camel
   fades from one clip into another, its bones are blended on the CPU as
-  three.js's mixer blends them (at most 16 at once). Each camel is culled off
-  screen and out of the sun's shadow area on its own.
+  three.js's mixer blends them, into its own row of a second texture. Each
+  camel is culled off screen and out of the sun's shadow area on its own, and
+  every level takes shadows.
 - **Animation:** every camel is animated every frame; the CPU work is the
   fading camels' bones only, and the herd's frame allocates nothing.
+- **Frame meter (`#fps`):** opened, it also has «رسم القطيع» (the herd's
+  drawing variant: two baked frames blended, the nearest frame, or every camel
+  on the CPU; also `?herd=0/1/2`) and «قطيع تجربة» (a test herd of 40 in the 3D
+  view).
 - **Draw calls:** the yard's fixed objects are merged, and footprints are
   instanced.
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)

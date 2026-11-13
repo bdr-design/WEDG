@@ -597,38 +597,50 @@ herd.
   most 3 draws in the picture and 2 in the shadow map. Each camel is culled
   on its own against the camera and the sun's shadow area.
 - **The three clips baked at load** into a texture of bone matrices, 60
-  frames a second (577 frames x 38 bones, 1.4 MB; texture memory well inside
-  the 80 MiB). The vertex shader reads the two nearest frames and blends them;
-  coat tint, coat roughness (the dark majaheem's own) and size by age go by
-  instance. Within 0.65 mm of the mixer's pose at every vertex (120 random
-  poses, 40k and 8k meshes).
+  frames a second from each clip's start, with its end as the last frame (577
+  frames x 38 bones, 1.4 MB; texture memory well inside the 80 MiB). The
+  vertex shader blends the two frames either side; coat tint, coat roughness
+  (the dark majaheem's own) and size by age go by instance. Within 1.3 mm of
+  the mixer's pose at every vertex (60 random poses, 40k and 8k meshes). A clip
+  whose length is not a whole number of frames has a shorter last step, read
+  as such (the walk cut to 1.4917 s for the test: 0.15 mm in its last step).
 - **While a camel fades from one clip into another** (half a second), its
   bones are blended on the CPU as three.js's mixer blends them (each bone's
-  place, turn and scale between the two nearest baked frames, the turns
-  slerped, then the bones from the top down) and written into a 16-row
-  texture: 0.00 mm from the mixer. Two baked poses mixed matrix by matrix are
-  up to 58 cm off (a neck swung from grazing to walking takes the chord, not
-  the arc), so this is the ADR's "skinned near the camera" tier moved to
-  where it is needed: at most 16 camels at once, nearest first (beyond 16
-  fading in the same half second, the farthest are drawn from the baked
-  blend). The third tier, impostors, is not needed for the yard: the 40 cost
+  place, turn and scale between the two baked frames either side, the turns
+  slerped, then the bones from the top down) and written into the camel's own
+  row of a second texture: 0.00 mm from the mixer. There is a row for every
+  camel the herd has room for, so every fade has one (all 40 fading in one
+  frame: 0.0001 mm). Two baked poses mixed matrix by matrix are up to 58 cm
+  off (a neck swung from grazing to walking takes the chord, not the arc), so
+  a fade is never drawn that way. This is the ADR's "skinned near the camera"
+  tier moved to where it is needed; these are not skinned meshes, and none is
+  drawn. The third tier, impostors, is not needed for the yard: the 40 cost
   the same few draws at any distance.
-- **Nothing allocated in the herd's frame**: 2-4 bytes a frame for the
-  camels' update, poses and instance lists together after warm-up (precise
-  heap, gc before each 50 frames), against about 146 kB a frame for the old
-  page's 40 mixers (sampling heap profiler). The camels' per-frame JavaScript
-  fell from 1.0-5.3 ms to 0.08-0.7 ms in the software renderer's machine
-  (relative figures; not the phone).
+- **The far level takes shadows** (it did not: a camel past 48 m under a
+  pen's shade was drawn in full sun; at the default map view that is all 40).
+  No draw or triangle more; the frame time in the software renderer is within
+  its noise.
+- **Nothing allocated in the herd's frame**: 15-36 bytes a frame for the
+  camels' update, poses and instance lists together from 30 s of play on
+  (precise heap, gc before each 50 frames, a fresh page), against about
+  146 kB a frame for the old page's 40 mixers (sampling heap profiler). Two
+  traps found on the way: a clip looked up by its name each frame, and
+  Frustum.setFromProjectionMatrix's calls (300 bytes a frame for the first
+  five minutes, until V8 optimized them). The camels' per-frame JavaScript
+  fell from 1.0-5.3 ms to 0.05-0.2 ms on this machine (relative figures; not
+  the phone).
 - **The yard changing** (setGame with 38 camels added) took 60-128 ms; now
-  2-4 ms. One sold and one bought: 7-16 ms, now 0.5-1.8 ms.
+  1.4-4 ms. One sold and one bought: 7-16 ms, now 0.5-1.8 ms. The tap's hit box
+  is one geometry for all (one each was never freed: a GPU geometry left
+  behind by every camel bought).
 - Footprints come from the baked feet (or the fading camel's bones); the tap
   on a camel, follow, the card, a calf growing and the pens' counts are as
   before.
 
 Measured at 956 x 440 (seed 4242, everything built and 38 camels added
 through `__farm.setGame`, every draw call counted, main / shadow pass, worst
-frame; the camels wander, so a view's triangles vary by a few tens of
-thousands between runs):
+frame; the camels wander, so a view's triangles vary by tens of thousands
+between runs):
 
 | View | Before | Now |
 |---|---|---|
@@ -636,38 +648,55 @@ thousands between runs):
 | All built, 2 camels, map view | 148 / 28, 176, 232k | 147 / 27, 174, 232k |
 | All built, 40 camels, map view | 186 / 66, **252**, 346k | 147 / 27, 174, 346k |
 | Near view of the pens | 74 / 66, 140, 346k | 65 / 28, 93, 314k |
-| Over the pens, 15 m up | 94 / 66, 160, 417k | 73 / 27, 100, 457k |
-| On foot in the big pen | 186 / 65, **251**, 585k | 152 / 26, 178, 539k |
-| On foot between the pens | 118 / 66, 184, 446k | 115 / 28, 143, 493k |
-| In the car between the pens, from behind | 250 / 67, **317**, 1058k | 204 / 29, **242**, 1058k |
-| In the car south of the pens, from behind | 276 / 66, **342**, 747k | 236 / 28, **267**, 816k |
+| Over the pens, 15 m up | 94 / 66, 160, 417k | 75 / 27, 102, 457k |
+| On foot in the big pen | 186 / 65, **251**, 585k | 158 / 26, 184, 539k |
+| On foot between the pens | 118 / 66, 184, 446k | 118 / 28, 146, 493k |
+| In the car between the pens, from behind | 250 / 67, **317**, 1058k | 213 / 29, **242**, 675k |
+| In the car south of the pens, from behind | 276 / 66, **342**, 747k | 239 / 27, **266**, 606k |
 
 Skinned meshes drawn: up to 40 before, none now; mixers run a frame: 40
-before, none now (fading camels posed on the CPU: 0 to 5 at a time in these
-runs). The same frame drawn by the old page and the new, the camels' poses
-pinned (fading ones included): 0.02-0.06% of the camels' pixels differ (single
-edge pixels) from near, eye-height and pen views; 2.7% at the map view (107
-scattered pixels of 3,979 on camels a few pixels tall).
+before, none now. The same frame drawn by the old page and the new, the
+camels' poses pinned (fading ones included): 0.02-0.06% of the camels' pixels
+differ (single edge pixels) in near, eye-height and pen views; at the map view
+10%, where camels under the pens' shade are now shaded.
+
+**On the owner's phone: three ways of drawing the herd.** The baked tier
+reads 32 texels a vertex (16 for the old skinning), so its GPU cost on a
+phone is the open question. The open frame meter has two lines for it:
+«رسم القطيع» (a touch goes to the next variant and keeps it; also `?herd=0/1/2`)
+and «قطيع تجربة» (the yard filled to 40 head with copies of the player's
+camels, in the 3D view only). Either change starts the meter's figures again;
+the closed meter names the variant.
+- مزج إطارين (0): as built.
+- أقرب إطار (1): the nearest baked frame only (16 texels a vertex; the pose
+  steps at 60 frames a second, up to 8 ms of a clip off).
+- كلها بالمعالج (2): every camel posed on the CPU into its own row each frame
+  (16 texels a vertex, about 97 kB sent to the GPU a frame for 40 camels, about
+  0.1-0.2 ms of JavaScript here). It allocates nothing either.
 
 **Still over (the owner's decisions):**
 - **Triangles up close.** Up close the herd is most of the frame: on foot in
   the big pen 33 camels at the 8k level (264k with their shadows' 60k), in the
-  car between the pens 10 at the full level and 19 at 8k (552k). Instancing
-  changes the draws, not the triangles. Measured on 40 camels standing in the
-  big pen (frames drawn by hand, the same poses):
-  - the 8k level to 24 m instead of 48: over the pens 537k -> 342k, but 10% of
-    the camels' pixels change there (the 1.5k camels at 24-48 m are visibly
-    coarser);
-  - to 30 m: 537k -> 420k, 5% of the camels' pixels;
-  - the full level only within 5 m (not 8): at eye height 724k -> 602k, 1-1.6%
-    of the camels' pixels (edges and the coat's shading of the nearest
-    camels);
-  - a lighter middle level (say 4k) made by `tool/camel3d/lods.py`: not made
-    here (it needs Blender and the rigged source); likely the least visible.
-- **Draws in the car by the pens** (242 and 267): the herd is 3 + 2 of them;
-  the rest is the yard and the player's car in play (the chase camera comes
-  in close between the pens and draws the car's near layer). Not the herd's
-  work; left for its own task.
+  car between the pens up to 10 at the full level. Instancing changes the
+  draws, not the triangles. Measured on 40 camels standing in the big pen
+  (frames drawn by hand at the phone's 2x, the same poses, the far level
+  shaded):
+
+  | Option | Over the pens | At eye height | Camels' pixels changed |
+  |---|---|---|---|
+  | Now | 544k | 735k | - |
+  | The 8k level to 24 m, not 48 | 349k | 696k | 6.3% over the pens |
+  | The 8k level to 30 m | 427k | 735k | 2.0% over the pens |
+  | The full level within 5 m, not 8 | 544k | 613k | 1.0% at eye height |
+  | A 4k middle level instead of the 8k | 384k | 587k | 4.5% over the pens, 1.8% at eye height |
+  | Full-level camels' shadows from the 1.5k mesh | 544k | 696k | 0.7% at eye height |
+
+  The 4k level was made with `tool/camel3d/lods.py`'s steps from the same
+  rigged source (its clips and skeleton bit for bit the shipped ones'); it is
+  not in the page.
+- **Draws in the car by the pens** (242 and 266): the herd is 3 + 2 of them;
+  the rest is the yard and the player's car in play. Not the herd's work;
+  left for its own task.
 
 ## Spike (must pass before this is accepted)
 
