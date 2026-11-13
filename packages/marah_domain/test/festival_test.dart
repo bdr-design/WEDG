@@ -693,58 +693,82 @@ void main() {
       expect(ContestRules.outsideRisk(3), RiskBand.low);
     });
 
-    test('a treatment costs its price, makes her look finer to every eye '
-        'while it lasts, and is the owner\'s secret', () {
-      final g = newGame();
-      final f = grand(g);
-      final r = roundOf(f, RoundKind.fardiDiq);
-      final c = camelFor(g, r);
-      // features low enough that the treatment's points are not cut at 100
-      for (final t in TamperKind.botox.traits) {
-        c.genes[t] = 40;
-        c.env[t] = 0;
-      }
-      final cash = g.me.cash.value;
-      final before = Judging.observedAll(c, g.today);
-      final value = Valuation.value(c, g.today).value;
-      expect(g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 2)).ok, isTrue);
-      expect(cash - g.me.cash.value, TamperKind.botox.price * 2);
-      expect(g.me.ledger.last.category, LedgerCategory.tampering);
-      // the judges and the buyers alike see her finer (the owner, 13 Nov)
-      final after = Judging.observedAll(c, g.today);
-      final gain = Balance.tamperTraitGain(TamperKind.botox, 2);
-      for (final t in Trait.values) {
-        final up = TamperKind.botox.traits.contains(t) ? gain : 0;
-        expect(after[t], closeTo((before[t]! + up).clamp(0, 100), 1e-9));
-      }
-      expect(Valuation.value(c, g.today).value, greaterThan(value));
-      // the lift on the weighted look is the level's, whatever the kind
-      final untreated = Camel.fromJson(c.toJson()..remove('treatments'));
-      expect(
-        Judging.quality(c, g.today) - Judging.quality(untreated, g.today),
-        closeTo(Balance.tamperLift(TamperKind.botox, 2), 1e-9),
-      );
-      expect(
-        refused(g, Tamper(g.me.id, c.id, TamperKind.botox, 1)).error.code,
-        ErrorCode.alreadyTreated,
-      );
-      expect(
-        refused(g, Tamper(g.me.id, c.id, TamperKind.dye, 4)).error.code,
-        ErrorCode.invalidAmount,
-      );
-      final v = GameView(g.state, g.me.id);
-      expect(v.tamperings.single.kind, TamperKind.botox);
-      expect(
-        v.tamperings.single.festivalRisk,
-        ContestRules.festivalRisk(TamperKind.botox, 2),
-      );
-      // no one else is told
-      expect(c.treatments.single.knownBy, [g.me.id]);
-      // it wears off
-      g.advanceDays(TamperKind.botox.lastsDays);
-      expect(GameView(g.state, g.me.id).tamperings, isEmpty);
-      expect(c.treatments, isEmpty);
-    });
+    test(
+      'a treatment costs its price, lifts her fully in the judges\' eyes '
+      'and by a small share in everyone else\'s, and is the owner\'s secret',
+      () {
+        final g = newGame();
+        final f = grand(g);
+        final r = roundOf(f, RoundKind.fardiDiq);
+        final c = camelFor(g, r);
+        // features low enough that the treatment's points are not cut at 100
+        for (final t in TamperKind.botox.traits) {
+          c.genes[t] = 40;
+          c.env[t] = 0;
+        }
+        final cash = g.me.cash.value;
+        final before = Judging.observedAll(c, g.today, judges: true);
+        final shownBefore = Judging.observedAll(c, g.today);
+        final value = Valuation.value(c, g.today).value;
+        expect(
+          g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 2)).ok,
+          isTrue,
+        );
+        expect(cash - g.me.cash.value, TamperKind.botox.price * 2);
+        expect(g.me.ledger.last.category, LedgerCategory.tampering);
+        // the judges see all of it; buyers, the broker and the cards a share
+        final after = Judging.observedAll(c, g.today, judges: true);
+        final shown = Judging.observedAll(c, g.today);
+        final gain = Balance.tamperTraitGain(TamperKind.botox, 2);
+        for (final t in Trait.values) {
+          final up = TamperKind.botox.traits.contains(t) ? gain : 0;
+          expect(after[t], closeTo((before[t]! + up).clamp(0, 100), 1e-9));
+          expect(
+            shown[t],
+            closeTo(
+              (shownBefore[t]! + up * Balance.tamperPriceShare).clamp(0, 100),
+              1e-9,
+            ),
+          );
+        }
+        expect(Valuation.value(c, g.today).value, greaterThan(value));
+        // the shown look moves by the share of the kind's lift
+        final untreated = Camel.fromJson(c.toJson()..remove('treatments'));
+        expect(
+          Judging.quality(c, g.today) - Judging.quality(untreated, g.today),
+          closeTo(
+            Balance.tamperLift(TamperKind.botox, 2) * Balance.tamperPriceShare,
+            1e-9,
+          ),
+        );
+        // and the fast sum is the features' own sum
+        var sum = 0.0;
+        for (final t in Trait.values) {
+          sum += shown[t]! * t.weight;
+        }
+        expect(Judging.quality(c, g.today), closeTo(sum, 1e-9));
+        expect(
+          refused(g, Tamper(g.me.id, c.id, TamperKind.botox, 1)).error.code,
+          ErrorCode.alreadyTreated,
+        );
+        expect(
+          refused(g, Tamper(g.me.id, c.id, TamperKind.dye, 4)).error.code,
+          ErrorCode.invalidAmount,
+        );
+        final v = GameView(g.state, g.me.id);
+        expect(v.tamperings.single.kind, TamperKind.botox);
+        expect(
+          v.tamperings.single.festivalRisk,
+          ContestRules.festivalRisk(TamperKind.botox, 2),
+        );
+        // no one else is told
+        expect(c.treatments.single.knownBy, [g.me.id]);
+        // it wears off
+        g.advanceDays(TamperKind.botox.lastsDays);
+        expect(GameView(g.state, g.me.id).tamperings, isEmpty);
+        expect(c.treatments, isEmpty);
+      },
+    );
 
     test(
       'found at a festival: out, the fine, the ban on every festival this '
@@ -1173,11 +1197,19 @@ void main() {
         c.genes[t] = 40;
         c.env[t] = 0;
       }
-      final q0 = Judging.quality(c, g.today);
+      double judged() {
+        var sum = 0.0;
+        for (final e in Judging.observedAll(c, g.today, judges: true).entries) {
+          sum += e.value * e.key.weight;
+        }
+        return sum;
+      }
+
+      final q0 = judged();
       expect(g.dispatch(Tamper(g.me.id, c.id, TamperKind.dye, 1)).ok, isTrue);
-      final q1 = Judging.quality(c, g.today);
+      final q1 = judged();
       expect(g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 1)).ok, isTrue);
-      final q2 = Judging.quality(c, g.today);
+      final q2 = judged();
       expect(q1 - q0, closeTo(Balance.tamperLift(TamperKind.dye, 1), 1e-9));
       expect(q2 - q1, closeTo(Balance.tamperLift(TamperKind.botox, 1), 1e-9));
       expect(GameView(g.state, g.me.id).tamperings, hasLength(2));
@@ -1313,11 +1345,75 @@ void main() {
           for (final t in Trait.values) {
             expect(
               after[t]! - before[t]!,
-              lessThanOrEqualTo(Balance.tamperFeatureCapPerLevel * 3 + 1e-9),
+              lessThanOrEqualTo(
+                Balance.tamperFeatureCapPerLevel *
+                        3 *
+                        Balance.tamperPriceShare +
+                    1e-9,
+              ),
             );
           }
         },
       );
+
+      test('a treated camel does not look cheap: her price and her shown '
+          'quality agree as a clean camel\'s do', () {
+        final g = newGame();
+        final sim0 = Sim(g.state);
+        // a camel's price over what the curve gives for the quality shown on
+        // her card: the clean band
+        double ratio(Camel c) {
+          final q = GameView(
+            g.state,
+            const OwnerId('buyer'),
+          ).camel(c.id)!.quality;
+          return Valuation.value(c, g.today).value /
+              (Valuation.basePrice(c.ageClass(g.today), c.sex) *
+                  Valuation.qualityMultiplier(q) *
+                  c.category.baseDemand *
+                  Valuation.placingMultiplier(c));
+        }
+
+        final clean = <double>[];
+        for (var i = 0; i < 300; i++) {
+          final c = WorldGen(sim0).makeCamel(
+            sim0.rng(['cheap', i]),
+            owner: g.state.world.owners.keys.first,
+            mean: 62,
+            sex: Sex.female,
+            ageDays: 5 * 365 + 40,
+          )..condition = 72;
+          clean.add(ratio(c));
+        }
+        clean.sort();
+        final lo = clean[(clean.length * 0.05).floor()];
+        final hi = clean[(clean.length * 0.95).floor()];
+        for (final k in TamperKind.values) {
+          for (var st = 1; st <= 3; st++) {
+            final c = WorldGen(sim0).makeCamel(
+              sim0.rng(['cheap-t', k.index, st]),
+              owner: g.state.world.owners.keys.first,
+              mean: 62,
+              sex: Sex.female,
+              ageDays: 5 * 365 + 40,
+            )..condition = 72;
+            c.treatments.add(
+              Tampering(
+                kind: k,
+                strength: st,
+                on: g.today,
+                until: g.today + 20,
+              ),
+            );
+            final r = ratio(c);
+            expect(
+              r,
+              inInclusiveRange(lo - 0.02, hi + 0.02),
+              reason: '${k.name} $st',
+            );
+          }
+        }
+      });
 
       test('every entry is examined: a weak treated camel is found as often as '
           'a strong one', () {
