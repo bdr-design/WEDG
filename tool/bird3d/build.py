@@ -173,10 +173,10 @@ def measures(name, pose, objs, spec, lo, hi):
 
 def run_saker():
     import saker
-    for pose in ('hooded', 'alert', 'flight'):
-        for level in (1, 0):
+    for pose in ('hooded', 'fist', 'alert', 'flight'):
+        for level in ((1, 0) if pose != 'fist' else (0,)):
             root, objs, pts, body = build_bird('saker', pose, level)
-        if RENDER:
+        if RENDER and pose != 'fist':
             pictures_bird('saker', pose, root, objs, pts)
 
 
@@ -207,7 +207,18 @@ def pictures_bird(name, pose, root, objs, pts):
             pxmm = res[0] / (ortho * 0.75 * 1000)
             x0 = res[0] / 2 - (mid[0] * 1000 - lo[0]) * pxmm
             finish(png, (pxmm, x0, res[1] - 40, round((hi[0] - lo[0]) / 10) * 10))
-        png = shot_jpg(st, tag + '_below', (mid[0] - 0.9, -0.6, mid[2] - 1.5), mid, lens=50, res=res)
+        # straight from below, the head up the picture: the underwing as a falconer sees it cast off
+        st.cam.rotation_mode = 'XYZ'
+        png = None
+        if want('below'):
+            st.cam.location = V3((mid[0], mid[1], mid[2] - 4))
+            st.cam.rotation_euler = (math.pi, 0, math.pi / 2)
+            st.cam_d.type = 'ORTHO'
+            st.cam_d.ortho_scale = ortho
+            st.sc.render.resolution_x, st.sc.render.resolution_y = res
+            st.sc.render.filepath = os.path.join(OUT, tag + '_below.png')
+            bpy.ops.render.render(write_still=True)
+            png = os.path.join(OUT, tag + '_below.png')
         finish(png)
         png = shot_jpg(st, tag + '_top', (mid[0], 0, 4), mid, ortho=ortho, res=res)
         if png:

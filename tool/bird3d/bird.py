@@ -132,6 +132,14 @@ def beak(body, spec, det):
         au, ad, bl, br = sizes[i]
         secs.append(Sec(q, uu, vv, au, ad, bl, br, p=b.get('p', 2.2)))
     out = [loft('horn', secs, det.beak_ring, caps=(True, True))]
+    if b.get('tooth') and det.level == 0:
+        # the falcon's tomial tooth: a small point on each edge of the upper mandible, before the hook
+        f0 = b['tooth']
+        i = int(round(f0 * (n - 1)))
+        sec = secs[i]
+        for side in (1, -1):
+            base = sec.c - sec.u * (sec.ad * 0.55) + sec.v * side * (sec.bl * 0.72)
+            out.append(tube('horn', [base + sec.u * 1.2, base - sec.u * 1.4, base - sec.u * 2.6], [1.5, 1.0, 0.25], 5, up=sec.v))
     if b.get('lower'):
         # the lower mandible: shorter and straight, under the upper's edges
         lo_len, lo_h, lo_w = b['lower']
@@ -177,18 +185,54 @@ def eyes(body, spec, det):
             uu, vv = frame(look_dir, u)
             secs.append(Sec(centre + look_dir * along, uu, vv, rad, p=2.0))
         out.append(loft('eye', secs, det.eye_ring, caps=(True, True)))
-        if e.get('ring'):
+        if e.get('ring') and det.level == 0:
+            # the bare skin round the eye: a flat ring laid on the face all round the eye's rim
             rr = e['ring']
-            # a ring of bare skin: a flat torus round the eye's front
-            pts, n2 = [], 14 if det.level == 0 else 8
+            pts, n2 = [], 16 if det.level == 0 else 8
             uu, vv = frame(look_dir, u)
-            ring_c = centre + look_dir * (r * 0.55)
-            for k in range(n2 + 1):
+            for k in range(n2):
                 a = 2 * math.pi * k / n2
-                pts.append(ring_c + (uu * math.cos(a) + vv * math.sin(a)) * (r + rr * 0.5))
-            pc = loop_tube('skin', pts[:-1], rr * 0.55, 6 if det.level == 0 else 4, look_dir, flat=0.45)
+                radial = uu * math.cos(a) + vv * math.sin(a)
+                q = centre - look_dir * (r * 0.5) + radial * (r * 0.92 + rr * 0.4)
+                for _ in range(80):          # out along the eye's axis until it sits on the face
+                    if not inside_head(body, q, 0.2):
+                        break
+                    q = q + look_dir * 0.25
+                pts.append(q)
+            out.append(loop_tube('skin', pts, rr * 0.5, 6 if det.level == 0 else 4, look_dir, flat=0.45))
+        if e.get('brow') and det.level == 0:
+            # the falcon's frown: a ridge of bone and feathers over the eye, coloured from the crown beside it
+            length, height, width = e['brow']
+            secs = []
+            m = 5 if det.level == 0 else 3
+            above = (u - look_dir * u.dot(look_dir)).normalized()
+            for i in range(m):
+                f = i / (m - 1)
+                q = centre + above * (r * 0.92) + look_dir * (r * 0.42) + t * (length * (f - 0.45))
+                k = math.sin(math.pi * (0.08 + 0.84 * f))
+                secs.append(Sec(q, above, look_dir.cross(above) * side, height * k + 0.3, height * k + 0.3, width * k + 0.3, p=2.0))
+            pc = loft('body', secs, 8 if det.level == 0 else 5, caps=(True, True))
+            s_b = float(np.interp(e['d'], body.d, body.s))
+            t_b = 0.20 if side > 0 else 0.80
+            pc.UV = [((s_b, t_b),) * 3 for _ in pc.T]
             out.append(pc)
     return out
+
+
+def inside_head(body, q, margin):
+    """Whether point q lies inside the body's surface (by its nearest section), with [margin] mm to spare."""
+    best = None
+    for d in np.linspace(body.d_end - 70, body.d_end, 71):
+        c, t, u, v = body.frame_at(d)
+        dd = abs((q - c).dot(t))
+        if best is None or dd < best[0]:
+            best = (dd, d, c, u, v)
+    _, d, c, u, v = best
+    au, ad, b = body.size_at(d)
+    x, y = (q - c).dot(u), (q - c).dot(v)
+    a = au if x >= 0 else ad
+    p = body.pose.get('p', 2.0)
+    return (abs(x) / (a + margin)) ** p + (abs(y) / (b + margin)) ** p < 1.0
 
 
 def loop_tube(block, pts, radius, n, up, flat=1.0):

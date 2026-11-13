@@ -19,22 +19,22 @@ STATIONS = [
     (75, 42.6, 63.8, 54),
     (110, 45.9, 69.4, 57),
     (140, 45.9, 67.2, 57),
-    (165, 41.4, 56, 52),
-    (185, 30, 37, 43),      # the neck's base
-    (205, 25, 28, 33),
-    (222, 23, 25, 27.5),    # the nape
-    (240, 28, 25, 28.5),    # the back of the head
-    (258, 29, 23, 27),      # the crown over the eyes
+    (165, 41.4, 58, 52),
+    (185, 33, 50, 46),      # the neck's base: a falcon's head sits on its shoulders, the throat full
+    (205, 27, 40, 38),
+    (222, 25, 32, 32),      # the nape
+    (240, 28, 27, 30),      # the back of the head
+    (258, 29, 23, 27.5),    # the crown over the eyes
     (272, 23, 19, 21),
-    (283, 15, 13, 14),
-    (290, 8, 8, 9),         # the forehead's end, where the cere begins
+    (283, 16, 14, 14.5),
+    (290, 12, 10, 9.5),     # the forehead's end, where the cere begins (as deep as the bill's root)
 ]
 
 SPEC = {
     'name': 'saker',
-    'beak': {'length': 27, 'droop': 14, 'droop_pow': 2.6, 'h0': 10.5, 'low': 0.62, 'w0': 6.6, 'h_pow': 0.75,
-             'w_pow': 1.0, 'h_tip': 0.7, 'w_tip': 0.5, 'cere': 9, 'lower': (17, 6.0, 5.6), 'sink': 3},
-    'eye': {'d': 263, 'up': 5.0, 'r': 8.2, 'out': 0.80, 'fwd': 22, 'ring': 2.6},
+    'beak': {'length': 21, 'droop': 14, 'droop_pow': 2.0, 'h0': 12.0, 'low': 0.72, 'w0': 7.4, 'h_pow': 0.85,
+             'w_pow': 1.0, 'h_tip': 0.7, 'w_tip': 0.5, 'cere': 7, 'lower': (13, 6.5, 6.4), 'sink': 7, 'tooth': 0.62},
+    'eye': {'d': 263, 'up': 5.0, 'r': 8.2, 'out': 0.80, 'fwd': 22, 'ring': 2.8, 'brow': (22, 3.4, 3.6)},
     'fold': [      # tip to wrist: (x, z_top, z_bottom, y_mid, half_thickness, bend); the tips 70 mm short of the tail's
         (-135, 16, 9, 10, 1.6, 0.5),
         (-95, 20, 4, 15, 2.6, 1.5),
@@ -47,17 +47,17 @@ SPEC = {
         (172, 14, -24, 58, 8.0, 6),
     ],
     'open': [      # root to tip: (y, x_leading, x_trailing, z, half_thickness, camber)
-        (28, 168, -8, 8, 12, 3),
-        (90, 173, -22, 8, 11, 6),
-        (160, 177, -14, 9, 10, 7),
-        (215, 173, 0, 9, 9, 7),        # the wrist
-        (280, 163, 10, 7, 6.5, 6),
-        (350, 146, 18, 4, 4.8, 5),
-        (420, 124, 24, 1, 3.8, 4),
-        (490, 100, 32, -2, 2.8, 3),
-        (550, 80, 42, -5, 2.0, 2),
-        (588, 66, 50, -6, 1.6, 1),
-        (600, 60, 55, -6, 1.2, 0.5),
+        (28, 168, -18, 8, 12, 3),
+        (90, 174, -34, 8, 11, 6),
+        (160, 178, -28, 9, 10, 7),
+        (215, 174, -16, 9, 9, 7),        # the wrist
+        (280, 164, -14, 7, 6.5, 6),
+        (350, 149, -8, 4, 4.8, 5),
+        (420, 129, -2, 1, 3.8, 4),
+        (490, 107, 8, -2, 2.8, 3),
+        (550, 88, 22, -5, 2.0, 2),
+        (588, 72, 40, -6, 1.6, 1),
+        (600, 64, 52, -6, 1.2, 0.5),
     ],
     'tail': [      # (distance from its root, half width, half thickness, z)
         (0, 18, 10, 0), (40, 25, 8, 0), (100, 30, 6.0, 0), (160, 33, 4.6, 0), (200, 32, 3.8, 0),
@@ -65,13 +65,13 @@ SPEC = {
     ],
     'wrist_y': 215,
     'tail_root': 20, 'tail_up': 3,
-    'leg': {'knee': (89, -53, 21), 'tibia': 96, 'tarsus': 57, 'shank_r': (19, 18.5, 16, 13, 9.5),
+    'leg': {'knee': (95, -38, 20), 'tibia': 104, 'tarsus': 57, 'shank_r': (26, 22, 17, 13, 9.5),
             'tarsus_r': (6.6, 5.6, 6.2), 'jess_at': 0.5, 'trouser': 0.38},
     'toes': [      # (heading deg, length, radius, (claw length, claw arc deg), curl)
-        (0, 54, 5.4, (17, 95), 0),       # the middle toe
-        (-30, 40, 5.0, (19, 100), 0),     # the inner toe
-        (32, 42, 4.6, (13, 90), 0),       # the outer toe
-        (180, 29, 5.6, (21, 100), 0),     # the hind toe (hallux)
+        (0, 52, 4.6, (21, 125), 0),      # the middle toe
+        (-30, 39, 4.4, (23, 130), 0),     # the inner toe
+        (32, 41, 4.0, (17, 120), 0),      # the outer toe
+        (180, 28, 4.8, (25, 130), 0),     # the hind toe (hallux)
     ],
 }
 
@@ -79,13 +79,16 @@ POSES = {
     # hooded on the perch: upright, relaxed, a little fluffed, head level
     'hooded': {'origin': (-58, 80), 'spine': [(0, 66), (160, 66), (200, 86), (238, 40), (262, 0), (300, 0)],
                'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 1, 'fluff': 1.05, 'wings': 'fold'},
+    # hooded on the fist (الدس): the same bird, her jesses held in the falconer's fist
+    'fist': {'origin': (-58, 80), 'spine': [(0, 66), (160, 66), (200, 86), (238, 40), (262, 0), (300, 0)],
+             'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 1, 'fluff': 1.05, 'wings': 'fold', 'held': True},
     # unhooded and alert: taller, sleeked, the neck stretched, the head a little raised
     'alert': {'origin': (-54, 78), 'spine': [(0, 65), (160, 65), (196, 88), (236, 48), (262, 6), (300, 6)],
               'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 0, 'fluff': 0.97, 'neck_stretch': 12, 'wings': 'fold'},
     # cast off: level, wings spread, tail a little fanned, the legs drawn up
     'flight': {'origin': (0, 0), 'spine': [(0, 0), (170, 0), (215, 6), (262, 0), (300, 0)], 'wings': 'open',
-               'wing_dihedral': 7, 'tail_spread': 1.22, 'tucked': True, 'tuck_ankle': (40, -44, 17),
-               'tuck_foot': (-12, -40, 13), 'foot': (0, 0, 0)},
+               'wing_dihedral': 7, 'tail_spread': 1.22, 'tucked': True, 'tuck_ankle': (35, -40, 15),
+               'tuck_foot': (-22, -18, 11), 'foot': (0, 0, 0)},
 }
 
 
@@ -117,7 +120,7 @@ def build(pose_name, level):
     leg, pts = bird.legs(body, SPEC, pose, det)
     for k in ('shank', 'tarsus', 'toes', 'claws'):
         parts['body'] += leg[k]
-    if pose_name == 'hooded':
+    if pose_name in ('hooded', 'fist'):
         parts['hood'] = hood(body, det)
     # the jesses are left off the far model: 2 mm cords are under a pixel at tens of metres
     jp = {}
@@ -155,19 +158,24 @@ def hood(body, det):
         grow = 5.2 * (1 - 0.35 * max(0.0, (d - 270) / 16))
         secs.append(Sec(c, u, v, au + grow, max(ad - 5, 4), b + grow, b + grow, p=2.1))
     out = [loft('hood', secs, det.body_ring, caps=(True, True))]
-    # the top knot: a short plaited stem and its knob on the crown
+    # the top knot: a small plaited leather knot sitting on the crown, with a short tuft of thong ends
     c, t, u, v = body.frame_at(246)
     au, ad, b = body.size_at(246)
-    base = c + u * (au + 2.5)
-    out.append(tube('hood_knot', [base, base + u * 6, base + u * 10], [2.6, 2.2, 3.4], 6 if det.level == 0 else 4, up=t))
-    # the braces: two narrow thongs from the back, hanging behind the head
+    base = c + u * (au + 4.0)
+    out.append(bird.ball('hood_knot', base + u * 2.6, 3.4, 8 if det.level == 0 else 5))
     if det.level == 0:
-        c, t, u, v = body.frame_at(223)
-        au, ad, b = body.size_at(223)
+        for k, side in ((0, 1), (1, -1), (2, 0)):
+            a = base + u * 4.5
+            tip = a + u * 4.0 - t * (5 + 2 * k) + v * side * 2.5
+            out.append(tube('hood_knot', [a, a.lerp(tip, 0.5) + u * 1.0, tip], [1.1, 0.9, 0.5], 4, up=t))
+        # the braces: two leather thongs drawn through the back, their ends hanging down the nape
+        c, t, u, v = body.frame_at(224)
+        au, ad, b = body.size_at(224)
         for side in (1, -1):
-            a = c + u * (au + 2.0) + v * side * 6
-            pts = smooth_path([a, a - t * 8 - u * 3 + v * side * 4, a - t * 13 - u * 14 + v * side * 7, a - t * 15 - u * 24 + v * side * 8], 6)
-            out.append(tube('hood_knot', pts, [1.4] * 6, 4, up=v))
+            a = c + u * (au + 4.5) + v * side * 7
+            pts = smooth_path([a, a - t * 6 + u * 1 + v * side * 5, a - t * 10 - u * 10 + v * side * 9,
+                               a - t * 11 - u * 24 + v * side * 11, a - t * 10 - u * 36 + v * side * 11], 7)
+            out.append(tube('hood_knot', pts, [2.0, 2.0, 1.9, 1.8, 1.7, 1.6, 1.2], 5, up=v))
     return out
 
 
@@ -187,7 +195,11 @@ def jesses(body, pts, pose, det):
         ring = [a + (u * math.cos(2 * math.pi * k / 12) + v * math.sin(2 * math.pi * k / 12)) * 7.4 for k in range(12)]
         out.append(bird.loop_tube('cord', ring, cord, 5 if det.level == 0 else 4, axis))
         start = a + u * 7.4
-        if pose.get('tucked'):
+        if pose.get('held'):
+            # down over the fist's front into the falconer's grip, between his fingers
+            path = smooth_path([start, V3((16, side * 9, cord)), V3((30, side * 4, -3)), V3((36, side * 2, -14)),
+                                V3((34, side * 1.5, -26))], n)
+        elif pose.get('tucked'):
             back = V3((-1, 0, -0.15)).normalized()
             path = smooth_path([start, start + back * 30 + V3((0, side * 3, -4)), start + back * 62 + V3((0, side * 2, -9))], n)
         else:
@@ -195,7 +207,7 @@ def jesses(body, pts, pose, det):
                                 V3((83, side * 1.5, -40)), sw + V3((0, side * 1.2, 4))], n + 4)
         out.append(tube('cord', path, [cord] * len(path), 5 if det.level == 0 else 4, up=V3((0, 0, 1))))
         p['jess_' + key] = (a, axis, u)
-    if not pose.get('tucked'):
+    if not pose.get('tucked') and not pose.get('held'):
         # the swivel: a small steel ring where the leash (المرسل) clips on
         ring = [sw + V3((math.cos(2 * math.pi * k / 10) * 6, 0, math.sin(2 * math.pi * k / 10) * 6 - 2)) for k in range(10)]
         out.append(bird.loop_tube('steel', ring, 1.3, 4, V3((0, 1, 0))))

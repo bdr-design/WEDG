@@ -84,23 +84,31 @@ def band(x, a, b, w):
     return soft(x, a - w, a) * (1 - soft(x, b, b + w))
 
 
-def streaks(X, Y, sx, sy, length, width, seed, density=1.0):
-    """Dark tear-drop streaks in staggered rows (X toward the tail, Y across, mm): each [length] long, widest
-    ([width]) toward its rear end, jittered. [density] 0..1 drops some. Returns 0..1 (1 inside a streak)."""
-    row = np.floor(X / sx)
-    off = (row % 2) * 0.5 * sy
-    col = np.floor((Y + off) / sy)
-    idx = (row * 7919 + col * 104729 + seed * 31) % 9973
-    jx = (hash01(idx, 3.0) - 0.5) * 0.35 * sx
-    jy = (hash01(idx, 5.0) - 0.5) * 0.35 * sy
-    keep = hash01(idx, 7.0) < density
-    lx = X - (row + 0.5) * sx - jx
-    ly = Y + off - (col + 0.5) * sy - jy
-    a = np.clip(lx / length + 0.5, 0, 1)              # 0 its front end, 1 its rear
-    hw = width * 0.5 * np.sin(np.pi * np.clip(a, 0, 1) ** 0.65) * (0.75 + 0.5 * hash01(idx, 9.0))
-    inside = (np.abs(lx) < length / 2) & keep
-    m = np.clip((hw - np.abs(ly)) / 0.7, 0, 1) * inside
-    return m
+def streaks(X, Y, sx, sy, length, width, seed, density=1.0, tilt=12.0):
+    """Dark tear-drop streaks in staggered rows (X toward the tail, Y across, mm): each about [length] long and
+    widest ([width]) toward its rear end, each one's length, width, place and slant ([tilt] degrees) varied at
+    random so they read as feathers, not a grid. [density] 0..1 drops some. Returns 0..1 (1 inside a streak)."""
+    out = np.zeros_like(X)
+    for pas, shift in ((0, 0.0), (1, 0.5)):       # two offset layers: neighbours overlap like real feathers
+        Xs = X + shift * sx
+        row = np.floor(Xs / sx)
+        off = (row % 2) * 0.5 * sy + hash01(row, 17.0 + pas) * sy
+        col = np.floor((Y + off) / sy)
+        idx = (row * 7919 + col * 104729 + seed * 31 + pas * 17) % 9973
+        jx = (hash01(idx, 3.0) - 0.5) * 0.5 * sx
+        jy = (hash01(idx, 5.0) - 0.5) * 0.45 * sy
+        keep = hash01(idx, 7.0) < density * (0.75 if pas else 1.0)
+        L = length * (0.65 + 0.7 * hash01(idx, 11.0))
+        ang = np.radians((hash01(idx, 13.0) - 0.5) * 2 * tilt)
+        lx0 = Xs - (row + 0.5) * sx - jx
+        ly0 = Y + off - (col + 0.5) * sy - jy
+        lx = lx0 * np.cos(ang) + ly0 * np.sin(ang)
+        ly = -lx0 * np.sin(ang) + ly0 * np.cos(ang)
+        a = np.clip(lx / L + 0.5, 0, 1)
+        hw = width * 0.5 * np.sin(np.pi * a ** 0.6) * (0.65 + 0.7 * hash01(idx, 9.0))
+        inside = (np.abs(lx) < L / 2) & keep
+        out = np.maximum(out, np.clip((hw - np.abs(ly)) / 0.8, 0, 1) * inside)
+    return out
 
 
 def plumage(X, Y, w, l, base, fringe, centre, streak_w, fringe_w, noise, shade=0.16, drop=False, sides=0.9, dark=0.0):
@@ -132,12 +140,12 @@ def plumage(X, Y, w, l, base, fringe, centre, streak_w, fringe_w, noise, shade=0
 # ------------------------------------------------------------------ the saker (a first-year female)
 class SakerPaint:
     # Juvenile (فرخ) saker colours; see README.md for the sources of each mark.
-    BROWN = C(0.35, 0.25, 0.18)          # upperparts' feathers, dark brown
-    FRINGE = C(0.66, 0.50, 0.35)         # their narrow rufous-buff edges
-    CREAM = C(0.90, 0.84, 0.74)          # underparts' ground, cream-buff
-    STREAK = C(0.31, 0.22, 0.16)         # the heavy dark-brown streaks of a young bird's underparts
-    CROWN = C(0.80, 0.70, 0.56)          # the pale crown
-    FACE = C(0.91, 0.87, 0.79)           # cheeks and throat
+    BROWN = C(0.29, 0.20, 0.145)         # a young bird's upperparts: dark brown
+    FRINGE = C(0.60, 0.48, 0.36)         # their narrow pale buff edges
+    CREAM = C(0.87, 0.80, 0.69)          # underparts' ground, buff-cream
+    STREAK = C(0.26, 0.18, 0.13)         # the heavy dark-brown streaks of a young bird's underparts
+    CROWN = C(0.66, 0.54, 0.41)          # a young bird's buff-brown crown, heavily streaked
+    FACE = C(0.86, 0.79, 0.67)           # cheeks and throat, buff
     PRIM = C(0.25, 0.19, 0.15)           # the primaries, darker than the coverts
     SKIN = C(0.60, 0.64, 0.66)           # a young bird's cere, eye ring and feet: bluish grey
     HORN = C(0.56, 0.61, 0.67)           # the beak's base: bluish horn
@@ -162,39 +170,43 @@ class SakerPaint:
         nz = self.n(D + 300, Y + 300, 6.0) + 0.5 * self.n(D + 300, Y + 300, 2.0)
         head = soft(D, 212, 232)                    # the head from the nape on
         belly = soft(tt, 0.17, 0.27)                # the underside from the flanks down
-        # the back and mantle: dark brown feathers with narrow rufous-buff edges, larger toward the scapulars and
-        # smaller toward the head
+        # the back and mantle: plain dark brown feathers with narrow pale buff edges (a young bird; an adult's are
+        # paler and barred rufous), larger toward the scapulars and smaller toward the head
         fw = 12 - 7 * head
         fl = 9 - 5.4 * head
-        back, al_b, occ_b = plumage(-D, Y, fw, fl, self.BROWN * 1.08, self.FRINGE, self.STREAK, 0.0, 0.10, nz, shade=0.06, sides=0.25, dark=0.35)
-        # the underparts: cream-buff, soft feathers, with the bold dark tear-drop streaks of a young bird, heaviest
-        # on the flanks and lower breast, finer and fewer up the breast, none on the throat and few under the tail
+        back, al_b, occ_b = plumage(-D, Y, fw, fl, self.BROWN, self.FRINGE, self.STREAK, 0.0, 0.07, nz, shade=0.10, sides=0.4)
+        # the underparts: buff-cream with the heavy, long dark streaks of a young bird, broadest and merging on the
+        # flanks, narrower up the breast, thin on the throat, few under the tail
         under_w = 8.0 - 4.0 * soft(D, 150, 215)
         under, al_u, occ_u = plumage(-D, Y, under_w, under_w * 0.72, self.CREAM, self.CREAM * 1.02, self.STREAK,
                                      0.0, 0.0, nz, shade=0.06)
-        flank = soft(tt, 0.2, 0.3) * (1 - soft(tt, 0.40, 0.5))
-        dens = np.clip(0.95 - 0.55 * soft(D, 150, 200) - 0.9 * (1 - soft(D, 25, 60)), 0, 1)
-        sl = 17.0 - 6.0 * soft(D, 140, 200)
-        st = streaks(-D, Y, sl * 1.15, 8.5 - 1.5 * soft(D, 140, 200), sl, 3.8 + 1.8 * flank - 1.6 * soft(D, 150, 200), 1,
-                     density=1.0) * (dens > 0.05) * np.clip(dens * 1.3, 0, 1)
-        under = lerp_col(under, self.STREAK[None, None, :] * (1 + 0.1 * nz[..., None]), st * 0.92)
+        flank = soft(tt, 0.19, 0.27) * (1 - soft(tt, 0.38, 0.47))
+        dens = np.clip(1.0 - 0.35 * soft(D, 170, 215) - 0.9 * (1 - soft(D, 20, 55)), 0, 1)
+        sl = 26.0 - 10.0 * soft(D, 140, 205)
+        sw = 5.2 + 3.5 * flank - 2.6 * soft(D, 150, 205)
+        st = streaks(-D, Y, sl * 0.9, 9.0 - 2.0 * soft(D, 140, 205), sl, sw, 1, density=1.0) * np.clip(dens * 1.2, 0, 1)
+        under = lerp_col(under, self.STREAK[None, None, :] * (1 + 0.1 * nz[..., None]), st * 0.95)
         col = lerp_col(back, under, belly)
         occ = occ_b * (1 - belly) + occ_u * belly
-        # the head: a pale, finely streaked crown; cream cheeks and an unmarked throat; a dark streak behind the eye
-        # and a thin, faint moustache (the saker's is weaker than a peregrine's)
+        # the head: a buff-brown crown densely streaked dark; buff cheeks finely streaked; the throat buff with thin
+        # streaks; a dark streak behind the eye, a faint pale brow line, and a thin moustache (weaker than a
+        # peregrine's)
         ed, ey = eye_place(self.body, self.spec['eye'])
-        crown_c, _, _ = plumage(-D, Y, 4.0, 3.0, self.CROWN, self.CROWN * 1.05, self.STREAK * 1.1, 0.16, 0.0, nz, shade=0.06)
+        crown_c, _, _ = plumage(-D, Y, 4.0, 3.0, self.CROWN, self.CROWN, self.STREAK, 0.0, 0.0, nz, shade=0.06)
+        cs = streaks(-D, Y, 6.0, 3.6, 6.0, 1.9, 5, density=0.95, tilt=8)
+        crown_c = lerp_col(crown_c, self.STREAK, cs * 0.9)
         face = self.FACE[None, None, :] * (1 + 0.04 * nz[..., None])
-        hc = lerp_col(crown_c, face, soft(Y, ey - 4, ey + 12))
-        # the nape: browner, its feathers pale-edged
-        hc = lerp_col(hc, back, (1 - soft(D, 228, 246)) * (1 - soft(Y, 6, 28)) * 0.75)
+        fs = streaks(-D, Y, 5.0, 4.0, 4.5, 1.2, 9, density=0.7, tilt=10)
+        face = lerp_col(face, self.STREAK * 1.2, fs * 0.55 * (1 - soft(tt, 0.36, 0.44)))
+        hc = lerp_col(crown_c, face, soft(Y, ey - 3, ey + 10))
+        # the nape: dark brown, its feathers pale-edged
+        hc = lerp_col(hc, back, (1 - soft(D, 228, 246)) * (1 - soft(Y, 6, 28)) * 0.85)
         stripe, _ = seg_dist(D, Y, (ed - 6, ey), (ed - 34, ey + 1.5))
-        hc = lerp_col(hc, self.STREAK[None, None, :] * 1.05, np.clip(1 - (stripe - 2.2) / 2.0, 0, 1) * 0.85)
+        hc = lerp_col(hc, self.STREAK[None, None, :] * 1.05, np.clip(1 - (stripe - 2.6) / 2.0, 0, 1) * 0.9)
         mous, f = seg_dist(D, Y, (ed + 3, ey + 7), (ed - 7, ey + 21))
-        hc = lerp_col(hc, self.STREAK[None, None, :] * 1.15, np.clip(1 - (mous - 1.2) / 1.6, 0, 1) * (0.75 - 0.4 * f))
+        hc = lerp_col(hc, self.STREAK[None, None, :] * 1.1, np.clip(1 - (mous - 1.2) / 1.6, 0, 1) * (0.8 - 0.4 * f))
         sup, _ = seg_dist(D, Y, (ed + 6, ey - 8.5), (ed - 26, ey - 8))
-        hc = lerp_col(hc, self.FACE[None, None, :], np.clip(1 - (sup - 1.5) / 2.0, 0, 1) * 0.55)
-        # the lores before the eye, darker; the forehead pale
+        hc = lerp_col(hc, self.FACE[None, None, :] * 1.04, np.clip(1 - (sup - 1.3) / 1.8, 0, 1) * 0.6)
         lore, _ = seg_dist(D, Y, (ed + 5, ey + 1), (ed + 16, ey + 3))
         hc = lerp_col(hc, self.STREAK[None, None, :] * 1.5, np.clip(1 - (lore - 1.0) / 2.5, 0, 1) * 0.35)
         col = lerp_col(col, hc, head)
@@ -212,14 +224,15 @@ class SakerPaint:
         Yv = tt * H
         nz = self.n(X + 50, Yv + 50, 5.0)
         # coverts near the wrist: small, dark-centred, rufous-fringed; the greater coverts larger
-        cov, _, occ1 = plumage(X, Yv, 9.0, 7.0, self.BROWN * 1.08, self.FRINGE, self.BROWN, 0.0, 0.12, nz, shade=0.06, sides=0.25, dark=0.35)
-        gc, _, occ2 = plumage(X, Yv, 15.0, 14.0, self.BROWN * 1.05, self.FRINGE * 0.97, self.BROWN, 0.0, 0.09, nz, shade=0.06, sides=0.25, dark=0.35)
+        cov, _, occ1 = plumage(X, Yv, 9.0, 7.0, self.BROWN, self.FRINGE, self.BROWN, 0.0, 0.08, nz, shade=0.10, sides=0.4)
+        gc, _, occ2 = plumage(X, Yv, 15.0, 14.0, self.BROWN * 1.02, self.FRINGE * 0.97, self.BROWN, 0.0, 0.07, nz, shade=0.10, sides=0.4)
         # the secondaries and tertials: long, brown, with a pale fringe at their tips
         sec, _, occ3 = plumage(X, Yv * 1.0, 16.0, 46.0, self.BROWN * 0.92, self.FRINGE * 0.95, self.BROWN, 0.0, 0.05, nz, shade=0.14)
         # the primaries over the rump and tail: darkest, long, their tips staggered with a thin pale edge
         prim = self.PRIM[None, None, :] * (1 + 0.05 * nz[..., None])
-        lines = np.abs(((Yv + 0.15 * X) / 7.0) % 1.0 - 0.5) < 0.06
-        prim = prim * (1 - 0.18 * lines[..., None])
+        fe = ((Yv + 0.15 * X) / 6.0) % 1.0
+        prim = prim * (0.80 + 0.28 * soft(fe, 0.0, 0.85)[..., None])        # each primary darker at its overlapped edge
+        prim = lerp_col(prim, self.FRINGE * 0.8, (fe > 0.93) * 0.5)
         tips = np.zeros_like(X)
         for k, xt in enumerate((335, 322, 306, 288, 268)):
             tips = np.maximum(tips, band(X, xt - 3.5, xt, 1.0) * soft(Yv, 0, 4) * (1 - soft(Yv, 4 + 3 * k, 10 + 3 * k)))
@@ -251,7 +264,7 @@ class SakerPaint:
         fx = fan - fi
         shaft = np.abs(fx - 0.5) < 0.05
         edge = np.abs(fx - 0.5) > 0.46
-        rem_zone = soft(c, 0.42 - 0.12 * hand, 0.55 - 0.12 * hand)
+        rem_zone = np.where(upper, soft(c, 0.42 - 0.12 * hand, 0.55 - 0.12 * hand), soft(c, 0.50 - 0.14 * hand, 0.60 - 0.14 * hand))
         # upper side: dark brown coverts with rufous fringes; brown remiges, the primaries darker
         cov, _, occc = plumage(Y, Xc, 10.0, 8.0, self.BROWN, self.FRINGE, self.BROWN, 0.0, 0.16, nz)
         rem_u = lerp_col(self.BROWN * 0.92, self.PRIM, hand)[..., :] if False else None
@@ -263,9 +276,10 @@ class SakerPaint:
         up = lerp_col(cov, rem_u, rem_zone)
         # under side: the coverts dark brown and heavily marked (the saker's dark underwing), the remiges pale
         # grey-buff, barred, with dusky tips
-        ucov, _, _ = plumage(Y, Xc, 9.0, 7.0, self.BROWN * 0.92, self.CREAM * 0.9, self.STREAK, 0.0, 0.12, nz, shade=0.06, sides=0.3)
+        ucov, _, _ = plumage(Y, Xc, 9.0, 7.0, self.BROWN * 0.85, self.CREAM * 0.9, self.STREAK, 0.0, 0.08, nz, shade=0.06, sides=0.3)
+        ucov = lerp_col(ucov, self.CREAM * 0.9, streaks(Y, Xc, 9.0, 8.0, 4.0, 2.4, 3, density=0.6) * 0.6)
         bars = np.abs(((Xc / 13.0 + fi * 0.37) % 1.0) - 0.5) < 0.17
-        rem_d = C(0.78, 0.74, 0.68)[None, None, :] * (1 - 0.35 * bars[..., None]) * (1 - 0.1 * edge[..., None])
+        rem_d = C(0.86, 0.83, 0.77)[None, None, :] * (1 - 0.16 * bars[..., None]) * (1 - 0.08 * edge[..., None])
         tipdark = soft(c, 0.92, 0.99)
         rem_d = lerp_col(rem_d, C(0.42, 0.36, 0.31), tipdark * 0.6)
         dn = lerp_col(ucov, rem_d, rem_zone)
@@ -301,7 +315,8 @@ class SakerPaint:
         X = S * 90.0
         Y = np.minimum(T, 1 - T) * 2 * 50.0
         nz = self.n(X + 3, Y + 3, 4.0)
-        col, al, occ = plumage(X, Y, 7.0, 6.0, self.CREAM * 0.94, self.CREAM, self.STREAK, 0.42, 0.0, nz, shade=0.12, drop=True)
+        col, al, occ = plumage(X, Y, 7.0, 6.0, self.CREAM, self.CREAM, self.STREAK, 0.0, 0.0, nz, shade=0.08)
+        col = lerp_col(col, self.STREAK, streaks(X, Y, 15.0, 7.5, 16.0, 5.5, 4, density=1.0) * 0.95)
         return col, 0.88 + 0.04 * nz, occ
 
     def skin_p(self, S, T):

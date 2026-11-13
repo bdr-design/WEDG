@@ -529,7 +529,7 @@ class Studio:
         self.lights = []
         at = V3(at)
         k = dist * dist * scale
-        self.light('AREA', at + V3((0.55, 0.85, 0.75)) * dist, 26 * k, at, 1.2 * dist)       # key: front, the bird's left, above
+        self.light('AREA', at + V3((0.55, 0.85, 0.75)) * dist, 18 * k, at, 1.2 * dist)       # key: front, the bird's left, above
         self.light('AREA', at + V3((-0.6, 0.7, 0.2)) * dist, 10 * k, at, 1.5 * dist)        # fill
         self.light('AREA', at + V3((-0.7, -0.8, 0.6)) * dist, 18 * k, at, 0.8 * dist)       # rim from behind
         self.light('AREA', at + V3((0.0, 0.0, 1.0)) * dist, 8 * k, at, 1.5 * dist)          # sky

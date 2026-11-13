@@ -41,7 +41,7 @@ def pose_arm(rig):
     pb.rotation_mode = 'QUATERNION'
     pb.rotation_quaternion = local.to_quaternion()
     hb = rig.pose.bones['hand.L']
-    hb.scale = (0.55, 0.55, 0.55)
+    hb.scale = (0.25, 0.25, 0.25)
     bpy.context.view_layer.update()
     m = rig.matrix_world @ rig.pose.bones['hand.L'].matrix
     head = m.translation
@@ -67,7 +67,7 @@ def vruler(path, px_per_mm, x, y_ground, length_mm):
 
 def scale(B):
     out = B.OUT
-    need = ['dass.glb', 'wakr.glb', 'saker_hooded.glb', 'saker_alert.glb', 'houbara_alert.glb', 'curlew_alert.glb']
+    need = ['dass.glb', 'wakr.glb', 'saker_fist.glb', 'saker_alert.glb', 'houbara_alert.glb', 'curlew_alert.glb']
     for n in need:
         if not os.path.exists(os.path.join(out, n)):
             raise SystemExit(f'{n} missing: build the birds and the gear first')
@@ -86,7 +86,7 @@ def scale(B):
     glove = load(os.path.join(out, 'dass.glb'), 'dass')
     top = fist + V3((0, 0, 0.052)) - V3((math.cos(math.radians(yaw)), math.sin(math.radians(yaw)), 0)) * (-0.015)
     place(glove, top, yaw)
-    hooded = load(os.path.join(out, 'saker_hooded.glb'), 'saker_hooded')
+    hooded = load(os.path.join(out, 'saker_fist.glb'), 'saker_fist')
     place(hooded, top + V3((0, 0, 0.002)), yaw)
     perch = load(os.path.join(out, 'wakr.glb'), 'wakr')
     place(perch, (0.0, -1.0, 0.30), -90)

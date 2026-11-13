@@ -3,8 +3,8 @@ The hood (البرقع) and the jesses (السبوق) are on the falcon (saker.p
 
 The perch: a broad flat round top on a wooden-clad stake driven into the sand, its top padded. Its origin is the
 middle of the top, where the falcon's feet stand (the saker's perched origin); the sand is 300 mm below.
-The glove (الدس): a padded, quilted cloth cuff over the left wrist and fist (not a fingered gauntlet), held with
-the forearm level and the thumb up. Its origin is
+The glove (الدس): a padded, quilted cloth cuff over the left wrist and fist (not a fingered gauntlet), its bound
+edge closed round the wrist over the sleeve's end, held with the forearm level and the thumb up. Its origin is
 the fist's top, where the falcon stands; X runs along the forearm toward the fist.
 """
 import math
@@ -128,26 +128,26 @@ def mursil(swivel, level=0):
 
 
 def dass(level=0):
-    """The dass: the padded cuff from mid forearm over the wrist and the fist (thumb up), the thumb's bulge over the
+    """The dass: the padded cuff from the wrist over the hand and the fist (thumb up), the thumb's bulge over the
     curled index finger, the knuckles' ridge."""
     n = 20 if level == 0 else 10
     X, Y, Z = V3((1, 0, 0)), V3((0, 1, 0)), V3((0, 0, 1))
     out = []
     top = 52.0          # the fist's top above the glove's axis
     o = V3((0, 0, -top))          # the axis in the file: the origin is the fist's top
-    rows = [   # (x, half height up, down, half width, squareness): from mid forearm over the wrist and the fist
-        (-160, 47, 47, 43, 2.2), (-153, 50, 50, 46, 2.2), (-145, 47, 47, 43, 2.2), (-100, 44, 44, 39, 2.2),
-        (-70, 43, 43, 36, 2.3), (-50, 44, 45, 34, 2.4), (-25, 50, 53, 36, 2.6), (5, 52, 53, 37, 2.8),
-        (28, 47, 45, 34, 2.8), (40, 35, 33, 30, 2.6), (47, 17, 17, 19, 2.2),
+    rows = [   # (x, half height up, down, half width, squareness): from the wrist over the hand and the fist
+        (-105, 47, 47, 45, 2.2), (-100, 49, 49, 47, 2.2), (-92, 47, 47, 44, 2.2), (-80, 44, 44, 39, 2.2),
+        (-68, 43, 43, 36, 2.3), (-50, 44, 45, 34, 2.4), (-25, 50, 53, 36, 2.6), (5, 52, 53, 37, 2.8),
+        (30, 48, 46, 35, 2.8), (44, 38, 36, 31, 2.6), (54, 18, 18, 20, 2.2),
     ]
     if level != 0:
         rows = [rows[0], rows[2], rows[4], rows[6], rows[7], rows[9], rows[10]]
     secs = [Sec(o + X * x, Z, Y, au, ad, b, b, p=p) for (x, au, ad, b, p) in rows]
-    s = [(x + 160) / 207.0 for (x, *_r) in rows]
+    s = [(x + 105) / 159.0 for (x, *_r) in rows]
     out.append(loft('leather', secs, n, s=s, caps=(True, True)))
     if level == 0:
         # the cuff's rolled edge
-        out.append(ring('cuff', o + X * (-153), X, 48.0, 5.0, 20, 6))
+        out.append(ring('cuff', o + X * (-100), X, 47.0, 4.0, 20, 6))
         # the thumb, over the curled index finger on the fist's top (the fist's left, toward the falconer's body)
         pts = [o + V3((-42, 16, 34)), o + V3((-12, 14, 46)), o + V3((14, 8, 49)), o + V3((30, 2, 44))]
         out.append(tube('leather', smooth_path(pts, 7), [13, 12.5, 11.5, 11, 10.5, 10, 9], 8, up=Z))
@@ -175,7 +175,7 @@ def run(B):
             else:
                 parts = {'glove': dass(level)}
                 pts = {'dass_top': ((0, 0, 0), (1, 0, 0), (0, 0, 1)), 'hand_l': ((-15, 0, -52), (1, 0, 0), (0, 0, 1)),
-                       'forearm': ((-120, 0, -52), (1, 0, 0), (0, 0, 1))}
+                       'forearm': ((-90, 0, -52), (1, 0, 0), (0, 0, 1))}
             objs = B.add_parts(root, name, parts, at, mat)
             if level == 0:
                 B.add_points(root, pts)

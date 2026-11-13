@@ -9,7 +9,7 @@ def painter(name, body, size):
     return HoubaraPaint(body, size) if name == 'houbara' else CurlewPaint(body, size)
 
 
-def vermiculate(X, Y, n, scale=2.4):
+def vermiculate(X, Y, n, scale=1.7):
     """Fine wavy dark lines (vermiculation) across a feather: 0..1."""
     w = np.sin((X + 1.8 * n(X + 40, Y + 40, 3.0)) * (2 * np.pi / scale) + 0.6 * np.sin(Y * 0.9))
     return soft(w, 0.55, 0.95)
@@ -53,12 +53,12 @@ class Base:
 # ------------------------------------------------------------------ the houbara
 class HoubaraPaint(Base):
     SAND = C(0.80, 0.68, 0.49)           # the upperparts' sandy buff ground
-    VERM = C(0.36, 0.27, 0.18)           # its fine dark vermiculation and arrowhead marks
-    GREY = C(0.76, 0.76, 0.74)           # the fore-neck and upper breast, pale grey
+    VERM = C(0.28, 0.20, 0.13)           # its fine dark vermiculation and arrowhead marks
+    GREY = C(0.60, 0.61, 0.61)           # the fore-neck and breast, ash grey
     WHITE = C(0.94, 0.93, 0.90)          # the lower breast and belly
     BLACK = C(0.07, 0.065, 0.06)         # the neck's ruff stripe, the primaries
     IRIS = C(0.90, 0.80, 0.42)           # a pale yellow iris
-    PUPIL = 0.93
+    PUPIL = 0.975
     BILL = C(0.36, 0.35, 0.34)
     LEG = C(0.76, 0.74, 0.60)            # pale yellowish grey legs
     CLAW = C(0.25, 0.24, 0.22)
@@ -77,7 +77,7 @@ class HoubaraPaint(Base):
         """Sandy-buff feathers, finely vermiculated, each with a dark arrowhead or bar near its tip."""
         col, al, occ = plumage(X, Y, w, l, self.SAND, self.SAND * 1.04, self.VERM, 0.0, 0.0, nz, shade=0.08)
         v = vermiculate(X, Y, self.n)
-        col = lerp_col(col, self.VERM * 1.2, v * 0.6)
+        col = lerp_col(col, self.VERM * 1.1, v * 0.72)
         al2, ac, idx = __import__('common').feathers(X, Y, w, l)
         # a dark arrowhead (chevron) toward each feather's tip, and a dusky middle on many
         arrow = (np.abs(al2 - 0.60 - 0.30 * np.abs(ac)) < 0.13) & (np.abs(ac) < 0.8) & (hash01(idx, 2.0) < marks)
@@ -95,8 +95,8 @@ class HoubaraPaint(Base):
         back, occ_b = self.sandy(-D, Y, 11, 8, nz)
         under, al, occ_u = plumage(-D, Y, 9, 7, self.WHITE, self.WHITE, self.WHITE, 0.0, 0.0, nz, shade=0.05)
         # the breast: pale grey grading to white below
-        breast = soft(D, 200, 245)
-        under = lerp_col(under, self.GREY[None, None, :] * (1 + 0.03 * nz[..., None]), breast * 0.9)
+        breast = soft(D, 175, 225)
+        under = lerp_col(under, self.GREY[None, None, :] * (1 + 0.03 * nz[..., None]), breast)
         col = lerp_col(back, under, belly)
         occ = occ_b * (1 - belly) + occ_u * belly
         # the neck: the hind neck sandy and vermiculated, the fore-neck grey; down each side the ruff's black stripe of
@@ -126,7 +126,7 @@ class HoubaraPaint(Base):
         return col, 0.88 + 0.05 * nz, occ
 
     def fold_p(self, S, T):
-        L = 315.0
+        L = 285.0
         X = (1 - S) * L
         tt = np.minimum(T, 1 - T) * 2
         H = 100 * (1 - 0.75 * soft(X, 170, 315))
@@ -134,13 +134,13 @@ class HoubaraPaint(Base):
         nz = self.n(X + 50, Yv + 50, 5.0)
         cov, occ = self.sandy(X, Yv, 12, 10, nz)
         # the tertials: long sandy feathers with dark bars
-        ter, _, _ = plumage(X, Yv, 22, 50, self.SAND * 0.97, self.SAND, self.VERM, 0.0, 0.0, nz, shade=0.15)
-        ter = lerp_col(ter, self.VERM, (np.abs(((X / 14.0) % 1.0) - 0.5) < 0.12) * 0.6)
+        ter, _ = self.sandy(X, Yv, 20, 30, nz, marks=0.9)
         # the primaries: black, their bases white (the patch shows in flight), tucked under, the tips over the tail
-        prim = self.BLACK[None, None, :] * (1 + 0.1 * nz[..., None])
-        prim = lerp_col(prim, self.WHITE, band(X, 190, 215, 6) * soft(tt, 0.5, 0.8) * 0.8)
-        col = lerp_col(cov, ter, soft(X, 120, 150) * (1 - soft(tt, 0.65, 0.85)))
-        col = lerp_col(col, prim, np.maximum(soft(X, 220, 245), soft(tt, 0.72, 0.85) * soft(X, 100, 140)))
+        prim = C(0.16, 0.13, 0.10)[None, None, :] * (1 + 0.1 * nz[..., None])
+        fe = ((Yv + 0.2 * X) / 7.0) % 1.0
+        prim = lerp_col(prim, self.SAND * 0.8, (fe > 0.86) * 0.6)
+        col = lerp_col(cov, ter, soft(X, 120, 150) * (1 - soft(tt, 0.7, 0.88)))
+        col = lerp_col(col, prim, soft(X, 255, 275) * soft(tt, 0.35, 0.6))
         return col, 0.86 + 0.05 * nz, occ
 
     def open_p(self, S, T):
@@ -200,8 +200,8 @@ class CurlewPaint(Base):
     WHITE = C(0.94, 0.92, 0.88)
     BUFF = C(0.86, 0.78, 0.64)
     BLACK = C(0.07, 0.06, 0.05)
-    IRIS = C(0.97, 0.86, 0.18)           # the large bright yellow iris
-    PUPIL = 0.90
+    IRIS = C(0.97, 0.86, 0.18)           # the large bright yellow iris, the pupil small
+    PUPIL = 0.978
     YELLOW = C(0.90, 0.80, 0.30)         # the bill's base
     LEG = C(0.90, 0.84, 0.48)            # pale yellow legs
     CLAW = C(0.10, 0.09, 0.08)
@@ -217,12 +217,15 @@ class CurlewPaint(Base):
                 'horn': self.horn_p, 'claw': self.claw_p, 'eye': self.eye_p}
 
     def streaked(self, X, Y, w, l, base, nz, sw=0.16):
-        return plumage(X, Y, w, l, base, base * 1.06, self.STREAK, sw, 0.12, nz, shade=0.08)
+        """Sandy feathers with pale edges and dark shaft streaks of varied length, width and slant."""
+        col, al, occ = plumage(X, Y, w, l, base, base * 1.06, self.STREAK, 0.0, 0.12, nz, shade=0.08)
+        st = streaks(X, Y, l * 1.3, w * 0.9, l * 1.5, max(w * sw * 1.4, 0.9), int(w * 10), density=0.9, tilt=10)
+        return lerp_col(col, self.STREAK, st * 0.9), al, occ
 
     def body_p(self, S, T):
         D, Y, P, tt, au, ad, b = body_coords(self.body, S, T)
         nz = self.n(D + 300, Y + 300, 5.0)
-        head = soft(D * 1.0, 220, 232)
+        head = soft(D, 236, 248)
         belly = soft(tt, 0.2, 0.3)
         back, _, occ_b = self.streaked(-D, Y, 9, 7, self.SAND, nz)
         # the breast buff with fine streaks; the belly white, the undertail buff
@@ -260,11 +263,14 @@ class CurlewPaint(Base):
         col = lerp_col(cov, self.BLACK, b_black * 0.9)
         col = lerp_col(col, self.WHITE, b_white * 0.9)
         gc = C(0.58, 0.52, 0.44)[None, None, :] * (1 + 0.04 * nz[..., None])
-        col = lerp_col(col, gc, band(Yv, 26, 40, 2.0) * (1 - soft(X, 110, 125)) * 0.8)
+        col = lerp_col(col, gc, band(Yv, 25.5, 32, 1.5) * (1 - soft(X, 110, 125)) * 0.7)
         # the primaries over the tail: black with a small white spot
-        prim = self.BLACK[None, None, :] * (1 + 0.1 * nz[..., None])
+        prim = C(0.17, 0.13, 0.10)[None, None, :] * (1 + 0.1 * nz[..., None])
+        fe = ((Yv + 0.2 * X) / 6.0) % 1.0
+        prim = prim * (0.82 + 0.25 * soft(fe, 0.0, 0.85))[..., None]
+        prim = lerp_col(prim, self.SAND * 0.85, (fe > 0.9) * 0.55)
         prim = lerp_col(prim, self.WHITE, band(X, 150, 160, 3) * band(Yv, 3, 9, 2) * 0.7)
-        col = lerp_col(col, prim, soft(X, 130, 150))
+        col = lerp_col(col, prim, soft(X, 140, 165))
         return col, 0.86 + 0.05 * nz, occ
 
     def open_p(self, S, T):
