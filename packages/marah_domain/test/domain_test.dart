@@ -874,6 +874,9 @@ void main() {
       expect(g.me.farm.tankL, Balance.startingTankL);
       expect(v.milk, hasLength(1));
       expect(v.milk.single.calf!.id, calf.id);
+      // in calf again (the owner, 13 Nov): due about ten and a half months in
+      expect(dam.pregnant, isTrue);
+      expect(dam.dueOn!.daysSince(g.today), Balance.gestationDays - 60);
       expect(v.market.length, greaterThan(20));
       expect(v.studs, isNotEmpty);
       expect(v.festivals, isNotEmpty);
@@ -925,6 +928,7 @@ void main() {
   group('Market', () {
     test('buying pays ask plus transport and moves the camel', () {
       final g = newGame();
+      Sim(g.state).pay(g.me, const Riyal(200000), LedgerCategory.sale);
       final v = GameView(g.state, g.me.id);
       final l = v.market.firstWhere((l) => l.askPrice.value < 150000);
       final cash = g.me.cash;
@@ -1037,8 +1041,11 @@ void main() {
         g.state,
         g.me.id,
       ).herd.firstWhere((c) => c.ageDays > 6 * 365);
-      // past her rest after calving (the start's camel calved 120 days ago)
-      g.state.world.camels[f.id]!.lastCalvedOn = g.today - 400;
+      // past her rest after calving and empty (the start's camel calved 120
+      // days ago and is in calf again)
+      g.state.world.camels[f.id]!
+        ..lastCalvedOn = g.today - 400
+        ..pregnancy = null;
       final stud = g.state.world.studs.values.first;
       final r = g.dispatch(MateWithStud(g.me.id, f.id, stud.id)) as Err;
       expect(r.error.code, ErrorCode.notBreedingSeason);
@@ -1371,12 +1378,15 @@ void main() {
         sex: Sex.male,
         ageDays: 3 * 365,
       );
-      final dam = g.state.world.camels.values.firstWhere(
-        (c) =>
-            c.ownerId == g.me.id &&
-            c.sex == Sex.female &&
-            c.ageYears(g.today) >= 6,
-      )..lastCalvedOn = null;
+      final dam =
+          g.state.world.camels.values.firstWhere(
+              (c) =>
+                  c.ownerId == g.me.id &&
+                  c.sex == Sex.female &&
+                  c.ageYears(g.today) >= 6,
+            )
+            ..lastCalvedOn = null
+            ..pregnancy = null; // (the start's camel is in calf: taken empty for the test)
       final r1 = g.dispatch(MateWithOwnBull(g.me.id, dam.id, young.id)) as Err;
       expect(r1.error.code, ErrorCode.tooYoungToBreed);
       final cash = g.me.cash;
@@ -1433,12 +1443,15 @@ void main() {
 
     test('a mating is only known to the owner until it is confirmed', () {
       final g = stocked(newGame(13))..advanceDays(45);
-      final dam = g.state.world.camels.values.firstWhere(
-        (c) =>
-            c.ownerId == g.me.id &&
-            c.sex == Sex.female &&
-            c.ageYears(g.today) >= 6,
-      )..lastCalvedOn = null;
+      final dam =
+          g.state.world.camels.values.firstWhere(
+              (c) =>
+                  c.ownerId == g.me.id &&
+                  c.sex == Sex.female &&
+                  c.ageYears(g.today) >= 6,
+            )
+            ..lastCalvedOn = null
+            ..pregnancy = null; // (the start's camel is in calf: taken empty for the test)
       final stud = g.state.world.studs.values.first;
       expect(g.dispatch(MateWithStud(g.me.id, dam.id, stud.id)).ok, isTrue);
       expect(GameView(g.state, g.me.id).camel(dam.id)!.awaitingCheck, isTrue);

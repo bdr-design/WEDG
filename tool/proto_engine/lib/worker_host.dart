@@ -79,8 +79,9 @@ class WorkerHost {
   /// The save version of the one-camel start (the owner, 13 Nov 2026: a
   /// game starts with one nursing camel and her calf). The prototype's saves
   /// from before it are games of the old start (three camels and SAR 600,000,
-  /// the whole farm built): set aside for a new game, which the owner asked
-  /// to see. The app itself keeps every save (SaveCodec migrates it).
+  /// the whole farm built): replaced by a new game, which the owner asked to
+  /// see (the old one, and its fallback copy, are not kept). The app itself
+  /// keeps every save (SaveCodec migrates it).
   static const oneCamelStart = 7;
 
   /// The version an encoded save was written in, read from its head (the

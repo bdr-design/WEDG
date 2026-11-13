@@ -83,7 +83,8 @@ class Game {
     final gen = WorldGen(sim);
     final rng = sim.rng(['setup']);
     // The start (the owner, 13 Nov 2026): one nursing she-camel of the
-    // chosen colour family, seven years old, and her calf of four months (its
+    // chosen colour family, seven years old, in calf again, and her calf of
+    // four months (its
     // first three months of free nursing behind it, so her milk is sold from
     // the first day). (balance) An ordinary camel, as a beginner's is: bred
     // to a mean of 42 she is worth about 13,000 to 21,000 (a 52 had made some
@@ -98,11 +99,30 @@ class Game {
       ageDays: 7 * 365 + 40,
     );
     final calfAge = 120;
+    // and in calf again (the owner, 13 Nov 2026: her milk ends eight months
+    // in, and on the rest after calving her next calf came a year and a half
+    // later): (field) mated within three months of calving, the 15-month
+    // interval (Balance.postCalvingRestDays); here 60 days after it, checked
+    // and confirmed, due a gestation later, about ten and a half months in
+    final matedOn = start - (calfAge - 60);
     dam
       ..acquiredOn = start - 400
       ..lastPlayerOwner = playerId
       ..calvings = 2
-      ..lastCalvedOn = start - calfAge;
+      ..lastCalvedOn = start - calfAge
+      ..pregnancy = Pregnancy(
+        sire: ParentRef(
+          id: sim.world.ids.camel(),
+          name: randomCamelName(rng, female: false),
+          category: favourite,
+        ),
+        sireGenes: Genetics.randomGenes(rng, mean: 42),
+        matedOn: matedOn,
+        checkOn: matedOn + Balance.pregnancyCheckDays,
+        dueOn: matedOn + Balance.gestationDays,
+        conceived: true,
+        confirmed: true,
+      );
     final calfSex = rng.chance(0.5) ? Sex.female : Sex.male;
     final calf = Camel(
       id: sim.world.ids.camel(),

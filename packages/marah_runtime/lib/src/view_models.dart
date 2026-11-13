@@ -474,6 +474,7 @@ class MilkCamel {
     required this.id,
     required this.name,
     required this.days,
+    required this.calfId,
     required this.calfName,
     required this.litres,
     required this.sold,
@@ -487,6 +488,7 @@ class MilkCamel {
 
   /// Her calf while it suckles, or null (sold, dead or weaned: all her milk
   /// is sold).
+  final CamelId? calfId;
   final String? calfName;
   final double litres;
   final double sold;
@@ -497,12 +499,14 @@ class MilkCamel {
       other.id == id &&
       other.name == name &&
       other.days == days &&
+      other.calfId == calfId &&
       other.calfName == calfName &&
       other.litres == litres &&
       other.sold == sold;
 
   @override
-  int get hashCode => Object.hash(id, name, days, calfName, litres, sold);
+  int get hashCode =>
+      Object.hash(id, name, days, calfId, calfName, litres, sold);
 }
 
 /// The farm's milk (the owner, 13 Nov 2026: sold every day; the player
@@ -706,8 +710,8 @@ class PlayerSnapshot {
   final List<CamelCard> herdTop;
 
   /// The camels the 3D farm shows (the owner, 13 Nov 2026: the camels in
-  /// the farm are the player's own), in a fixed order (by when they came to
-  /// the farm, then id), at most Presenter.yardCount.
+  /// the farm are the player's own): the first Presenter.yardCount to come
+  /// to the farm, in that order (by the day they came, then id).
   final List<CamelCard> yard;
 
   /// Changes whenever any camel in the herd changes (not only the top

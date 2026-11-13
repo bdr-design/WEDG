@@ -433,6 +433,7 @@ void main() {
       final dam = e.game!.state.world.camels.values.firstWhere(
         (c) => c.ownerId == e.game!.me.id,
       );
+      final saved0 = dam.pregnancy?.dueOn; // (the start's camel is in calf)
       dam.pregnancy = Pregnancy(
         sire: dam.sire!,
         sireGenes: const {},
@@ -446,7 +447,8 @@ void main() {
       await e.resume();
       expect(pushes.whereType<StateRecovered>(), isNotEmpty);
       expect(e.game, isNotNull);
-      expect(e.game!.state.world.camels[dam.id]!.pregnancy, isNull);
+      // as it was saved, not the broken one
+      expect(e.game!.state.world.camels[dam.id]!.pregnancy?.dueOn, saved0);
       expect(backend.data['marah.save'], saved);
       await e.close();
     });

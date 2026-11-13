@@ -178,6 +178,7 @@ const NOUN = {
   head: ['راس واحد', 'راسين', 'روس', 'راس'],
   month: ['شهر واحد', 'شهرين', 'شهور', 'شهر'],
   shepherd: ['راعي واحد', 'راعيين', 'رعاة', 'راعي'],
+  camel: ['ناقة وحدة', 'ناقتين', 'نياق', 'ناقة'],
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const days = (n) => count(n, 'day');
@@ -392,7 +393,7 @@ function milkScreen() {
       <div class="ln">${line}</div>
       <div class="ln ink2">دخل الحليب هالشهر ${n0(M.thisMonth)} ريال</div></div>
     <div class="sec">الحلايب${M.nursing > cs.length ? ` · ${n0(M.nursing)}` : ''}</div>
-    <div class="group">${rows}</div>${M.nursing > cs.length ? `<div class="note">وغيرها ${n0(M.nursing - cs.length)} ناقة مرضع.</div>` : ''}
+    <div class="group">${rows}</div>${M.nursing > cs.length ? `<div class="note">وغيرها ${count(M.nursing - cs.length, 'camel')} مرضع.</div>` : ''}
     ${seg}
     <div class="note">المشتري يمر كل يوم وياخذ الحليب، اللتر بـ ${n0(M.price)} ريال. الحوار يرضع لين يكمل سنة، وأول 3 شهور يبي حليب أمه كله.</div></div>`;
 }
@@ -422,9 +423,9 @@ function buildScreen() {
     const d = FAC[x.facility], made = x.has + x.building;
     const nameOf = (n) => (x.facility === 'pen' ? `شبك ${PEN_NTH[Math.min(n, PEN_NTH.length - 1)]}` : d.name);
     const out = [];
-    if (x.building) {      // (the one being built, by its own name: «شبك ثالث … ينبني» named the next pen, the review)
-      const soon = daysTo(x.doneOn);
-      out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${nameOf(x.has)}</b><small>ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}</small></div>`);
+    for (let k = 0; k < x.building; k++) {      // (each one being built, by its own name: «شبك ثالث … ينبني» named the next pen, the review)
+      const soon = daysTo(x.doneOn);      // (the first's day: they are built together, three days each)
+      out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${nameOf(x.has + k)}</b><small>ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}</small></div>`);
     }
     if (made < x.most) {
       const poor = x.cannot === 'insufficientFunds', name = nameOf(made);

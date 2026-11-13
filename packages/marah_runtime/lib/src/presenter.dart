@@ -200,6 +200,7 @@ class Presenter {
               id: m.camel.id,
               name: m.camel.name,
               days: m.days,
+              calfId: m.calf?.id,
               calfName: m.calf?.name,
               litres: m.litres,
               sold: m.sold,
@@ -219,14 +220,25 @@ class Presenter {
       herdViews,
       HerdSort.quality,
     ).take(topCount).map((c) => card(c, v)).toList(growable: false);
-    final yard =
-        (herdViews.toList()..sort((a, b) {
-              final c = a.born.value.compareTo(b.born.value);
-              return c != 0 ? c : a.id.value.compareTo(b.id.value);
-            }))
-            .take(yardCount)
-            .map((c) => card(c, v))
-            .toList(growable: false);
+    // the first to come to the farm (by the day they came, then id), picked
+    // as the herd is walked: a newcomer only ever joins at the end, and the
+    // whole herd is not sorted (3-5 ms at 10,000 head, the review)
+    int came(CamelView a, CamelView b) {
+      final c = a.acquiredOn.value.compareTo(b.acquiredOn.value);
+      return c != 0 ? c : a.id.value.compareTo(b.id.value);
+    }
+
+    final first = <CamelView>[];
+    for (final c in herdViews) {
+      if (first.length == yardCount && came(c, first.last) >= 0) continue;
+      var i = first.length;
+      while (i > 0 && came(c, first[i - 1]) < 0) {
+        i--;
+      }
+      first.insert(i, c);
+      if (first.length > yardCount) first.removeLast();
+    }
+    final yard = [for (final c in first) card(c, v)];
     final market = [for (final l in v.market) listing(l, v)];
     final myListings = [for (final l in v.myListings) listing(l, v)];
     final studs = [

@@ -55,6 +55,9 @@ class CamelView {
   Sex get sex => _c.sex;
   ColorCategory get category => _c.category;
   GameDay get born => _c.born;
+
+  /// The day it came to its owner's farm (its birth for one born there).
+  GameDay get acquiredOn => _c.acquiredOn;
   int get ageDays => _c.ageDays(_today);
   AgeClass get ageClass => _c.ageClass(_today);
   String get chip => _c.chip;

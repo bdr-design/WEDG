@@ -5,6 +5,7 @@
 // boxes and circles from the yard layout.
 import * as THREE from 'three';
 import { createCar, makeSoftness, LC300 } from './car_physics.js';
+import { PEN_FACILITY } from './world.js';
 const LC300KPA = (LC300.roadKPa + LC300.airedKPa) / 2;      // below this the tyres count as aired down
 const GEAR_TOP = [0, 18, 34, 52, 72, 96, 130];      // the rpm needle's simple gears: each one's top speed, km/h (allocated once)
 const TIP = Math.tan(40 / 57.3);  // the steepest side slope it goes onto (its static stability: track 1.63 m over twice a cg of 0.8 m, about 45 degrees, with a margin)
@@ -23,26 +24,37 @@ const UP = new THREE.Vector3(0, 1, 0);
 export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAYOUT, loadLod, onExit, host = document.body, phone = null }) {
   const ground = (x, z) => (heightAt ? heightAt(x, z) : 0);
   // ---------------------------------------------------------------- obstacles (yard layout, metres)
-  const rects = [];
+  // Each built facility's obstacles carry its name (fac): only those that stand are met (the owner, 13 Nov 2026: the
+  // farm starts small; hidden, the room, the tent and the pens still stopped the walker and the car, the review).
+  // rects, posts and roofs hold the standing ones, refilled from the whole lists by facilities().
+  const rects = [], allRects = [];
   const C = LAYOUT.compound, T = 0.25;
-  const wall = (x0, x1, z0, z1) => rects.push({ x0, x1, z0, z1, wall: true, h: 2.1 });      // (h: the height the chase camera must clear to see over it; world.js builds the wall 2.1 m)
+  const wall = (x0, x1, z0, z1) => allRects.push({ x0, x1, z0, z1, wall: true, h: 2.1 });      // (h: the height the chase camera must clear to see over it; world.js builds the wall 2.1 m)
   wall(C.x0 - T, C.x1 + T, C.z0 - T, C.z0 + T);                                   // north
   wall(C.x0 - T, C.x0 + T, C.z0, C.z1); wall(C.x1 - T, C.x1 + T, C.z0, C.z1);     // west, east
   wall(C.x0 - T, LAYOUT.gate.x0, C.z1 - T, C.z1 + T); wall(LAYOUT.gate.x1, C.x1 + T, C.z1 - T, C.z1 + T);   // south, with the gate
-  for (const p of Object.values(LAYOUT.pens)) rects.push({ x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1 });
-  rects.push({ x0: 0.7, x1: 11.3, z0: 3.4, z1: 9.6, h: 4.6 });        // the room
-  rects.push({ x0: -18, x1: -6, z0: 4.2, z1: 9.8, h: 3.3 });          // the goat-hair tent
-  rects.push({ x0: 34, x1: 40, z0: 4.4, z1: 7.6, h: 3.0 });           // the shepherds' cabin
-  rects.push({ x0: 13.4, x1: 15.4, z0: 4.2, z1: 9.4, h: 2.1 });       // the white shas under the shade
-  rects.push({ x0: 25.2, x1: 27.6, z0: -16.9, z1: -11.5, h: 2.1 });   // the shas by the feed shed
+  for (const [k, p] of Object.entries(LAYOUT.pens)) allRects.push({ x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1, fac: PEN_FACILITY[k] });
+  allRects.push({ x0: 0.7, x1: 11.3, z0: 3.4, z1: 9.6, h: 4.6, fac: 'room' });        // the room
+  allRects.push({ x0: -18, x1: -6, z0: 4.2, z1: 9.8, h: 3.3, fac: 'tent' });          // the goat-hair tent
+  allRects.push({ x0: 34, x1: 40, z0: 4.4, z1: 7.6, h: 3.0, fac: 'caravan' });        // the shepherds' cabin
+  allRects.push({ x0: 13.4, x1: 15.4, z0: 4.2, z1: 9.4, h: 2.1 });                    // the white shas under the shade
+  allRects.push({ x0: 25.2, x1: 27.6, z0: -16.9, z1: -11.5, h: 2.1, fac: 'store' });  // the shas by the feed shed
+  allRects.push({ x0: -36.6, x1: -34.6, z0: -14.5, z1: -12.5, h: 2.7 });              // the start's 6,000 L tank (world.js)
   // roofs a car drives under, with the height of their underside (world.js): the porch's pergola before the room, 3.25 m
   // up and 12 cm thick, and the car shade's cloth, 2.7 m at its edges and 3.2 at its middle. The chase camera keeps the
   // line to the car under them (it rose over them and saw only the roof)
-  const roofs = [{ x0: 1.0, x1: 11.0, z0: 0.55, z1: 3.75, under: 3.19, top: 3.31 }, { x0: 12.25, x1: 20.75, z0: 3.25, z1: 9.75, under: 2.7, top: 3.3 }];      // (top: the porch's slab 12 cm; the shade's cloth peaks at 3.2 m)
-  const posts = [];
-  for (const dx of [-1.4, 1.4]) for (const dz of [-1.4, 1.4]) posts.push({ x: 30 + dx, z: -40 + dz, r: 0.18 });
-  for (const dx of [-3.2, 3.2]) for (const dz of [-6.2, 0, 6.2]) posts.push({ x: 32 + dx, z: -21 + dz, r: 0.15 });
-  for (const dx of [-4.25, 4.25]) for (const dz of [-3.25, 3.25]) posts.push({ x: 16.5 + dx, z: 6.5 + dz, r: 0.12 });
+  const allRoofs = [{ x0: 1.0, x1: 11.0, z0: 0.55, z1: 3.75, under: 3.19, top: 3.31, fac: 'room' }, { x0: 12.25, x1: 20.75, z0: 3.25, z1: 9.75, under: 2.7, top: 3.3 }];      // (top: the porch's slab 12 cm; the shade's cloth peaks at 3.2 m)
+  const allPosts = [];
+  for (const dx of [-1.4, 1.4]) for (const dz of [-1.4, 1.4]) allPosts.push({ x: 30 + dx, z: -40 + dz, r: 0.18, fac: 'tank' });
+  for (const dx of [-3.2, 3.2]) for (const dz of [-6.2, 0, 6.2]) allPosts.push({ x: 32 + dx, z: -21 + dz, r: 0.15, fac: 'store' });
+  for (const dx of [-4.25, 4.25]) for (const dz of [-3.25, 3.25]) allPosts.push({ x: 16.5 + dx, z: 6.5 + dz, r: 0.12 });
+  for (const dx of [-2.25, 2.25]) for (const dz of [-1.6, 1.6]) allPosts.push({ x: -28 + dx, z: -2.6 + dz, r: 0.07 });      // the start's feed shade (world.js)
+  const roofs = [], posts = [];
+  function facilities(stands) {
+    const keep = (list, out) => { out.length = 0; for (const o of list) if (!o.fac || stands(o.fac)) out.push(o); };
+    keep(allRects, rects); keep(allPosts, posts); keep(allRoofs, roofs);
+  }
+  facilities((f) => f === 'start');      // (the start's farm until the page says what stands)
 
   function pushCircle(p, r) {           // p: Vector3 (x, z used); returns true if it touched something
     let hit = false;
@@ -796,5 +808,5 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     return true;
   }
   if (rigged) setTimeout(loadCabin, 4000);
-  return { start, stop, update, model, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; }, get orbNow() { return orbNow; } } };
+  return { start, stop, update, model, facilities, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; }, get orbNow() { return orbNow; } } };
 }

@@ -213,7 +213,7 @@
 </style>
 
 <div id="root">
-<div id="stage" aria-label="عزبة الصفوة ثلاثية الأبعاد: الحلال يسرح في المرعى جنب الشبوك. اسحب بإصبع لتحريك الخريطة، وقرّب أو بعّد بإصبعين، ولفها بلفّ الإصبعين، واضغط على ناقة لتختارها."></div>
+<div id="stage" aria-label="العزبة ثلاثية الأبعاد: حلالك في الشبوك. اسحب بإصبع لتحريك الخريطة، وقرّب أو بعّد بإصبعين، ولفها بلفّ الإصبعين، واضغط على ناقة لتختارها."></div>
 <div id="labels" dir="rtl" lang="ar" role="group" aria-label="أماكن العزبة على الخريطة"></div>
 
 <div class="side" dir="ltr" role="group" aria-label="أزرار الخريطة">
@@ -409,10 +409,11 @@ function bakeStaticShadows() {
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(p);
   }
-  for (const parts of buckets.values()) {
+  for (const [key, parts] of buckets) {
     const mesh = new THREE.Mesh(mergeCasters(parts, (p) => p.world), shadowOnly(parts[0].side, parts[0].shadowSide));
     mesh.castShadow = true; mesh.receiveShadow = false; mesh.matrixAutoUpdate = false; mesh.name = 'static shadows'; mesh.userData.shadowOnly = true;
     if (parts[0].fac) mesh.userData.facility = parts[0].fac;
+    mesh.userData.lookKey = 'shadow|' + key.replace(/\|[^|]*$/, '');      // (its square and sides, not its facility: the standing facilities' shadows in a square merged again)
     scene.add(mesh);
   }
   pendingCasters.length = 0;
@@ -423,7 +424,7 @@ function bakeStaticShadows() {
 // GAME: the engine's latest snapshot (null until it starts: the start's farm is shown). The facilities stand only once
 // built (the owner, 13 Nov 2026: the farm starts small and grows by what is bought): world.js tags each piece; hidden
 // here, with its merged meshes and its shadows. The camels are the engine's (syncYard).
-let GAME = null, facSig = null, placesReady = false;
+let GAME = null, facSig = null, placesReady = false, onFacilities = null;      // (onFacilities: play mode's obstacles, once it is made)
 const builtCount = (f) => (GAME ? GAME.farm.facilities.find((x) => x.facility === f)?.has ?? 0 : 0);
 const facVisible = (fac) => fac === 'start' || (fac === 'graze' ? camels.some((c) => c.home === 'graze') : fac.startsWith('pen') ? builtCount('pen') >= +fac.slice(3) : builtCount(fac) > 0);
 function applyFacilities(force) {
@@ -431,8 +432,37 @@ function applyFacilities(force) {
   if (!force && sig === facSig) return;
   facSig = sig;
   for (const o of scene.children) { const f = o.userData.facility; if (f) o.visible = facVisible(f); }
+  recombine();
   renderer.shadowMap.needsUpdate = true;
   if (placesReady) placeFacilities();
+  onFacilities?.();
+}
+// The yard's merged meshes (and their baked shadows) are merged per facility, so one not yet built can be hidden; the
+// standing ones are merged again into one mesh per look whenever what stands changes (a facility built: rare), so a grown
+// farm draws as the whole yard did before the facilities (merged per facility, the full farm cost 29 more draws, the
+// review). The per-facility meshes stay, hidden, for the next change.
+const combined = [];
+function recombine() {
+  for (const m of combined) { scene.remove(m); m.geometry.dispose(); }
+  combined.length = 0;
+  const groups = new Map();
+  for (const o of scene.children) {
+    const k = o.userData.lookKey;
+    if (!k || (o.userData.facility && !facVisible(o.userData.facility))) continue;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(o);
+  }
+  for (const list of groups.values()) {
+    if (list.length < 2) { list[0].visible = true; continue; }
+    const merged = mergeGeometries(list.map((o) => o.geometry), false);
+    if (!merged) { for (const o of list) o.visible = true; continue; }
+    merged.computeBoundingSphere();
+    const m = new THREE.Mesh(merged, list[0].material);
+    m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; m.renderOrder = list[0].renderOrder;
+    m.matrixAutoUpdate = false; m.name = list[0].name; m.userData.shadowOnly = list[0].userData.shadowOnly;
+    scene.add(m); combined.push(m);
+    for (const o of list) o.visible = false;
+  }
 }
 const supOf = (k) => (GAME ? GAME.farm.supplies.find((x) => x.supply === k) : null);
 
@@ -486,11 +516,11 @@ function mergeStatic(roots) {
     if (g.morphAttributes && Object.keys(g.morphAttributes).length) return;
     const attrs = Object.keys(g.attributes).filter((k) => !(fold && /^uv/.test(k))).sort().join(',');
     const look = fold ? ['fold', m.emissive.getHex(), m.emissiveIntensity, m.side, m.shadowSide, m.flatShading, m.envMapIntensity, m.opacity, m.depthWrite, m.depthTest, m.polygonOffset, m.wireframe, m.fog].join(',') : m.uuid;
-    const key = [look, o.castShadow, o.receiveShadow, attrs, !!g.index, o.renderOrder, facOf(o)].join('|');      // (merged within a facility: shown or hidden with it)
+    const key = [look, o.castShadow, o.receiveShadow, attrs, !!g.index, o.renderOrder].join('|') + '#' + facOf(o);      // (merged within a facility: shown or hidden with it; the standing ones merged again, recombine)
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(o);
   });
-  for (const list of groups.values()) {
+  for (const [groupKey, list] of groups) {
     if (list.length < 2) continue;
     const mats = new Set(list.map((o) => o.material)), fold = mats.size > 1;      // (one material: merged as it is)
     const geos = list.map((o) => {
@@ -514,6 +544,7 @@ function mergeStatic(roots) {
     const m = new THREE.Mesh(merged, mat);
     m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; m.renderOrder = list[0].renderOrder;
     const fac = facOf(list[0]); if (fac) m.userData.facility = fac;
+    m.userData.lookKey = groupKey.slice(0, groupKey.lastIndexOf('#')) + (fold ? '|folded' : '|own');      // (the look, not the facility; folded or not, so only alike attributes merge again)
     scene.add(m);
     for (const o of list) drop.push(o);
   }
@@ -738,18 +769,18 @@ let LODS = null;      // the camel's three detail levels, once loaded
 const sizeOf = (d) => (d < 180 ? 0.55 : d < 365 ? 0.65 : d < 730 ? 0.8 : d < 1095 ? 0.9 : 1);
 // what the card says of a camel, from the engine: her calf or her mother, a pregnancy, an illness, the value estimated
 function cardInfo(card) {
-  const milk = GAME.farm.milk.camels, mine = milk.find((m) => m.id === card.id), mother = card.ageDays < 365 ? milk.find((m) => m.calfName === card.name) : null;
+  const milk = GAME.farm.milk.camels, mine = milk.find((m) => m.id === card.id), mother = milk.find((m) => m.calfId === card.id);
   const female = card.sex === 'female', due = card.pregnant && card.dueOn != null ? Math.max(0, card.dueOn - GAME.today) : null;
   const sick = card.health === 'sick', treated = card.health === 'treated';
   const parts = [];
   if (sick) parts.push(female ? 'مريضة، تبي علاج' : 'مريض، يبي علاج'); else if (treated) parts.push('تحت العلاج');
   if (due != null) parts.push(due <= 1 ? 'تولد بكرة' : `عشار، تولد بعد ${days(due).join(' ')}`);
   if (mine) parts.push(mine.calfName ? `مرضع، حوارها ${mine.calfName}` : 'تحلب');
-  if (mother) parts.push(`يرضع من أمه ${mother.name}`);
+  if (mother) parts.push(female ? `ترضع من أمها ${mother.name}` : `يرضع من أمه ${mother.name}`);
   return {
     name: card.name, age: card.ageName, card, sick: sick || treated, due,
     note: parts.length ? parts.join(' · ') : 'بصحة زينة',
-    tag: sick ? (female ? 'مريضة' : 'مريض') : due != null && due <= 30 ? 'قريبة ولادة' : due != null ? 'عشار' : mine ? 'مرضع' : mother ? 'يرضع' : '',
+    tag: sick ? (female ? 'مريضة' : 'مريض') : due != null && due <= 30 ? 'قريبة ولادة' : due != null ? 'عشار' : mine ? 'مرضع' : mother ? (female ? 'ترضع' : 'يرضع') : '',
     warn: sick || (due != null && due <= 10),
     value: Math.round((card.estimateLow + card.estimateHigh) / 2 / 500) * 500,
   };
@@ -765,10 +796,17 @@ function syncYard() {
     herd.remove(c.root); camels.splice(i, 1);
   }
   const pens = PEN_ORDER.filter((k) => facVisible(PEN_FACILITY[k]));
+  const calfOf = new Map(GAME.farm.milk.camels.filter((m) => m.calfId).map((m) => [m.calfId, m.id]));      // calf -> its dam
+  const penOf = new Map();
   let pi = 0, n = 0;
   for (const card of want) {
+    if (calfOf.has(card.id) && ids.has(calfOf.get(card.id))) continue;      // (placed with its dam, below)
     while (pi < pens.length - 1 && n >= penRoom(pens[pi])) { pi++; n = 0; }
-    const rect = P[pens[pi]]; n++;
+    penOf.set(card.id, P[pens[pi]]); n++;
+  }
+  for (const card of want) if (!penOf.has(card.id)) penOf.set(card.id, penOf.get(calfOf.get(card.id)) || P[pens[0]]);
+  for (const card of want) {
+    const rect = penOf.get(card.id);
     let c = camels.find((x) => x.id === card.id);
     const spot = () => [R(rect.x0 + 2, rect.x1 - 2), R(rect.z0 + 2, rect.z1 - 2)];
     if (!c) {
@@ -820,10 +858,11 @@ const closer = (pl) => ({ label: 'قرّب', run: () => glideTo(pl, 36) });
 const PEN_ORDER = ['calves', 'main', 'young', 'bull', 'sick', 'spare'];
 const PEN_NAMES = { calves: 'الحوش', main: 'الشبك الثاني', young: 'الشبك الثالث', bull: 'الشبك الرابع', sick: 'الشبك الخامس', spare: 'الشبك السادس' };
 const penRoom = (key) => (key === 'calves' ? 6 : 10);      // (the engine's: the first pen 6 head, each bought one 10)
-const pen = (key) => ({ key, name: PEN_NAMES[key], rect: P[key], facility: PEN_FACILITY[key], icon: 'pen', p: mid(P[key], 2.6), max: 280,
+// (the first pen's pin at its far side: at its middle it fell on the feed shade's and the tank's pins, and one hid the other)
+const pen = (key) => ({ key, name: PEN_NAMES[key], rect: P[key], facility: PEN_FACILITY[key], icon: 'pen', p: key === 'calves' ? new THREE.Vector3((P.calves.x0 + P.calves.x1) / 2, 2.6, P.calves.z0 + 2) : mid(P[key], 2.6), max: 280,
   text: () => `${PEN_NAMES[key]} · ${inPenOf(P[key]).length}`,
   open() { const list = inPenOf(P[key]), w = supOf('water');
-    return { sub: `يشيل ${heads(penRoom(key))}`, stats: herdStats(list, ['الحوض', !w ? '…' : w.amount > 0 ? 'فيه ماء' : 'فاضي', '', w && w.amount <= 0 ? 'warn' : '']), html: list.length ? camelList('في الشبك', list) : '', actions: [closer(this)] }; } });
+    return { sub: `يشيل ${heads(penRoom(key)).join(' ').trim()}`, stats: herdStats(list, ['الحوض', !w ? '…' : w.amount > 0 ? 'فيه ماء' : 'فاضي', '', w && w.amount <= 0 ? 'warn' : '']), html: list.length ? camelList('في الشبك', list) : '', actions: [closer(this)] }; } });
 // the water and the feed where they are: the big tank and the store once built, else the start's tank and feed shade
 const WATER_AT = { start: new THREE.Vector3(-35.6, 4.4, -13.5), big: new THREE.Vector3(30, 7.6, -40) };
 const FEED_AT = { start: new THREE.Vector3(-28, 4.2, -2.6), big: new THREE.Vector3(32, 4.6, -21) };
@@ -849,7 +888,7 @@ const PLACES = [
     cls: () => { const w = waterNow(); return w && !w.coming && (w.short || (w.days != null && w.days <= 3)) ? 'warn' : ''; },
     text: () => { const w = waterNow(); return !w ? 'خزان الماء' : `الماء ${w.pct}٪ · ${w.coming ? 'الوايت جاي' : w.short ? 'خلص' : w.days == null ? '' : days(w.days).join(' ')}`; },
     open() { const w = waterNow(); if (!w) return { sub: 'يجهّز…' };
-      return { sub: `يعبّي أحواض الشبوك · ${GAME.farm.tankL.toLocaleString('en-US')} لتر`, gauge: w.pct,
+      return { sub: `${builtCount('pen') ? 'يعبّي أحواض الشبوك' : 'يعبّي حوض الحوش'} · ${GAME.farm.tankL.toLocaleString('en-US')} لتر`, gauge: w.pct,
         stats: [w.short ? ['الماء', 'خلص', '', 'warn'] : ['يكفي', ...(w.days == null ? ['—'] : days(w.days)), !w.coming && w.days != null && w.days <= 3 ? 'warn' : ''], ['يشرب منه', ...heads(GAME.herd.total)], ['الوايت', w.coming ? 'في الطريق' : 'ما انطلب']],
         actions: [closer(this), { label: 'افتح الوايت', icon: TRUCK, primary: true, run: () => { closePop(); phone.openApp('water'); } }] }; } },
   { key: 'feed', name: 'مظلة العلف', icon: 'feed', p: FEED_AT.start.clone(), max: 280,
@@ -857,7 +896,7 @@ const PLACES = [
     text: () => { const f = feedNow(); return !f ? 'العلف' : `العلف · ${f.coming ? 'بالطريق' : f.days == null ? '' : days(f.days).join(' ')}`; },
     open() { const f = feedNow(); if (!f) return { sub: 'يجهّز…' };
       const d = (x) => (x.amount <= 0 || x.short ? ['خلص', '', 'warn'] : x.daysLeft == null ? ['—'] : [...days(x.daysLeft), x.daysLeft <= 3 ? 'warn' : '']);
-      return { sub: `شعير وبرسيم · يشيل ${GAME.farm.storeKg.toLocaleString('en-US')} كجم`, stats: [['الشعير', ...d(f.b)], ['البرسيم', ...d(f.a)]],
+      return { sub: `شعير وبرسيم · ${builtCount('store') ? 'يشيل' : 'تشيل'} ${GAME.farm.storeKg.toLocaleString('en-US')} كجم`, stats: [['الشعير', ...d(f.b)], ['البرسيم', ...d(f.a)]],
         actions: [closer(this), { label: 'افتح العلف', primary: true, run: () => { closePop(); phone.openApp('feed'); } }] }; } },
   { key: 'room', name: 'غرفة العزبة', facility: 'room', icon: 'room', p: new THREE.Vector3(6, 4.6, 6.5), max: 280, text: () => 'غرفة العزبة',
     open() { return { sub: 'جلسة ومكيفات · تطل على الشبوك', actions: [{ label: 'ادخل', primary: true, run: () => { closePop(); view('room'); } }] }; } },
@@ -916,7 +955,7 @@ function placeFacilities() {
   for (const pl of PLACES) {
     pl.off = pl.facility ? !facVisible(pl.facility) : false;
     if (pl.key === 'water') pl.p.copy(bigTank ? WATER_AT.big : WATER_AT.start);
-    if (pl.key === 'feed') { pl.p.copy(store ? FEED_AT.big : FEED_AT.start); pl.name = store ? 'مخزن العلف' : 'مظلة العلف'; }
+    if (pl.key === 'feed') { pl.p.copy(store ? FEED_AT.big : FEED_AT.start); pl.name = store ? 'مستودع العلف' : 'مظلة العلف'; }
     const hit = pl.key === 'water' ? (bigTank ? pl.hit : pl.hitStart) : pl.key === 'feed' ? (store ? pl.hit : pl.hitStart) : pl.hit;
     if (hit && !pl.off) placeHits.push(hit);
   }
@@ -948,7 +987,8 @@ function refreshLabels() {
   }
   for (const l of labels) if (!l.vis) l.el.style.display = 'none';
   // when pins overlap, the earlier one wins: the open place, warnings and far places, pens, the rest
-  for (const l of labels) l.rank = pop && pop.place === l ? 0 : l.warn || l.edge || l.min ? 1 : l.rect ? 2 : 3;
+  // (the water and the feed before the pens: the start's feed shade stands by the first pen, and its pin lost to the pen's)
+  for (const l of labels) l.rank = pop && pop.place === l ? 0 : l.warn || l.edge || l.min ? 1 : l.key === 'water' || l.key === 'feed' ? 2 : l.rect ? 2.5 : 3;
 }
 placesReady = true;
 placeFacilities();
@@ -1463,6 +1503,7 @@ vehiclesReady.then(async () => {
   play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root, phone,
     onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); ease.k = 1; controls.update(); measureHud(); } });      // (the HUD measured again: hidden in play, a turn of the phone there left its boxes stale)
   window.__play = play;
+  onFacilities = () => play.facilities(facVisible); onFacilities();      // (what stands blocks the walker and the car; nothing else)
 }).catch((e) => console.error(e));
 $('cam-play').addEventListener('click', () => { if (play) { closePop(); play.start(); } });
 

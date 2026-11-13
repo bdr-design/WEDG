@@ -97,14 +97,14 @@ int _extras(Game game, int week, Map<String, int> done) {
   // the farm's own bull: bought grown when there is none, then used
   if (v.breedingSeason) {
     bool serves(CamelView c) => c.sex == Sex.male && v.canServe(c.id) == null;
-    if (!v.herd.any(serves) && v.me.cash.value > 150000) {
+    if (!v.herd.any(serves) && v.me.cash.value > 100000) {
       final bulls =
           v.market
               .where(
                 (l) =>
                     l.camel.sex == Sex.male &&
                     l.camel.ageDays > 6 * 365 &&
-                    l.askPrice.value < v.me.cash.value * 0.3,
+                    l.askPrice.value < v.me.cash.value * 0.4,
               )
               .toList()
             ..sort((a, b) => a.askPrice.value.compareTo(b.askPrice.value));

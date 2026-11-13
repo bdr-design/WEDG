@@ -94,6 +94,7 @@ class SnapshotJson {
             'id': m.id.value,
             'name': m.name,
             'days': m.days,
+            'calfId': m.calfId?.value,
             'calfName': m.calfName,
             'litres': _tenth(m.litres),
             'sold': _tenth(m.sold),
