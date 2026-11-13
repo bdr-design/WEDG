@@ -10,7 +10,7 @@
 //   6 strength    one kind picked: light, middle or strong, each with its price, fine and how often it is found
 //   7 day         the round's day: the six stages, told one by one (here the third under way)
 //   8 result      the results: the player's camel's outcome, the placings and prizes, her worth and the name's
-//   9 caught      the day a treatment is found (a state this seed does not reach: see below)
+//   9 caught      the day a treatment is found: the fine, the ban, the balance below zero and the account
 // Every figure the engine has comes from it, so the drawing follows the engine when it changes:
 //  - the snapshot (SnapshotJson): the festivals' cards, the herd, the market, festivalRules (late fee, 72 hours, ban,
 //    the seven treatments' prices, fines, features, how long they last, the chance a festival finds each), reputation;
@@ -18,13 +18,17 @@
 //    prizes, rivals, the camels that may enter, the entry fee, the transport, and after the day the field after each
 //    stage and the places;
 //  - the engine's own refusals (enterRound for each camel's round: wrongAgeClass, ownershipTooRecent...);
-//  - the save, for the owners' names in the places (the snapshot gives an owner's id only).
-// Two games on seed 4242 (1 October 2026, مزاين حائل open): one played forward on a fast clock to the round's results
-// (the market's نمر bought, نورة entered in الفردي جل الوضح), then one at the real clock on its first day, where the
-// screens are drawn. What the engine does not give is a placeholder, marked PLACEHOLDER below.
-// The caught view: on this seed نورة, treated or not, is cut at the preliminary judging (13 of 26 go on), and the
-// engine checks for tampering only after it, so no game here reaches it; it is drawn from the engine's rules
-// (Botox at light strength: its fine; the ban; the balance it leaves below zero) with the stages before it as they would pass.
+//  - the save, for the owners' names in the places (the snapshot gives an owner's id only);
+//  - the recent events, for a treatment found (TamperingFound: its kind, stage and fine), and farm.account.
+// Games on seed 4242 (1 October 2026, مزاين حائل open): one played forward on a fast clock to the round's results
+// (a market camel bought, نورة entered in الفردي جل الوضح), one treated (below), then one at the real clock on its
+// first day, where the screens are drawn (the cheapest market camel with a round of its own bought, so it is owned too recently; نورة entered, then a light
+// dye put on her for the strength view). What the engine does not give is a placeholder, marked PLACEHOLDER below.
+// The caught view is played, not drawn: a third game on the fast clock in which نورة is treated (the first of a few
+// kinds and strengths within her owner's cash that a festival finds) and entered; every entry is examined before the
+// preliminary judging (the owner, 13 Nov). If none is found the view is left out and the run says so.
+// Copied from the engine, not sent by it: the treatments' and the features' Arabic names (TamperKind.label,
+// Trait.label), the round kinds' names, and the stages' names.
 // To draw again: build the prototype (THREE_DIR=<three@0.170.0 package> python3 tool/proto_app/assemble.py), serve
 // tool/proto_app/assets/web on a port (8765 by default, or PORT=<port>), and run
 // `NODE_PATH=$(npm root -g) node design/ui/phone_mazayen.cjs` from the repository's root; it writes
@@ -82,7 +86,18 @@ const CSS = `
 // in the page: the worker's other calls (engine.js gives dispatch only), answered by their id
 const OP = `window.__op = (o) => new Promise((res) => { const w = window.marahEngine.worker; const id = 900000 + Math.floor(Math.random() * 99999);
   const h = (ev) => { const m = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data; if (m.id === id) { w.removeEventListener('message', h); res(m); } };
-  w.addEventListener('message', h); w.postMessage(JSON.stringify({ ...o, id })); });`;
+  w.addEventListener('message', h); w.postMessage(JSON.stringify({ ...o, id })); });
+// a camel to buy so one is owned too recently: the cheapest in the market the cash covers that has a round of its own
+// at the open festival (its colour, its sex, its age's kind), with that round
+window.__pick = (S, d) => {
+  const kinds = (c) => ({ mafrood: ['mafareed'], haq: [c.sex === 'female' ? 'fardiDiq' : 'diq'], laqi: [c.sex === 'female' ? 'fardiDiq' : 'diq'], jatha: [c.sex === 'female' ? 'fardiDiq' : 'diq'] })[c.ageClass] || [];      // (not جل: it asks for two calvings too)
+  for (const l of S.market.slice().sort((a, b) => a.askPrice - b.askPrice)) {
+    if (l.askPrice + l.transport > S.cash) continue;
+    const r = d.rounds.find((x) => x.enterable && x.cat === l.camel.category && x.sex === l.camel.sex && kinds(l.camel).includes(x.kind));
+    if (r) return { listing: l, round: r };
+  }
+  return null;
+};`;
 
 async function open(b, fast) {
   const ctx = await b.newContext({ viewport: { width: 956, height: 440 }, deviceScaleFactor: 2 });
@@ -103,76 +118,101 @@ async function open(b, fast) {
 (async () => {
   const b = await chromium.launch(LAUNCH);
 
-  // ---- game 1, fast: نمر bought and نورة entered on the first day, played to her round's places
-  const g1 = await open(b, true);
-  const after = await g1.p.evaluate(async () => {
-    const e = window.marahEngine;
-    await e.startOver({ seed: 4242 });
-    const S0 = e.snapshot;
-    const fest = S0.festivals.find((f) => !f.done && S0.today >= f.opensOn && S0.today <= f.closesOn);
-    const d0 = (await window.__op({ op: 'festival', festival: fest.id })).festival;
-    const noura = S0.yard.find((c) => c.sex === 'female');
-    const rd = d0.rounds.find((r) => r.enterable && r.eligible.some((c) => c.id === noura.id) && r.kind === 'fardiJil');
-    const nimr = S0.market.find((l) => l.camel.name === 'نمر' && l.camel.category === 'shoqh');
-    await e.dispatch({ type: 'buyListing', listing: nimr.id });
-    await e.dispatch({ type: 'enterRound', festival: fest.id, round: rd.id, camels: [noura.id] });
-    let r = null;
-    for (let i = 0; i < 4000; i++) {
-      await new Promise((res) => setTimeout(res, 300));
-      if (e.snapshot.today < rd.day) continue;
-      r = (await window.__op({ op: 'festival', festival: fest.id })).festival.rounds.find((x) => x.id === rd.id);
-      if (r.announced) break;
-    }
-    const S = e.snapshot;
-    await e.flush();
-    // the owners' names: the save's world (the snapshot gives the places an owner's id only)
-    const save = JSON.parse(localStorage.getItem('marah.proto.marah.save'));
-    const owners = {};
-    const walk = (o, d = 0) => { if (!o || typeof o !== 'object' || d > 6) return; if (Array.isArray(o.owners)) for (const w of o.owners) if (w && w.id && w.name) owners[w.id] = w.name; for (const v of Object.values(o)) walk(v, d + 1); };
-    walk(save);
-    const names = {};
-    for (const row of r.results || []) names[row.owner] = owners[row.owner] || null;
-    const mine = S.yard.find((c) => c.id === noura.id);
-    // (the player's own row carries her score and marks: never shown; only the place, the stage and the reason)
-    return {
-      date: S.date, field: r.field, prizes: r.prizes, rivals: r.rivals, cash: S.cash,
-      places: (r.results || []).filter((x) => x.rank != null).map((x) => ({ rank: x.rank, name: x.name, owner: names[x.owner], prize: x.prize })),
-      mine: (r.results || []).filter((x) => x.camel === noura.id).map((x) => ({ rank: x.rank, prize: x.prize, removedAt: x.removedAt, reason: x.reason })),
-      estimate: [mine.estimateLow, mine.estimateHigh], reputation: S.reputation[noura.category],
-    };
-  });
-  console.log('played to', after.date, 'field', JSON.stringify(after.field), 'نورة', JSON.stringify(after.mine));
-  await g1.ctx.close();
+  // ---- a game on the fast clock: نورة entered on the first day (after [buyNimr], [treat]: [kind, strength]), played
+  // to her round's places
+  const playToDay = async ({ buyNimr, treat }) => {
+    const g = await open(b, true);
+    const out = await g.p.evaluate(async ([buyNimr, treat]) => {
+      const e = window.marahEngine;
+      await e.startOver({ seed: 4242 });
+      // (the new game's first snapshot, not the page's own game's last)
+      for (let i = 0; i < 200 && !(e.snapshot && e.snapshot.date === '2026-10-01' && e.snapshot.herd.total === 2); i++) await new Promise((res) => setTimeout(res, 50));
+      const S0 = e.snapshot;
+      const fest = S0.festivals.find((f) => !f.done && S0.today >= f.opensOn && S0.today <= f.closesOn);
+      const d0 = (await window.__op({ op: 'festival', festival: fest.id })).festival;
+      const noura = S0.yard.find((c) => c.sex === 'female');
+      const rd = d0.rounds.find((r) => r.enterable && r.eligible.some((c) => c.id === noura.id) && r.kind === 'fardiJil');
+      const repBefore = S0.reputation[noura.category];
+      if (buyNimr) { const pk = window.__pick(S0, d0); if (pk) await e.dispatch({ type: 'buyListing', listing: pk.listing.id }); }
+      const treated = treat ? (await e.dispatch({ type: 'tamper', camel: noura.id, kind: treat[0], strength: treat[1] })).ok : null;
+      await e.dispatch({ type: 'enterRound', festival: fest.id, round: rd.id, camels: [noura.id] });
+      let r = null;
+      for (let i = 0; i < 4000; i++) {
+        await new Promise((res) => setTimeout(res, 300));
+        if (e.snapshot.today < rd.day) continue;
+        r = (await window.__op({ op: 'festival', festival: fest.id })).festival.rounds.find((x) => x.id === rd.id);
+        if (r.announced) break;
+      }
+      const S = e.snapshot;
+      await e.flush();
+      // the owners' names: the save's world (the snapshot gives the places an owner's id only)
+      const save = JSON.parse(localStorage.getItem('marah.proto.marah.save'));
+      const owners = {};
+      const walk = (o, d = 0) => { if (!o || typeof o !== 'object' || d > 6) return; if (Array.isArray(o.owners)) for (const w of o.owners) if (w && w.id && w.name) owners[w.id] = w.name; for (const v of Object.values(o)) walk(v, d + 1); };
+      walk(save);
+      const mine = S.yard.find((c) => c.id === noura.id);
+      const found = S.recentEvents.filter((x) => x.type === 'tamperingFound' && x.camel === noura.id).pop() || null;
+      // (only the place, the stage and the reason are read: never a score or marks)
+      return {
+        date: S.date, from: S0.date, treated, field: r.field, prizes: r.prizes, rivals: r.rivals, cash: S.cash, account: S.farm.account,
+        places: (r.results || []).filter((x) => x.rank != null).map((x) => ({ rank: x.rank, name: x.name, owner: owners[x.owner] || null, prize: x.prize })),
+        mine: (r.results || []).filter((x) => x.camel === noura.id).map((x) => ({ rank: x.rank, prize: x.prize, removedAt: x.removedAt, reason: x.reason })),
+        found, bannedThrough: S.bannedThrough,
+        estimate: [mine.estimateLow, mine.estimateHigh], repBefore, repAfter: S.reputation[noura.category],
+      };
+    }, [buyNimr, treat]);
+    await g.ctx.close();
+    return out;
+  };
+  // game 1: a market camel bought, نورة entered untreated
+  const after = await playToDay({ buyNimr: true });
+  console.log('played from', after.from, 'to', after.date, 'field', JSON.stringify(after.field), 'نورة', JSON.stringify(after.mine));
+  // game 3: نورة treated and entered; the first treatment (of these, each within the 20,000 riyals) a festival finds
+  let caughtGame = null;
+  for (const treat of [['botox', 3], ['filler', 3], ['hormones', 3], ['botox', 2], ['filler', 2]]) {
+    const g3 = await playToDay({ buyNimr: false, treat });
+    console.log('treated', treat.join(' '), g3.treated, '->', JSON.stringify(g3.mine), JSON.stringify(g3.found));
+    if (g3.found && g3.found.festival) { caughtGame = { ...g3, treat }; break; }
+  }
 
   // ---- game 2, the real clock, on its first day: the screens drawn here
   const { p } = await open(b, false);
   const game = await p.evaluate(async () => {
     const e = window.marahEngine;
     await e.startOver({ seed: 4242 });
-    await new Promise((r) => setTimeout(r, 800));
+    for (let i = 0; i < 200 && !(e.snapshot && e.snapshot.date === '2026-10-01' && e.snapshot.herd.total === 2); i++) await new Promise((res) => setTimeout(res, 50));
     const S0 = e.snapshot;
     const fest = S0.festivals.find((f) => !f.done && S0.today >= f.opensOn && S0.today <= f.closesOn);
     const before = (await window.__op({ op: 'festival', festival: fest.id })).festival;
-    const nimrL = S0.market.find((l) => l.camel.name === 'نمر' && l.camel.category === 'shoqh');
-    const buy = await e.dispatch({ type: 'buyListing', listing: nimrL.id });
-    const nimr = { ...nimrL.camel, id: buy.events.find((x) => x.camel).camel, onTheWay: true };
+    const pk = window.__pick(S0, before);
+    const buy = await e.dispatch({ type: 'buyListing', listing: pk.listing.id });
+    const nimr = { ...pk.listing.camel, id: buy.events.find((x) => x.camel).camel, onTheWay: true };
     const noura = S0.yard.find((c) => c.sex === 'female'), calf = S0.yard.find((c) => c !== noura);
     // each camel's own round (its colour, its sex, its age's kind), and the engine's answer to entering it
     const roundFor = (c, kinds) => before.rounds.find((r) => r.enterable && r.cat === c.category && r.sex === c.sex && kinds.includes(r.kind));
     const ask = async (c, r) => (await e.dispatch({ type: 'enterRound', festival: fest.id, round: r.id, camels: [c.id] })).error;
-    const rNimr = roundFor(nimr, ['diq']), rCalf = roundFor(calf, ['mafareed']), rNoura = roundFor(noura, ['fardiJil']);
+    const rNimr = pk.round, rCalf = roundFor(calf, ['mafareed']), rNoura = roundFor(noura, ['fardiJil']);
     const refusals = { nimr: await ask(nimr, rNimr), calf: await ask(calf, rCalf) };
     const entered = await ask(noura, rNoura);
     await new Promise((r) => setTimeout(r, 800));
     const detail = (await window.__op({ op: 'festival', festival: fest.id })).festival;
-    return { before, detail, nimr, refusals, entered, rNoura: rNoura.id, rNimr: rNimr.kind, rCalf: rCalf.kind };
+    // the first prize a player can enter for, at each festival (its rounds' pages)
+    const tops = {};
+    for (const f of S0.festivals) {
+      const d = (await window.__op({ op: 'festival', festival: f.id })).festival;
+      const best = d.rounds.filter((r) => r.enterable).sort((x, y) => y.prizes[0] - x.prizes[0])[0];
+      if (best) tops[f.id] = { prize: best.prizes[0], kind: best.kind };
+    }
+    const dyed = (await e.dispatch({ type: 'tamper', camel: noura.id, kind: 'dye', strength: 1 })).ok;
+    await new Promise((r) => setTimeout(r, 800));
+    return { before, detail, tops, dyed, nimr, refusals, entered, rNoura: rNoura.id, rNimr: rNimr.kind, rCalf: rCalf.kind };
   });
   console.log('entered نورة:', game.entered === null, 'refusals', JSON.stringify(game.refusals));
   await p.evaluate(() => { window.requestAnimationFrame = () => 0; });
   await p.evaluate(() => { window.R = () => [...document.querySelectorAll('*')].find((e) => e.shadowRoot && e.shadowRoot.querySelector('.phone')).shadowRoot; window.__phone.toggle(); window.__phone.enlarge(); });
   await p.waitForTimeout(400);
 
-  const screens = await p.evaluate(([G, A]) => {
+  const screens = await p.evaluate(([G, A, C]) => {
     const S = window.marahEngine.snapshot, FR = S.festivalRules;
     // ---- the phone's own helpers (phone.js), as they are there
     const I = {
@@ -239,14 +279,14 @@ async function open(b, fast) {
 
     // ---------------------------------------------------------------- 1 the festivals
     const rest = coming.length - 3;
-    const comingRow = (f) => `<div class="row"><span class="lead">${svg('cup')}</span><b>${f.name}</b><span class="qty">${n0(f.topPrize)}</span><small>${span(f)} · التسجيل ${f.opensOn > S.today ? `من ${dShort(f.opensOn)}` : `لين ${dShort(f.closesOn)}`}</small></div>`;
+    const comingRow = (f) => `<div class="row"><span class="lead">${svg('cup')}</span><b>${f.name}</b><span class="qty">${G.tops[f.id] ? n0(G.tops[f.id].prize) : ''}</span><small>${span(f)}${G.tops[f.id] ? ` · ${KIND[G.tops[f.id].kind]}` : ''} · التسجيل ${f.opensOn > S.today ? `من ${dShort(f.opensOn)}` : `لين ${dShort(f.closesOn)}`}</small></div>`;
     const fests = `<div class="body">${nav()}<div class="title">المزاين</div>
       <div class="open"><span class="tag">التسجيل مفتوح</span><b>${F.name}</b><small>${REGION[F.region]} · ${span(F)}</small>
         <small>التسجيل ${free} لين ${dd(F.closesOn)}، وبعده بـ ${n0(late)} ريال لين قبل كل شوط بـ ${hours} ساعة</small>
-        <small>جايزة الأول لين ${n0(F.topPrize)} ريال</small></div>
+        <small>جايزة الأول لين ${n0(G.tops[F.id].prize)} ريال (${KIND[G.tops[F.id].kind]})</small></div>
       <div class="sec">مشاركاتك</div>
       <div class="group"><div class="row"><span class="lead">${svg('camel')}</span><b>${noura.name} · ${myRound}</b><span class="act"><button class="btn ghost" aria-label="اسحب ${noura.name} من الشوط">اسحبها</button></span><small>شوطها ${dd(myR.day)} (${inDays(myR.day)})</small></div></div>
-      <div class="sec">الجاية · جايزة الأول بالريال</div>
+      <div class="sec">الجاية · أعلى جايزة أول تدخلها، بالريال</div>
       <div class="group">${coming.slice(0, 3).map(comingRow).join('')}</div>
       ${rest > 0 ? `<div class="note">وبعدها ${count(rest, 'fest')} لين ${MONTH[dateOf(coming[coming.length - 1].endsOn).getUTCMonth()]}.</div>` : ''}</div>`;
 
@@ -284,6 +324,7 @@ async function open(b, fast) {
       wrongAgeClass: (c) => `${her(c, 'صغيرة', 'صغير')}، وأصغر شوط للمفاريد من سنة`,
       wrongCategory: (c) => `ما فيه شوط ل${FAMILY[c.category]} بهالمهرجان`,
       sick: (c) => her(c, 'مريضة، ما تدخل لين تطيب', 'مريض، ما يدخل لين يطيب'),
+      tooFewCalvings: (c, p) => `شوط الجل لمن ولدت ${p.calvings === 2 ? 'مرتين' : `${p.calvings} مرات`} وفوق`,
       listedForSale: (c) => her(c, 'معروضة بالحراج، شيل الإعلان أول', 'معروض بالحراج، شيل الإعلان أول'),
     };
     const why = (c, err) => (REASON[err.code] ? REASON[err.code](c, err.params || {}) : err.code);
@@ -293,7 +334,7 @@ async function open(b, fast) {
       <div class="note" style="margin-top:-4px">${F.name} · كل ناقة وشوطها من لونها وعمرها</div>
       <div class="lst flat">
         ${camelIt(noura, `شوطها ${myRound} · ${dShort(myR.day)}`, `مرضع وعشار · ${noura.health === 'healthy' ? 'صحتها زينة' : 'مريضة'}`, '', true)}
-        ${camelIt(nimr, `شوطه ${KIND[G.rNimr]} · ${FAMILY[nimr.category]}`, '', why(nimr, G.refusals.nimr))}
+        ${camelIt(nimr, `${her(nimr, 'شوطها', 'شوطه')} ${KIND[G.rNimr]} · ${FAMILY[nimr.category]}`, '', why(nimr, G.refusals.nimr))}
         ${calf ? camelIt(calf, `${her(calf, 'ترضع من أمها', 'يرضع من أمه')} ${noura.name}`, '', why(calf, G.refusals.calf)) : ''}</div>
       <div class="tank"><small>اللي تدفعه عن ${noura.name}</small>
         <div class="kind"><span>التسجيل</span><span class="d">${free} لين ${dShort(F.closesOn)}، وبعده ${n0(late)} ريال لين ${dShort(myR.lastEntryDay)}</span></div>
@@ -304,27 +345,31 @@ async function open(b, fast) {
     // ---------------------------------------------------------------- 5 and 6 the secret treatment
     // the kinds' names (TamperKind.label) and the features (Trait) in the phone's words; the figures are the engine's
     const TK = { botox: 'بوتوكس', filler: 'فيلر', hormones: 'هرمونات', lipStretch: 'شد الشفة', teethFiling: 'برد الأسنان', tailCut: 'قص الذيل', dye: 'الصبغ' };
-    const TRAIT = { lips: 'الشفايف', nose: 'الخشم', head: 'الراس', hump: 'السنام', hind: 'المؤخرة', coat: 'الوبر', neck: 'الرقبة', ears: 'الأذان', back: 'الظهر', fore: 'المقدمة', stance: 'الوقفة' };
-    const raises = (k) => `يرفع ${k.traits.map((t) => TRAIT[t]).join(' و')}`;
-    // how often a festival finds it, in a word, from the engine's chance (the chance itself is not shown)
-    const often = (p) => (p < 0.45 ? 'ينكشف أحيان' : p < 0.7 ? 'ينكشف كثير' : 'ينكشف أغلب المرات');
+    const TRAIT = { head: 'الرأس', nose: 'الخشم', lips: 'الشفايف', ears: 'الأذن', neck: 'الرقبة', hump: 'السنام', back: 'الغارب والظهر', fore: 'المقدمة', hind: 'المؤخرة', stance: 'الوقفة', coat: 'اللون والوبر' };
+    const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join('، ')} و${xs[xs.length - 1]}`);
+    const raises = (k) => `يزيّن ${list(k.traits.map((t) => TRAIT[t]))}`;
+    // the engine's risk bands (festivalRisk) and who finds a kind most (foundMostlyBy), in words; never a number
+    const often = (band) => ({ low: 'قليل ما ينكشف', medium: 'ينكشف أحيان', high: 'ينكشف أغلب المرات' })[band];
+    const BY = { tamperingExperts: 'أكثر ما يلقونه خبراء التلاعب', medical: 'أكثر ما تلقاه اللجنة الطبية' };
+    const STR = ['خفيف', 'وسط', 'قوي'];
+    // the treatments already on her (the snapshot's tamperings)
+    const onHer = S.tamperings.filter((t) => t.camel === noura.id).map((t) => `${TK[t.kind]} ${STR[t.strength - 1]}`);
     const chatTop = `<div class="nav"><button class="back" aria-label="رجوع">${svg('back')}</button><div class="chathd"><span class="av">س</span><span><b>أبو سند</b><small>يجمّل الحلال بالسر</small></span></div></div>`;
     const chatHead = `${chatTop}
-      ${bar(noura, `${myRound} · ${F.name}`, `<span class="lim">الشوط<span>${dShort(myR.day)}</span></span>`)}`;
-    const kindRow = (k) => `<div class="row"><span class="lead">${svg('scope')}</span><b>${TK[k.kind]}</b><span class="qty" aria-hidden="true">${svg('chev')}</span><small>${raises(k)} · من ${n0(k.price[0])} ريال · الغرامة لين ${n0(k.fineCap)}</small></div>`;
+      ${bar(noura, onHer.length ? `فيها: ${onHer.join('، ')}` : `${myRound} · ${F.name}`, `<span class="lim">الشوط<span>${dShort(myR.day)}</span></span>`)}`;
+    const kindRow = (k) => `<div class="row" role="button" tabindex="0" aria-label="${TK[k.kind]}، ${raises(k)}، من ${n0(k.price[0])} ريال، الغرامة لين ${n0(k.fineCap)} ريال"><span class="lead">${svg('scope')}</span><b>${TK[k.kind]}</b><span class="qty" aria-hidden="true">${svg('chev')}</span><small>من ${n0(k.price[0])} ريال · الغرامة لين ${n0(k.fineCap)} ريال</small></div>`;
     const cheat = `<div class="body">${chatTop}
       <div class="chat">
         <div class="msg them">أقدر أزيّن ${noura.name} قبل الشوط. بيني وبينك. وش تبي؟</div></div>
       <div class="group">${FR.tamperKinds.map(kindRow).join('')}</div></div>`;
     const K = FR.tamperKinds.find((k) => k.kind === 'botox');
-    const STR = ['خفيف', 'وسط', 'قوي'];
-    const strRow = (i) => `<div class="row"><span class="lead">${svg('scope')}</span><b>${STR[i]}</b><span class="act"><button class="btn ghost pr" aria-label="${TK[K.kind]} ${STR[i]} بـ ${n0(K.price[i])} ريال">${n0(K.price[i])} ريال</button></span><small>${often(K.festivalCatch[i])} · الغرامة ${n0(K.fine[i])} ريال</small></div>`;
+    const strRow = (i) => `<div class="row"><span class="lead">${svg('scope')}</span><b>${STR[i]}</b><span class="act"><button class="btn ghost pr" aria-label="${TK[K.kind]} ${STR[i]} بـ ${n0(K.price[i])} ريال">${n0(K.price[i])} ريال</button></span><small>${often(K.festivalRisk[i])} · الغرامة ${n0(K.fine[i])} ريال</small></div>`;
     const strength = `<div class="body">${chatHead}
       <div class="chat"><div class="msg me">${TK[K.kind]}.</div>
-        <div class="msg them">${raises(K)} يوم التحكيم ويغلّي سعرها، ويبقى فيها ${days(K.lastsDays)}. خفيف ولا وسط ولا قوي؟</div></div>
+        <div class="msg them">${raises(K)} يوم التحكيم، ويبقى فيها ${days(K.lastsDays)}. خفيف ولا وسط ولا قوي؟</div></div>
       <div class="group">${[0, 1, 2].map(strRow).join('')}</div>
-      <div class="note">كل ما قوي يبيّن أكثر، وينكشف أكثر، وغرامته أكبر.</div>
-      ${alertCard('لو انكشف', `بالمهرجان تطلع ${noura.name} من الشوط على طول وتنكتب عليك الغرامة، وتنحرم أنت وحلالك من كل المهرجانات، هالدورة و${count(FR.banEditionsAfter, 'edition')} جاية، والخبر يطلع. وممكن ينكشف بالحراج أو عند البيطري وتنغرم، وصيتك ينزل. ولو بعتها يروح معها.`)}</div>`;
+      <div class="note">كل ما قوي يبيّن أكثر، وينكشف أكثر، وغرامته أكبر. و${BY[K.foundMostlyBy]}. وتقدر تجمع أكثر من نوع، وكل نوع له فحصه وغرامته، فالخطر يتجمع.</div>
+      ${alertCard('لو انكشف', `بالمهرجان تطلع ${noura.name} من الشوط على طول وتنكتب عليك الغرامة، وتنحرم أنت وحلالك من كل المهرجانات، هالدورة و${count(FR.banEditionsAfter, 'edition')} جاية، والخبر يطلع. ولو بعتها يفحصونها قبل ما يدفعون: لو لقوه تنلغي البيعة وتنغرم، ولو ما لقوه يزيد سعرها شوي. وممكن يلقاه البيطري بعد، وصيتك ينزل.`)}</div>`;
 
     // ---------------------------------------------------------------- 7 the day: the six stages (GDD 7)
     // the field after each stage is the engine's (game 1); the day tells the stages one by one: the engine judges the
@@ -351,7 +396,7 @@ async function open(b, fast) {
     const STAGE_OUT = { preliminary: 'ما تأهلت للتحكيم النهائي', chipWitness: 'طلعت عند الشريحة والشاهد', breedColourAge: 'طلعت بفحص الهجين واللون والعمر', tamperingExperts: 'انكشفت عند خبراء التلاعب', medical: 'انكشفت عند اللجنة الطبية' };
     const outcome = m.rank ? `المركز ${m.rank} من ${count(entered, 'camel')}` : (STAGE_OUT[m.removedAt] || '');
     const place = (r) => `<div class="row"><span class="lead rk${r.rank === 1 ? ' g1' : ''}">${r.rank}</span><b>${r.name}</b><span class="qty">${n0(r.prize)}</span><small>${r.owner || ''}</small></div>`;
-    const repWord = A.reputation > 10 ? 'كبر' : A.reputation < 10 ? 'نزل' : 'ما تغير';
+    const repWord = A.repAfter > A.repBefore ? 'كبر' : A.repAfter < A.repBefore ? 'نزل' : 'ما تغير';
     const result = `<div class="body">${nav()}<div class="title">النتيجة</div>
       <div class="note" style="margin-top:-4px">${F.name} · ${myRound} · ${count(entered, 'camel')}</div>
       <div class="it big"><span class="ph">${photo(noura)}</span><b>${noura.name}</b><small class="${m.rank && m.rank <= 10 ? '' : 'bad'}">${outcome}</small><small>${m.removedAt === 'preliminary' ? `اللجنة اختارت ${fld[2]} من ${fld[1]}` : m.prize ? `جايزتها ${n0(m.prize)} ريال نزلت برصيدك` : ''}</small><small>الشوط ما زاد قيمتها شي</small><small>يقدّرونها ${rng(A.estimate[0], A.estimate[1])}</small></div>
@@ -359,24 +404,33 @@ async function open(b, fast) {
       <div class="group">${A.places.slice(0, 5).map(place).join('')}</div>
       <div class="note">والجوايز لين العاشر (${n0(A.prizes[9])} ريال). اللي يجي بالعشرة الأوائل تزيد قيمته ويكبر صيته بلونه، وصيتك ب${FAMILY[noura.category]} ${repWord}. والدرجات ما تنعلن. ونقلها ${n0(t1)} ريال انخصم.</div></div>`;
 
-    // ---------------------------------------------------------------- 9 caught (not reached on this seed: see the header)
-    // Botox at light strength (with نمر bought, the middle one is past the cash): the engine's fine for it; the balance
-    // after it is the engine's cash on the day (game 1) less the treatment's price and the fine
-    const fine = K.fine[0], left = A.cash - K.price[0] - fine;
+    // ---------------------------------------------------------------- 9 caught (game 3: نورة treated, entered, found)
     const money = (v) => `<bdi dir="ltr">${v < 0 ? '−' : ''}${n0(Math.abs(v))}</bdi>`;
-    const caught = `<div class="body">${head}
-      ${bar(noura, `<span style="color:var(--red);font-weight:600">طلعت من الشوط</span>`)}
-      <div class="group">
-        ${stage('', 'check', 'الشريحة والشاهد', 'شريحتها باسمك', ['ok', 'عدّت'])}
-        ${stage('', 'check', 'فحص الهجين واللون والعمر', `${COAT[noura.category][0]} صافية، و${noura.ageName} بأسنانها`, ['ok', 'عدّت'])}
-        ${stage('', 'check', 'التحكيم الأولي', `اختاروها مع ${fld[2] - 1} للنهائي`, ['ok', 'عدّت'])}
-        ${stage('bad', 'x', 'خبراء التلاعب', 'لقوا بوتوكس بشفايفها', ['bad', 'انكشفت'])}</div>
-      ${alertCard('انكشف البوتوكس', `طلعت ${noura.name} من الشوط، وانكتبت عليك غرامة ${n0(fine)} ريال. وانحرمت أنت وحلالك من كل المهرجانات، هالدورة و${count(FR.banEditionsAfter, 'edition')} جاية، والخبر طلع للملاك.`)}
-      ${left < 0 ? alertCard(`رصيدك صار ${money(left)} ريال`, 'ما تقدر تشتري حلال ولا تبني لين تسدد، والعلف والماء يمشون. بيع من حلالك.') : ''}
-      <div class="note">وصيتك ب${FAMILY[noura.category]} نزل.</div></div>`;
+    let caught = '';
+    if (C) {
+      const cm = C.mine[0] || {}, f3 = C.field, found = C.found, at = cm.removedAt || found.stage;
+      const ORDER = ['chipWitness', 'breedColourAge', 'preliminary', 'tamperingExperts', 'medical', 'final'];
+      const NAMES = ['الشريحة والشاهد', 'فحص الهجين واللون والعمر', 'التحكيم الأولي', 'خبراء التلاعب', 'اللجنة الطبية', 'التحكيم النهائي'];
+      const LINE = [`شريحتها باسمك`, `${COAT[noura.category][0]} صافية، و${noura.ageName} بأسنانها`];
+      const atI = ORDER.indexOf(at);
+      const where = { lips: 'بشفايفها', nose: 'بخشمها', head: 'براسها', hump: 'بسنامها' };
+      const KF = FR.tamperKinds.find((k) => k.kind === found.kind);
+      const rows = [];
+      for (let i = 0; i < atI; i++) {
+        // every entry is examined before the preliminary judging (the owner, 13 Nov): found there, she never reached it
+        if (i === 2) rows.push(stage('next', 'dot', NAMES[i], 'ما وصلته: انفحصت قبله', ['wait', '']));
+        else rows.push(stage('', 'check', NAMES[i], LINE[i] || '', ['ok', 'عدّت']));
+      }
+      rows.push(stage('bad', 'x', NAMES[atI], `لقوا ${TK[found.kind]} ${where[KF.traits[0]] || 'فيها'}`, ['bad', 'انكشفت']));
+      const acc = C.account;
+      caught = `<div class="body">${head}
+      <div class="group">${rows.join('')}</div>
+      ${alertCard(`انكشف ${/^ال| /.test(TK[found.kind]) ? TK[found.kind] : 'ال' + TK[found.kind]}`, `طلعت ${noura.name} من الشوط، وانكتبت عليك غرامة ${n0(found.fine)} ريال. وانحرمت أنت وحلالك من كل المهرجانات، هالدورة و${count(FR.banEditionsAfter, 'edition')} جاية، والخبر طلع للملاك. وصيتك ب${FAMILY[noura.category]} نزل.`)}
+      ${C.cash < 0 ? alertCard(`رصيدك صار ${money(C.cash)} ريال`, `ما تقدر تشتري حلال ولا تبني لين تسدد. والعلف والماء والبيطري ينطلبون على الحساب لين ${n0(acc.limit)} ريال${acc.owed ? ` (عليك ${n0(acc.owed)})` : ''}، وبعده لازم تبيع من حلالك.`) : ''}</div>`;
+    }
 
-    return { fests, fest, fest_end: fest, enter, cheat, strength, day, result, caught };
-  }, [game, after]);
+    return { fests, fest, fest_end: fest, enter, cheat, strength, day, result, ...(caught ? { caught } : {}) };
+  }, [game, after, caughtGame]);
 
   const files = [];
   let i = 0;
