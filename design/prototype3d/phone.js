@@ -766,7 +766,7 @@ export function createPhone({ host }) {
     if (st.state === 'closed') show('home');
     const was = st.state;
     st.state = state; box.dataset.state = state;
-    if (state !== 'big') HJ.sure = null;      // (a sale readied on the enlarged phone does not wait for its return)
+    if (state !== 'big' && HJ.sure) { HJ.sure = null; if (state !== 'closed') redraw(); }      // (a sale readied on the enlarged phone does not wait for its return; its button drawn again unreadied)
     // to assistive technology and the keyboard: closed, the phone is not there; small, it is a picture (a tap does
     // nothing); big, it is a modal dialog with the focus in it, given back to where it was when it shrinks
     box.setAttribute('aria-hidden', String(state === 'closed'));
