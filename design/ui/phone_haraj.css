@@ -1,0 +1,17 @@
+  .liveban { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1.5px #f3c2bd; }
+  .liveban .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px #fde6e4; flex: none; }
+  .liveban b { font-size: 13.5px; }
+  .liveban small { font-size: 11.5px; color: var(--ink2); display: block; }
+  .liveban .go { margin-inline-start: auto; color: var(--red); font-weight: 700; font-size: 13px; }
+  .lst { display: flex; flex-direction: column; gap: 8px; padding-bottom: 56px; }
+  .it { display: grid; grid-template-columns: 70px 1fr; column-gap: 11px; padding: 8px; border-radius: 16px; background: var(--card); align-items: center; }
+  .it .ph { width: 70px; height: 70px; border-radius: 12px; background: linear-gradient(180deg, #f3eadc, #e2cfae); overflow: hidden; grid-row: span 4; }
+  .it .ph img { width: 100%; height: 100%; object-fit: contain; }
+  .it b { font-size: 13.5px; font-weight: 700; }
+  .it small { font-size: 11.5px; color: var(--ink2); }
+  .it .pr { display: flex; align-items: center; }
+  .it .bgs { display: flex; gap: 5px; margin-top: 3px; }
+  .it .pr .price { font: 700 15px/1 "Alexandria", sans-serif; margin-inline-end: auto; }
+  .it .pr .price.open { font: 700 13px/1 "IBM Plex Sans Arabic", sans-serif; color: var(--amber); }
+  .sell { position: absolute; bottom: 26px; inset-inline: 14px; height: 46px; border-radius: 15px; background: var(--acc); color: #fff; font-weight: 700; font-size: 14.5px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 6px 16px rgba(11,138,92,.35); z-index: 4; }
+  .sell svg { width: 18px; height: 18px; stroke-width: 2.4; }

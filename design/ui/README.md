@@ -8,6 +8,7 @@ These mockups were reviewed by agents and approved by the owner. Only the inform
 | `phone.html`, `phone_1.jpg`, `phone_2.jpg`, `phone_3.jpg` | The in-game phone, light and clean like iOS. |
 | `phone_supplies.html`, `phone_supplies_water.jpg`, `phone_supplies_feed.jpg` | الوايت and العلف in the phone, and the home screen's date and season (approved 2026-11-12). Add `&big=1` to see a screen as the game enlarges it. |
 | `phone_start_home.jpg`, `phone_start_milk.jpg`, `phone_start_build.jpg` (drawn by `phone_start.cjs`) | The new start (one nursing she-camel and her calf, SAR 20,000): the home screen with الحليب, العزبة and الحراج, the milk app (sold every day; how much is left for the calf) and the farm app (what you have, and the facilities you can buy and their prices), approved 2026-11-13. |
+| `phone_haraj.jpg` (drawn by `phone_haraj.cjs` with `phone_haraj.css`) | الحراج on the engine: the listings, a camel's page (buy, or haggle three times a seller), selling one's own camel (listed at one's price or to the broker now), and one's listings with their offers; the old design's «على السوم» tab and live auction left out (every listing takes offers; the auctions come later), approved 2026-11-13. |
 
 ## The map HUD
 
