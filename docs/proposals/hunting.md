@@ -13,17 +13,25 @@ Only these three points are decided; everything below them stays a proposal. The
 for them is drafted in [gdd_hunting_section.md](gdd_hunting_section.md) for the director to
 move into `docs/GDD.md` after the owner reads it.
 
-1. **The Kalashnikov enters the game with its danger,** as cheating does in GDD 7.1
-   (option C2). It is bought in secret, and kept at the farm or hunted with. If the player
-   is caught, it is seized, he is fined and his name falls. It is never shown as lawful.
-2. **Hunting comes as a pastime that costs money.** The first to be built is المقناص with
-   the falcon (option A: the auction, the falcon's passport, the فطري permit, الدعو, and
-   the trip in the Land Cruiser in season). The air rifle (option B) comes after it.
-3. **Wolves and stray dogs at the calves enter the game** (option D): a rare danger at
-   night, lessened by the pen, a herdsman and a guard dog. Killing a wolf is fined if the
-   player is caught.
+The owner chose these options; their exact text, as he read it, is the decision:
 
-Still open: questions 4, 5, 7 and 8 in section 7.
+1. **The Kalashnikov (option C2):**
+   > «يدخل مع خطره: مثل الغش في المزاين: اللاعب يقدر يشتريه بالسر ويخليه بالعزبة أو يصيد فيه، بس إذا انمسك ينصادر ويتغرم وينزل صيته. ما ينعرض أبد كشي نظامي.»
+2. **What comes first (options A, then B):**
+   > «المقناص بالصقر: تشتري صقر من المزاد، تطلع له جواز وتصريح فطري، تدعيه، وتطلع بالجيب في الموسم. وبعده الساكتون.»
+3. **Wolves and stray dogs (option D):**
+   > «تدخل: خطر نادر بالليل على الحيران، يقل بالشبك والراعي وكلب الحراسة. اللي يقتل الذيب يتغرم إذا انمسك.»
+
+The director also relays that hunting comes as a pastime that costs money (question 1).
+Anything beyond these words (amounts, chances, how prison plays) is a game choice or an
+open question, not the owner's decision.
+
+**A constraint for the build (from the review):** a player who kills wolves would lose
+fewer calves, so killing would pay in practice. Killing a wolf must never pay: it does not
+lower the danger afterwards, and the expected fine outweighs any calves it could save.
+This is put to the owner as question 9.
+
+Still open: questions 4, 5, 7, 8 and 9 in section 7.
 
 ## 0. Read these official pages before anything here is adopted
 
@@ -170,7 +178,8 @@ Firing it adds a muzzle flash (one short-lived quad) and a sound.
   calves lost without one.
 - **Real:** wolves enter pens and kill livestock; one case of a wolf taking a three-day-old camel calf from a pen near al-Aflaj, which herders there called unusual [168]; herders defend with dogs, pens and
   herdsmen; the wolf is protected and killing one costs SAR 80,000 [139][148][149]. Stray
-  dog attacks are real in Qassim and elsewhere [151].
+  dogs attack people in Buraidah and elsewhere [151]; stray dogs attacking camels: no source
+  found (game choice). The wolf case is one report, about 2018 [168].
 - **Game choice:** how often a predator comes, and that it takes calves rather than adult
   camels (wolf attacks on camels were **not found**; the sources speak of sheep and
   goats).
@@ -245,6 +254,10 @@ player's, and it is real.
 8. **Real names in the phone** (فطري, أبشر, نادي الصقور). *Recommended:* the real names as
    text, without their logos, as the game already names the real festivals.
    > نكتب أسماء التطبيقات الحقيقية (فطري، أبشر، نادي الصقور) بدون شعاراتهم؟
+9. **Killing a wolf must not pay.** *Recommended:* killing one never lowers the danger
+   afterwards (new wolves come as before), and the chance of the 80,000 fine is set so its
+   expected cost is above the value of the calves it could save.
+   > لو اللاعب يقتل الذيب بيقل اللي ينفقد من الحيران، فيصير القتل مربح. نقترح إن قتله ما يقلل الخطر بعده، وإن الغرامة المتوقعة (80 ألف) أكثر من قيمة الحيران اللي ممكن يحميها: توافق؟
 
 ## 8. Not confirmed
 
