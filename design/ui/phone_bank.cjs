@@ -9,7 +9,8 @@
 // To draw again, from the repository's root (dart on the PATH, the workspace's .dart_tool present):
 //   build and serve the prototype (THREE_DIR=... python3 tool/proto_app/assemble.py, then
 //   python3 -m http.server 8765 --bind 127.0.0.1 -d tool/proto_app/assets/web), and run
-//   `NODE_PATH=$(npm root -g) node design/ui/phone_bank.cjs` (PORT=... for another port). It writes
+//   `NODE_PATH=$(npm root -g) node design/ui/phone_bank.cjs` (PORT=... for another port; DRY=1 prints each screen's
+//   words without a browser). It writes
 //   mock_bank_*.png in the current folder and phone_bank.jpg (the screens side by side) here.
 const { chromium } = require('playwright');
 const { execFileSync } = require('child_process');
@@ -26,108 +27,146 @@ const M = Object.fromEntries(DATA.moments.map((m) => [m.key, m]));
 
 // ---------------------------------------------------------------- words (phone.js's own, and its counting rule)
 const MONTH = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+// the GDD's counting rule (9, «الكتابة»): one and two by the word, 3 to 10 the plural, 11 and up the singular; the
+// first two as phone.js has them, the others new (each the thing its ledger row is one of)
 const NOUN = {
   head: ['راس واحد', 'راسين', 'روس', 'راس'],
-  order: ['طلب واحد', 'طلبين', 'طلبات', 'طلب'],      // (new: a feed or water order, the ledger's one row each)
-  sale: ['بيعة وحدة', 'بيعتين', 'بيعات', 'بيعة'],      // (new)
+  order: ['طلب واحد', 'طلبين', 'طلبات', 'طلب'],          // a feed or water order
+  trip: ['نقلة وحدة', 'نقلتين', 'نقلات', 'نقلة'],         // a truck's trip (a camel home, to a stud, to a festival)
+  treat: ['علاج واحد', 'علاجين', 'علاجات', 'علاج'],        // the vet's treatment (handlers.dart _treat)
+  prize: ['جائزة وحدة', 'جائزتين', 'جوائز', 'جائزة'],       // a festival's prize
+  mating: ['تلقيح واحد', 'تلقيحين', 'تلقيحات', 'تلقيح'],    // a stud's fee, one a mating
+  build: ['منشأة وحدة', 'منشأتين', 'منشآت', 'منشأة'],
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const n0 = (v) => Math.round(v).toLocaleString('en-US');
 const sg = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + n0(Math.abs(v));
-const monthName = (ym) => `${MONTH[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+const mon = (ym) => MONTH[Number(ym.slice(5, 7)) - 1];
+const monthName = (ym) => `${mon(ym)} ${ym.slice(0, 4)}`;
 const dayName = (iso) => `${Number(iso.slice(8, 10))} ${MONTH[Number(iso.slice(5, 7)) - 1]}`;
-// each LedgerCategory: its name on the phone, its icon (phone.js's), and the line under it from the month's rows
+// a facility by the name the العزبة app gives it (phone.js FAC; the pen there is «شبك ثاني», «شبك ثالث»… by count)
+const FACILITY = { pen: 'شبك', tank: 'خزان 30 طن', store: 'مستودع علف', caravan: 'كرفان الراعي', tent: 'بيت الشعر', room: 'غرفة العزبة' };
 const I = {
   milk: '<path d="M8.5 3.5h7M9 3.5v3l-2.2 3.3a3 3 0 0 0-.5 1.7v7.5a1.5 1.5 0 0 0 1.5 1.5h8.4a1.5 1.5 0 0 0 1.5-1.5V11.5a3 3 0 0 0-.5-1.7L15 6.5v-3"/><path d="M6.4 13h11.2"/>',
   feed: '<rect x="4" y="7" width="16" height="11" rx="2"/><path d="M9.5 7v11M14.5 7v11"/>',
   water: '<path d="M12 3.5s6 6.4 6 10.6a6 6 0 0 1-12 0C6 9.9 12 3.5 12 3.5z"/>',
   camel: '<path d="M3 8.5c0-1 .8-1.6 1.7-1.6h.9c.9 0 1.5.7 1.4 1.6l-.2 1.2c-.1.8.2 1.5.8 2 .5.4 1.1.4 1.6 0 .5-.5.9-1 1.1-1.6.9-1.7 2.5-2.8 4.4-2.7 1.1.1 2.1.8 2.7 1.8.5.8 1.1 1.3 2 1.6 1.1.4 1.9 1.5 1.9 2.8V15c0 .6-.4 1.2-.9 1.5V20"/><path d="M6.4 12.2V20M9.5 15.5V20M15 15.5V20"/>',
   truck: '<path d="M2.5 6.5h11v9.5h-11z"/><path d="M13.5 9.5h4.2l3.3 3.6V16h-7.5"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
-  haraj: '<path d="M3.5 12.4V5c0-.8.7-1.5 1.5-1.5h7.4l8.1 8.1c.6.6.6 1.5 0 2.1l-7.4 7.4c-.6.6-1.5.6-2.1 0z"/><circle cx="8.2" cy="8.2" r="1.6"/>',
   user: '<circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c.6-3.3 3-5 6.5-5s5.9 1.7 6.5 5"/>',
   build: '<path d="M3.5 20.5h17"/><path d="M5.5 20.5V10l6.5-5 6.5 5v10.5"/><path d="M10 20.5v-5h4v5"/>',
   cal: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   back: '<path d="M9 6l6 6-6 6"/>',
 };
 const svg = (k) => `<svg class="i" viewBox="0 0 24 24">${I[k]}</svg>`;
+const sum = (rows) => rows.reduce((n, r) => n + r.amount, 0);
 const one = (rows) => (rows.length === 1 ? rows[0] : null);
-const CAT = {
+const named = (r) => r.refName != null;      // (a ref the dump could name: never a raw id on the screen)
+// a transport row by its reason (the dump reads it from the rows beside it: the ledger does not keep it)
+const TRIP = { purchase: (r) => `نقل ${r.refName} لعزبتك`, mating: (r) => `نقل ${r.refName} للفحل`, festival: (r) => `${r.refName}، رايح جاي` };
+// each kind: its name, its icon (phone.js's), and the line under it from its rows. السعي goes with the sale it was
+// taken from (the kind «بيع حلال»: what reached the player, as الحراج says «يوصلك … بعد السعي»), so it is no cost row
+const KIND = {
   milk: { name: 'الحليب', icon: 'milk', line: (rows, cur) => (cur ? 'ينباع كل يوم، لين اليوم' : 'ينباع كل يوم') },
-  sale: { name: 'بيع حلال', icon: 'camel', line: (rows) => (one(rows) ? `${one(rows).refName} · ${dayName(one(rows).date)}` : count(rows.length, 'sale')) },
-  prize: { name: 'جوائز المزاين', icon: 'camel', line: (rows) => count(rows.length, 'order') },
-  purchase: { name: 'شراء حلال', icon: 'camel', line: (rows) => (one(rows) ? `${one(rows).refName} · ${dayName(one(rows).date)}` : count(rows.length, 'head')) },
-  transport: { name: 'النقل', icon: 'truck', line: (rows) => (one(rows) ? `نقل ${one(rows).refName} لعزبتك` : count(rows.length, 'order')) },
+  sale: { name: 'بيع حلال', icon: 'camel', line: (rows) => {
+    const sold = rows.filter((r) => r.cat === 'sale'), fee = -sum(rows.filter((r) => r.cat === 'commission'));
+    const what = one(sold) && named(sold[0]) ? `${sold[0].refName} بـ ${n0(sold[0].amount)}` : `${count(sold.length, 'head')} بـ ${n0(sum(sold))}`;
+    return fee ? `${what} · السعي ${n0(fee)}` : `${what} · ${dayName(sold[0].date)}`;
+  } },
+  prize: { name: 'جوائز المزاين', icon: 'camel', line: (rows) => count(rows.length, 'prize') },
+  purchase: { name: 'شراء حلال', icon: 'camel', line: (rows) => (one(rows) && named(rows[0]) ? `${rows[0].refName} · ${dayName(rows[0].date)}` : count(rows.length, 'head')) },
+  transport: { name: 'النقل', icon: 'truck', line: (rows) => (one(rows) && named(rows[0]) && TRIP[rows[0].why] ? TRIP[rows[0].why](rows[0]) : count(rows.length, 'trip')) },
   feed: { name: 'العلف', icon: 'feed', line: (rows) => count(rows.length, 'order') },
   water: { name: 'الوايت', icon: 'water', line: (rows) => count(rows.length, 'order') },
-  commission: { name: 'السعي', icon: 'haraj', line: (rows) => (one(rows) ? `على بيع ${one(rows).refName}` : `على ${count(rows.length, 'sale')}`) },
   wages: { name: 'رواتب الرعاة', icon: 'user', line: () => 'تنخصم أول الشهر' },
-  construction: { name: 'البناء', icon: 'build', line: (rows) => rows.map((r) => r.refName).join('، ') },
-  vet: { name: 'البيطري', icon: 'user', line: (rows) => count(rows.length, 'order') },
-  studFee: { name: 'أجرة الفحل', icon: 'camel', line: (rows) => count(rows.length, 'order') },
+  construction: { name: 'البناء', icon: 'build', line: (rows) => (rows.every((r) => FACILITY[r.refName]) ? rows.map((r) => FACILITY[r.refName]).join('، ') : count(rows.length, 'build')) },
+  vet: { name: 'البيطري', icon: 'user', line: (rows) => count(rows.length, 'treat') },
+  studFee: { name: 'أجرة الفحل', icon: 'camel', line: (rows) => count(rows.length, 'mating') },
 };
+const kindOf = (cat) => (cat === 'commission' ? 'sale' : cat);
 
 // ---------------------------------------------------------------- the ledger grouped as a presenter would group it
+// rows into kinds; in = the kinds that brought money, out = the kinds that cost it (a sale net of its السعي)
+function kinds(rows) {
+  const by = new Map();
+  for (const r of rows) { const k = kindOf(r.cat); if (!by.has(k)) by.set(k, []); by.get(k).push(r); }
+  const ks = [...by.entries()].map(([kind, rs]) => ({ kind, rows: rs, v: sum(rs) }));
+  return { ks, inn: ks.filter((k) => k.v > 0).reduce((n, k) => n + k.v, 0), out: -ks.filter((k) => k.v < 0).reduce((n, k) => n + k.v, 0) };
+}
 // a row's month: a roll-up row's own (milk, wages), else its day's; the opening balance apart (not an income)
 function months(m) {
   const by = new Map();
   for (const r of m.ledger) {
     if (r.cat === 'opening') continue;
     const ym = r.month || r.date.slice(0, 7);
-    if (!by.has(ym)) by.set(ym, { ym, inn: 0, out: 0, cats: new Map() });
-    const g = by.get(ym);
-    if (r.amount > 0) g.inn += r.amount; else g.out -= r.amount;
-    if (!g.cats.has(r.cat)) g.cats.set(r.cat, []);
-    g.cats.get(r.cat).push(r);
+    if (!by.has(ym)) by.set(ym, []);
+    by.get(ym).push(r);
   }
-  return [...by.values()].sort((a, b) => b.ym.localeCompare(a.ym));
+  return [...by.entries()].map(([ym, rows]) => ({ ym, ...kinds(rows) })).sort((a, b) => b.ym.localeCompare(a.ym));
 }
 const opening = (m) => m.ledger.filter((r) => r.cat === 'opening');
 // today: the day's one-off rows, and today's milk (the ledger keeps it as one row a month: GameView.todayNet's rule)
 function today(m) {
-  let inn = m.milkIncomeToday, out = 0;
-  for (const r of m.ledger) if (r.day === m.today && r.cat !== 'opening' && r.cat !== 'milk') { if (r.amount > 0) inn += r.amount; else out -= r.amount; }
-  if (inn - out !== m.todayNet) throw new Error(`today ${inn} - ${out} != todayNet ${m.todayNet}`);
-  return { inn, out };
+  const rows = m.ledger.filter((r) => r.day === m.today && r.cat !== 'opening' && r.cat !== 'milk');
+  if (m.milkIncomeToday) rows.push({ cat: 'milk', amount: m.milkIncomeToday });
+  const t = kinds(rows);
+  if (t.inn - t.out !== m.todayNet) throw new Error(`today ${t.inn} - ${t.out} != todayNet ${m.todayNet}`);
+  return t;
 }
 function check(m) {      // the figures add up: the opening and every month's net make the balance (cash == the ledger's sum)
-  const sum = opening(m).reduce((n, r) => n + r.amount, 0) + months(m).reduce((n, g) => n + g.inn - g.out, 0);
-  if (sum !== m.cash) throw new Error(`${m.key}: ${sum} != cash ${m.cash}`);
+  const total = sum(opening(m)) + months(m).reduce((n, g) => n + g.inn - g.out, 0);
+  if (total !== m.cash) throw new Error(`${m.key}: ${total} != cash ${m.cash}`);
 }
 DATA.moments.forEach(check);
 
 const nav = () => `<div class="nav"><button class="back">${svg('back')}رجوع</button></div>`;
 const inOut = (inn, out) => [inn ? `دخل ${n0(inn)} ريال` : '', out ? `صرفت ${n0(out)} ريال` : ''].filter(Boolean).join(' · ');
+// today's line: the net first in the home widget's own words, then, when money moved both ways, what came in and
+// what went out; green only when money only came in (as the widget's «دخل اليوم»)
+function todayLine(t) {
+  const net = t.inn - t.out;
+  const head = net > 0 ? `دخل اليوم ${n0(net)} ريال` : net < 0 ? `صرفت اليوم ${n0(-net)} ريال` : t.inn ? 'اليوم ما زاد ولا نقص' : 'ما فيه حركة اليوم';
+  const both = t.inn && t.out ? ` · دخل ${n0(t.inn)} وطلع ${n0(t.out)}` : '';
+  return `<div class="ln${t.inn && !t.out ? ' pos' : !t.inn && !t.out ? ' ink2' : ''}">${head}${both}</div>`;
+}
+// a month's biggest kind, named (the alternative main screen: where the money went)
+function biggest(g) {
+  const k = g.ks.slice().sort((a, b) => Math.abs(b.v) - Math.abs(a.v))[0];
+  const r = one(k.rows.filter((x) => x.cat !== 'commission'));
+  const what = k.kind === 'purchase' && r && named(r) ? `شراء ${r.refName}` : k.kind === 'sale' && r && named(r) ? `بيع ${r.refName}` : KIND[k.kind].name;
+  return { k, text: `${what} ${n0(Math.abs(k.v))} ريال` };
+}
 
-// the bank's main screen: the balance, today's money in and out, this month's and each month's before it (newest
-// first, each opening on its month), and the opening balance in a line under them (not an income)
-function main(m) {
-  const t = today(m), gs = months(m), ym = m.date.slice(0, 7);
-  const cur = gs.find((g) => g.ym === ym), before = gs.filter((g) => g.ym !== ym), op = opening(m)[0];
-  const todayLine = t.inn || t.out ? `اليوم: ${inOut(t.inn, t.out)}` : 'ما فيه حركة اليوم';
-  // (this month's in and out: the first of the months' rows; none yet, said in the card)
-  const monthLine = `${MONTH[Number(ym.slice(5)) - 1]}: ما دخل ولا طلع شي للحين`;
-  const mrow = (g, isCur) => `<div class="row"><span class="lead">${svg('cal')}</span><b>${isCur ? `${MONTH[Number(g.ym.slice(5)) - 1]} · هالشهر` : monthName(g.ym)}</b><span class="amt${g.inn - g.out > 0 ? ' pos' : ''}">${sg(g.inn - g.out)}</span><small>${inOut(g.inn, g.out)}</small></div>`;
+// the bank's main screen: the balance, today's money, each month's in and out and net (this month first), and the
+// opening balance in a line under them (not an income). alt: each month's second line names its biggest kind,
+// and its icon is that kind's, instead of the in and out
+function main(m, alt = false) {
+  const t = today(m), gs = months(m), ym = m.date.slice(0, 7), op = opening(m)[0];
+  const mrow = (g) => {
+    const net = g.inn - g.out, isCur = g.ym === ym, top = alt ? biggest(g) : null;
+    const line = alt ? `أكبرها: ${top.text}` : inOut(g.inn, g.out);
+    return `<div class="row"><span class="lead">${svg(alt ? KIND[top.k.kind].icon : 'cal')}</span><b>${isCur ? `${mon(g.ym)} · هالشهر` : monthName(g.ym)}</b><span class="amt${net > 0 ? ' pos' : ''}">${sg(net)}</span><small>${line}</small></div>`;
+  };
+  // the milk buyer's word only when the day's milking sells some (the milk app's own rule: farm.milk.sold)
+  const first = op.day === m.today ? `بديت اليوم برصيد ${n0(op.amount)} ريال.${m.milkSold > 0.05 ? ' حليب ناقتك أول دخل لك: يمر المشتري بكرة وياخذه.' : ''}` : `بديت اللعبة ${dayName(op.date)} ${op.date.slice(0, 4)} برصيد ${n0(op.amount)} ريال.`;
   return `<div class="body">${nav()}<div class="title">البنك</div>
-    <div class="balance"><small>رصيدك</small><div class="v">${n0(m.cash)}<span>ريال</span></div>
-      <div class="ln${t.inn - t.out > 0 ? ' pos' : t.inn || t.out ? '' : ' ink2'}">${todayLine}</div>
-      ${cur ? '' : `<div class="ln ink2">${monthLine}</div>`}</div>
-    ${gs.length ? `<div class="sec">الشهور</div><div class="group">${cur ? mrow(cur, true) : ''}${before.map((g) => mrow(g, false)).join('')}</div>` : ''}
-    <div class="note">${op.day === m.today ? `بديت اليوم برصيد ${n0(op.amount)} ريال. حليب ناقتك أول دخل لك: يمر المشتري بكرة وياخذه.` : `بديت اللعبة ${dayName(op.date)} ${op.date.slice(0, 4)} برصيد ${n0(op.amount)} ريال.`}</div></div>`;
+    <div class="balance"><small>رصيدك</small><div class="v">${n0(m.cash)}<span>ريال</span></div>${todayLine(t)}</div>
+    ${gs.length ? `<div class="sec">الشهور</div><div class="group">${gs.map(mrow).join('')}</div>` : ''}
+    <div class="note">${first}</div></div>`;
 }
 
 // a month opened: what came in and what went out, each kind with its sum, and the month's net
 function month(m, ym) {
   const g = months(m).find((x) => x.ym === ym), cur = ym === m.date.slice(0, 7);
-  const sum = (rows) => rows.reduce((n, r) => n + r.amount, 0);
-  const kinds = [...g.cats.entries()].map(([cat, rows]) => ({ cat, rows, v: sum(rows) }));
-  const row = (k) => `<div class="row"><span class="lead${k.v < 0 ? ' out' : ''}">${svg(CAT[k.cat].icon)}</span><b>${CAT[k.cat].name}</b><span class="amt${k.v > 0 ? ' pos' : ''}">${sg(k.v)}</span><small>${CAT[k.cat].line(k.rows, cur)}</small></div>`;
-  const ins = kinds.filter((k) => k.v > 0).sort((a, b) => b.v - a.v), outs = kinds.filter((k) => k.v < 0).sort((a, b) => a.v - b.v);
+  const row = (k) => `<div class="row"><span class="lead${k.v < 0 ? ' out' : ''}">${svg(KIND[k.kind].icon)}</span><b>${KIND[k.kind].name}</b><span class="amt${k.v > 0 ? ' pos' : ''}">${sg(k.v)}</span><small>${KIND[k.kind].line(k.rows, cur)}</small></div>`;
+  const ins = g.ks.filter((k) => k.v > 0).sort((a, b) => b.v - a.v), outs = g.ks.filter((k) => k.v < 0).sort((a, b) => a.v - b.v);
+  // a month without milk says so (the ledger has no milk row for it: no nursing camel milked)
+  const noMilk = g.ks.some((k) => k.kind === 'milk') ? '' : `<div class="row"><span class="lead out">${svg('milk')}</span><b>الحليب</b><span class="amt"></span><small>ما فيه حليب ${cur ? 'هالشهر' : `في ${mon(ym)}`}</small></div>`;
   const net = g.inn - g.out;
   return `<div class="body">${nav()}<div class="title">${monthName(ym)}</div>
     <div class="balance"><small>${cur ? 'الصافي لين اليوم' : 'الصافي'}</small><div class="v${net > 0 ? ' pos' : ''}"><bdi dir="ltr">${sg(net)}</bdi><span>ريال</span></div>
       <div class="ln ink2">${inOut(g.inn, g.out)}</div></div>
-    ${ins.length ? `<div class="sec">الدخل</div><div class="group">${ins.map(row).join('')}</div>` : `<div class="sec">الدخل</div><div class="group"><div class="row"><span class="lead">${svg('milk')}</span><b>ما دخلك شي</b><small>${MONTH[Number(ym.slice(5)) - 1]} بدون دخل</small></div></div>`}
-    <div class="sec">المصروف</div><div class="group">${outs.map(row).join('')}</div></div>`;
+    <div class="sec">الدخل</div><div class="group">${ins.map(row).join('')}${noMilk}</div>
+    ${outs.length ? `<div class="sec">المصروف</div><div class="group">${outs.map(row).join('')}</div>` : ''}</div>`;
 }
 
 const SCREENS = [
@@ -135,9 +174,16 @@ const SCREENS = [
   ['october', main(M.october)],
   ['october_month', month(M.october, '2026-10')],
   ['april', main(M.april)],
+  ['april_alt', main(M.april, true)],
   ['november', month(M.april, '2026-11')],
   ['february', month(M.april, '2027-02')],
 ];
+
+// DRY=1: print each screen's words and stop (no browser)
+if (process.env.DRY) {
+  for (const [k, html] of SCREENS) console.log(`--- ${k}\n` + html.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<\/(div|small|b|span)>/g, '$& ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
+  process.exit(0);
+}
 
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });

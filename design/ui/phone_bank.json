@@ -9,6 +9,7 @@
    "todayNet": 0,
    "milkIncomeToday": 0,
    "milkThisMonth": 0,
+   "milkSold": 2.0281480197625936,
    "herd": 2,
    "ledger": [
     {
@@ -17,19 +18,22 @@
      "cat": "opening",
      "amount": 20000,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     }
    ]
   },
   {
    "key": "october",
-   "today": 299,
-   "date": "2026-10-27",
-   "cash": 20069,
-   "todayNet": 19,
+   "today": 294,
+   "date": "2026-10-22",
+   "cash": 19974,
+   "todayNet": -290,
    "milkIncomeToday": 19,
-   "milkThisMonth": 506,
+   "milkThisMonth": 411,
+   "milkSold": 1.9008475249269394,
    "herd": 2,
    "ledger": [
     {
@@ -38,16 +42,20 @@
      "cat": "opening",
      "amount": 20000,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
      "day": 274,
      "date": "2026-10-02",
      "cat": "milk",
-     "amount": 506,
+     "amount": 411,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": "2026-10"
     },
     {
@@ -56,7 +64,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -65,7 +75,9 @@
      "cat": "feed",
      "amount": -189,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -74,7 +86,9 @@
      "cat": "water",
      "amount": -120,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     }
    ]
@@ -87,6 +101,7 @@
    "todayNet": 27,
    "milkIncomeToday": 27,
    "milkThisMonth": 388,
+   "milkSold": 2.7434555621724575,
    "herd": 3,
    "ledger": [
     {
@@ -95,7 +110,9 @@
      "cat": "opening",
      "amount": 20000,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -104,7 +121,9 @@
      "cat": "milk",
      "amount": 581,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": "2026-10"
     },
     {
@@ -113,7 +132,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -122,7 +143,9 @@
      "cat": "feed",
      "amount": -189,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -131,7 +154,9 @@
      "cat": "water",
      "amount": -120,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -140,7 +165,9 @@
      "cat": "milk",
      "amount": 525,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": "2026-11"
     },
     {
@@ -149,7 +176,9 @@
      "cat": "feed",
      "amount": -162,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -158,7 +187,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -167,7 +198,9 @@
      "cat": "feed",
      "amount": -162,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -176,7 +209,9 @@
      "cat": "purchase",
      "amount": -6000,
      "ref": "c-000039u-d5",
+     "refKind": "camel",
      "refName": "شاهة",
+     "why": null,
      "month": null
     },
     {
@@ -185,7 +220,9 @@
      "cat": "transport",
      "amount": -1069,
      "ref": "c-000039u-d5",
+     "refKind": "camel",
      "refName": "شاهة",
+     "why": "purchase",
      "month": null
     },
     {
@@ -194,7 +231,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -203,7 +242,9 @@
      "cat": "feed",
      "amount": -216,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -212,7 +253,9 @@
      "cat": "milk",
      "amount": 485,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": "2026-12"
     },
     {
@@ -221,7 +264,9 @@
      "cat": "feed",
      "amount": -216,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -230,7 +275,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -239,7 +286,9 @@
      "cat": "feed",
      "amount": -216,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -248,7 +297,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -257,7 +308,9 @@
      "cat": "feed",
      "amount": -270,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -266,7 +319,9 @@
      "cat": "milk",
      "amount": 200,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": "2027-01"
     },
     {
@@ -275,7 +330,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -284,7 +341,9 @@
      "cat": "feed",
      "amount": -243,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -293,7 +352,9 @@
      "cat": "feed",
      "amount": -192,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -302,7 +363,9 @@
      "cat": "feed",
      "amount": -270,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -311,7 +374,9 @@
      "cat": "feed",
      "amount": -192,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -320,7 +385,9 @@
      "cat": "feed",
      "amount": -270,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -329,7 +396,9 @@
      "cat": "sale",
      "amount": 7300,
      "ref": "c-000039u-u",
+     "refKind": "camel",
      "refName": "سيف",
+     "why": null,
      "month": null
     },
     {
@@ -338,7 +407,9 @@
      "cat": "commission",
      "amount": -183,
      "ref": "c-000039u-u",
+     "refKind": "camel",
      "refName": "سيف",
+     "why": null,
      "month": null
     },
     {
@@ -347,7 +418,9 @@
      "cat": "water",
      "amount": -120,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -356,7 +429,9 @@
      "cat": "feed",
      "amount": -189,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -365,7 +440,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -374,7 +451,9 @@
      "cat": "feed",
      "amount": -216,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -383,7 +462,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -392,7 +473,9 @@
      "cat": "feed",
      "amount": -189,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -401,7 +484,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -410,7 +495,9 @@
      "cat": "milk",
      "amount": 72,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": "2027-03"
     },
     {
@@ -419,7 +506,9 @@
      "cat": "feed",
      "amount": -216,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -428,7 +517,9 @@
      "cat": "milk",
      "amount": 388,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": "2027-04"
     },
     {
@@ -437,7 +528,9 @@
      "cat": "feed",
      "amount": -128,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     },
     {
@@ -446,7 +539,9 @@
      "cat": "feed",
      "amount": -216,
      "ref": null,
+     "refKind": null,
      "refName": null,
+     "why": null,
      "month": null
     }
    ]
