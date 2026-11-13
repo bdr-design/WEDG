@@ -409,7 +409,7 @@ function refusal(r, command) {
   const unit = water ? 'tanker' : command.supply === 'barley' ? 'bag' : 'bale';
   if (code === 'insufficientFunds') return `رصيدك ما يكفي: الطلب بـ ${n0(p.needed ?? 0)} ريال.`;
   if (code === 'storeFull') return p.room ? `${where} ما يشيل إلا ${count(p.room, unit)} بعد.` : `${where} ما فيه مكان الحين.`;
-  return 'المحرك رفض الطلب، جرّب مرة ثانية.';
+  return 'جرّب مرة ثانية.';
 }
 
 function waterScreen() {
@@ -483,7 +483,9 @@ function feedScreen() {
       <div class="row ord"><span class="lead">${svg('feed')}</span><b>شعير</b>${stepper('barley', ORD.barley, unitWord(ORD.barley, 'bag'), canUp(b))}<small>الكيس ${b.unitSize} كجم بـ ${n0(b.unitPrice)} ريال</small></div>
       <div class="row ord"><span class="lead">${svg('leaf')}</span><b>برسيم</b>${stepper('alfalfa', ORD.alfalfa, unitWord(ORD.alfalfa, 'bale'), canUp(a))}<small>البالة ${a.unitSize} كجم بـ ${n0(a.unitPrice)} ريال</small></div></div>`;
   const canUp = (x) => usedKg + x.unitSize <= room;
-  const heading = (ordered) => `<div class="sec">${ordered ? 'اطلب زيادة' : suggest(b) + suggest(a) > 0 ? 'اطلب لـ 3 أسابيع' : 'اطلب'}</div>`;
+  // three weeks that do not fit in the store: the order is cut to what does, and the heading says so
+  const cut = suggest(b) * b.unitSize + suggest(a) * a.unitSize > room;
+  const heading = (ordered) => `<div class="sec">${ordered ? 'اطلب زيادة' : cut ? 'اطلب على قد المستودع' : suggest(b) + suggest(a) > 0 ? 'اطلب لـ 3 أسابيع' : 'اطلب'}</div>`;
   const ordered = b.onTheWayAmount || a.onTheWayAmount;
   // short of money: as the approved screen has it, the warning and a week's order first
   if (total > G.cash) {
@@ -498,12 +500,12 @@ function feedScreen() {
   let warn = '';
   const lowB = out(b, lb) || (lb != null && lb <= 3), lowA = out(a, la) || (la != null && la <= 3);
   if ((lowB || lowA) && !ordered) {
+    // each feed as it is (one out and the other low are said apart); the two together when they are the same
+    const state = (x, l, two) => out(x, l) ? (two ? 'خلصوا' : 'خلص') : `${two ? 'يخلصون' : 'يخلص'} ${l <= 1 ? 'بكرة' : `بعد ${days(l)}`}`;
     const gone = (lowB && out(b, lb)) || (lowA && out(a, la));
-    const soonest = Math.min(lowB ? lb ?? 0 : 99, lowA ? la ?? 0 : 99);
-    const what = lowB && lowA ? 'الشعير والبرسيم' : lowB ? 'الشعير' : 'البرسيم';
-    const verb = gone ? (lowB && lowA ? 'خلصوا' : 'خلص') : (lowB && lowA ? 'يخلصون' : 'يخلص');
-    const when = gone ? '' : soonest <= 1 ? ' بكرة' : ` بعد ${days(soonest)}`;
-    warn = alertCard(`${what} ${verb}${when}`, gone ? 'الحلال ما شبع اليوم وحالته تنزل. اطلب اليوم يوصل بكرة.' : 'اطلب اليوم يوصل بكرة قبل العلفة.');
+    const title = lowB && lowA && state(b, lb) === state(a, la) ? `الشعير والبرسيم ${state(b, lb, true)}`
+      : [lowB ? `الشعير ${state(b, lb)}` : '', lowA ? `البرسيم ${state(a, la)}` : ''].filter(Boolean).join(' و');
+    warn = alertCard(title, gone ? 'الحلال ما شبع اليوم وحالته تنزل. اطلب اليوم يوصل بكرة.' : 'اطلب اليوم يوصل بكرة قبل العلفة.');
   }
   const plans = { economy: 'خفيفة', standard: 'عادية', premium: 'قوية' };
   const R = f.rations, cur = R.find((r) => r.plan === f.feedPlan);
@@ -768,8 +770,9 @@ export function createPhone({ host }) {
     const done = () => {
       if (!live()) return;
       redraw();
-      // the keyboard's place kept: the control is drawn again, so the same one takes the focus
-      if (focused) { const again = [...scr.querySelectorAll('[data-act]')].find((e) => keyOf(e) === focused && !e.disabled); if (again) again.focus({ preventScroll: true }); }
+      // the keyboard's place kept: the control is drawn again, so the same one takes the focus; one that is gone (the
+      // order went, its button with it) leaves it on the screen's back button, in the phone
+      if (focused) { const again = [...scr.querySelectorAll('[data-act]')].find((e) => keyOf(e) === focused && !e.disabled); focusIn(again || scr.querySelector('.back, [data-go], button') || dev); }
     };
     if (kind === 'step') {
       const k = t.dataset.s; ORD[k] = Math.max(0, (ORD[k] ?? 0) + Number(t.dataset.d)); done(); return;
@@ -791,7 +794,7 @@ export function createPhone({ host }) {
         if (kind === 'feed') { ORD.barley = nb; ORD.alfalfa = na; }
       }
     } catch (err) {
-      ERR = 'ما وصل الطلب للمحرك، جرّب مرة ثانية.';
+      ERR = 'ما وصل الطلب، جرّب مرة ثانية.';
       console.warn('phone:', err);
     } finally {
       busy = false;
