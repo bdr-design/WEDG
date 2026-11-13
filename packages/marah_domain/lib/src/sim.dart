@@ -38,15 +38,27 @@ class Sim {
   void pay(PlayerState p, Riyal amount, LedgerCategory cat, {String? ref}) {
     if (amount.value == 0) return;
     p.cash = p.cash + amount;
+    _settle(p, amount);
     p.ledger.add(
       LedgerEntry(day: today, category: cat, amount: amount, ref: ref),
     );
+  }
+
+  /// Money in pays the merchant's account first; it is clear once the money
+  /// is back above zero (Account).
+  static void _settle(PlayerState p, Riyal amount) {
+    if (p.onAccount == 0) return;
+    if (amount.value > 0) {
+      p.onAccount = p.onAccount > amount.value ? p.onAccount - amount.value : 0;
+    }
+    if (!p.cash.isNegative) p.onAccount = 0;
   }
 
   /// Records a recurring cost into this month's single row for [cat].
   void bill(PlayerState p, Riyal amount, LedgerCategory cat) {
     if (amount.value == 0) return;
     p.cash = p.cash + amount;
+    _settle(p, amount);
     final d = today.date;
     final month = '${d.year}-${d.month.toString().padLeft(2, '0')}';
     for (var i = p.ledger.length - 1; i >= 0; i--) {

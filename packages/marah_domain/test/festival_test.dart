@@ -1,6 +1,7 @@
 // The Saudi round system and cheating (GDD 7 and 7.1; the owner's decisions
 // of 13 Nov 2026): each rule built has a test here that fails without it.
 import 'package:marah_domain/marah_domain.dart';
+import 'package:marah_domain/src/handlers/handlers.dart' as handlers;
 import 'package:marah_domain/src/model/camel.dart';
 import 'package:marah_domain/src/rules/eligibility.dart';
 import 'package:marah_domain/src/rules/judging.dart';
@@ -1102,6 +1103,124 @@ void main() {
       expect(checkInvariants(g.state), isEmpty);
     });
 
+    test('feed, water and the vet go on account up to its limit, never '
+        'counting a fine; money in pays the merchant first', () {
+      final g = newGame();
+      g.me.farm
+        ..barleyKg = 0
+        ..alfalfaKg = 0
+        ..storeKg = 1000000;
+      final limit = handlers.accountLimit(Sim(g.state), g.me);
+      expect(limit, greaterThanOrEqualTo(Balance.minCreditLimit));
+      // short but above zero: the rest on account
+      grant(g, -g.me.cash.value + 50);
+      final bag = Provisions.unitPrice(Supply.barley, g.me.farm.region);
+      expect(g.dispatch(OrderSupply(g.me.id, Supply.barley, 3)).ok, isTrue);
+      expect(g.me.onAccount, (bag * 3).round() - 50);
+      // a fine far past the limit does not count against the account
+      grant(g, -1000000);
+      expect(g.dispatch(OrderSupply(g.me.id, Supply.barley, 1)).ok, isTrue);
+      // up to the limit, then the player must sell
+      final most = ((limit - g.me.onAccount) / bag).floor();
+      if (most > 0) {
+        expect(
+          g.dispatch(OrderSupply(g.me.id, Supply.barley, most)).ok,
+          isTrue,
+        );
+      }
+      final full = refused(g, OrderSupply(g.me.id, Supply.barley, 1));
+      expect(full.error.code, ErrorCode.accountFull);
+      // the vet's treatment of a sick camel too
+      final c =
+          g.state.world.camels.values.firstWhere(
+              (c) => c.ownerId == g.me.id && c.isAlive,
+            )
+            ..health = HealthStatus.sick
+            ..illness = Illness.lameness
+            ..sickSince = g.today;
+      expect(
+        refused(g, Treat(g.me.id, c.id)).error.code,
+        ErrorCode.accountFull,
+      );
+      // money in pays the merchant first, while the fine is still owed
+      final owed = g.me.onAccount;
+      grant(g, 2000);
+      expect(g.me.onAccount, owed - 2000);
+      expect(g.me.cash.isNegative, isTrue);
+      expect(g.dispatch(Treat(g.me.id, c.id)).ok, isTrue);
+      // and clear once the money is above zero
+      grant(g, 2000000);
+      expect(g.me.onAccount, 0);
+      expect(checkInvariants(g.state), isEmpty);
+      final v = GameView(g.state, g.me.id);
+      expect(v.onAccount, 0);
+      expect(v.accountLimit(), limit);
+    });
+
+    test('several kinds on one camel: each adds to her looks, has its own '
+        'check and its own fine', () {
+      final g = newGame();
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.fardiDiq);
+      final c = camelFor(g, r);
+      for (final t in Trait.values) {
+        c.genes[t] = 40;
+        c.env[t] = 0;
+      }
+      final q0 = Judging.quality(c, g.today);
+      expect(g.dispatch(Tamper(g.me.id, c.id, TamperKind.dye, 1)).ok, isTrue);
+      final q1 = Judging.quality(c, g.today);
+      expect(g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 1)).ok, isTrue);
+      final q2 = Judging.quality(c, g.today);
+      expect(q1 - q0, closeTo(Balance.tamperLiftPerLevel, 1e-9));
+      expect(q2 - q1, closeTo(Balance.tamperLiftPerLevel, 1e-9));
+      expect(GameView(g.state, g.me.id).tamperings, hasLength(2));
+      // found at a festival: every kind found fined, each its own
+      var both = 0;
+      for (var seed = 0; seed < 60 && both == 0; seed++) {
+        final h = newGame(seed);
+        final hf = grand(h);
+        final hr = roundOf(hf, RoundKind.fardiDiq);
+        final x = camelFor(h, hr, mean: 85);
+        h.advanceTo(hf.opensOn);
+        h.dispatch(EnterRound(h.me.id, hf.id, hr.id, [x.id]));
+        // close to the day: dye lasts a month
+        h.advanceTo(hr.day - 5);
+        h
+          ..dispatch(Tamper(h.me.id, x.id, TamperKind.dye, 3))
+          ..dispatch(Tamper(h.me.id, x.id, TamperKind.botox, 3));
+        final found = h
+            .advanceTo(hr.day)
+            .whereType<TamperingFound>()
+            .where((e) => e.festival != null)
+            .toList();
+        if (found.length < 2) continue;
+        both++;
+        expect(found.map((e) => e.kind).toSet(), {
+          TamperKind.dye,
+          TamperKind.botox,
+        });
+        expect(found.map((e) => e.fine).toSet(), {
+          Balance.tamperFine(TamperKind.dye, 3),
+          Balance.tamperFine(TamperKind.botox, 3),
+        });
+        expect(
+          h.me.ledger.where(
+            (l) => l.category == LedgerCategory.fine && l.ref == hf.id.value,
+          ),
+          hasLength(2),
+        );
+      }
+      expect(both, 1);
+      // the chance at least one is found adds up
+      final one = ContestRules.festivalCatchChance(TamperKind.dye, 1);
+      final two =
+          1 -
+          (1 - one) *
+              (1 - ContestRules.festivalCatchChance(TamperKind.botox, 1));
+      expect(two, greaterThan(one));
+    });
+
     test('الصيت: strong sales raise it, and it moves what buyers pay', () {
       expect(Balance.reputationPriceFactor(Balance.startingReputation), 1);
       expect(Balance.reputationPriceFactor(100), closeTo(1.18, 1e-9));
@@ -1140,7 +1259,7 @@ void main() {
   });
 
   group('What a player sees', () {
-    test('other owners\' rows carry no marks; his own do', () {
+    test('no row carries a score or a mark, the player\'s own included', () {
       final g = newGame();
       final f = grand(g);
       final r = roundOf(f, RoundKind.mafareed, sex: Sex.female);
@@ -1165,13 +1284,15 @@ void main() {
         g.me.id,
       ).festival(f.id)!.rounds.firstWhere((x) => x.id == r.id).results!;
       final theirs = rows.firstWhere((x) => x.ownerId.value == 'other-player');
-      expect(theirs.marks, isNull);
       expect(theirs.camelId, isNull);
       final mine = rows.firstWhere((x) => x.ownerId == g.me.id);
-      if (mine.rank != null) expect(mine.marks, isNotNull);
-      // and no one else's entries
-      final stranger = Sim(g.state);
-      expect(stranger.world.festivals[f.id], isNotNull);
+      expect(mine.camelId, c.id);
+      for (final row in rows) {
+        expect(
+          row.toJson().keys,
+          isNot(anyOf(contains('score'), contains('marks'))),
+        );
+      }
     });
 
     test('views list only the player\'s own entries', () {

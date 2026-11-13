@@ -150,6 +150,10 @@ void main() {
       );
     }
     expect(snap['tamperings'], isEmpty);
+    // never a score or a mark: the judges' marks are not announced
+    final text = jsonEncode(a) + jsonEncode(snap);
+    expect(text, isNot(contains('"score"')));
+    expect(text, isNot(contains('"marks"')));
     final none = await page.call('festival', {'festival': 'nope'});
     expect(none['ok'], isFalse);
     await page.call('pause');

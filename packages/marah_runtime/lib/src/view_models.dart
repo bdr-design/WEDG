@@ -698,6 +698,8 @@ class FarmSummary {
     required this.rations,
     required this.facilities,
     required this.milk,
+    required this.onAccount,
+    required this.accountLimit,
   });
 
   final String name;
@@ -732,9 +734,16 @@ class FarmSummary {
   final List<FacilitySummary> facilities;
   final MilkSummary milk;
 
+  /// Feed, water and vet treatments bought on account and not yet paid, and
+  /// the account's limit (past it the player must sell: the owner, 13 Nov).
+  final int onAccount;
+  final int accountLimit;
+
   @override
   bool operator ==(Object other) =>
       other is FarmSummary &&
+      other.onAccount == onAccount &&
+      other.accountLimit == accountLimit &&
       other.name == name &&
       other.region == region &&
       other.capacity == capacity &&
@@ -961,7 +970,7 @@ class RoundCard {
 
   /// The places once announced (others' rows without marks), and the
   /// player's own removals.
-  final List<ResultRow>? results;
+  final List<ResultView>? results;
 }
 
 class FestivalDetail {

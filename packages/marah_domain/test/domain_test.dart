@@ -462,7 +462,7 @@ void main() {
       expect(seasons, {true, false});
     });
 
-    test('an order that does not fit, or is not paid for, is refused', () {
+    test('an order that does not fit, or is past the account, is refused', () {
       final g = newGame(4);
       final room = GameView(g.state, g.me.id).roomFor(Supply.water);
       final r = g.dispatch(OrderSupply(g.me.id, Supply.water, room + 1)) as Err;
@@ -472,10 +472,13 @@ void main() {
         (g.dispatch(OrderSupply(g.me.id, Supply.alfalfa, 0)) as Err).error.code,
         ErrorCode.invalidAmount,
       );
+      // short of money it goes on account, but not past the account's limit
+      // (the owner, 13 Nov 2026)
       g.me.cash = const Riyal(10);
+      g.me.onAccount = 1000000;
       expect(
         (g.dispatch(OrderSupply(g.me.id, Supply.barley, 1)) as Err).error.code,
-        ErrorCode.insufficientFunds,
+        ErrorCode.accountFull,
       );
     });
 

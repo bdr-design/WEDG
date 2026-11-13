@@ -1029,10 +1029,31 @@ class ContestSystem implements DailySystem {
                   ),
                 )
                 .toList();
-        if (found.isNotEmpty) {
-          final (camel, t) = found.first;
-          remove(c, stage, RemovalReason.tampering);
+        // several kinds in her: each has its own check and its own fine
+        // (the owner, 13 Nov 2026: the risk adds up); one found by the
+        // tampering experts, the medical committee still looks for the rest
+        if (found.isEmpty) continue;
+        remove(c, stage, RemovalReason.tampering);
+        final later = stage == Stage.tamperingExperts
+            ? [
+                for (final camel in c.camels)
+                  for (final t in camel.treatments)
+                    if (t.activeOn(r.day) && !found.any((x) => x.$2 == t))
+                      if (rng.chance(
+                        ContestRules.detectChance(
+                          t.kind,
+                          t.strength,
+                          Stage.medical,
+                        ),
+                      ))
+                        (camel, t),
+              ]
+            : const <(Camel, Tampering)>[];
+        for (final (camel, t) in found) {
           _caught(sim, f, r, p, camel, t, stage, comps);
+        }
+        for (final (camel, t) in later) {
+          _caught(sim, f, r, p, camel, t, Stage.medical, comps);
         }
       }
       field.add(active().length);

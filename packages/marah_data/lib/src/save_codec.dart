@@ -340,7 +340,9 @@ class SaveCodec {
     final world = data['world']! as Map<String, Object?>;
     world['bans'] = <String, Object?>{};
     for (final pl in (data['players'] as List<Object?>?) ?? const []) {
-      (pl! as Map<String, Object?>)['reputation'] = <String, Object?>{};
+      (pl! as Map<String, Object?>)
+        ..['reputation'] = <String, Object?>{}
+        ..['onAccount'] = 0;
     }
     const young = {'haq', 'laqi', 'jatha'};
     for (final fe in (world['festivals'] as List<Object?>?) ?? const []) {

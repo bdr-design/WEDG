@@ -361,7 +361,7 @@ class Balance {
   /// on (the owner, 13 Nov 2026: a strong one lifts a middling camel a few
   /// places, as in the real thing). It shows to every eye, the judges' and
   /// the buyers' (she looks finer, and fetches more), while it lasts.
-  static const tamperLiftPerLevel = 3.0;
+  static const tamperLiftPerLevel = 3.4;
 
   /// The points it adds to each of its features.
   static double tamperTraitGain(TamperKind kind, int strength) =>
@@ -383,6 +383,12 @@ class Balance {
   static const outsideCatchPerDay = 0.0004;
   static const outsideCatchListedFactor = 4.0;
   static const vetCatchChance = 0.15;
+
+  /// (balance) The account for the herd's necessities (feed, water, the
+  /// vet's treatment; the owner, 13 Nov 2026): a month of the herd's feed and
+  /// water at today's ration, at least SAR 5,000 (Account.limit).
+  static const creditDays = 30;
+  static const minCreditLimit = 5000;
 
   /// (balance) A vet's look at a camel for sale before buying (not found):
   /// its price, and the chance it finds each treatment (a deliberate look,

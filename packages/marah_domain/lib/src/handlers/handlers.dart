@@ -11,6 +11,7 @@ import '../model/contest.dart';
 import '../model/market.dart';
 import '../model/player.dart';
 import '../model/tampering.dart';
+import '../rules/account.dart';
 import '../rules/balance.dart';
 import '../rules/contest_rules.dart';
 import '../rules/eligibility.dart';
@@ -50,6 +51,10 @@ Result handle(Sim sim, Command cmd) {
 }
 
 Ok _ok(Sim sim) => Ok(sim.drain());
+
+/// The limit of [p]'s account for the herd's necessities today.
+int accountLimit(Sim sim, PlayerState p) =>
+    Account.limit(sim.herdOf(p.id), p, sim.today);
 
 /// The balance is below zero (a fine larger than the money, GDD 7.1): no
 /// camel is bought and nothing built till it is paid (the owner, 13 Nov
@@ -429,9 +434,10 @@ Result _treat(Sim sim, PlayerState p, Treat cmd) {
   final cost = marketRound(
     rng.range(illness.treatMin, illness.treatMax).toDouble(),
   );
-  if (p.cash < cost) {
-    return _err(sim, ErrorCode.insufficientFunds, {'needed': cost.value});
-  }
+  // a sick camel's treatment goes on account like feed (the owner, 13 Nov)
+  final short = Account.canPay(p, cost.value, accountLimit(sim, p));
+  if (short != null) return Err(short, sim.drain());
+  Account.book(p, cost.value);
   sim.pay(p, -cost, LedgerCategory.vet, ref: camel.id.value);
   camel
     ..health = HealthStatus.treated
@@ -492,11 +498,11 @@ Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
       ? Provisions.tankerPrice(cmd.tanker)
       : Provisions.unitPrice(cmd.supply, p.farm.region);
   final cost = Riyal((unit * cmd.units).round());
-  // in debt (a fine larger than the money, GDD 7.1), feed and water still
-  // come, on credit (the owner, 13 Nov 2026)
-  if (!p.cash.isNegative && p.cash < cost) {
-    return _err(sim, ErrorCode.insufficientFunds, {'needed': cost.value});
-  }
+  // what the money does not cover goes on account, up to its limit (the
+  // owner, 13 Nov 2026: the herd does not go hungry for want of riyals)
+  final short = Account.canPay(p, cost.value, accountLimit(sim, p));
+  if (short != null) return Err(short, sim.drain());
+  Account.book(p, cost.value);
   sim.pay(
     p,
     -cost,

@@ -346,6 +346,7 @@ class PlayerState {
     required this.favourite,
     List<LedgerEntry>? ledger,
     Map<ColorCategory, double>? reputation,
+    this.onAccount = 0,
   }) : ledger = ledger ?? [],
        reputation = reputation ?? {};
 
@@ -364,6 +365,11 @@ class PlayerState {
   /// family not in the map is at Balance.startingReputation.
   final Map<ColorCategory, double> reputation;
 
+  /// Feed, water and vet treatments bought on account and not yet paid
+  /// (Account): the income that comes in pays it first, and it is cleared
+  /// when the money is back above zero. Never a fine.
+  int onAccount;
+
   double reputationIn(ColorCategory c) =>
       reputation[c] ?? Balance.startingReputation;
 
@@ -375,6 +381,7 @@ class PlayerState {
     'favourite': favourite,
     'ledger': [for (final l in ledger) l.toJson()],
     'reputation': {for (final e in reputation.entries) e.key.name: e.value},
+    'onAccount': onAccount,
   };
 
   static PlayerState fromJson(Map<String, Object?> j) => PlayerState(
@@ -391,5 +398,6 @@ class PlayerState {
       for (final e in (j['reputation']! as Map<String, Object?>).entries)
         ColorCategory.values.byName(e.key): (e.value! as num).toDouble(),
     },
+    onAccount: j['onAccount']! as int,
   );
 }

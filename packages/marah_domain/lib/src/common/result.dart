@@ -72,6 +72,11 @@ enum ErrorCode {
   /// 2026).
   inDebt,
 
+  /// Feed, water or the vet's treatment past the account's limit with the
+  /// merchant ({'needed', 'limit', 'owed'}): the player must sell (the
+  /// owner, 13 Nov 2026).
+  accountFull,
+
   /// An order would overfill the feed store or the water tank ({'room'}: units
   /// that still fit).
   storeFull,

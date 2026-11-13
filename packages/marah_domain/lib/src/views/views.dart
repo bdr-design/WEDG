@@ -12,6 +12,7 @@ import '../model/game_state.dart';
 import '../model/market.dart';
 import '../model/player.dart';
 import '../model/tampering.dart';
+import '../rules/account.dart';
 import '../rules/balance.dart';
 import '../rules/contest_rules.dart';
 import '../rules/eligibility.dart';
@@ -365,6 +366,12 @@ class GameView {
   ({double barley, double alfalfa, double water}) get dailyNeeds =>
       Provisions.needs(_w.aliveOwnedBy(viewer), me.farm.feedPlan, today);
 
+  /// Feed, water and vet treatments on account and not yet paid, and the
+  /// account's limit (Account; [needs] saves walking the herd again).
+  int get onAccount => me.onAccount;
+  int accountLimit([({double barley, double alfalfa, double water})? needs]) =>
+      Account.limitFor(needs ?? dailyNeeds, me);
+
   /// What is in store now (kg or L), not counting orders on the way.
   double inStore(Supply s) => Provisions.stocked(me.farm, s, withOrders: false);
 
@@ -540,25 +547,11 @@ class RoundView {
                 // judged, the places to come: only the owner's removals
                 ? [
                     for (final row in r.results!)
-                      if (row.ownerId == v.viewer && row.rank == null) row,
+                      if (row.ownerId == v.viewer && row.rank == null)
+                        ResultView._(row, v.viewer),
                   ]
                 : null)
-          : [
-              for (final row in r.results!)
-                if (row.ownerId == v.viewer)
-                  row
-                else
-                  ResultRow(
-                    rank: row.rank,
-                    camelName: row.camelName,
-                    ownerId: row.ownerId,
-                    score: row.score,
-                    prize: row.prize,
-                    head: row.head,
-                    removedAt: row.removedAt,
-                    reason: row.reason,
-                  ),
-            ];
+          : [for (final row in r.results!) ResultView._(row, v.viewer)];
 
   final RoundId id;
   final RoundKind kind;
@@ -579,12 +572,50 @@ class RoundView {
   final List<int>? field;
   final int caught;
 
-  /// The rows the player may see: all places once announced (others'
-  /// without marks), and his own entries' removals.
-  final List<ResultRow>? results;
+  /// The rows the player may see: all places once announced, and his own
+  /// entries' removals; never a score or a mark (the judges' marks are not
+  /// announced, the design: «والدرجات ما تنعلن»).
+  final List<ResultView>? results;
 
   /// A player may enter it now (the group rounds come later).
   bool get enterable => kind.enterable;
+}
+
+/// One row of a round's results as a player sees it: the place, the prize
+/// and the stage an entry left at; never its score or marks, the player's
+/// own included (hidden values: the judges' marks are not announced).
+class ResultView {
+  ResultView._(ResultRow r, OwnerId viewer)
+    : rank = r.rank,
+      camelName = r.camelName,
+      ownerId = r.ownerId,
+      prize = r.prize,
+      head = r.head,
+      removedAt = r.removedAt,
+      reason = r.reason,
+      camelId = r.ownerId == viewer ? r.camelId : null;
+
+  final int? rank;
+  final String camelName;
+  final OwnerId ownerId;
+  final int prize;
+  final int head;
+  final Stage? removedAt;
+  final RemovalReason? reason;
+
+  /// Only on the viewer's own rows.
+  final CamelId? camelId;
+
+  Map<String, Object?> toJson() => {
+    'rank': rank,
+    'name': camelName,
+    'owner': ownerId.value,
+    'prize': prize,
+    'head': head,
+    if (camelId != null) 'camel': camelId!.value,
+    if (removedAt != null) 'removedAt': removedAt!.name,
+    if (reason != null) 'reason': reason!.name,
+  };
 }
 
 /// One of the player's own secret treatments and its risk, in words: at a
