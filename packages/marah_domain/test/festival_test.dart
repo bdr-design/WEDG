@@ -1663,6 +1663,110 @@ void main() {
     },
   );
 
+  group('Round 5: the rules the mutations found untested', () {
+    test('the preliminary cuts only among entries the check let through', () {
+      for (var seed = 0; seed < 20; seed++) {
+        final g = newGame(seed);
+        final f = grand(g);
+        final r = roundOf(f, RoundKind.diq, sex: Sex.female);
+        final c = camelFor(g, r, mean: 60);
+        g.advanceTo(f.opensOn);
+        g
+          ..dispatch(EnterRound(g.me.id, f.id, r.id, [c.id]))
+          ..dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 3));
+        g.advanceTo(r.day);
+        final field = r.field!;
+        final checked = field[Stage.breedColourAge.index];
+        final caught = r.caught;
+        if (caught == 0) continue;
+        final kept = (checked - caught) * Balance.preliminaryKeeps;
+        final keep = kept.ceil() < Balance.preliminaryKeepsAtLeast
+            ? Balance.preliminaryKeepsAtLeast
+            : kept.ceil();
+        // the found ones are told at their stage, after the cut, and took
+        // none of its places
+        expect(
+          field[Stage.preliminary.index],
+          (keep < checked - caught ? keep : checked - caught) + caught,
+        );
+        return;
+      }
+      fail('nothing found in 20 rounds');
+    });
+
+    test(
+      'the examination at a sale finds a stronger treatment more easily',
+      () {
+        final p = [
+          for (var s = 1; s <= 3; s++) ContestRules.saleCheckChance(s),
+        ];
+        expect(p[0], closeTo(Balance.saleCheckPerLevel, 1e-9));
+        expect(p[1], greaterThan(p[0]));
+        expect(p[2], greaterThan(p[1]));
+        expect(p[2], closeTo(1 - 0.65 * 0.65 * 0.65, 1e-9));
+      },
+    );
+
+    test('the vet\'s treatment goes on the account; the account clears once '
+        'the money is above zero', () {
+      final g = newGame();
+      final c =
+          g.state.world.camels.values.firstWhere(
+              (c) => c.ownerId == g.me.id && c.isAlive,
+            )
+            ..health = HealthStatus.sick
+            ..illness = Illness.lameness
+            ..sickSince = g.today;
+      grant(g, -g.me.cash.value - 100);
+      expect(g.dispatch(Treat(g.me.id, c.id)).ok, isTrue);
+      final owed = g.me.onAccount;
+      expect(owed, greaterThan(0));
+      expect(g.me.onAccount, lessThanOrEqualTo(-g.me.cash.value));
+      // income smaller than the account but enough to bring the money above
+      // zero: the account is cleared, not just lowered
+      grant(g, -g.me.cash.value - 100); // cash at -100
+      g.me.onAccount = 100;
+      grant(g, 150);
+      expect(g.me.cash.isNegative, isFalse);
+      expect(g.me.onAccount, 0);
+      g.me.onAccount = 50;
+      grant(g, -1000);
+      g.me.onAccount = 50;
+      grant(g, 1);
+      expect(g.me.onAccount, 49);
+    });
+
+    test('a stud\'s fee needs the money: insufficientFunds when short, inDebt '
+        'below zero', () {
+      final g = newGame();
+      // in the breeding season (November to April)
+      g.advanceTo(GameDay.ofDate(DateTime.utc(2026, 12, 1)));
+      final sim0 = Sim(g.state);
+      final stud = WorldGen(sim0).addStud(sim0.rng(['test-stud']));
+      final dam =
+          g.state.world.camels.values.firstWhere(
+              (x) =>
+                  x.ownerId == g.me.id &&
+                  x.sex == Sex.female &&
+                  x.ageYears(g.today) >= 6,
+            )
+            ..pregnancy = null
+            ..lastCalvedOn = null
+            ..health = HealthStatus.healthy;
+      expect(Eligibility.femaleCanBreed(dam, g.today), isNull);
+      grant(g, -g.me.cash.value + 10);
+      expect(
+        refused(g, MateWithStud(g.me.id, dam.id, stud.id)).error.code,
+        ErrorCode.insufficientFunds,
+      );
+      grant(g, -1000);
+      expect(
+        refused(g, MateWithStud(g.me.id, dam.id, stud.id)).error.code,
+        ErrorCode.inDebt,
+      );
+    });
+  });
+
   group('What a player sees', () {
     test('no row carries a score or a mark, the player\'s own included', () {
       final g = newGame();
