@@ -92,6 +92,7 @@ class SnapshotJson {
           'most': x.most,
           'building': x.building,
           'doneOn': x.doneOn == null ? null : _date(x.doneOn!),
+          'doneOns': [for (final d in x.doneOns) _date(d)],
           'cannot': x.cannot?.name,
         },
     ],

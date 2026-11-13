@@ -40,6 +40,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   allRects.push({ x0: 13.4, x1: 15.4, z0: 4.2, z1: 9.4, h: 2.1 });                    // the white shas under the shade
   allRects.push({ x0: 25.2, x1: 27.6, z0: -16.9, z1: -11.5, h: 2.1, fac: 'store' });  // the shas by the feed shed
   allRects.push({ x0: -36.6, x1: -34.6, z0: -14.5, z1: -12.5, h: 2.7 });              // the start's 6,000 L tank (world.js)
+  allRects.push({ x0: 36.0, x1: 38.4, z0: -34.4, z1: -25.6, h: 3.0, fac: 'tank' });   // the water tanker parked by the big tank (world.js: 8.4 m long, turned along z; the walker passed through it, the review)
   // roofs a car drives under, with the height of their underside (world.js): the porch's pergola before the room, 3.25 m
   // up and 12 cm thick, and the car shade's cloth, 2.7 m at its edges and 3.2 at its middle. The chase camera keeps the
   // line to the car under them (it rose over them and saw only the roof)
@@ -49,6 +50,7 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   for (const dx of [-3.2, 3.2]) for (const dz of [-6.2, 0, 6.2]) allPosts.push({ x: 32 + dx, z: -21 + dz, r: 0.15, fac: 'store' });
   for (const dx of [-4.25, 4.25]) for (const dz of [-3.25, 3.25]) allPosts.push({ x: 16.5 + dx, z: 6.5 + dz, r: 0.12 });
   for (const dx of [-2.25, 2.25]) for (const dz of [-1.6, 1.6]) allPosts.push({ x: -28 + dx, z: -2.6 + dz, r: 0.07 });      // the start's feed shade (world.js)
+  for (const x of [1.2, 10.8]) allPosts.push({ x, z: 0.75, r: 0.12, fac: 'room' });      // the room's two porch posts (world.js; walked through, the review)
   const roofs = [], posts = [];
   function facilities(stands) {
     const keep = (list, out) => { out.length = 0; for (const o of list) if (!o.fac || stands(o.fac)) out.push(o); };

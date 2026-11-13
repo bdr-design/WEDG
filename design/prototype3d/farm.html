@@ -544,7 +544,7 @@ function mergeStatic(roots) {
     const m = new THREE.Mesh(merged, mat);
     m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; m.renderOrder = list[0].renderOrder;
     const fac = facOf(list[0]); if (fac) m.userData.facility = fac;
-    m.userData.lookKey = groupKey.slice(0, groupKey.lastIndexOf('#')) + (fold ? '|folded' : '|own');      // (the look, not the facility; folded or not, so only alike attributes merge again)
+    m.userData.lookKey = groupKey.slice(0, groupKey.lastIndexOf('#')) + (fold ? '|folded' : `|own:${mat.uuid}`);      // (the look, not the facility; folded or not, so only alike attributes merge again; one not folded keeps its own material, so only the same material merges with it again: two facilities' single colours had the same key, the review)
     scene.add(m);
     for (const o of list) drop.push(o);
   }
@@ -798,11 +798,16 @@ function syncYard() {
   const pens = PEN_ORDER.filter((k) => facVisible(PEN_FACILITY[k]));
   const calfOf = new Map(GAME.farm.milk.camels.filter((m) => m.calfId).map((m) => [m.calfId, m.id]));      // calf -> its dam
   const penOf = new Map();
+  // a dam and her calf go into a pen together and take room for two (the engine counts a calf as a head: the review
+  // found a pen's pin saying 12 where its card said it holds 6)
+  const withCalf = new Set();
+  for (const [calf, dam] of calfOf) if (ids.has(calf) && ids.has(dam)) withCalf.add(dam);
   let pi = 0, n = 0;
   for (const card of want) {
     if (calfOf.has(card.id) && ids.has(calfOf.get(card.id))) continue;      // (placed with its dam, below)
-    while (pi < pens.length - 1 && n >= penRoom(pens[pi])) { pi++; n = 0; }
-    penOf.set(card.id, P[pens[pi]]); n++;
+    const need = withCalf.has(card.id) ? 2 : 1;
+    while (pi < pens.length - 1 && n + need > penRoom(pens[pi])) { pi++; n = 0; }
+    penOf.set(card.id, P[pens[pi]]); n += need;
   }
   for (const card of want) if (!penOf.has(card.id)) penOf.set(card.id, penOf.get(calfOf.get(card.id)) || P[pens[0]]);
   for (const card of want) {

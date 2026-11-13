@@ -87,7 +87,8 @@ class Game {
     // four months (its
     // first three months of free nursing behind it, so her milk is sold from
     // the first day). (balance) An ordinary camel, as a beginner's is: bred
-    // to a mean of 42 she is worth about 13,000 to 21,000 (a 52 had made some
+    // to a mean of 42 she is worth about 14,500 to 23,000, her pregnancy in
+    // it (p10 to p90 over 200 seeds, the review; a 52 had made some
     // starts' camel worth 150,000, more than seven times the money), at the
     // low end of the GDD's 10,000 to 40,000 for مقاني (GDD 6).
     final dam = gen.makeCamel(
@@ -101,9 +102,11 @@ class Game {
     final calfAge = 120;
     // and in calf again (the owner, 13 Nov 2026: her milk ends eight months
     // in, and on the rest after calving her next calf came a year and a half
-    // later): (field) mated within three months of calving, the 15-month
-    // interval (Balance.postCalvingRestDays); here 60 days after it, checked
-    // and confirmed, due a gestation later, about ten and a half months in
+    // later): (field) mated within three months of calving, which shortens
+    // the interval between calves to about 15 months (the rest the engine
+    // gives every other camel, Balance.postCalvingRestDays, makes the usual
+    // 22 to 23 months); here 60 days after it, checked and confirmed, due a
+    // gestation later, about ten and a half months in
     final matedOn = start - (calfAge - 60);
     dam
       ..acquiredOn = start - 400

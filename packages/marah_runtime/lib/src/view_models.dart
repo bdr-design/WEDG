@@ -453,6 +453,7 @@ class FacilitySummary {
     required this.building,
     required this.doneOn,
     required this.cannot,
+    this.doneOns = const [],
   });
 
   final Facility facility;
@@ -465,6 +466,10 @@ class FacilitySummary {
   final GameDay? doneOn;
   final ErrorCode? cannot;
 
+  /// The day each one being built is done, in the order they were ordered
+  /// (each takes Balance.buildDays from its own order).
+  final List<GameDay> doneOns;
+
   @override
   bool operator ==(Object other) =>
       other is FacilitySummary &&
@@ -474,11 +479,28 @@ class FacilitySummary {
       other.most == most &&
       other.building == building &&
       other.doneOn == doneOn &&
-      other.cannot == cannot;
+      other.cannot == cannot &&
+      _sameDays(other.doneOns, doneOns);
+
+  static bool _sameDays(List<GameDay> a, List<GameDay> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
   @override
-  int get hashCode =>
-      Object.hash(facility, price, has, most, building, doneOn, cannot);
+  int get hashCode => Object.hash(
+    facility,
+    price,
+    has,
+    most,
+    building,
+    doneOn,
+    cannot,
+    Object.hashAll(doneOns),
+  );
 }
 
 /// One nursing camel's milk today.

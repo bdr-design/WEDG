@@ -12,6 +12,8 @@
 // is enlarged the page stops drawing the 3D scene (farm.html).
 const SMALL = 0.4, SMALL_ROOM = 105;      // the small phone's scale at most, and the height left clear above it (the top row of buttons), px
 const LONG_PRESS = 450, SLOP = 10;        // ms held, and px moved at most, for a long press
+const DOUBLE_TAP = 400;                   // ms after a screen changes, or a sale is readied, in which a tap is the second of a double tap
+const SURE_FOR = 5000;                    // ms a sale readied by its first tap waits for the second
 const W = 334, H = 712, EDGE = 10;        // the device at true size, and its margin from the screen's top and bottom when enlarged, px
 
 const CSS = `
@@ -161,6 +163,7 @@ const CSS = `
   .row.ord.full .stp { grid-row: 1; }      /* (a price's stepper: its line under it as well, not squeezed beside it) */
   .row.ord.full small { grid-column: 2 / 4; }
   .nw { white-space: nowrap; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }      /* (what is said after an order, for a screen reader: outside the screen the redraws replace) */
 `;
 
 const I = {
@@ -259,23 +262,26 @@ const STORE = () => (hasStore()
 // the engine's refusal of [command] in words
 function refusal(r, command) {
   const code = r.error?.code, p = r.error?.params || {};
+  // الحراج's refusals by the camel's sex (the one on the page: a listing's or one's own)
+  const subj = command.listing ? listingOf(command.listing)?.camel : command.camel ? myCamel(command.camel) : null;
+  const hf = (f, m) => (subj && subj.sex === 'male' ? m : f);
   const water = command.supply === 'water', st = STORE();
   const where = water ? 'الخزان' : st.the, holds = water ? 'يشيل' : st.holds, none = water ? 'ما فيه' : st.none;
   const unit = water ? 'tanker' : command.supply === 'barley' ? 'bag' : 'bale';
   if (command.type === 'buyListing' || command.type === 'bargain') {
     if (code === 'insufficientFunds') return `رصيدك ما يكفي: تبي ${n0(p.needed ?? 0)} ريال مع النقل.`;
     if (code === 'farmFull') return 'عزبتك مليانة: ابنِ شبك من العزبة.';
-    if (code === 'notFound') return 'انباعت قبل لا توصلها.';
+    if (code === 'notFound') return hf('انباعت قبل لا توصلها.', 'انباع قبل لا توصله.');
     if (code === 'sellerRefusesBargaining') return 'البايع ما عاد يقبل منك سوم.';
     if (code === 'invalidAmount') return 'السوم لازم يكون فوق الصفر.';
     return 'جرّب مرة ثانية.';
   }
   if (command.type === 'listForSale' || command.type === 'quickSale') {
-    if (code === 'alreadyListed') return 'معروضة بالحراج من قبل، شوفها بإعلاناتي.';
-    if (code === 'enteredInContest') return 'مشاركة بمزاين، اسحبها منه أول.';
-    if (code === 'onTheWay') return 'ما وصلت عزبتك للحين، توصل بكرة.';
+    if (code === 'alreadyListed') return hf('معروضة بالحراج من قبل، شوفها بإعلاناتي.', 'معروض بالحراج من قبل، شوفه بإعلاناتي.');
+    if (code === 'enteredInContest') return hf('مشاركة بمزاين، اسحبها منه أول.', 'مشارك بمزاين، اسحبه منه أول.');
+    if (code === 'onTheWay') return hf('ما وصلت عزبتك للحين، توصل بكرة.', 'ما وصل عزبتك للحين، يوصل بكرة.');
     if (code === 'invalidAmount') return `أقل سعر ${n0(G.haraj.minAsk)} ريال.`;
-    if (code === 'notYourCamel' || code === 'notFound') return 'ما عادت عندك.';
+    if (code === 'notYourCamel' || code === 'notFound') return hf('ما عادت عندك.', 'ما عاد عندك.');
     return 'جرّب مرة ثانية.';
   }
   if (command.type === 'acceptOffer' || command.type === 'declineOffer' || command.type === 'cancelListing') {
@@ -450,7 +456,7 @@ function milkScreen() {
       <div class="ln">${line}</div>
       <div class="ln ink2">دخل الحليب هالشهر ${n0(M.thisMonth)} ريال</div></div>
     <div class="sec">الحلايب${M.nursing > cs.length ? ` · ${n0(M.nursing)}` : ''}</div>
-    <div class="group">${rows}</div>${M.nursing > cs.length ? `<div class="note">وغيرها ${count(M.nursing - cs.length, 'camel')} مرضع.</div>` : ''}
+    <div class="group">${rows}</div>${M.nursing > cs.length ? `<div class="note">وغيرها ${M.nursing - cs.length === 1 ? 'ناقة مرضع وحدة' : `${count(M.nursing - cs.length, 'camel')} مرضع`}.</div>` : ''}
     ${seg}
     <div class="note">المشتري يمر كل يوم وياخذ الحليب، اللتر بـ ${n0(M.price)} ريال. الحوار يرضع لين يكمل سنة، وأول 3 شهور يبي حليب أمه كله.</div></div>`;
 }
@@ -481,7 +487,7 @@ function buildScreen() {
     const nameOf = (n) => (x.facility === 'pen' ? `شبك ${PEN_NTH[Math.min(n, PEN_NTH.length - 1)]}` : d.name);
     const out = [];
     for (let k = 0; k < x.building; k++) {      // (each one being built, by its own name: «شبك ثالث … ينبني» named the next pen, the review)
-      const soon = daysTo(x.doneOn);      // (the first's day: they are built together, three days each)
+      const soon = daysTo(x.doneOns?.[k] ?? x.doneOn);      // (each its own day: three days from its own order)
       out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${nameOf(x.has + k)}</b><small>ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}</small></div>`);
     }
     if (made < x.most) {
@@ -536,7 +542,7 @@ function doing(c) {
   if (c.health === 'sick') parts.push(her(c, 'مريضة', 'مريض'));
   return parts.join(' و');
 }
-const msgCard = () => (HJ.msg ? `<div class="msgc${HJ.msg.good ? ' good' : ''}" role="status"><span class="lead">${svg(HJ.msg.good ? 'check' : 'talk')}</span><b>${HJ.msg.title}</b><small>${HJ.msg.line}</small></div>` : '');
+const msgCard = () => (HJ.msg ? `<div class="msgc${HJ.msg.good ? ' good' : ''}"><span class="lead">${svg(HJ.msg.good ? 'check' : 'talk')}</span><b>${HJ.msg.title}</b><small>${HJ.msg.line}</small></div>` : '');
 const tabs = () => {
   const mine = HJ.tab === 'mine', n = G.openOffers;
   const tab = (k, name, on) => `<span data-act="tab" data-p="${k}" role="tab" tabindex="0" aria-selected="${on}"${on ? ' class="on"' : ''}>${name}</span>`;
@@ -552,7 +558,7 @@ function marketList() {
   if (!list.length) return '<div class="note">ما فيه شي معروض اليوم. يجي حلال جديد كل يوم.</div>';
   const item = (l) => {
     const c = l.camel;
-    return `<div class="it" data-go="listing" data-id="${esc(l.id)}" role="button" tabindex="0" aria-label="${titleOf(c)} بـ ${n0(l.askPrice)} ريال"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${REGION[l.region]} · ${esc(l.sellerName)} · <span class="nw">النقل ${n0(l.transport)} ريال</span></small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)}</small></div>`;
+    return `<div class="it" data-go="listing" data-id="${esc(l.id)}" role="button" tabindex="0" aria-label="${titleOf(c)} بـ ${n0(l.askPrice)} ريال، النقل ${n0(l.transport)}، ${her(c, 'يقدّرونها', 'يقدّرونه')} من ${n0(c.estimateLow)} إلى ${n0(c.estimateHigh)}"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${REGION[l.region]} · ${esc(l.sellerName)} · <span class="nw">النقل ${n0(l.transport)} ريال</span></small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)}</small></div>`;
   };
   return `<div class="note" style="margin-top:-4px">${count(list.length, 'head')} معروض · رصيدك ${n0(G.cash)} ريال</div>
     <div class="lst">${list.map(item).join('')}</div>`;
@@ -561,14 +567,17 @@ function listingScreen() {
   const back = nav('', 'haraj');
   if (!G) return `<div class="body">${back}<div class="title">الحراج</div>${waiting()}</div>`;
   const l = listingOf(HJ.listing);
-  if (!l) return `<div class="body">${back}<div class="title">الحراج</div>${msgCard()}<div class="note" style="margin-top:6px">انباعت أو انشال إعلانها.</div></div>`;
+  if (!l) return `<div class="body">${back}<div class="title">الحراج</div>${msgCard()}<div class="note" style="margin-top:6px">هالإعلان انباع أو انشال.</div></div>`;
   const c = l.camel, total = l.askPrice + l.transport, k = stepOf(l.askPrice);
   const full = G.herd.total >= G.farm.capacity, poor = G.cash < total;
-  // the haggle starts a tenth under the asking price; it goes no higher than a step under it (at the price it is a purchase)
+  // the haggle starts at the low end of their appraisal (at 90% of the asking price the first bid was over the seller's
+  // floor 96% of the time, a purchase in one tap: the review); it goes no higher than a step under the price (at the
+  // price it is a purchase)
   const top = Math.max(k, l.askPrice - k);
-  if (HJ.bid == null) HJ.bid = Math.min(top, Math.max(k, roundTo(l.askPrice * 0.9, k)));
+  if (HJ.bid == null) HJ.bid = Math.min(top, Math.max(k, roundTo(c.estimateLow, k)));
   HJ.bid = Math.min(top, Math.max(k, HJ.bid));
-  const left = l.bargainsLeft;
+  const left = l.bargainsLeft, canPayBid = G.cash >= HJ.bid + l.transport;
+  const canBid = left > 0 && !full && canPayBid;
   const facts = [
     `<b>${esc(c.name)}</b>`,
     `<small>${REGION[l.region]} · عند ${esc(l.sellerName)}</small>`,
@@ -578,7 +587,7 @@ function listingScreen() {
   ].join('');
   const why = full ? 'عزبتك مليانة: ابنِ شبك من العزبة.' : poor ? `رصيدك ${n0(G.cash)} ريال ما يكفي.` : '';
   const canBuy = !full && !poor;
-  const bidRow = `<div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} عند ${esc(l.sellerName)}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
+  const bidRow = `<div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} ${her(c, 'عليها', 'عليه')}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
   return `<div class="body">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${msgCard()}${errCard()}
     <div class="it big"><span class="ph">${photo(c)}</span>${facts}</div>
     <div class="tank"><small>اللي تدفعه</small>
@@ -589,8 +598,9 @@ function listingScreen() {
     ${why ? `<div class="note">${why}</div>` : ''}
     <div class="sec">${her(c, 'سوم عليها', 'سوم عليه')}</div>
     ${bidRow}
-    <button class="btn ${left > 0 && !full ? 'ghost' : ''} wide" data-act="bid" ${left > 0 && !full ? '' : 'disabled'}>سوم بـ ${n0(HJ.bid)}</button>
-    <div class="note">يرد عليك على طول: يقبل، أو يرد بسعر، أو يرفض. والنقل ${her(c, 'يوصلها', 'يوصله')} بكرة لعزبتك.</div></div>`;
+    <button class="btn ${canBid ? 'ghost' : ''} wide" data-act="bid" ${canBid ? '' : 'disabled'}>سوم بـ ${n0(HJ.bid)}</button>
+    ${left > 0 && !full && !canPayBid ? `<div class="note">لو قبل سومك تدفع ${n0(HJ.bid + l.transport)} ريال مع النقل، ورصيدك ما يكفي.</div>` : ''}
+    <div class="note">يرد عليك على طول: يقبل، أو ينزل لك، أو يرفض. والنقل ${her(c, 'يوصلها', 'يوصله')} بكرة لعزبتك.</div></div>`;
 }
 // one's own camels to sell: those on the farm (the 3D yard's, the first 40 to come), each with what stops a sale
 function pickScreen() {
@@ -614,25 +624,27 @@ function sellScreen() {
   const back = nav('', 'pick');
   if (!G) return `<div class="body">${back}<div class="title">بيع</div>${waiting()}</div>`;
   const c = myCamel(HJ.camel);
-  if (!c || c.listed || c.quickSale == null) return `<div class="body">${back}<div class="title">بيع</div>${errCard()}<div class="note" style="margin-top:6px">${!c ? 'ما عادت عندك.' : c.listed ? 'معروضة بالحراج، شوفها بإعلاناتي.' : 'ما تنباع الحين.'}</div></div>`;
+  if (!c || c.listed || c.quickSale == null) return `<div class="body">${back}<div class="title">بيع</div>${msgCard()}${errCard()}<div class="note" style="margin-top:6px">${!c ? 'ما عاد عندك هالحلال.' : c.listed ? her(c, 'معروضة بالحراج، شوفها بإعلاناتي.', 'معروض بالحراج، شوفه بإعلاناتي.') : her(c, 'ما تنباع الحين.', 'ما ينباع الحين.')}</div></div>`;
   const k = stepOf(c.estimateHigh), min = G.haraj.minAsk;
   if (HJ.ask == null) HJ.ask = Math.max(min, roundTo(c.estimateHigh, k));
   HJ.ask = Math.max(min, HJ.ask);
   const fee = Math.round(HJ.ask * G.haraj.commission), what = doing(c);
   const dam = G.farm.milk.camels.find((m) => m.id === c.id && m.calfName);
+  const calf = dam && G.yard.find((x) => x.id === dam.calfId);
+  const cf = (f, m) => (calf && calf.sex === 'female' ? f : m);      // (the calf's own sex)
   // the asking price against the appraisals: above them, fewer buyers come (Balance.buyerInterest); below, money left
   const hint = HJ.ask > c.estimateHigh * 1.15 ? 'سعرك فوق تقديرهم بواجد: السومات تقل.' : HJ.ask < c.estimateLow ? 'سعرك تحت تقديرهم.' : '';
   const sure = HJ.sure === `quick:${c.id}`;
   return `<div class="body">${back}<div class="title" style="font-size:22px">بيع ${esc(c.name)}</div>${errCard()}
     <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small>${what ? `<small>${what}</small>` : ''}</div>
-    ${dam ? alertCard(`حوارها ${esc(dam.calfName)} يرضع منها`, 'لو بعتها يضعف بدون حليب أمه، خصوصًا قبل 3 شهور.') : ''}
+    ${dam ? alertCard(`${cf('حوارتها', 'حوارها')} ${esc(dam.calfName)} ${cf('ترضع', 'يرضع')} منها`, `لو بعتها ${cf('تضعف بدون حليب أمها', 'يضعف بدون حليب أمه')}، خصوصًا قبل 3 شهور.`) : ''}
     <div class="sec">${her(c, 'اعرضها', 'اعرضه')} بالحراج</div>
     <div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سعرك</b><span class="stp"><button data-act="askStep" data-d="-1" aria-label="سعر أقل" ${HJ.ask - k >= min ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.ask)}</b> <span>ريال</span></span><button data-act="askStep" data-d="1" aria-label="سعر أكثر">${svg('plus')}</button></span><small>السعي ${n0(fee)} ريال · يوصلك ${n0(HJ.ask - fee)}</small></div></div>
     ${hint ? `<div class="note">${hint}</div>` : ''}
     <button class="btn pri wide" data-act="list">${her(c, 'اعرضها', 'اعرضه')} بـ ${n0(HJ.ask)}</button>
     <div class="note">تجيك السومات بإعلاناتي، وتقبل أو ترفض. الإعلان يبقى ${days(G.haraj.listingDays)}.</div>
     <div class="sec">أو ${her(c, 'بيعها', 'بيعه')} للدلال الحين</div>
-    <button class="btn ${sure ? 'sure' : 'ghost'} two wide" data-act="quick"><span>${sure ? 'اضغط مرة ثانية وتنباع' : her(c, 'بيعها الحين', 'بيعه الحين')}</span><span>${n0(c.quickSale)} ريال</span></button>
+    <button class="btn ${sure ? 'sure' : 'ghost'} two wide" data-act="quick"><span>${sure ? her(c, 'اضغط مرة ثانية وتنباع', 'اضغط مرة ثانية وينباع') : her(c, 'بيعها الحين', 'بيعه الحين')}</span><span>${n0(c.quickSale)} ريال</span></button>
     <div class="note">الدلال يشتري${her(c, 'ها', 'ه')} بنفسه ويدفع على طول بدون سعي، بس أقل من الحراج.</div></div>`;
 }
 function myListings() {
@@ -646,7 +658,7 @@ function myListings() {
       return `<div class="row"><span class="lead">${svg('user')}</span><b>${esc(o.buyerName)} سام ${n0(o.amount)}</b><span class="act two"><button class="btn ${sure ? 'sure' : 'pri'}" data-act="accept" data-o="${esc(o.id)}" aria-label="اقبل سوم ${esc(o.buyerName)}">${sure ? 'أكّد' : 'اقبل'}</button><button class="btn ghost" data-act="decline" data-o="${esc(o.id)}" aria-label="ارفض سوم ${esc(o.buyerName)}">لا</button></span><small>يوصلك ${n0(o.amount - fee)} بعد السعي · ${when(o.expiresOn - G.today)}</small></div>`;
     };
     const sure = HJ.sure === `unlist:${l.id}`;
-    return `<div class="it"><span class="ph">${photo(c)}</span><b>${esc(c.name)} · ${titleOf(c)}</b><small>${her(c, 'معروضة', 'معروض')} بـ ${n0(l.askPrice)} · باقي ${days(Math.max(1, left))}</small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${l.offers.length ? count(l.offers.length, 'bid') : `ما ${her(c, 'جاها', 'جاه')} سوم للحين`}</small></div>
+    return `<div class="it"><span class="ph">${photo(c)}</span><b>${esc(c.name)} · ${titleOf(c)}</b><small>${her(c, 'معروضة', 'معروض')} بـ ${n0(l.askPrice)} · الإعلان ${when(left)}</small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${l.offers.length ? count(l.offers.length, 'bid') : `ما ${her(c, 'جاها', 'جاه')} سوم للحين`}</small></div>
       ${l.offers.length ? `<div class="sec">السومات</div><div class="group">${l.offers.map(offer).join('')}</div>` : ''}
       <button class="btn ${sure ? 'sure' : 'ghost'} wide" data-act="unlist" data-id="${esc(l.id)}">${sure ? 'اضغط مرة ثانية وينشال' : 'شيل الإعلان'}</button>`;
   }).join('') + `<div class="note">السوم يبقى ${days(G.haraj.offerDays)}، وإذا ما قبلته يروح.</div>`;
@@ -686,16 +698,16 @@ const S = {
 
 export function createPhone({ host }) {
   const el = document.createElement('div'), root = el.attachShadow({ mode: 'open' });
-  root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar" role="dialog" aria-label="الجوال" aria-hidden="true"><div class="dim"></div><div class="dev" tabindex="-1"><div class="scr" inert></div></div></div>`;
+  root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar" role="dialog" aria-label="الجوال" aria-hidden="true"><div class="dim"></div><div class="dev" tabindex="-1"><div class="scr" inert></div></div><div class="sr" role="status" aria-live="polite"></div></div>`;
   host.appendChild(el);
-  const box = root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim');
+  const box = root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim'), sr = root.querySelector('.sr');
   const st = { state: 'closed', play: false, screen: 'home', s: SMALL };
   const listeners = new Set();
-  let press = null, lastDown = 0, bigAt = 0, focusBack = null;
+  let press = null, lastDown = 0, bigAt = 0, focusBack = null, shownAt = 0;
   const turned = () => document.body.classList.contains('rot');      // (farm.html: a phone held upright, the game turned a quarter)
   const endPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
   function show(v) {
-    if (v !== st.screen) ERR = null;
+    if (v !== st.screen) { ERR = null; shownAt = performance.now(); }
     if (v === 'feed' && st.screen !== 'feed') ORD.barley = ORD.alfalfa = null;      // (opened afresh: the order starts at three weeks' need)
     st.screen = v; scr.classList.toggle('home', v === 'home');
     scr.innerHTML = `<span class="pill"></span>${sbar()}${S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0')}<div class="hb"></div>`;      // (a number kept on the line of the word after it: «20,000 | ريال» split across lines otherwise)
@@ -754,6 +766,7 @@ export function createPhone({ host }) {
     if (st.state === 'closed') show('home');
     const was = st.state;
     st.state = state; box.dataset.state = state;
+    if (state !== 'big') HJ.sure = null;      // (a sale readied on the enlarged phone does not wait for its return)
     // to assistive technology and the keyboard: closed, the phone is not there; small, it is a picture (a tap does
     // nothing); big, it is a modal dialog with the focus in it, given back to where it was when it shrinks
     box.setAttribute('aria-hidden', String(state === 'closed'));
@@ -834,19 +847,26 @@ export function createPhone({ host }) {
   }
   // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen);
   // a refusal is said on the screen, and what was not taken stays in the order
-  let engine = null, busy = false;
+  let engine = null, busy = false, sureAt = 0, sureTimer = 0;
   const keyOf = (t) => ['act', 's', 'd', 'p', 't', 'f', 'o', 'id'].map((k) => t.dataset[k] ?? '').join('|');
   async function act(t) {
     const kind = t.dataset.act, focused = root.activeElement === t ? keyOf(t) : null;
     ERR = null;
     // الحراج: a sale asked twice (the first tap readies it: HJ.sure); any other tap stands it down. [next]: the screen
     // to go to once the order is done (a camel bought or sold goes back to the market's list)
+    // (the second tap comes at least DOUBLE_TAP after the first, else a double tap sold at once; a readied sale stands
+    // down by itself after SURE_FOR, as the phone shrinks, and as the day turns: the review)
     const twice = { quick: `quick:${HJ.camel}`, accept: `accept:${t.dataset.o}`, unlist: `unlist:${t.dataset.id}` }[kind];
+    const now = performance.now();
+    if (twice != null && HJ.sure === twice && now - sureAt < DOUBLE_TAP) return;
     const ready = twice != null && HJ.sure === twice;
     HJ.sure = twice != null && !ready ? twice : null;
+    clearTimeout(sureTimer);
+    if (HJ.sure) { sureAt = now; const key = HJ.sure; sureTimer = setTimeout(() => { if (HJ.sure === key) { HJ.sure = null; if (live()) redraw(); } }, SURE_FOR); }
     if (kind !== 'tab' && kind !== 'bidStep' && kind !== 'askStep') HJ.msg = null;      // (the seller's answer stays while the haggle is set again)
     let next = null;
     const done = () => {
+      sr.textContent = HJ.msg ? `${HJ.msg.title}. ${HJ.msg.line}`.replace(/<[^>]+>/g, '') : ERR || '';
       if (!live()) return;
       if (next) { show(next); if (focused) focusIn(scr.querySelector('.back') || dev); return; }
       redraw();
@@ -901,10 +921,17 @@ export function createPhone({ host }) {
       if (bought) {
         HJ.msg = { good: true, title: `اشتريت ${esc(c.name)} بـ ${n0(bought.price)} ريال`, line: `${her(c, 'توصل', 'يوصل')} عزبتك بكرة، والنقل ${n0(l.transport)} ريال.` };
         HJ.bid = null; next = 'haraj';
-      } else if (r.error?.code === 'bargainCountered') {
-        HJ.msg = { title: `${esc(l.sellerName)} رد عليك`, line: `آخر سعر عنده ${n0(r.error.params.ask)} ريال. ${her(c, 'تقدر تشتريها', 'تقدر تشتريه')} فيه أو تسوم مرة ثانية.` };
-      } else if (r.error?.code === 'bargainRejected') {
-        HJ.msg = { title: `${esc(l.sellerName)} رفض سومك`, line: 'ما يبيع بهالسعر. زِد سومك أو اشترِ بسعره.' };
+      } else if (r.error?.code === 'bargainCountered' || r.error?.code === 'bargainRejected') {
+        // the answer as the engine gave it: each uses a try; a counter lowers the price (the next try halves the gap
+        // again, so it is not his last word), and what can be done next is said only if it can be
+        const left = l.bargainsLeft - 1, ask = r.error.params?.ask ?? l.askPrice, afford = G.cash >= ask + l.transport;
+        const then = [
+          afford ? her(c, `تقدر تشتريها بـ ${n0(ask)}`, `تقدر تشتريه بـ ${n0(ask)}`) : `رصيدك ما يكفي ${n0(ask + l.transport)} مع النقل`,
+          left > 0 ? `أو تسوم مرة ثانية (باقي لك ${count(left, 'bid')})` : 'وما عاد يقبل منك سوم',
+        ];
+        HJ.msg = r.error.code === 'bargainCountered'
+          ? { title: `${esc(l.sellerName)} نزل لـ ${n0(ask)} ريال`, line: `${then.join('، ')}.` }
+          : { title: `${esc(l.sellerName)} رفض سومك`, line: `ما يبيع بهالسعر. ${then.join('، ')}.` };
       } else if (!r.ok) ERR = refusal(r, command);
     }
     // one's own camel listed at one's price (to إعلاناتي, where the offers come) or sold to the broker now
@@ -940,6 +967,9 @@ export function createPhone({ host }) {
   scr.addEventListener('click', (e) => {
     if (e.detail !== 0 && (slid || stopTap)) { slid = stopTap = false; return; }      // (the finger slid the phone or stopped a fling: not a tap; a keyboard's or assistive technology's click is never one of those)
     stopTap = false;
+    // a tap that comes just after the screen changed is the second of a double tap, landing on what the new screen put
+    // under the finger: not taken (the review: a double tap on a market row bought the camel under it)
+    if (e.detail !== 0 && performance.now() - shownAt < DOUBLE_TAP) return;
     const a = e.target.closest('[data-act]');
     if (a) { if (!a.disabled) act(a); return; }
     const t = e.target.closest('[data-go], .back');
@@ -965,7 +995,7 @@ export function createPhone({ host }) {
     setPlay: (on) => { st.play = on; if (st.state !== 'closed') layout(); },
     onChange: (f) => listeners.add(f),
     /** The engine's newest view of the game (engine.js), and the engine to send the player's orders to. */
-    setGame: (snapshot) => { if (G && snapshot && snapshot.today !== G.today) HJ.msg = null; G = snapshot; if (live()) redraw(); },      // (the word after an order is for its day)
+    setGame: (snapshot) => { if (G && snapshot && snapshot.today !== G.today) HJ.msg = HJ.sure = null; G = snapshot; if (live()) redraw(); },      // (the word after an order, and a sale readied, are for their day)
     setEngine: (e) => { engine = e; },
     get state() { return st.state; }, get big() { return st.state === 'big'; },
   };

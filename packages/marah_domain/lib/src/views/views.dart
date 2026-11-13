@@ -97,16 +97,21 @@ class CamelView {
   /// viewer and each week), shown as a range around it. The exact value and
   /// the hidden sire genes behind it cannot be read back from the range.
   (Riyal, Riyal) get estimate {
-    final value = Valuation.value(_c, _today).value.toDouble();
-    final rng = Rng.keyed(_seed, [
+    final a = appraise(_c, _today, _viewer, _seed);
+    return (marketRound(a * 0.9), marketRound(a * 1.1));
+  }
+
+  /// The appraisal behind [estimate]: [c]'s value as [viewer] hears it this
+  /// week, a few percent off the true value.
+  static double appraise(Camel c, GameDay today, OwnerId viewer, int seed) {
+    final value = Valuation.value(c, today).value.toDouble();
+    final rng = Rng.keyed(seed, [
       'appraise',
-      _viewer.value,
-      _c.id.value,
-      _today.value ~/ 7,
+      viewer.value,
+      c.id.value,
+      today.value ~/ 7,
     ]);
-    final appraisal =
-        value * (1 + clampDouble(rng.normal(sd: 0.06), -0.15, 0.15));
-    return (marketRound(appraisal * 0.9), marketRound(appraisal * 1.1));
+    return value * (1 + clampDouble(rng.normal(sd: 0.06), -0.15, 0.15));
   }
 }
 
@@ -366,9 +371,15 @@ class GameView {
     return handlers.quickSalePrice(c, _sim);
   }
 
-  Riyal get herdValue => Riyal(
+  /// The herd's worth as the viewer hears it: the sum of the appraisals
+  /// behind each camel's range, never the exact values (the review: with the
+  /// exact sum, buying or selling one camel moved it by that camel's value).
+  Riyal get herdValue => marketRound(
     _w
         .aliveOwnedBy(viewer)
-        .fold<int>(0, (a, c) => a + Valuation.value(c, today).value),
+        .fold<double>(
+          0,
+          (a, c) => a + CamelView.appraise(c, today, viewer, _w.seed),
+        ),
   );
 }

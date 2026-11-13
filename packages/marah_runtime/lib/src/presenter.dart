@@ -196,6 +196,10 @@ class Presenter {
                 .map((b) => b.doneOn)
                 .firstOrNull,
             cannot: v.cannotBuild(f)?.code,
+            doneOns: [
+              for (final b in me.farm.building)
+                if (b.facility == f) b.doneOn,
+            ],
           ),
       ],
       milk: MilkSummary(

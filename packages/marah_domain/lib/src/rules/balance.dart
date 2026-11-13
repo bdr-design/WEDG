@@ -272,9 +272,10 @@ class Balance {
   static const brokerEyeSd = 0.05;
 
   /// (balance) A camel bought in the market comes on the truck the next day,
-  /// from anywhere in the kingdom: a game choice (the 1,356 km from Tabuk to
-  /// Riyadh is about 17 hours at a lorry's 80 km/h, but the longest road,
-  /// Jouf to Najran at 1,804 km, would take longer). Until then it is the
+  /// from anywhere in the kingdom: a game choice (by the game's own road
+  /// estimate, Region.roadKmTo, Tabuk to Riyadh is 1,356 km, about 17 hours at
+  /// a lorry's 80 km/h, but the longest, Jouf to Najran at 1,804 km, would
+  /// take longer). Until then it is the
   /// player's but not on the farm: not in the yard, not milked, not for sale
   /// or for breeding.
   static const camelTruckDays = 1;

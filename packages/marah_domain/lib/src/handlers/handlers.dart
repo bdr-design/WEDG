@@ -131,6 +131,19 @@ Result _bargain(Sim sim, PlayerState p, Bargain cmd) {
     return _err(sim, ErrorCode.sellerRefusesBargaining);
   }
   final offer = Riyal(cmd.amount);
+  // the money and the room are checked first, whatever the bid, so a refusal
+  // for them says nothing of where the seller's floor is (the review: a bid
+  // over the floor was refused for money without using a try, one under it
+  // was answered, and the floor could be found by halving)
+  final move = Riyal(transportToFarm(p, l));
+  if (p.cash < offer + move) {
+    return _err(sim, ErrorCode.insufficientFunds, {
+      'needed': (offer + move).value,
+    });
+  }
+  if (sim.herdOf(p.id).length >= p.farm.capacity) {
+    return _err(sim, ErrorCode.farmFull);
+  }
   if (offer >= l.askPrice) return _buyAt(sim, p, l, l.askPrice);
   if (offer >= l.reservePrice) {
     final r = _buyAt(sim, p, l, offer);

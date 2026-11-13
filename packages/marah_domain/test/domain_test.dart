@@ -993,6 +993,54 @@ void main() {
       );
     });
 
+    test('short of money, every bid is refused alike, the floor unread', () {
+      // over the floor or under it, a bid the player cannot pay for is
+      // refused for the money and uses no try (the review read the floor by
+      // halving: over it refused for money, under it answered)
+      final g = newGame();
+      final l = GameView(g.state, g.me.id).market.first;
+      final reserve = g.state.world.listings[l.id]!.reservePrice.value;
+      g.me.cash = const Riyal(500);
+      for (final bid in [reserve + 500, reserve - 500, reserve ~/ 2]) {
+        final r = g.dispatch(Bargain(g.me.id, l.id, bid)) as Err;
+        expect(r.error.code, ErrorCode.insufficientFunds);
+      }
+      expect(
+        GameView(g.state, g.me.id).bargainsLeft(l.id),
+        Balance.maxBargainsPerBuyer,
+      );
+      final full = newGame();
+      full.me
+        ..cash = const Riyal(10000000)
+        ..farm.capacity = 2;
+      final l2 = GameView(full.state, full.me.id).market.first;
+      final r2 = full.dispatch(Bargain(full.me.id, l2.id, 1000)) as Err;
+      expect(r2.error.code, ErrorCode.farmFull);
+    });
+
+    test('the herd\'s worth is the appraisals\', not the exact values', () {
+      final g = newGame();
+      Sim(g.state).pay(g.me, const Riyal(400000), LedgerCategory.sale);
+      final l = GameView(
+        g.state,
+        g.me.id,
+      ).market.firstWhere((l) => l.askPrice.value < 150000);
+      expect(g.dispatch(BuyListing(g.me.id, l.id)).ok, isTrue);
+      final v = GameView(g.state, g.me.id);
+      final exact = g.state.world
+          .aliveOwnedBy(g.me.id)
+          .fold<int>(0, (a, c) => a + Valuation.value(c, g.today).value);
+      final heard = g.state.world
+          .aliveOwnedBy(g.me.id)
+          .fold<double>(
+            0,
+            (a, c) =>
+                a + CamelView.appraise(c, g.today, g.me.id, g.state.world.seed),
+          );
+      expect(v.herdValue, marketRound(heard));
+      expect(v.herdValue.value, isNot(exact));
+    });
+
     test('seller stops after three bargains', () {
       final g = newGame();
       final l = GameView(g.state, g.me.id).market.first;

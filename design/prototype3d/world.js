@@ -223,7 +223,7 @@ const inCompound = (x, z, m = 0) => x > LAYOUT.compound.x0 - m && x < LAYOUT.com
 
 export function buildWorld(scene, renderer, sandTex) {
   // Each facility the player builds (the owner, 13 Nov 2026: the farm starts small and every facility is bought and built
-  // in its place) is tagged on what it adds (userData.facility, see FACILITY_OF); the page merges by facility and shows a
+  // in its place) is tagged on what it adds (userData.facility: a Facility of the engine, or PEN_FACILITY's pen1 to pen5); the page merges by facility and shows a
   // facility's pieces only once it stands. Untagged: the land, the wall, the roads, the trees, always there.
   let FAC = null;
   const add = (o) => { if (FAC) o.userData.facility = FAC; scene.add(o); };
