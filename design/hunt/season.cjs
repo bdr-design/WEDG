@@ -14,12 +14,15 @@
 //   hatched and marked as needing a source.
 //   The camels' lane is the engine's (seed 4242's festivals: S.festivals, the same as the reviewer's calendar.txt):
 //   mating 1 Nov – 30 Apr (GDD 4), الوسم from 16 Oct (GDD 4, real [114][115]), the festivals with their registration.
+//   The average prize a falcon: more than 38 million [170][176] over more than 5,200 falcons [157], about 7,300 (an
+//   estimate from two sources). The third place's 100,000 is one round's split [177]. No auction runs from December to
+//   August, so the falcon is sold at the next autumn's national auction, after eight months of feed through the moult.
 //   Money: a farm-bred saker about 19,000 and top birds over a million [158]; المزاين's first three 300,000, 175,000,
 //   100,000 [177] (one source); 1,012 prizes [170][176] for more than 5,200 falcons [157] in 2025, so about one falcon
 //   in five wins anything (an estimate from two sources); selling game is an offence [166]. Everything else is a game
-//   choice and marked so: the wild-caught falcon's price 42,000, feed 20 riyals a day, the kit 2,500, the permit 100
+//   choice and marked so: the wild-caught falcon's price 32,000, eight months' feed through the moult 4,800, feed 20 riyals a day, the kit 2,500, the permit 100
 //   (a weak source gives 100 [160]), passport and club nothing (no fee found), each outing's fuel 60, the trip to Malham
-//   1,500, the entry fee nothing (not found), the ملواح prizes by place, the resale prices.
+//   1,500, the entry fee nothing (not found), the ملواح prizes by place, the resale prices (35,000; up to 60,000 with results).
 // To draw again: `NODE_PATH=$(npm root -g) node design/hunt/season.cjs` from the repository's root (no server needed:
 // the fonts come from Google Fonts); it writes both JPEGs here (or OUT=<folder>).
 const { chromium } = require('playwright');
@@ -36,7 +39,7 @@ const x = (y, m, d) => W - RIGHT - (Date.UTC(y, m - 1, d) - D0) / (D1 - D0) * SP
 const MONTHS = ['أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو'];
 // [label, from [y,m,d], to [y,m,d] (inclusive), class, source]
 const FALCON = [
-  ['المقيض', [2026, 8, 1], [2026, 8, 31], 'moult', ''],
+  ['المقيض (يبي مصدر)', [2026, 8, 1], [2026, 8, 31], 'moult tiny', ''],
   ['مزاد صقور المزارع · ملهم', [2026, 8, 5], [2026, 8, 25], 'auc', '[158]'],
   ['الدعو', [2026, 9, 1], [2026, 10, 10], 'train', '[155]'],
   ['مزاد الطرح', [2026, 10, 1], [2026, 11, 30], 'auc', '[157]'],
@@ -59,7 +62,7 @@ const CAMEL_F = [
 ];
 const bar = (top, h, [lbl, a, z, cls, src]) => {
   const x0 = x(...z) - SPAN / 365, x1 = x(...a);      // (right to left: the end is the left edge; inclusive of the last day)
-  const out = x1 - x0 < 30 + lbl.length * 6.5;          // a short bar: its label beside it, to its left
+  const out = !cls.includes('tiny') && x1 - x0 < 30 + lbl.length * 6.5;          // a short bar: its label beside it, to its left
   return `<div class="bar ${cls}${out ? ' out' : ''}" style="top:${top}px;height:${h}px;left:${x0}px;width:${x1 - x0}px"><span>${lbl}${src ? ` <i>${src}</i>` : ''}</span></div>`;
 };
 const calendar = () => {
@@ -83,7 +86,7 @@ const calendar = () => {
   const clash = (a, z, top, bottom, t) => { const x0 = x(...z) - SPAN / 365, x1 = x(...a); return `<div class="clash" style="left:${x0 - 2}px;width:${x1 - x0 + 4}px;top:${top}px;height:${bottom - top}px"></div><div class="ct" style="left:${x0 - 236}px;top:${bottom - 22}px">${t}</div>`; };
   h += clash([2026, 11, 29], [2026, 11, 30], 262, row0 + 2 * rh + 26, 'لو بنوفمبر: آخره يصادف الجوف');
   h += clash([2026, 12, 25], [2027, 1, 3], 296, row0 + 3 * rh + 26, 'لو بديسمبر: داخل المهرجان الكبير');
-  h += `<div class="start" style="left:${x(2026, 10, 1)}px"></div><div class="startt" style="left:${x(2026, 10, 1) - 1}px">بداية اللعبة · 1 أكتوبر</div>`;
+  h += `<div class="start" style="left:${x(2026, 10, 1)}px"></div><div class="startt" style="left:${x(2026, 10, 1) - 1}px">بداية اللعبة: 1 أكتوبر</div>`;
   return `<!doctype html><meta charset="utf-8">${FONT}<style>
     body { margin: 0; width: ${W}px; height: 820px; background: #f6f1e7; font-family: "IBM Plex Sans Arabic", sans-serif; direction: rtl; color: #1c1712; position: relative; overflow: hidden; }
     h1 { font: 700 24px/1 Alexandria, sans-serif; margin: 0; position: absolute; right: 24px; top: 12px; } h1 small { font: 500 14px "IBM Plex Sans Arabic"; color: #6e6457; margin-right: 10px; }
@@ -93,7 +96,7 @@ const calendar = () => {
     .bar { position: absolute; border-radius: 7px; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 12px; font-weight: 600; white-space: nowrap; }
     .bar span { padding: 0 6px; } .bar.out { overflow: visible; justify-content: flex-start; } .bar.out span { position: absolute; right: calc(100% + 2px); color: #1c1712; padding: 0 2px; } .bar i { font-style: normal; font-weight: 500; opacity: .75; font-size: 11px; }
     .auc { background: #f2d7a6; color: #5a3d0f; } .train { background: #cfe6d6; color: #1f5a37; } .ev { background: #e7e0f2; color: #45366b; }
-    .moult { background: repeating-linear-gradient(-45deg, #e9e2d6 0 6px, #ddd3c2 6px 12px); color: #6e6457; }
+    .moult.tiny span { font-size: 10.5px; white-space: normal; line-height: 1.05; text-align: center; } .moult { background: repeating-linear-gradient(-45deg, #e9e2d6 0 6px, #ddd3c2 6px 12px); color: #6e6457; }
     .hunt { background: #0b8a5c; color: #fff; } .hunt2 { background: #2f7fcf; color: #fff; }
     .fa, .fb { background: #fff; border: 2px dashed #c27a12; color: #8a560b; }
     .mate { background: #f3d5cf; color: #7a2a1d; } .reg { background: #e9e5dc; color: #6e6457; font-size: 10.5px; } .cf { background: #c8402f; color: #fff; } .big { background: #8e2b1f; color: #fff; }
@@ -102,7 +105,7 @@ const calendar = () => {
     .note { position: absolute; font-size: 12px; color: #8a560b; line-height: 1.4; }
     .tick { position: absolute; font-size: 11.5px; font-weight: 600; color: #2f6e9e; border-right: 2px solid #2f6e9e; padding-right: 4px; }
     .start { position: absolute; top: 64px; height: 600px; width: 0; border-left: 3px solid #111; }
-    .startt { position: absolute; top: 664px; transform: translateX(-100%); font: 700 13px Alexandria; background: #111; color: #fff; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+    .startt { position: absolute; top: 664px; transform: translateX(-100%); font: 700 13px "IBM Plex Sans Arabic"; background: #111; color: #fff; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
     .box { position: absolute; bottom: 14px; right: 24px; left: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; font-size: 13px; line-height: 1.55; }
     .box div { background: #fff; border-radius: 12px; padding: 10px 14px; } .box b { font-family: Alexandria; }
   </style><h1>موسم القنيص وسنة الإبل<small>من أغسطس 2026 لين يوليو 2027 · الأرقام بين [ ] مصادر البحث، والباقي اختيار لعب</small></h1>${h}
@@ -123,11 +126,12 @@ const money = () => {
     tr.tot td { background: #fbf6ec; font-weight: 700; } .neg { color: #c4362b; } .pos { color: #0b8a5c; }
     .q { margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 16px; font-size: 14px; line-height: 1.6; box-shadow: inset 0 0 0 2px #e8b46c; }
   </style><h1>موسم واحد: وش يكلّف ووش يجيب (بالريال)</h1>
-  <p class="s">صقر طرح واحد من مزاد الطرح، موسم كامل. الأرقام بين [ ] من البحث (كله من نصوص نتايج البحث، ما فتحنا صفحة رسمية)، والباقي اختيار لعب.</p>
+  <p class="s">صقر طرح واحد من مزاد الطرح، موسم كامل، ويبيعه بمزاد الخريف الجاي (أول مزاد بعد الموسم). الأرقام بين [ ] من البحث (كله من نصوص نتايج البحث، ما فتحنا صفحة رسمية)، والباقي اختيار لعب.</p>
   <table><tr><th></th><th>هواية: طلعات بس</th><th>مسابقات بعد</th><th>من وين الرقم</th></tr>
   ${r('اللي تصرفه', '', '', '', 'h')}
-  ${r('الصقر: حر طرح من المزاد', '42,000', '42,000', 'اختيار لعب. صقر المزارع حوالي 19,000 والكبار فوق المليون [158]')}
-  ${r('أكله 5 شهور', '3,060', '3,060', 'اختيار لعب: 20 ريال باليوم')}
+  ${r('الصقر: حر فرخ طرح من مزاد الخريف', '32,000', '32,000', 'اختيار لعب. صقر المزارع حوالي 19,000 والكبار فوق المليون [158]')}
+  ${r('أكله بالموسم، 5 شهور', '3,060', '3,060', 'اختيار لعب: 20 ريال باليوم')}
+  ${r('أكله بالمقيض لين يبيعه بالخريف الجاي، 8 شهور', '4,800', '4,800', 'اختيار لعب. ما فيه مزاد من ديسمبر لين أغسطس (التقويم)')}
   ${r('عدته: البرقع والدس والوكر والميزان وجهاز التتبع', '2,500', '2,500', 'اختيار لعب')}
   ${r('الجواز والتسجيل بالنادي', '0', '0', 'ما لقينا رسوم')}
   ${r('تصريح الصيد', '100', '100', 'اختيار لعب (مصدر ضعيف يقول 100 [160])')}
@@ -135,12 +139,13 @@ const money = () => {
   ${r('رسوم التسجيل والنقل لملهم', '', '1,500', 'التسجيل ما لقيناه (ببلاش)، والنقل اختيار لعب')}
   ${r('اللي يجيك', '', '', '', 'h')}
   ${r('بيع الصيد', '0', '0', 'ممنوع: بيع الصيد مخالفة [166]')}
-  ${r('جوايز، اللي يصير أغلب المرات', '', '0', 'تقريبًا صقر من كل خمسة يفوز بشي: 1,012 جايزة [170][176] لأكثر من 5,200 صقر [157]')}
-  ${r('جوايز، لو جا بالمراكز', '', '25,000 – 300,000', 'المزاين: 300,000 و175,000 و100,000 للثلاثة الأوائل [177] (مصدر واحد)؛ الملواح بالمراكز اختيار لعب')}
-  ${r('بيعه آخر الموسم', '45,000', '45,000 – 80,000', 'اختيار لعب: يغلى بالدعو والنتايج')}
-  ${r('آخر الموسم لو بعته', '<span class="neg">−3,260</span>', '<span class="neg">−4,760</span> لين <span class="pos">+130,240</span> (ثالث بالمزاين)', 'الهواية تكلف شوي لو بعته، وأكثر لو خليته. والمسابقات: أغلبها خسارة بسيطة، ومرة بالكثير ربح كبير', 'tot')}
+  ${r('جوايز، اللي يصير أغلب المرات', '', '0', 'تقريبًا صقر من كل خمسة يفوز بشي: 1,012 جايزة [170][176] لأكثر من 5,200 صقر [157] (تقدير من مصدرين)')}
+  ${r('جوايز، المعدل لكل صقر', '', '7,300', 'تقدير: أكثر من 38 مليون جوايز [170][176] على أكثر من 5,200 صقر [157]')}
+  ${r('جوايز، لو جا ثالث بالمزاين', '', '100,000', '[177] مصدر واحد، لشوط واحد (300,000 و175,000 و100,000)؛ جوايز أول الفئات الثانية ممدودة منه، اختيار لعب')}
+  ${r('بيعه بمزاد الطرح بالخريف الجاي (قرناس)', '35,000', '35,000 – 60,000', 'اختيار لعب: يغلى بالنتايج')}
+  ${r('آخر الموسم لين يبيعه', '<span class="neg">−8,060</span>', 'أغلب المرات <span class="neg">−9,560</span> · بالمعدل <span class="neg">−2,260</span> · لو جا ثالث <span class="pos">+115,440</span>', 'ولو أطلقه بالربيع مثل ما يسوون صقارين كثير بالطرح: ما فيه أكل المقيض ولا بيع، والهواية −38,260 (سؤال للمالك)', 'tot')}
   </table>
-  <div class="q"><b>قرارك:</b> الصقور تبقى هواية تصرف عليها ومعها فرصة نادرة بجايزة كبيرة، ولا تصير تجارة ثانية؟ <b>نقترح الأولى:</b> الجوايز حقيقية وكبيرة بس نادرة مثل الواقع (صقر من خمسة يفوز بشي، والأوائل أقل بكثير)، فما تصير الصقور طريق مضمون للفلوس، والإبل تبقى الأساس.</div>`;
+  <div class="q"><b>قرارك:</b> الصقور تبقى هواية تصرف عليها ومعها فرصة نادرة بجايزة كبيرة، ولا تصير تجارة ثانية؟ <b>نقترح الأولى:</b> الجوايز حقيقية وكبيرة بس نادرة مثل الواقع (صقر من خمسة يفوز بشي، والمعدل حوالي 7,300 للصقر، والأوائل أقل بكثير)، فما تصير الصقور طريق مضمون للفلوس، والإبل تبقى الأساس.</div>`;
 };
 
 (async () => {

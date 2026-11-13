@@ -24,8 +24,15 @@
 //   the flight's 40 seconds and 350 m on the result card: game choices (no source read for a stone-curlew flight).
 // Draws and triangles: every frame's base (the real page, before anything is drawn) is counted from the WebGL calls
 // (main pass and shadow pass apart, as $SC/review_de2/draws.js does) and written to outing_draws.txt; the new
-// models' cost is an ESTIMATE (hunting.md option A, T11's brief) until T11 measures them: the falcon about 2-3k
-// triangles and 1 draw, plus 1 shadow draw (its 1 m span is over the 30 cm rule); a stone-curlew about 2k and 1 draw.
+// models' cost comes from task T11's measured models (/home/user/wt/t11, design/birds/): the hooded saker close 6,752
+// triangles with hood and jesses in 3 draws, alert 6,188, in flight 6,364; the stone-curlew 5,084 / 5,420; the houbara
+// 4,996 / 6,052; the far models under 1,500 each; the perch 1,424; the cuff 864 (each draw casts a shadow too: the
+// saker's 1 m span is over the 30 cm rule). Frames 5 and 8 show T11's own render of the hooded saker, cut out by
+// cut_bird.py (t11_saker_hooded.png), on a drawn glove; the other birds are flat stand-ins. The driver's seat is
+// counted without a picture (the hooded falcon on its perch in the cabin would be seen from there).
+// Two things drawn here are the OWNER'S to decide, asked in the design note: the place card shown in play (the
+// approved HUD hides it there) and whether the player may cast in a banned place anyway (the warning card offers only
+// «طيب»).
 // To draw again: build the prototype (THREE_DIR=<three@0.170.0 package> python3 tool/proto_app/assemble.py), serve
 // tool/proto_app/assets/web on a port (PORT, 8765 by default), and run `NODE_PATH=$(npm root -g) node
 // design/hunt/outing.cjs` from the repository's root; it writes outing_<n>_<name>.jpg and outing_board.jpg in
@@ -78,17 +85,20 @@ const SV = {
     <path d="M10 40 C24 30 40 26 52 30 L58 22 C62 14 72 12 76 20 C80 28 78 36 70 42 C86 38 100 40 112 46 C96 48 80 50 64 52 L46 52 C34 50 20 46 10 40 Z" fill="#4a3826"/>
     <circle cx="70" cy="20" r="2" fill="#111"/><path d="M76 20 l5 2 l-5 2" fill="#e9c84a"/></svg>`,
 };
+SV.glove = `<svg viewBox="0 0 300 300" width="300" height="300" style="position:absolute;left:0;top:30px">
+    <path d="M60 300 C70 250 95 222 140 214 L205 210 C240 212 262 236 268 300 Z" fill="#6b6a3e"/>
+    <path d="M60 300 C70 250 95 222 140 214 L205 210 C240 212 262 236 268 300" fill="none" stroke="#4a4a2a" stroke-width="5"/>
+    <path d="M120 236 h110 M118 258 h120" stroke="#55552f" stroke-width="4"/></svg>`;
 const FALCON_ICON = '<svg viewBox="0 0 24 24"><path d="M2.5 10c3 0 5.5 1 7.5 3l2-3 2 3c2-2 4.5-3 7.5-3-2.8 1.8-4.8 3.6-6.6 4.6L14 19h-4l-.9-4.4C7.3 13.6 5.3 11.8 2.5 10z"/></svg>';
 const CAST_ICON = '<svg viewBox="0 0 24 24"><path d="M4 18c3-1 5-3 6-6"/><path d="M8 8c3 0 5.5 1 7.5 3l1.7-2.5 1.7 2.5c1-1 2-1.5 3.1-1.7"/><path d="M13 5l3-2.5M17 6l3.5-1"/></svg>';
 const LURE_ICON = '<svg viewBox="0 0 24 24"><path d="M4 4c5 2 8 6 9 10"/><circle cx="15" cy="17" r="3.2"/><path d="M13 15.5l-2-1.5M17 15.5l2-1.5"/></svg>';
 const PIN_ICONS = {
   falcon: '<path d="M2.5 10c3 0 5.5 1 7.5 3l2-3 2 3c2-2 4.5-3 7.5-3-2.8 1.8-4.8 3.6-6.6 4.6L14 19h-4l-.9-4.4C7.3 13.6 5.3 11.8 2.5 10z"/>',
-  estate: '<path d="M3 20V8M21 20V8M3 11h18M3 16.5h18M9 8v12M15 8v12"/>',
+  estate: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',      // (a flag: the farm's pens already use a fence)
   ban: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
 };
 
 (async () => {
-  if (process.env.BOARD_ONLY) { const bb = await chromium.launch(); await makeBoard(bb, fs.readdirSync(OUT).filter((f) => /^outing_\d.*\.jpg$/.test(f)).sort().map((f) => path.join(OUT, f))); await bb.close(); return; }
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 956, height: 440 }, deviceScaleFactor: DSF });
   p.on('pageerror', (e) => console.log('pageerror', e.message));
@@ -117,6 +127,17 @@ const PIN_ICONS = {
   // a few steps out from the driver's door (by it, the get-in and lock buttons show at the same edge)
   const stepAway = async () => { await p.evaluate(() => { const m = window.__play.debug.man; m.pos.x += 5 * Math.sin(m.heading); m.pos.z += 5 * Math.cos(m.heading); }); await p.waitForTimeout(2500); };
   const counts = [];
+  const count = async (name, note) => {
+    await p.waitForTimeout(1200);
+    const f = await p.evaluate(() => window.__frames.slice(-6, -1));
+    const best = f.reduce((m, x) => (x[0] + x[2] > m[0] + m[2] ? x : m), [0, 0, 0, 0]);
+    counts.push(`${name}: main ${best[0]} draws / ${best[1]} triangles, shadow ${best[2]} / ${best[3]}, total ${best[0] + best[2]} / ${best[1] + best[3]}  (${note})`);
+    console.log(counts[counts.length - 1]);
+  };
+  // the hooded saker on the glove: task T11's render (cut out by cut_bird.py: design/hunt/t11_saker_hooded.png) over a
+  // flat glove drawn here; still drawn in, not the game's model
+  const BIRD = 'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 't11_saker_hooded.png')).toString('base64');
+  const FIST = `<div style="left:250px;top:110px;width:300px;height:330px"><img src="${BIRD}" style="position:absolute;left:78px;top:32px;width:150px">${SV.glove}</div>`;
   const files = [];
   const shot = async (name, note) => {
     await p.waitForTimeout(1200);
@@ -128,9 +149,7 @@ const PIN_ICONS = {
     const png = path.join(OUT, `${name}.png`);
     await p.screenshot({ path: png, timeout: 600000 });
     await p.evaluate(() => { window.requestAnimationFrame = window.__raf; const q = window.__q; window.__q = []; for (const fn of q) window.requestAnimationFrame(fn); });
-    const jpg = png.replace(/\.png$/, '.jpg');
-    execFileSync('convert', [png, '-quality', '88', jpg]); fs.unlinkSync(png);
-    files.push(jpg); console.log('shot', name, counts[counts.length - 1]);
+    files.push(png); console.log('shot', name, counts[counts.length - 1]);
   };
   
   // ---------------------------------------------------------------- 1, 2 the map: the two new places, far pins
@@ -169,6 +188,12 @@ const PIN_ICONS = {
   // the falcon's button joins the car's row while it stands outside (the car's own buttons, GDD 9.1)
   await p.evaluate((ic) => { const row = document.querySelector('.pl-car'); const bt = document.createElement('button'); bt.className = 'pl-ib'; bt.id = 'falconBtn'; bt.setAttribute('aria-label', 'الصقر'); bt.innerHTML = ic; row.insertBefore(bt, row.querySelector('[data-c="more"]')); }, FALCON_ICON);
   await shot('outing_4_parked', 'parked in the open, from behind; the falcon\'s button drawn in the car\'s row');
+  // the driver's seat, counted only (no picture): the hooded falcon on its perch in the cabin would be seen from here
+  await p.evaluate(() => window.__play.debug.toggleView());
+  await p.waitForTimeout(4000);
+  await count('seat (count only)', 'parked, from the driver\'s seat: the cabin drawn');
+  await p.evaluate(() => window.__play.debug.toggleView());
+  await p.waitForTimeout(2000);
 
   // ---------------------------------------------------------------- 5, 6, 7 on foot: the falcon on the glove, the cast, the result
   await p.evaluate(() => { document.getElementById('falconBtn')?.remove(); window.__play.debug.exit(); });
@@ -176,13 +201,13 @@ const PIN_ICONS = {
   await p.waitForTimeout(1500);
   await stepAway();
   const castBtn = (ic, label) => `<div class="play" style="position:fixed;inset:0;z-index:21;pointer-events:none"><div class="pl-door"><button class="pl-ib big" aria-label="${label}">${ic}</button></div></div>`;
-  await draw(at(250, 140, SV.fist) + castBtn(CAST_ICON, 'شيل البرقع وأرسله'));
+  await draw(FIST + castBtn(CAST_ICON, 'شيل البرقع وأرسله'));
   await shot('outing_5_fist', 'on foot by the car, first person; the hooded falcon on the glove (stand-in) and the cast-off button drawn');
   await draw(at(470, 168, SV.fly) + at(380, 200, SV.curlewUp.replace('width="70" height="40"', 'width="44" height="25"')) + castBtn(LURE_ICON, 'ارجعه بالملواح'));
   await shot('outing_6_flight', 'the falcon cast off (stand-in) and a stone-curlew flushing (stand-in); the lure button to call it back drawn');
   await draw(at(380, 224, SV.down) + pin(440, 222, 'falcon'));
   await p.evaluate(() => window.__open({ el: document.createElement('button'), key: 'result', name: 'غيث', icon: 'falcon', p: window.__camera.position.clone(), max: 1e9, text: () => 'غيث',
-    open() { return { sub: 'حر · قرناس · صاد كروان', stats: [['الطيران', '40', 'ثانية'], ['المسافة', '350', 'م'], ['الطلعة', 'صاد', '', 'good']],
+    open() { return { sub: 'حر · فرخ · صاد كروان', stats: [['الطيران', '40', 'ثانية'], ['المسافة', '350', 'م'], ['الطلعة', 'صاد', '', 'good']],
       html: '<div class="note">نزل على الكروان عند الطعس. أكّله من صيده وارجعه للدس.</div>', actions: [{ label: 'ارجعه للدس', primary: true, run() {} }] }; } }, true));
   await shot('outing_7_result', 'the falcon down on its quarry (stand-in) with its pin, and the result card the pin opened (drawn content)');
   await p.evaluate(() => window.__close());
@@ -197,10 +222,10 @@ const PIN_ICONS = {
   await p.waitForFunction(() => window.__play.debug.state.mode === 'walk', null, { timeout: 120000 });
   await p.waitForTimeout(1500);
   await stepAway();
-  await draw(at(250, 140, SV.fist) + `<div class="play" style="position:fixed;inset:0;z-index:21;pointer-events:none"><div class="pl-door"><button class="pl-ib big warn" style="background:rgba(28,20,12,.5);color:#f2b54c" aria-label="هنا ممنوع الصيد">${CAST_ICON}<i class="dot"></i></button></div></div>`);
+  await draw(FIST + `<div class="play" style="position:fixed;inset:0;z-index:21;pointer-events:none"><div class="pl-door"><button class="pl-ib big warn" style="background:rgba(28,20,12,.5);color:#f2b54c" aria-label="هنا ممنوع الصيد">${CAST_ICON}<i class="dot"></i></button></div></div>`);
   await p.evaluate(() => window.__open({ el: document.createElement('button'), key: 'ban', name: 'هنا ممنوع الصيد', icon: 'ban', cls: 'warn', p: window.__camera.position.clone(), max: 1e9, text: () => '',
     open() { return { sub: 'قريب من المزارع والعزب', html: '<div class="note warn">الصيد بالمزارع وحولها ممنوع، وغرامته 5,000 ريال لو انمسكت. ابعد عن العزب والقرى وأرسله.</div>',
-      actions: [{ label: 'طيب', primary: true, run() {} }, { label: 'أرسله', run() {} }] }; } }, true));
+      actions: [{ label: 'طيب', primary: true, run() {} }] }; } }, true));      // (whether he may cast anyway is the owner's question)
   await shot('outing_8_banned', 'on foot near the yard: the cast-off button in its warning state and the warning card it opened (drawn)');
   await p.evaluate(() => window.__close());
   await draw('');
@@ -222,26 +247,43 @@ const PIN_ICONS = {
   await shot('outing_9_fine', 'the fine after: the phone opened small in play (the real phone), on the permit app\'s violation screen (drawn content)');
   // the board: the frames with their captions under them (outside the game's picture), for reading in order
   await p.close();
+  await makeStrips(b, files);
   await makeBoard(b, files);
+  for (const f of files) fs.unlinkSync(f);
   await b.close();
   fs.writeFileSync(path.join(OUT, 'outing_draws.txt'), counts.join('\n') + '\n');
   console.log(counts.join('\n'));
 })();
 
 const CAP = [
-  'الخريطة من فوق العزبة للغرب. مرسوم: دبوس «طرف النفود» (المقناص) ودبوس «المحازة» بعيد على الأفق.',
-  'تضغط الدبوس فتنفتح بطاقته جنبه. مرسوم: محتوى البطاقة (بطاقة اللعبة نفسها). «روح بالجيب» يوديك هناك والوقت يمشي.',
-  'السواقة بالبر من ورا. كله حقيقي: وهي تمشي يبقى القير بس فوق. الصقر مبرقع على وكره بالسيارة وما يبين.',
-  'السيارة واقفة برا. مرسوم: زر الصقر جنب أزرار السيارة، يطلع بس والسيارة واقفة (الصيد من سيارة تمشي ممنوع).',
-  'نزلت، من عيونك. مرسوم: الصقر المبرقع على الدس (بديل لين تجهز مجسمات الطيور) وزر «شيل البرقع وأرسله» على الطرف.',
-  'أرسلته. مرسوم: الصقر طاير والكروان قام (بدائل)، وزر الملواح يرجعه لو تبي.',
-  'نزل على الكروان. مرسوم: دبوس على الصقر، وتضغطه فتطلع بطاقة النتيجة (صاد أو فلت). الصيد ما ينباع.',
-  'جنب العزبة. مرسوم: زر الإرسال بلون التحذير، وبطاقة «هنا ممنوع الصيد» والغرامة 5,000 ريال [136] قبل ما ترسل.',
+  'الخريطة من فوق العزبة للغرب. مرسوم: دبوس «طرف النفود» (المقناص) ودبوس «المحازة» (علم) بعيد على الأفق.',
+  'تضغط الدبوس فتنفتح بطاقته جنبه. مرسوم: محتوى البطاقة (بطاقة اللعبة نفسها). «روح بالجيب» يوديك هناك والوقت يمشي (سؤال للمالك).',
+  'السواقة بالبر من ورا. كله حقيقي: وهي تمشي يبقى القير بس فوق. الصقر مبرقع على وكره بالسيارة وما يبين من ورا.',
+  'السيارة واقفة برا. مرسوم: زر الصقر جنب أزرار السيارة، يطلع بس والسيارة واقفة (الصيد من سيارة تمشي ممنوع بالنظام).',
+  'نزلت، من عيونك. مرسوم: الصقر المبرقع (صورة مجسم الصقر من مهمة الطيور، مركّبة) على دس مرسوم، وزر «شيل البرقع وأرسله» على الطرف.',
+  'أرسلته. مرسوم: الصقر طاير والكروان قام (بدائل مسطحة)، وزر الملواح يرجعه لو تبي.',
+  'نزل على الكروان. مرسوم: الصقر على صيده (بديل) ودبوس عليه، وتضغطه فتطلع بطاقة النتيجة. البطاقة وقت اللعب جديدة: سؤال للمالك.',
+  'جنب العزبة. مرسوم: الصقر على الدس، وزر الإرسال بلون التحذير، وبطاقة «هنا ممنوع الصيد» والغرامة 5,000 ريال [136]. هل يقدر يرسل رغم المنع؟ سؤال للمالك.',
   'بعدها لو انمسكت: الجوال الصغير (الحقيقي) على المخالفة بتطبيق «تصريح الصيد». مرسوم: محتوى الشاشة.',
 ];
+// each frame with its strip under it (outside the game's picture): what is real and what is drawn
+async function makeStrips(b, files) {
+  const pg = await b.newPage({ viewport: { width: 956, height: 470 } });
+  for (const [i, f] of files.entries()) {
+    await pg.setContent(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@500;700&display=swap"><style>
+      body { margin: 0; width: 956px; background: #2a2119; direction: rtl; font-family: "IBM Plex Sans Arabic", sans-serif; } img { display: block; width: 956px; height: 440px; }
+      p { margin: 0; padding: 7px 12px 9px; color: #f6f1e7; font-size: 13px; line-height: 1.45; } b { background: #e8b46c; color: #1b130a; border-radius: 5px; padding: 0 6px; margin-left: 6px; }</style>
+      <img src="data:image/png;base64,${fs.readFileSync(f).toString('base64')}"><p><b>${i + 1} · تصميم</b>${CAP[i] || ''}</p>`, { waitUntil: 'networkidle' });
+    await pg.evaluate(() => document.fonts.ready);
+    const png = f.replace(/\.png$/, '_s.png');
+    await pg.screenshot({ path: png, fullPage: true, timeout: 600000 });
+    execFileSync('convert', [png, '-quality', '88', f.replace(/\.png$/, '.jpg')]); fs.unlinkSync(png);
+  }
+  await pg.close();
+}
 async function makeBoard(b, files) {
   const board = await b.newPage({ viewport: { width: 1500, height: 900 } });
-  const cells = files.map((f, i) => `<figure><img src="data:image/jpeg;base64,${fs.readFileSync(f).toString('base64')}"><figcaption><b>${i + 1}</b> ${CAP[i] || ''}</figcaption></figure>`).join('');
+  const cells = files.map((f, i) => `<figure><img src="data:image/png;base64,${fs.readFileSync(f).toString('base64')}"><figcaption><b>${i + 1}</b> ${CAP[i] || ''}</figcaption></figure>`).join('');
   await board.setContent(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@500;700&display=swap"><style>
     body { margin: 0; padding: 14px; background: #2a2119; direction: rtl; font-family: "IBM Plex Sans Arabic", sans-serif; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 1500px; box-sizing: border-box; }
     figure { margin: 0; } img { width: 100%; display: block; border-radius: 6px; } figcaption { color: #f6f1e7; font-size: 13.5px; line-height: 1.5; padding: 6px 2px 0; }

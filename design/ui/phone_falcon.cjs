@@ -1,24 +1,26 @@
 // الصقور in the phone: a DESIGN for the owner's approval (13 Nov 2026), not built (nothing in phone.js or the engine).
-// Two apps, «نادي الصقور» and «تصريح الصيد» (the owner's generic names, 13 Nov), in thirteen views as the phone draws
+// Two apps, «نادي الصقور» and «تصريح الصيد» (the owner's generic names, 13 Nov), in fifteen views as the phone draws
 // them at the owner's screen (956 x 440, the phone enlarged), in the phone's own CSS and pieces
 // (design/prototype3d/phone.js) and the approved المزاين pieces (phone_mazayen.cjs):
 //   1 home          the home screen: the six apps there now, the two approved and being built (المزاين, المحادثات:
 //                   task T10) and the two new ones: ten, in three rows of four
 //   2 auction       نادي الصقور, the auction: the falcons on sale this autumn (wild-caught passage birds, the national
 //                   auction's season), each by species, age, origin, last bid and the days left
-//   3 falcon        a falcon's page for a buyer: what he sees (species, age, origin, the span, the scale), what stays
+//   3 falcon        a falcon's page for a buyer: what he sees (species, age, origin, تام or مثلوث, the scale), what stays
 //                   hidden (how it hunts and races: only its results tell), and the bid
 //   4 mine          صقوري: the player's falcon after a season: its passport, age, species, the scale, its outings and
 //                   its contest results
 //   5 train         الدعو: the short care, once each time the game opens, for the days since; what changes, in words
-//   6 fest          مهرجان الصقور: its days, the registration, الملواح's classes and المزاين's classes and prizes, rules
-//   7 race          the ملواح round's day: the times as they come in, the player's falcon still to fly
-//   8 race_result   the round's result: the falcon's time and place, the places with times and prizes
-//   9 beauty_result مزاين الصقور's result: places and prizes, no scores
-//  10 permit_new    تصريح الصيد before it is taken: what it needs and its fee
-//  11 permit        the permit held: its season and halves, the means, the quarry, by day only, personal
-//  12 permit_end    the same, scrolled: where hunting is banned, what is never hunted, the fines in words
-//  13 fine          a violation told (the fine after; the storyboard's frame 9 shows it in play)
+//   6 fest          مهرجان الصقور: its days, the registration, الملواح's classes and المزاين's classes and prizes
+//   7 fest_end      the same, scrolled to its end: the rules
+//   8 race          the ملواح round's day: the times as they come in, the player's falcon still to fly
+//   9 race_result   the round's result: the falcon's time and place, the places with times and prizes
+//  10 beauty_result مزاين الصقور's result: places and prizes, no scores (the sample falcon out of the prizes)
+//  11 beauty_third  WHAT A THIRD PLACE LOOKS LIKE (an example of the card, not the sample season: the falcon's season is view 4)
+//  12 permit_new    تصريح الصيد before it is taken: what it needs and its fee
+//  13 permit        the permit held: its season and halves, the means, the quarry, by day only, personal
+//  14 permit_end    the same, scrolled: where hunting is banned, what is never hunted, the fines in words
+//  15 fine          a violation told (the fine after; the storyboard's frame 9 shows it in play)
 // No hunting engine exists yet, so no figure here is the game's own. Each is REAL (research-realism.md section 8, its
 // source number; every figure there rests on search-result text only, no official page was opened) or a GAME CHOICE:
 //  REAL: the season 1 Sep 2026 – 31 Jan 2027, autumn to 30 Nov, winter from 1 Dec [127][128][129][167]; by day only,
@@ -32,20 +34,26 @@
 //    summaries); the national auction of locally trapped falcons 1 Oct – 30 Nov [157]; the breeders' auction at Malham
 //    in August [158]; trapping without a permit banned [156]; الملواح a 400 m race from the release to the lure
 //    [169][171] (300 m in an older edition, 200 m also reported [183]: the distance changes by edition); its classes
-//    الملاك، الهواة، المحترفين، النخبة [169][171]; ages فرخ (under a year) and قرناس (over a year) [169]; a saker's span at
-//    least 16 inches [169]; المزاين's classes [172] (الحر and الجير بيور, each فرخ and قرناس; شاهين بحري قرناس; حر فرخ إنتاج
+//    الملاك، الهواة، المحترفين، النخبة [169][171]; ages فرخ (under a year) and قرناس (over a year) [169]; a saker «16 inches and over» [169] (what the inches measure is NOT known: not the wingspan, 16 in
+//    being 40.6 cm; shown only on the festival screen, as the club's own words); المزاين's classes [172] (الحر and الجير بيور, each فرخ and قرناس; شاهين بحري قرناس; حر فرخ إنتاج
 //    محلي); proof of ownership and at most five falcons a round [175] (one source; whether five a round or five a
-//    falconer is not clear); المزاين's prizes 300,000, 175,000 and 100,000 for the first three [177] (one source); the
-//    owners' round's first two times, 17.905 s and 18.061 s [182] (2025, a search summary); doping tests [179]; the
-//    2025 festival 25 Dec – 10 Jan at Malham [169][157].
+//    falconer is not clear); المزاين's prizes 300,000, 175,000 and 100,000 for the first three [177] (one source, ONE round's split: the
+//    four classes' first prizes on the festival screen are that round's split extended to them, a game choice); the
+//    owners' round's first two times, 17.905 s and 18.061 s [182] (2025, a search summary); doping tests [179]; three Saudi judges for المزاين
+//    [173]; the 2025 festival 25 Dec – 10 Jan at Malham [169][157].
 //  DISAGREEING, shown as such: the 2026 festival: 17–30 Nov 2026 [157] or 25 Dec 2026 – 10 Jan 2027 [181]; the views
 //    draw the 2025 dates (the last edition the sources agree on) until the owner picks or the club's page is read.
 //    Entries a falconer: 8 an age class, 6 for professionals, or 12 in all [169][174]: the game's 8 an age class is a
 //    game choice among them. المزاين's 4th and 5th prizes (the round is 625,000 [177], the three add to 575,000, so
 //    about 50,000 is left, uncertain): split 30,000 and 20,000, a game choice.
+//  THE ENGINE'S: the home screen's date, balance and herd (a new game on seed 4242, 1 October).
 //  GAME CHOICES: every price on the auction and the falcons' bids (the real range: a farm-bred saker about 19,000 to a
-//    top bird over a million [158]; no price found for wild-caught birds at the national auction); the span and the
-//    weight of each falcon shown; the permit's fee 100 riyals (no official fee found; a weak source gives 100 a season
+//    top bird over a million [158]; no price found for wild-caught birds at the national auction); «تام» (a full-sized
+//    female) or «مثلوث» (the smaller male) on each lot: a game choice resting on the club's 2025 rules' wording as the
+//    reviewer's search summary gives it («تام وليس مثلوث»; not in research section 8); the weight of each falcon shown (1,120 and 1,105 g);
+//    «طرح هالموسم» says only that the bird was trapped this season and sold at the auction ([156][157]); that it was trapped
+//    with a licence rests on a weak source [160]; most wild-caught lots are فرخ (a wild-caught قرناس is rarer: game choice);
+//    that a fine leaves the permit standing («تصريحك باقي») is a game choice; the permit's fee 100 riyals (no official fee found; a weak source gives 100 a season
 //    for falconry [160]); the passport's and the club's fees (none found: shown as nothing to pay); the entry fee
 //    (not found: free); الدعو's steps and their words, once each time the game opens, and that a new falcon needs four
 //    weeks of it before its first outing (real: الدعو in September and early October [155]); the race times past the
@@ -53,14 +61,16 @@
 //    winners 17.653–18.061 s [182]); the ملواح prizes by place (the real split is not known: [169] and [176] disagree)
 //    and paying down to the 7th place (1,012 prizes over 139 rounds in 2025 [170][176], about seven a round); the field
 //    of 31 falcons (5,200 falcons [157] over 139 rounds is about 37 a round: an estimate from two sources); the
-//    falcons' and owners' names; the season's outings and catches; resale gain (none shown as a number).
+//    falcons' and owners' names; the beauty round's field of 23; the season's outings and catches (6 outings, 3 stone-curlews, the dates 14 Oct and 12 Dec); resale gain (none
+//    shown as a number). View 11 is an EXAMPLE of a placing card, not the sample falcon's season (it finishes out of the
+//    prizes in view 10).
 // Words: الدعو، البرقع، الوكر، الدس، الميزان، الملواح، الطرح، المقناص as research [155][156][169]; القرموشة and الجير تبع are not
 // drawn as species (they are likely sex or size classes: unresolved); a falcon's grammar is masculine (الصقر، الطير).
 // The falcon pictures are STAND-INS (a flat SVG) until task T11's birds exist (design/birds/).
 // To draw again: build the prototype (THREE_DIR=<three@0.170.0 package> python3 tool/proto_app/assemble.py), serve
 // tool/proto_app/assets/web on a port (PORT, 8765 by default), and run `NODE_PATH=$(npm root -g) node
 // design/ui/phone_falcon.cjs` from the repository's root; it writes mock_falcon_<n>_<name>.png in the current folder
-// (or OUT=<folder>) and design/ui/phone_falcon.jpg (the thirteen side by side). AUDIT=<audit.js> runs the layout audit
+// (or OUT=<folder>) and design/ui/phone_falcon.jpg (the fifteen side by side). AUDIT=<audit.js> runs the layout audit
 // on each view and writes the views' texts to falcon_texts.txt.
 const { chromium } = require('playwright');
 const { execFileSync } = require('child_process');
@@ -155,33 +165,33 @@ const PHOTO = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 1
     // ------------------------------------------------ 2 the auction (national auction season: wild-caught passage birds)
     const lot = (name, line, bid, left) => `<div class="it">${ph}<b>${name}</b><small>${line}</small><span class="pr"><span class="price num">${bid}</span><small>آخر سوم</small></span><small>${left}</small></div>`;
     const auction = `<div class="body">${nav()}<div class="title">نادي الصقور</div>${seg(0)}
-      <div class="note" style="margin-top:-4px">مزاد الطرح مفتوح لين 30 نوفمبر · صقور انطرحت بتصريح هالخريف</div>
+      <div class="note" style="margin-top:-4px">مزاد الطرح مفتوح لين 30 نوفمبر · صقور طرح هالموسم، ببيعة المزاد</div>
       <div class="lst">
-        ${lot('حر · قرناس', 'طرح · العرض 17 إنش', '42,000', 'يقفل بعد 3 أيام')}
-        ${lot('حر · فرخ', 'طرح · العرض 16 إنش', '26,500', 'يقفل بعد 5 أيام')}
-        ${lot('شاهين · فرخ', 'طرح · العرض 14 إنش', '18,000', 'يقفل بكرة')}
-        ${lot('حر · فرخ', 'طرح · العرض 16 إنش', '23,000', 'يقفل بعد 8 أيام')}</div>
+        ${lot('حر · فرخ', 'طرح · تام', '31,000', 'يقفل بعد 3 أيام')}
+        ${lot('حر · فرخ', 'طرح · مثلوث', '14,500', 'يقفل بعد 5 أيام')}
+        ${lot('شاهين · فرخ', 'طرح · تام', '18,000', 'يقفل بكرة')}
+        ${lot('حر · قرناس', 'طرح · تام', '42,000', 'يقفل بعد 8 أيام')}</div>
       <div class="note">ومزاد صقور المزارع بملهم يرجع بأغسطس.</div></div>`;
 
     // ------------------------------------------------ 3 a falcon's page for a buyer
-    const falcon = `<div class="body">${nav()}<div class="title" style="font-size:22px">حر · قرناس</div>
-      <div class="it big">${ph}<b>طرح هالخريف</b><small>انطرح بتصريح بالحماد وجا للمزاد</small><small>العرض 17 إنش · الميزان 1,120 غرام</small><small>عمره فوق سنة</small></div>
+    const falcon = `<div class="body">${nav()}<div class="title" style="font-size:22px">حر · فرخ</div>
+      <div class="it big">${ph}<b>طرح هالموسم</b><small>انطرح هالموسم وجا ببيعة المزاد</small><small>تام، مو مثلوث · الميزان 1,120 غرام</small><small>عمره تحت سنة</small></div>
       <div class="group">${row2('eye', 'وش يسوي بالصيد والسباق ما ينعرف', 'يبين بس من طلعاته ونتايجه بعد ما تدعيه')}${row2('chip', 'الجواز يطلع باسمك بعد البيعة', 'ويتسجل بالنادي، وبعدها تطلّع تصريح الصيد')}</div>
       <div class="tank"><small>المزاد</small>
-        <div class="kind"><span>آخر سوم</span><span class="d">42,000 ريال · 6 مزايدين</span></div>
+        <div class="kind"><span>آخر سوم</span><span class="d">31,000 ريال · 6 مزايدين</span></div>
         <div class="kind"><span>يقفل</span><span class="d">بعد 3 أيام</span></div></div>
-      <div class="group"><div class="row ord"><span class="lead">${svg('falcon')}</span><b>سومك</b><span class="stp"><button>${svg('minus')}</button><span class="n"><b>43,000</b> <span>ريال</span></span><button>${svg('plus')}</button></span><small>لو أحد زاد عليك يجيك خبر</small></div></div>
-      <button class="btn pri" style="width:100%">زايد بـ 43,000</button>
+      <div class="group"><div class="row ord"><span class="lead">${svg('falcon')}</span><b>سومك</b><span class="stp"><button>${svg('minus')}</button><span class="n"><b>32,000</b> <span>ريال</span></span><button>${svg('plus')}</button></span><small>لو أحد زاد عليك يجيك خبر</small></div></div>
+      <button class="btn pri" style="width:100%">زايد بـ 32,000</button>
       <div class="note">الصقر الجديد يبي له الدعو قبل أول طلعة.</div></div>`;
 
     // ------------------------------------------------ 4 the player's falcon after a season
     const mine = `<div class="body">${nav()}<div class="title">نادي الصقور</div>${seg(1)}
-      <div class="it big">${ph}<b>غيث · حر قرناس</b><small>جوازه باسمك · مسجل بالنادي</small><small>طرح، اشتريته 14 أكتوبر بـ 42,000</small><small>الميزان اليوم 1,105 غرام</small></div>
+      <div class="it big">${ph}<b>غيث · حر فرخ</b><small>جوازه باسمك · مسجل بالنادي</small><small>طرح، اشتريته 14 أكتوبر بـ 32,000</small><small>الميزان اليوم 1,105 غرام</small></div>
       <div class="sec">طلعاته · هالموسم</div>
       <div class="group">${row('map', '6 طلعات', 'صاد 3 كراوين، وفلت منه الباقي')}${row('flag', 'آخر طلعة', 'طرف النفود · صاد كروان', '12 ديسمبر')}</div>
       <div class="sec">مسابقاته</div>
-      <div class="group">${row('lure', 'الملواح · الملاك', 'حر قرناس · المركز 12 من 31', '18.906')}${row('star', 'المزاين · الحر', 'قرناس · المركز الثالث', '100,000')}</div>
-      <div style="display:flex;gap:8px"><button class="btn pri" style="flex:1">دعّه اليوم</button><button class="btn ghost" style="flex:1">اعرضه بالمزاد</button></div></div>`;
+      <div class="group">${row('lure', 'الملواح · الملاك', 'حر فرخ · المركز 12 من 31', '18.906')}${row('star', 'المزاين · الحر', 'فرخ · ما جا بالمراكز', '')}</div>
+      <div style="display:flex;gap:8px"><button class="btn pri" style="flex:1">ادعه اليوم</button><button class="btn ghost" style="flex:1">اعرضه بالمزاد</button></div></div>`;
 
     // ------------------------------------------------ 5 الدعو: the care, once each time the game opens
     const step = (cls, icon, name, line, right) => `<div class="row ${cls}"><span class="lead">${svg(icon)}</span><b>${name}</b><span class="qty ${right[0]}">${right[1]}</span><small>${line}</small></div>`;
@@ -194,7 +204,7 @@ const PHOTO = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 1
         ${step('next', 'lure', 'يجي للملواح من بعيد', 'الأسبوع الرابع', ['wait', 'بعدين'])}
         ${step('next', 'falcon', 'جاهز للمقناص', 'بعد الدعو', ['wait', 'بعدين'])}</div>
       <div class="group">${row('scale', 'الميزان', 'تزنه كل يوم قبل أكله', '1,120 غرام')}</div>
-      <button class="btn pri" style="width:100%">دعّه اليوم</button>
+      <button class="btn pri" style="width:100%">ادعه اليوم</button>
       <div class="note">مرة وحدة كل ما تفتح اللعبة، وتنحسب لك الأيام اللي فاتت. ولو تركته أسبوعين يرجع خطوة. وبالمقيض بالصيف ما فيه دعو.</div></div>`;
 
     // ------------------------------------------------ 6 the festival (the 2025 dates: the 2026 ones disagree)
@@ -211,7 +221,7 @@ const PHOTO = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 1
     // ------------------------------------------------ 7 the ملواح round's day: the times come in
     const run = (rk, name, owner, t, cls = '') => `<div class="row${cls ? ' ' + cls : ''}"><span class="lead rk${rk === 1 ? ' g1' : ''}">${rk}</span><b>${name}</b><span class="qty">${t}</span><small>${owner}</small></div>`;
     const race = `<div class="body">${nav()}<div class="title">يوم الملواح</div>
-      <div class="note" style="margin-top:-4px">الملاك · حر قرناس · 400 متر · 31 صقر</div>
+      <div class="note" style="margin-top:-4px">الملاك · حر فرخ · 400 متر · 31 صقر</div>
       <div class="sec">الأسرع لين الحين · بالثواني</div>
       <div class="group">${run(1, 'سهم', 'بو فهد', '17.905')}${run(2, 'ريح', 'بو ناصر', '18.061')}${run(3, 'برق', 'بو سعد', '18.112')}</div>
       <div class="group">${row('falcon', 'غيث يطير بعد 3 صقور', 'من السناح للملواح', 'الحين', 'now')}</div>
@@ -220,26 +230,29 @@ const PHOTO = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 1
     // ------------------------------------------------ 8 the round's result
     const prize = (rk, name, owner, t, pr) => `<div class="row"><span class="lead rk${rk === 1 ? ' g1' : ''}">${rk}</span><b>${name} · ${t}</b><span class="qty">${pr}</span><small>${owner}</small></div>`;
     const race_result = `<div class="body">${nav()}<div class="title">النتيجة</div>
-      <div class="note" style="margin-top:-4px">الملواح · الملاك · حر قرناس · 31 صقر</div>
+      <div class="note" style="margin-top:-4px">الملواح · الملاك · حر فرخ · 31 صقر</div>
       <div class="it big">${ph}<b>غيث</b><small>وقته 18.906 ثانية</small><small>المركز 12، والجوايز لين السابع</small><small>وقته ينكتب بسجله، ويبين لمن يبي يشتريه</small></div>
       <div class="sec">المراكز · الجايزة بالريال</div>
       <div class="group">${prize(1, 'سهم', 'بو فهد', '17.905', '100,000')}${prize(2, 'ريح', 'بو ناصر', '18.061', '60,000')}${prize(3, 'برق', 'بو سعد', '18.112', '40,000')}${prize(4, 'مزن', 'بو خالد', '18.240', '25,000')}</div>
       <div class="note">والأوقات تنقاس من السناح لين الملواح.</div></div>`;
 
     // ------------------------------------------------ 9 المزاين's result: places and prizes, no scores
-    const beauty_result = `<div class="body">${nav()}<div class="title">النتيجة</div>
-      <div class="note" style="margin-top:-4px">مزاين الصقور · الحر · قرناس</div>
-      <div class="it big">${ph}<b>غيث</b><small>المركز الثالث</small><small>جايزته 100,000 ريال نزلت برصيدك</small><small>واللي يجي بالمراكز يغلى سعره</small></div>
+    const beauty = (mine, me) => `<div class="body">${nav()}<div class="title">النتيجة</div>
+      <div class="note" style="margin-top:-4px">مزاين الصقور · الحر · فرخ · 23 صقر</div>
+      ${mine}
       <div class="sec">المراكز · الجايزة بالريال</div>
-      <div class="group">${prize(1, 'الشاهي', 'بو سلطان', 'حر قرناس', '300,000')}${prize(2, 'الريم', 'بو عبدالله', 'حر قرناس', '175,000')}${prize(3, 'غيث', 'أنت', 'حر قرناس', '100,000')}${prize(4, 'زعزوع', 'بو فيصل', 'حر قرناس', '30,000')}${prize(5, 'هدّاج', 'بو مشعل', 'حر قرناس', '20,000')}</div>
+      <div class="group">${prize(1, 'الشاهي', 'بو سلطان', 'حر فرخ', '300,000')}${prize(2, 'الريم', 'بو عبدالله', 'حر فرخ', '175,000')}${me ? prize(3, 'غيث', 'أنت', 'حر فرخ', '100,000') : prize(3, 'سلطانة', 'بو نايف', 'حر فرخ', '100,000')}${prize(4, 'زعزوع', 'بو فيصل', 'حر فرخ', '30,000')}${prize(5, 'هدّاج', 'بو مشعل', 'حر فرخ', '20,000')}</div>
       <div class="note">ثلاث حكام، والدرجات ما تنعلن. وجماله من خلقته، والدعو ما يغيّره.</div></div>`;
+    const beauty_result = beauty(`<div class="it big">${ph}<b>غيث</b><small>ما جا بالمراكز</small><small>الجوايز للخمسة الأوائل</small><small>يقدر يدخل السنة الجاية قرناس</small></div>`, false);
+    // (an example of the card when the falcon places: not the sample season)
+    const beauty_third = beauty(`<div class="it big">${ph}<b>غيث</b><small>المركز الثالث</small><small>جايزته 100,000 ريال نزلت برصيدك</small><small>واللي يجي بالمراكز يغلى سعره</small></div>`, true);
 
     // ------------------------------------------------ 10 the permit before it is taken
     const need = (ok, name, line) => `<div class="row"><span class="lead">${svg(ok ? 'check' : 'dot')}</span><b>${name}</b><span class="qty ${ok ? 'ok' : 'wait'}">${ok ? 'عندك' : 'ناقص'}</span><small>${line}</small></div>`;
     const permit_new = `<div class="body">${nav()}<div class="title">تصريح الصيد</div>
       <div class="note" style="margin-top:-4px">موسم الصيد مفتوح من 1 سبتمبر لين 31 يناير</div>
       <div class="sec">اللي يبيه التصريح</div>
-      <div class="group">${need(true, 'عمرك 21 وفوق', 'التصريح باسمك')}${need(true, 'صقر جوازه باسمك', 'غيث · حر قرناس')}${need(true, 'مسجل بنادي الصقور', 'صقار')}</div>
+      <div class="group">${need(true, 'عمرك 21 وفوق', 'التصريح باسمك')}${need(true, 'صقر جوازه باسمك', 'غيث · حر فرخ')}${need(true, 'مسجل بنادي الصقور', 'صقار')}</div>
       <div class="tank"><small>تصريح صقار لهالموسم</small>
         <div class="kind"><span>الرسوم</span><span class="d">100 ريال</span></div>
         <div class="kind"><span>ينفع لين</span><span class="d">31 يناير</span></div></div>
@@ -267,7 +280,7 @@ const PHOTO = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 1
       <div class="note">وقفتك الدورية وانت ترسل الصقر جنب العزب. تصريحك باقي، بس المرة الجاية بعيد عن المزارع والقرى.</div>
       <div class="group">${row2('rule', 'الصيد بالنهار بس، وبعيد عن المزارع والقرى', 'والصقر ما ينرسل إلا والسيارة واقفة')}</div></div>`;
 
-    return { home: homeHtml, auction, falcon, mine, train, fest, race, race_result, beauty_result, permit_new, permit, permit_end: permit, fine };
+    return { home: homeHtml, auction, falcon, mine, train, fest, fest_end: fest, race, race_result, beauty_result, beauty_third, permit_new, permit, permit_end: permit, fine };
   }, [PHOTO]);
 
   const files = [];
