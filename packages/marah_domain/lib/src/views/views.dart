@@ -307,6 +307,51 @@ class GameView {
   /// Treatments found outside a festival and a sale, not yet told.
   List<Finding> get untoldFindings => List.unmodifiable(me.untold);
 
+  /// الفحل وإنتاجه at festival [f] for [bull]: the round, the group the
+  /// player would show (the bull, then his best offspring by look in the
+  /// herd, as many as the round takes: (balance) the engine picks them, the
+  /// phone does not choose), and why it cannot be entered now, or null.
+  /// Too few offspring: wrongGroupSize with the round's size and the head he
+  /// has ('have'). Null round: no الفحل وإنتاجه here, or not a grown bull.
+  (RoundId?, List<CamelId>, DomainError?) fahalGroup(
+    FestivalId f,
+    CamelId bull,
+  ) {
+    final fest = _w.festivals[f];
+    final c = _w.camels[bull];
+    final r = fest?.rounds.where((x) => x.kind == RoundKind.fahal).firstOrNull;
+    if (fest == null ||
+        c == null ||
+        r == null ||
+        c.sex != Sex.male ||
+        c.ageYears(r.day) < Balance.maleMinBreedingYears) {
+      return (null, const [], null);
+    }
+    final kids =
+        [
+          for (final k in _w.aliveOwnedBy(viewer))
+            if (k.sire?.id == bull) (k, Judging.quality(k, today)),
+        ]..sort((a, b) {
+          final d = b.$2.compareTo(a.$2);
+          return d != 0 ? d : a.$1.id.value.compareTo(b.$1.id.value);
+        });
+    final group = [bull, for (final (k, _) in kids.take(r.size - 1)) k.id];
+    if (group.length < r.size) {
+      return (
+        r.id,
+        group,
+        DomainError(ErrorCode.wrongGroupSize, {
+          'size': r.size,
+          'have': group.length,
+        }),
+      );
+    }
+    final e = handlers.cannotEnter(_sim, me, fest, r, [
+      for (final id in group) _w.camels[id],
+    ]);
+    return (r.id, group, e);
+  }
+
   /// [c]'s own round at festival [f] (its colour, its sex, its age's kind on
   /// the round's day; الفحل وإنتاجه, a group, is not one) and why it cannot
   /// enter it now, or null: the round it may enter, else the one whose
@@ -779,4 +824,8 @@ class TamperingView {
   RiskBand get outsideRisk => ContestRules.outsideRisk(_t.strength);
   Stage get foundMostlyBy => ContestRules.foundMostlyBy(_t.kind);
   int get fineIfFound => Balance.tamperFine(_t.kind, _t.strength);
+
+  /// The player had it done (not one his vet found in a camel he bought).
+  bool get bought => _t.by == camel.ownerId;
+  GameDay get on => _t.on;
 }

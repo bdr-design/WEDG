@@ -388,6 +388,8 @@ class MyEntryCard {
     this.foundAt,
     this.foundKind,
     this.fine = 0,
+    this.head = 1,
+    this.announceOn,
   });
 
   final CamelId camel;
@@ -405,6 +407,11 @@ class MyEntryCard {
   final RemovalReason? reason;
   final ReputationMove? reputation;
 
+  /// The camels in the entry (الفحل وإنتاجه: the bull and his offspring),
+  /// and the day its places are announced (after the DNA tests), or null.
+  final int head;
+  final GameDay? announceOn;
+
   /// The treatment the check found, once its stage is told, and the fines.
   final Stage? foundAt;
   final TamperKind? foundKind;
@@ -413,6 +420,8 @@ class MyEntryCard {
   @override
   bool operator ==(Object other) =>
       other is MyEntryCard &&
+      other.head == head &&
+      other.announceOn == announceOn &&
       other.foundAt == foundAt &&
       other.foundKind == foundKind &&
       other.fine == fine &&
@@ -450,6 +459,8 @@ class MyEntryCard {
     foundAt,
     foundKind,
     fine,
+    head,
+    announceOn,
   );
 }
 
@@ -466,6 +477,8 @@ class TamperingCard {
     required this.outsideRisk,
     required this.foundMostlyBy,
     required this.fineIfFound,
+    this.bought = false,
+    this.on,
   });
 
   final CamelId camel;
@@ -473,6 +486,11 @@ class TamperingCard {
   final TamperKind kind;
   final int strength;
   final GameDay until;
+
+  /// The player had it done (from the treatment man), on [on]; false for
+  /// one his vet found in a camel he bought.
+  final bool bought;
+  final GameDay? on;
 
   /// The risk a festival finds it, outside one in a month, and who finds
   /// it most: in words, never the odds.
@@ -488,10 +506,13 @@ class TamperingCard {
       other.camelName == camelName &&
       other.kind == kind &&
       other.strength == strength &&
-      other.until == until;
+      other.until == until &&
+      other.bought == bought &&
+      other.on == on;
 
   @override
-  int get hashCode => Object.hash(camel, camelName, kind, strength, until);
+  int get hashCode =>
+      Object.hash(camel, camelName, kind, strength, until, bought, on);
 }
 
 /// One supply in the farm's store or tank (GDD 4.3: feed and water run out
@@ -1294,10 +1315,19 @@ class FestivalDetail {
 /// the festival (null: none of its colour and sex there) and the engine's
 /// refusal to enter it now, or null when it may.
 class RegisterRow {
-  const RegisterRow({required this.camel, this.round, this.error});
+  const RegisterRow({
+    required this.camel,
+    this.round,
+    this.error,
+    this.group = const [],
+  });
   final CamelCard camel;
   final RoundId? round;
   final DomainError? error;
+
+  /// For الفحل وإنتاجه: the offspring the engine shows with the bull (his
+  /// best by look), in the order entered after him.
+  final List<CamelCard> group;
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {

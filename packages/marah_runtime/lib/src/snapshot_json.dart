@@ -347,6 +347,8 @@ class SnapshotJson {
           if (e.foundAt != null) 'foundAt': e.foundAt!.name,
           if (e.foundKind != null) 'foundKind': e.foundKind!.name,
           if (e.fine > 0) 'fine': e.fine,
+          if (e.head > 1) 'head': e.head,
+          if (e.announceOn != null) 'announceOn': e.announceOn!.value,
         },
     ],
   };
@@ -367,6 +369,7 @@ class SnapshotJson {
           'error': x.error == null
               ? null
               : {'code': x.error!.code.name, 'params': x.error!.params},
+          if (x.group.isNotEmpty) 'group': [for (final c in x.group) camel(c)],
         },
     ],
     'rounds': [
@@ -412,6 +415,9 @@ class SnapshotJson {
     'outsideRisk': t.outsideRisk.name,
     'foundMostlyBy': t.foundMostlyBy.name,
     'fineIfFound': t.fineIfFound,
+    // the player had it done (the chat shows only those he bought)
+    if (t.bought) 'bought': true,
+    if (t.on != null) 'on': t.on!.value,
   };
 
   /// The festival rules the screens say (Balance, TamperKind): the late

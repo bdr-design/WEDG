@@ -2526,6 +2526,14 @@ void main() {
       final s = sim(g);
       TamperingSystem.foundOutside(s, g.me, c, c.treatments.single);
       g.dispatch(Tamper(g.me.id, c.id, TamperKind.botox, 1));
+      // the chat shows only what he had done
+      expect(
+        {
+          for (final t in GameView(g.state, g.me.id).tamperings)
+            t.kind: t.bought,
+        },
+        {TamperKind.dye: false, TamperKind.botox: true},
+      );
       final own = c.treatments.firstWhere((t) => t.kind == TamperKind.botox);
       TamperingSystem.foundOutside(s, g.me, c, own);
       // at a sale the refusal tells it: not kept
@@ -2596,6 +2604,47 @@ void main() {
       final second = camelFor(g, jil, cat: ColorCategory.wodh);
       final (_, e5) = GameView(g.state, g.me.id).ownRound(f.id, second.id);
       expect(e5?.code, ErrorCode.oneFardiRound);
+    });
+
+    test('الفحل وإنتاجه: the bull and his best offspring by look, picked by '
+        'the engine; too few, the refusal says how many he has', () {
+      final g = newGame();
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.fahal);
+      final bull = camelFor(g, r, sex: Sex.male, mean: 90);
+      final kids = [
+        for (var i = 0; i < 7; i++) offspringOf(g, bull, r, mean: 40.0 + i * 8),
+      ];
+      g.advanceTo(f.opensOn);
+      final v = GameView(g.state, g.me.id);
+      final (round, group, why) = v.fahalGroup(f.id, bull.id);
+      expect((round, why), (r.id, null));
+      // the five best by look, best first
+      final byLook = [...kids]
+        ..sort(
+          (a, b) => Judging.quality(
+            b,
+            g.today,
+          ).compareTo(Judging.quality(a, g.today)),
+        );
+      expect(group, [bull.id, for (final k in byLook.take(5)) k.id]);
+      expect(g.dispatch(EnterRound(g.me.id, f.id, r.id, group)).ok, isTrue);
+      // a bull with three: refused, with what he has
+      final other = camelFor(g, r, sex: Sex.male, mean: 80);
+      for (var i = 0; i < 3; i++) {
+        offspringOf(g, other, r);
+      }
+      final (_, few, e) = GameView(g.state, g.me.id).fahalGroup(f.id, other.id);
+      expect(few, hasLength(4));
+      expect(e?.code, ErrorCode.wrongGroupSize);
+      expect(e?.params, {'size': r.size, 'have': 4});
+      // a young male is no bull for it
+      final young = camelFor(
+        g,
+        roundOf(f, RoundKind.mafareed, sex: Sex.male),
+        sex: Sex.male,
+      );
+      expect(GameView(g.state, g.me.id).fahalGroup(f.id, young.id).$1, isNull);
     });
 
     test('الصيت as a band, never the number', () {

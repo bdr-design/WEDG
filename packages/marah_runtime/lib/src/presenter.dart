@@ -117,6 +117,8 @@ class Presenter {
             foundAt: row?.foundAt,
             foundKind: row?.foundKind,
             fine: row?.fine ?? 0,
+            head: e.camels.length,
+            announceOn: r.announceOn,
           ),
         );
       }
@@ -163,6 +165,8 @@ class Presenter {
         outsideRisk: t.outsideRisk,
         foundMostlyBy: t.foundMostlyBy,
         fineIfFound: t.fineIfFound,
+        bought: t.bought,
+        on: t.on,
       ),
   ];
 
@@ -641,12 +645,32 @@ class Presenter {
           final k = b.$2.compareTo(a.$2);
           return k != 0 ? k : a.$1.id.value.compareTo(b.$1.id.value);
         });
+      final rows = <RegisterRow>[];
       for (final (c, _) in keyed.take(registerShown)) {
+        // a grown bull: الفحل وإنتاجه, his group the engine's choice
+        final (fr, group, ferr) = v.fahalGroup(f.id, c.id);
+        if (fr != null) {
+          rows.add(
+            RegisterRow(
+              camel: card(c, v),
+              round: fr,
+              error: ferr,
+              group: [
+                for (final id in group.skip(1))
+                  if (byId[id] case final k?) card(k, v),
+              ],
+            ),
+          );
+          continue;
+        }
         final (round, error) = v.ownRound(f.id, c.id);
-        register.add(
-          RegisterRow(camel: card(c, v), round: round, error: error),
-        );
+        rows.add(RegisterRow(camel: card(c, v), round: round, error: error));
       }
+      // those that may enter first, then the refused, each by look
+      register.addAll([
+        ...rows.where((x) => x.error == null),
+        ...rows.where((x) => x.error != null),
+      ]);
     }
     return FestivalDetail(
       register: register,
@@ -729,8 +753,9 @@ class Presenter {
           c.sex == Sex.male && (kids[c.id]?.length ?? 0) >= r.size - 1;
       for (final c in best(herd.where(sires))) {
         if (out.length >= eligibleShown) break;
-        final group = [c.id, ...kids[c.id]!.take(r.size - 1)];
-        if (v.canEnter(f.id, r.id, group) == null) out.add(card(c, v));
+        // (his best offspring by look: the group the engine enters)
+        final (_, _, why) = v.fahalGroup(f.id, c.id);
+        if (why == null) out.add(card(c, v));
       }
       return out;
     }
