@@ -138,7 +138,15 @@ class Bot {
     for (final f in festivals) {
       // (the better camels only: the preliminary judging cuts half the
       // field, and the trucking is paid either way)
-      for (final c in view.herd.where((c) => c.quality >= 60)) {
+      // and, honest, only those it knows: born on the farm or its own a year
+      // (one bought may carry a treatment its vet missed, GDD 7.1)
+      for (final c in view.herd.where(
+        (c) =>
+            c.quality >= 60 &&
+            (cheats ||
+                c.acquiredOn == game.state.startedOn ||
+                view.today.daysSince(c.acquiredOn) >= 365),
+      )) {
         for (final r in f.rounds) {
           if (!r.kind.single) continue;
           if (view.canEnter(f.id, r.id, [c.id]) != null) continue;
@@ -185,8 +193,12 @@ class Bot {
             ..sort((a, b) => b.camel.quality.compareTo(a.camel.quality));
       if (pick.isNotEmpty) {
         final l = pick.first;
-        final r = _do(Bargain(me, l.id, (l.askPrice.value * 0.9).round()));
-        if (!r.ok) _do(BuyListing(me, l.id));
+        // its vet looks at her first; one he finds treated is left
+        _do(CheckListing(me, l.id));
+        if (view.listingOf(l.camel.id)?.knownTreatments.isEmpty ?? false) {
+          final r = _do(Bargain(me, l.id, (l.askPrice.value * 0.9).round()));
+          if (!r.ok) _do(BuyListing(me, l.id));
+        }
       }
     }
 

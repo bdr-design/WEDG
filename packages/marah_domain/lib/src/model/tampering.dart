@@ -102,41 +102,51 @@ enum TamperKind {
   final int price;
 }
 
-/// One secret treatment on one of the owner's camels: [strength] 1 (light)
-/// to 3 (heavy). Kept on the player, never on the camel, so no one else's
-/// view can reach it.
+/// One secret treatment on a camel: [strength] 1 (light) to 3 (heavy). It
+/// is in the camel itself and goes with her when she is sold (the owner, 13
+/// Nov 2026); [by] had it done (null: an owner outside the game's players),
+/// [knownBy] are the players who know of it (he, and a buyer whose vet
+/// found it). No view shows it to anyone else; what anyone sees is how she
+/// looks.
 class Tampering {
-  const Tampering({
-    required this.camelId,
+  Tampering({
     required this.kind,
     required this.strength,
     required this.on,
     required this.until,
-  });
+    this.by,
+    List<OwnerId>? knownBy,
+  }) : knownBy = knownBy ?? [];
 
-  final CamelId camelId;
   final TamperKind kind;
   final int strength;
   final GameDay on;
 
   /// The last day it shows (and can be found).
   final GameDay until;
+  final OwnerId? by;
+  final List<OwnerId> knownBy;
 
   bool activeOn(GameDay day) => day >= on && day <= until;
 
   Map<String, Object?> toJson() => {
-    'camel': camelId.value,
     'kind': kind.name,
     'strength': strength,
     'on': on.value,
     'until': until.value,
+    if (by != null) 'by': by!.value,
+    if (knownBy.isNotEmpty) 'knownBy': [for (final o in knownBy) o.value],
   };
 
   static Tampering fromJson(Map<String, Object?> j) => Tampering(
-    camelId: CamelId(j['camel']! as String),
     kind: TamperKind.values.byName(j['kind']! as String),
     strength: j['strength']! as int,
     on: GameDay(j['on']! as int),
     until: GameDay(j['until']! as int),
+    by: j['by'] == null ? null : OwnerId(j['by']! as String),
+    knownBy: [
+      for (final o in (j['knownBy'] as List<Object?>?) ?? const <Object?>[])
+        OwnerId(o! as String),
+    ],
   );
 }

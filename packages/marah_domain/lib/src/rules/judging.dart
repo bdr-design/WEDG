@@ -2,6 +2,7 @@ import '../catalog/catalog.dart';
 import '../common/rng.dart';
 import '../common/time.dart';
 import '../model/camel.dart';
+import 'balance.dart';
 
 /// What a camel's body shows, and how a judging panel scores it.
 class Judging {
@@ -30,6 +31,12 @@ class Judging {
     }
     final years = c.ageYears(today);
     if (years >= 16) v -= (years - 15) * 1.2;
+    // a secret treatment makes her look finer while it lasts (GDD 7.1)
+    for (final x in c.treatments) {
+      if (x.activeOn(today) && x.kind.traits.contains(t)) {
+        v += Balance.tamperTraitGain(x.kind, x.strength);
+      }
+    }
     return clampDouble(v, 0, 100);
   }
 

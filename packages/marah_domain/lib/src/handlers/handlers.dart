@@ -45,10 +45,17 @@ Result handle(Sim sim, Command cmd) {
     EnterRound() => _enter(sim, p, cmd),
     WithdrawEntry() => _withdraw(sim, p, cmd),
     Tamper() => _tamper(sim, p, cmd),
+    CheckListing() => _checkListing(sim, p, cmd),
   };
 }
 
 Ok _ok(Sim sim) => Ok(sim.drain());
+
+/// The balance is below zero (a fine larger than the money, GDD 7.1): no
+/// camel is bought and nothing built till it is paid (the owner, 13 Nov
+/// 2026).
+Err _inDebt(Sim sim, PlayerState p) =>
+    _err(sim, ErrorCode.inDebt, {'debt': -p.cash.value});
 Err _err(Sim sim, ErrorCode code, [Map<String, Object> params = const {}]) =>
     Err(DomainError(code, params), sim.drain());
 
@@ -69,6 +76,7 @@ Result _buyAt(Sim sim, PlayerState p, Listing l, Riyal price) {
   final c = sim.world.camels[l.camelId];
   if (c == null || !c.isAlive) return _err(sim, ErrorCode.notFound);
   final move = Riyal(transportToFarm(p, l));
+  if (p.cash.isNegative) return _inDebt(sim, p);
   if (p.cash < price + move) {
     return _err(sim, ErrorCode.insufficientFunds, {
       'needed': (price + move).value,
@@ -115,6 +123,11 @@ void _payout(
   bool commission = true,
 }) {
   sim.pay(seller, price, LedgerCategory.sale, ref: c.id.value);
+  // a strong sale raises the seller's name in the family (GDD 8)
+  if (price.value >=
+      Valuation.value(c, sim.today).value * Balance.strongSaleOver) {
+    raiseReputation(seller, c.category, Balance.reputationForStrongSale);
+  }
   if (!commission) return;
   sim.pay(
     seller,
@@ -139,6 +152,7 @@ Result _bargain(Sim sim, PlayerState p, Bargain cmd) {
   // over the floor was refused for money without using a try, one under it
   // was answered, and the floor could be found by halving)
   final move = Riyal(transportToFarm(p, l));
+  if (p.cash.isNegative) return _inDebt(sim, p);
   if (p.cash < offer + move) {
     return _err(sim, ErrorCode.insufficientFunds, {
       'needed': (offer + move).value,
@@ -251,8 +265,10 @@ Riyal quickSalePrice(Camel c, Sim sim) {
     c.id.value,
     sim.today.value ~/ 7,
   ]).normal(sd: Balance.brokerEyeSd);
+  final rep = sim.player(c.ownerId)?.reputationIn(c.category);
   return marketRound(
     Valuation.value(c, sim.today).value *
+        (rep == null ? 1 : Balance.reputationPriceFactor(rep)) *
         Balance.quickSaleFactor *
         (1 +
             clampDouble(
@@ -433,10 +449,8 @@ Result _treat(Sim sim, PlayerState p, Treat cmd) {
     ),
   );
   // the vet may see a treatment on it (GDD 7.1)
-  for (final t in [...p.tamperings]) {
-    if (t.camelId == camel.id &&
-        t.activeOn(sim.today) &&
-        rng.chance(Balance.vetCatchChance)) {
+  for (final t in [...camel.treatments]) {
+    if (t.activeOn(sim.today) && rng.chance(Balance.vetCatchChance)) {
       TamperingSystem.foundOutside(sim, p, camel, t);
       break;
     }
@@ -478,7 +492,9 @@ Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
       ? Provisions.tankerPrice(cmd.tanker)
       : Provisions.unitPrice(cmd.supply, p.farm.region);
   final cost = Riyal((unit * cmd.units).round());
-  if (p.cash < cost) {
+  // in debt (a fine larger than the money, GDD 7.1), feed and water still
+  // come, on credit (the owner, 13 Nov 2026)
+  if (!p.cash.isNegative && p.cash < cost) {
     return _err(sim, ErrorCode.insufficientFunds, {'needed': cost.value});
   }
   sim.pay(
@@ -529,6 +545,9 @@ Result _shepherds(Sim sim, PlayerState p, SetShepherds cmd) {
 DomainError? cannotBuild(PlayerState p, Facility f) {
   if (p.farm.hasOrBuilding(f) >= f.most) {
     return const DomainError(ErrorCode.alreadyBuilt);
+  }
+  if (p.cash.isNegative) {
+    return DomainError(ErrorCode.inDebt, {'debt': -p.cash.value});
   }
   if (p.cash.value < f.price) {
     return DomainError(ErrorCode.insufficientFunds, {'needed': f.price});
@@ -636,8 +655,9 @@ DomainError? cannotTamper(
   if (strength < 1 || strength > 3) {
     return const DomainError(ErrorCode.invalidAmount);
   }
-  if (p.tamperings.any(
-    (t) => t.camelId == c.id && t.kind == kind && t.activeOn(sim.today),
+  // (one he knows of; a kind already in her unknown to him is not told)
+  if (c.treatments.any(
+    (t) => t.kind == kind && t.activeOn(sim.today) && t.knownBy.contains(p.id),
   )) {
     return const DomainError(ErrorCode.alreadyTreated);
   }
@@ -654,13 +674,14 @@ Result _tamper(Sim sim, PlayerState p, Tamper cmd) {
   if (problem != null) return Err(problem, sim.drain());
   final price = ContestRules.tamperPrice(cmd.kind, cmd.strength);
   sim.pay(p, Riyal(-price), LedgerCategory.tampering, ref: c!.id.value);
-  p.tamperings.add(
+  c.treatments.add(
     Tampering(
-      camelId: c.id,
       kind: cmd.kind,
       strength: cmd.strength,
       on: sim.today,
       until: sim.today + (cmd.kind.lastsDays - 1),
+      by: p.id,
+      knownBy: [p.id],
     ),
   );
   sim.emit(
@@ -672,6 +693,50 @@ Result _tamper(Sim sim, PlayerState p, Tamper cmd) {
       kind: cmd.kind,
       strength: cmd.strength,
       price: price,
+    ),
+  );
+  return _ok(sim);
+}
+
+/// A vet's look at a camel for sale before buying (GDD 7.1; the owner, 13
+/// Nov 2026): paid, and each treatment in her found with the vet's chance;
+/// what he finds the buyer knows from then on. Nothing is reported: he is
+/// the buyer's vet.
+Result _checkListing(Sim sim, PlayerState p, CheckListing cmd) {
+  final l = sim.world.listings[cmd.listing];
+  final c = l == null ? null : sim.world.camels[l.camelId];
+  if (l == null || c == null || !c.isAlive) {
+    return _err(sim, ErrorCode.notFound);
+  }
+  if (l.sellerId == p.id) return _err(sim, ErrorCode.ownListing);
+  if (p.cash.value < Balance.vetCheckFee) {
+    return _err(sim, ErrorCode.insufficientFunds, {
+      'needed': Balance.vetCheckFee,
+    });
+  }
+  sim.pay(
+    p,
+    const Riyal(-Balance.vetCheckFee),
+    LedgerCategory.vet,
+    ref: c.id.value,
+  );
+  final rng = sim.rng(['vet-check', c.id.value, p.id.value]);
+  final found = <TamperKind>[];
+  for (final t in c.treatments) {
+    if (!t.activeOn(sim.today)) continue;
+    if (t.knownBy.contains(p.id) || rng.chance(Balance.vetCheckChance)) {
+      if (!t.knownBy.contains(p.id)) t.knownBy.add(p.id);
+      found.add(t.kind);
+    }
+  }
+  sim.emit(
+    ListingChecked(
+      sim.today,
+      owner: p.id,
+      camel: c.id,
+      name: c.name,
+      listing: l.id,
+      found: found,
     ),
   );
   return _ok(sim);

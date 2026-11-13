@@ -230,6 +230,8 @@ class SnapshotJson {
     'expiresOn': l.expiresOn.value,
     'bargainsLeft': l.bargainsLeft,
     'isMine': l.isMine,
+    if (l.knownTreatments.isNotEmpty)
+      'treatments': [for (final k in l.knownTreatments) k.name],
     'offers': [
       for (final o in l.offers)
         {

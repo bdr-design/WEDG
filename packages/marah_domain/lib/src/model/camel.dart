@@ -1,6 +1,7 @@
 import '../catalog/catalog.dart';
 import '../common/ids.dart';
 import '../common/time.dart';
+import 'tampering.dart';
 
 /// Where a camel is in its life. Records are never deleted: sold and dead
 /// camels stay in the registry so pedigrees, offspring records and history
@@ -163,7 +164,9 @@ class Camel {
     this.lastPlayerOwner,
     this.bannedThrough,
     List<Placing>? placings,
-  }) : placings = placings ?? [];
+    List<Tampering>? treatments,
+  }) : placings = placings ?? [],
+       treatments = treatments ?? [];
 
   final CamelId id;
   String name;
@@ -209,6 +212,10 @@ class Camel {
   /// camel of its owner's (GDD 7.1; research section 3, [102]).
   int? bannedThrough;
 
+  /// Secret treatments in her (GDD 7.1): hidden like [genes]; what shows is
+  /// how she looks (Judging.observed).
+  final List<Tampering> treatments;
+
   /// Everything that can change after the camel is created, in a fixed
   /// order. The store compares this with what it last wrote and rewrites
   /// the row only when something differs (exact, no hashing).
@@ -236,6 +243,12 @@ class Camel {
     placings.length,
     lastPlayerOwner?.value,
     bannedThrough,
+    for (final t in treatments) ...[
+      t.kind.index,
+      t.strength,
+      t.until.value,
+      t.knownBy.length,
+    ],
   ];
   final List<Placing> placings;
 
@@ -279,6 +292,8 @@ class Camel {
     'lastPlayerOwner': lastPlayerOwner?.value,
     if (bannedThrough != null) 'bannedThrough': bannedThrough,
     'placings': [for (final p in placings) p.toJson()],
+    if (treatments.isNotEmpty)
+      'treatments': [for (final t in treatments) t.toJson()],
   };
 
   static Camel fromJson(Map<String, Object?> j) {
@@ -324,6 +339,10 @@ class Camel {
       placings: [
         for (final p in j['placings']! as List<Object?>)
           Placing.fromJson(p! as Map<String, Object?>),
+      ],
+      treatments: [
+        for (final t in (j['treatments'] as List<Object?>?) ?? const [])
+          Tampering.fromJson(t! as Map<String, Object?>),
       ],
     );
   }

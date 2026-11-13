@@ -156,6 +156,7 @@ class ListingCard {
     required this.bargainsLeft,
     required this.isMine,
     required this.offers,
+    this.knownTreatments = const [],
   });
 
   final ListingId id;
@@ -174,6 +175,9 @@ class ListingCard {
   /// Buyers' offers (only on the player's own listings).
   final List<OfferCard> offers;
 
+  /// Treatments in her the player's vet found (never one he was not told).
+  final List<TamperKind> knownTreatments;
+
   @override
   bool operator ==(Object other) =>
       other is ListingCard &&
@@ -187,7 +191,8 @@ class ListingCard {
       other.expiresOn == expiresOn &&
       other.bargainsLeft == bargainsLeft &&
       other.isMine == isMine &&
-      _listEquals(other.offers, offers);
+      _listEquals(other.offers, offers) &&
+      _listEquals(other.knownTreatments, knownTreatments);
 
   @override
   int get hashCode => Object.hash(

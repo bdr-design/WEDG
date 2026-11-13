@@ -251,6 +251,7 @@ class ContestRound {
     List<Entry>? entries,
     this.results,
     this.field,
+    this.entrants = 0,
     this.caught = 0,
     this.fines = 0,
     this.announceOn,
@@ -276,6 +277,9 @@ class ContestRound {
   /// How many entries were left after each stage (index = Stage.index), the
   /// whole field counted: the day's story for the screens.
   List<int>? field;
+
+  /// Entries on the day, before the first stage: the N of "5th of N".
+  int entrants;
 
   /// Entries the tampering experts and the medical committee caught.
   int caught;
@@ -304,6 +308,7 @@ class ContestRound {
     'entries': [for (final e in entries) e.toJson()],
     'results': results == null ? null : [for (final r in results!) r.toJson()],
     'field': field,
+    'entrants': entrants,
     'caught': caught,
     'fines': fines,
     'announceOn': announceOn?.value,
@@ -336,6 +341,7 @@ class ContestRound {
     field: j['field'] == null
         ? null
         : [for (final n in j['field']! as List<Object?>) n! as int],
+    entrants: j['entrants']! as int,
     caught: j['caught']! as int,
     fines: j['fines']! as int,
     announceOn: j['announceOn'] == null

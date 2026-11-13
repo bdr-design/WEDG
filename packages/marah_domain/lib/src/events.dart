@@ -363,6 +363,17 @@ sealed class DomainEvent {
         festival: j['festival'] as String?,
         fine: j['fine']! as int,
       ),
+      'listingChecked' => ListingChecked(
+        day,
+        owner: owner,
+        camel: camel,
+        name: j['name']! as String,
+        listing: ListingId(j['listing']! as String),
+        found: [
+          for (final k in j['found']! as List<Object?>)
+            TamperKind.values.byName(k! as String),
+        ],
+      ),
       'festivalIntegrity' => FestivalIntegrity(
         day,
         owner: owner,
@@ -1269,5 +1280,29 @@ final class FestivalIntegrity extends DomainEvent {
     'festival': festival,
     'cases': cases,
     'fines': fines,
+  };
+}
+
+/// The vet looked at a camel for sale for the owner: the treatments he found
+/// in her (none, or what he found; never what he missed).
+final class ListingChecked extends DomainEvent {
+  const ListingChecked(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.name,
+    required this.listing,
+    required this.found,
+  });
+  final String name;
+  final ListingId listing;
+  final List<TamperKind> found;
+  @override
+  String get type => 'listingChecked';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'name': name,
+    'listing': listing.value,
+    'found': [for (final k in found) k.name],
   };
 }

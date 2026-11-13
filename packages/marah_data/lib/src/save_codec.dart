@@ -322,8 +322,9 @@ class SaveCodec {
   }
 
   /// v7 to v8 (the Saudi round system and cheating, GDD 7 and 7.1; the
-  /// owner's decisions of 13 Nov 2026): no one is barred and no camel is;
-  /// no player has a treatment, and his name in each family (الصيت) starts
+  /// owner's decisions of 13 Nov 2026): no one is barred and no camel is
+  /// (a camel's ban and treatments are left out when it has none); a
+  /// player's name in each family (الصيت) starts
   /// where a new game's does. A festival planned before keeps its rounds as
   /// they were registered, all on its old judging day: each round a single
   /// round of its colour, sex and one age class (kept as legacyAge, its
@@ -338,13 +339,8 @@ class SaveCodec {
     final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
     final world = data['world']! as Map<String, Object?>;
     world['bans'] = <String, Object?>{};
-    for (final c in (world['camels'] as List<Object?>?) ?? const []) {
-      (c! as Map<String, Object?>)['bannedThrough'] = null;
-    }
     for (final pl in (data['players'] as List<Object?>?) ?? const []) {
-      (pl! as Map<String, Object?>)
-        ..['tamperings'] = <Object?>[]
-        ..['reputation'] = <String, Object?>{};
+      (pl! as Map<String, Object?>)['reputation'] = <String, Object?>{};
     }
     const young = {'haq', 'laqi', 'jatha'};
     for (final fe in (world['festivals'] as List<Object?>?) ?? const []) {
@@ -381,6 +377,9 @@ class SaveCodec {
               },
           ]
           ..['field'] = null
+          // the day's field: its rivals and the registered entries
+          ..['entrants'] =
+              (r['rivals']! as int) + (r['entries']! as List<Object?>).length
           ..['caught'] = 0
           ..['fines'] = 0
           ..['announceOn'] = null

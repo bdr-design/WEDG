@@ -67,6 +67,11 @@ enum ErrorCode {
   /// The camel has that treatment already.
   alreadyTreated,
 
+  /// The balance is below zero ({'debt'}): no camel bought and nothing
+  /// built till it is paid; feed and water still come (the owner, 13 Nov
+  /// 2026).
+  inDebt,
+
   /// An order would overfill the feed store or the water tank ({'room'}: units
   /// that still fit).
   storeFull,

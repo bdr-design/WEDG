@@ -60,6 +60,7 @@ class Presenter {
     expiresOn: l.expiresOn,
     bargainsLeft: v.bargainsLeft(l.id),
     isMine: l.sellerId == viewer,
+    knownTreatments: l.knownTreatments,
     offers: l.sellerId == viewer
         ? [
             for (final o in v.offersOn(l.id))
@@ -540,13 +541,11 @@ class Presenter {
     if (f == null) return null;
     final herd = v.herd;
     final byId = {for (final c in herd) c.id: c};
-    // the best first: a round lists the best few that may enter
-    final best = [for (final c in herd) (c, c.quality)]
-      ..sort((a, b) {
-        final k = b.$2.compareTo(a.$2);
-        return k != 0 ? k : a.$1.id.value.compareTo(b.$1.id.value);
-      });
-    final ranked = [for (final (c, _) in best) c];
+    // each camel's look worked out once, and only for one a round could
+    // take (the review: the whole herd's, sorted, was most of the time)
+    final looks = <CamelId, double>{};
+    double look(CamelView c) => looks[c.id] ??= c.quality;
+
     return FestivalDetail(
       card: festival(f),
       distanceKm: f.distanceKm,
@@ -572,7 +571,7 @@ class Presenter {
                     if (byId[c] case final cv?) card(cv, v),
                 ],
             ],
-            eligible: _eligible(v, f, r, ranked),
+            eligible: _eligible(v, f, r, herd, look),
             entryFee: v.entryFee(f.id, 1),
             judged: r.judged,
             announced: r.announced,
@@ -597,8 +596,18 @@ class Presenter {
     FestivalView f,
     RoundView r,
     List<CamelView> herd,
+    double Function(CamelView) look,
   ) {
     if (v.mayEnter(f.id, r.id) != null) return const [];
+    List<CamelView> best(Iterable<CamelView> cs) {
+      final keyed = [for (final c in cs) (c, look(c))]
+        ..sort((a, b) {
+          final k = b.$2.compareTo(a.$2);
+          return k != 0 ? k : a.$1.id.value.compareTo(b.$1.id.value);
+        });
+      return [for (final (c, _) in keyed) c];
+    }
+
     final out = <CamelCard>[];
     if (r.kind == RoundKind.fahal) {
       final kids = <CamelId, List<CamelId>>{};
@@ -606,29 +615,28 @@ class Presenter {
         final sire = c.sire?.id;
         if (sire != null) (kids[sire] ??= []).add(c.id);
       }
-      for (final c in herd) {
+      bool sires(CamelView c) =>
+          c.sex == Sex.male && (kids[c.id]?.length ?? 0) >= r.size - 1;
+      for (final c in best(herd.where(sires))) {
         if (out.length >= eligibleShown) break;
-        final mine = kids[c.id];
-        if (c.sex != Sex.male || mine == null || mine.length < r.size - 1) {
-          continue;
-        }
-        final group = [c.id, ...mine.take(r.size - 1)];
+        final group = [c.id, ...kids[c.id]!.take(r.size - 1)];
         if (v.canEnter(f.id, r.id, group) == null) out.add(card(c, v));
       }
       return out;
     }
+    // the cheap checks first: a herd of thousands, rounds by the dozen
     final age = r.legacyAge;
-    for (final c in herd) {
-      if (out.length >= eligibleShown) break;
-      // the cheap checks first: a herd of thousands, rounds by the dozen
+    bool may(CamelView c) {
       final days = r.day.daysSince(c.born);
-      if ((r.category == null || c.category == r.category) &&
+      return (r.category == null || c.category == r.category) &&
           (r.sex == null || c.sex == r.sex) &&
           (age != null ||
-              ContestRules.ageFits(r.kind, AgeClass.fromDays(days), days)) &&
-          v.canEnter(f.id, r.id, [c.id]) == null) {
-        out.add(card(c, v));
-      }
+              ContestRules.ageFits(r.kind, AgeClass.fromDays(days), days));
+    }
+
+    for (final c in best(herd.where(may))) {
+      if (out.length >= eligibleShown) break;
+      if (v.canEnter(f.id, r.id, [c.id]) == null) out.add(card(c, v));
     }
     return out;
   }

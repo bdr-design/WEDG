@@ -143,7 +143,11 @@ void main() {
         kind['festivalRisk'],
         everyElement(isIn(['low', 'medium', 'high'])),
       );
-      expect(kind.values.whereType<double>(), isEmpty);
+      // (no fraction anywhere: JavaScript holds whole numbers as doubles)
+      expect(
+        kind.values.whereType<num>().where((n) => n != n.roundToDouble()),
+        isEmpty,
+      );
     }
     expect(snap['tamperings'], isEmpty);
     final none = await page.call('festival', {'festival': 'nope'});

@@ -141,6 +141,13 @@ final class WithdrawEntry extends Command {
 
 // --------------------------------------------------------------- cheating
 
+/// Has a vet look at a camel for sale before buying: each treatment in her
+/// may be found (GDD 7.1).
+final class CheckListing extends Command {
+  const CheckListing(super.actor, this.listing);
+  final ListingId listing;
+}
+
 /// Has [camel] secretly treated ([strength] 1 light to 3 heavy): it looks
 /// better on judging day, and may be found (GDD 7.1).
 final class Tamper extends Command {
