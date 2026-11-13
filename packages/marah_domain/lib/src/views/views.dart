@@ -327,14 +327,9 @@ class GameView {
     if (fest == null || round == null) {
       return const DomainError(ErrorCode.notFound);
     }
-    return Eligibility.canEnter(
-      _w,
-      fest,
-      round,
-      [for (final c in camels) _w.camels[c]],
-      viewer,
-      today,
-    );
+    return handlers.cannotEnter(_sim, me, fest, round, [
+      for (final c in camels) _w.camels[c],
+    ]);
   }
 
   /// Why the player may not enter [r] today whatever camels he brings (the

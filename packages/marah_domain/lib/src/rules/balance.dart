@@ -374,10 +374,27 @@ class Balance {
   /// fined [outsideFine] for each and his name lowered.
   static const saleCheckPerLevel = 0.35;
 
+  /// (balance) The most one feature moves for each level: 7, so a heavy
+  /// treatment's 21 stays under how far an untreated camel's neighbouring
+  /// features differ in nine of ten (21.9, measured over 3,000 market
+  /// camels: the median 8.9, the 99th percentile 34.5). The GDD: it shows in
+  /// her look, not that she was treated. A kind whose features weigh little
+  /// (dye: the coat and the bearing) lifts the look less.
+  static const tamperFeatureCapPerLevel = 7.0;
+
   /// The points it adds to each of its features.
-  static double tamperTraitGain(TamperKind kind, int strength) =>
-      tamperLiftPerLevel *
-      strength /
+  static double tamperTraitGain(TamperKind kind, int strength) {
+    final spread =
+        tamperLiftPerLevel / kind.traits.fold(0.0, (s, t) => s + t.weight);
+    return (spread < tamperFeatureCapPerLevel
+            ? spread
+            : tamperFeatureCapPerLevel) *
+        strength;
+  }
+
+  /// The lift a kind gives the weighted look at [strength].
+  static double tamperLift(TamperKind kind, int strength) =>
+      tamperTraitGain(kind, strength) *
       kind.traits.fold(0.0, (s, t) => s + t.weight);
 
   /// (field) Caught at a festival: disqualified, fined, and the owner and

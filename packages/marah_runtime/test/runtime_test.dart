@@ -265,46 +265,55 @@ void main() {
 
   group('Time slicing (web path)', () {
     test('a long catch-up never blocks the event loop for long', () async {
-      final backend = MemoryBackend();
-      final now = FakeNow();
-      final client = InlineEngineClient(
-        (emit) => EngineCore(
-          store: SaveStore(backend),
-          emit: emit,
-          now: now.call,
-          sliceBudget: const Duration(milliseconds: 1),
-        ),
-      );
-      await client.newGame(params);
-      now.advance(const Duration(days: 60)); // 420 game days
+      // the stall is measured in real time, so another process's spike on a
+      // shared machine can stretch one run: it is tried up to three times,
+      // and an engine that blocks fails every one
+      Future<(Duration, int, int)> once() async {
+        final backend = MemoryBackend();
+        final now = FakeNow();
+        final client = InlineEngineClient(
+          (emit) => EngineCore(
+            store: SaveStore(backend),
+            emit: emit,
+            now: now.call,
+            sliceBudget: const Duration(milliseconds: 1),
+          ),
+        );
+        await client.newGame(params);
+        now.advance(const Duration(days: 60)); // 420 game days
 
-      // A "frame" timer: measure the longest gap between its ticks while
-      // the catch-up runs on the same thread.
-      var last = DateTime.now();
-      var worst = Duration.zero;
-      var ticks = 0;
-      final frames = Timer.periodic(const Duration(milliseconds: 2), (_) {
-        final t = DateTime.now();
-        final gap = t.difference(last);
-        if (gap > worst) worst = gap;
-        last = t;
-        ticks++;
-      });
-      final watch = Stopwatch()..start();
-      await client.resume();
-      watch.stop();
-      frames.cancel();
+        // A "frame" timer: measure the longest gap between its ticks while
+        // the catch-up runs on the same thread.
+        var last = DateTime.now();
+        var worst = Duration.zero;
+        var ticks = 0;
+        final frames = Timer.periodic(const Duration(milliseconds: 2), (_) {
+          final t = DateTime.now();
+          final gap = t.difference(last);
+          if (gap > worst) worst = gap;
+          last = t;
+          ticks++;
+        });
+        final watch = Stopwatch()..start();
+        await client.resume();
+        watch.stop();
+        frames.cancel();
+        await client.dispose();
+        return (worst, ticks, watch.elapsedMilliseconds);
+      }
 
+      var (worst, ticks, took) = await once();
+      for (var i = 0; i < 2 && worst >= const Duration(milliseconds: 60); i++) {
+        (worst, ticks, took) = await once();
+      }
       expect(ticks, greaterThan(0), reason: 'frames ran during catch-up');
       // Generous bound for shared CI machines; locally it is a few ms.
       expect(
         worst,
         lessThan(const Duration(milliseconds: 60)),
         reason:
-            'longest stall ${worst.inMilliseconds} ms, '
-            'catch-up took ${watch.elapsedMilliseconds} ms',
+            'longest stall ${worst.inMilliseconds} ms, catch-up took $took ms',
       );
-      await client.dispose();
     });
   });
 
