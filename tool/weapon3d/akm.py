@@ -19,7 +19,8 @@ import numpy as np
 from mathutils import Matrix, Vector
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'out'
-RENDER = len(sys.argv) > 2 and sys.argv[2] == 'render'
+RENDER = len(sys.argv) > 2 and sys.argv[2] in ('render', 'quick')
+QUICK = len(sys.argv) > 2 and sys.argv[2] == 'quick'      # the right side only, few samples
 os.makedirs(OUT, exist_ok=True)
 
 # ------------------------------------------------------------------ the texture's blocks (u0, v0, u1, v1)
@@ -58,32 +59,32 @@ def paint_textures(size=512):
     # mapped anywhere in the block join; darker where hands hold it (the handguard's swell, the stock's wrist: by x)
     m = block('wood')
     v = (yy - 0.5) / 0.5
-    lines = 0.5 + 0.5 * np.sin(2 * np.pi * (v * 22 + 0.35 * np.sin(2 * np.pi * (xx * 3 + v * 2)) + 0.12 * np.sin(2 * np.pi * xx * 11)))
-    lines = lines ** 3
+    lines = 0.5 + 0.5 * np.sin(2 * np.pi * (v * 9 + 0.45 * np.sin(2 * np.pi * (xx * 3 + v)) + 0.15 * np.sin(2 * np.pi * xx * 11)))
+    lines = lines ** 2
     streak = fine(2, 0.10) + 0.6 * np.kron(rng.random((size // 64 + 1, size // 4 + 1)).astype(np.float32) - 0.5, np.ones((64, 4), np.float32))[:size, :size] * 0.12
     x_mm = xx * LENGTH
     held = np.exp(-((x_mm - 585) / 60) ** 2) * 0.30 + np.exp(-((x_mm - 222) / 28) ** 2) * 0.26
-    base = np.array([0.34, 0.105, 0.035], np.float32)      # amber-red shellac over birch, darkened by years of handling
-    dark = np.array([0.15, 0.045, 0.018], np.float32)
-    w = (1 - 0.45 * lines)[..., None] * base + (0.45 * lines)[..., None] * dark
+    base = np.array([0.44, 0.17, 0.065], np.float32)      # amber-red shellac over birch, darkened by years of handling
+    dark = np.array([0.24, 0.085, 0.035], np.float32)
+    w = (1 - 0.5 * lines)[..., None] * base + (0.5 * lines)[..., None] * dark
     w = w * (1 + streak[..., None]) * (1 - held[..., None])
     col[m] = w[m]
     orm[..., 1][m] = (0.42 + 0.10 * lines + 0.25 * held)[m]
     # black oxide steel: a deep satin black
     m = block('oxide')
-    g = 0.040 + fine(1, 0.012) + fine(8, 0.008)
+    g = 0.085 + fine(1, 0.02) + fine(8, 0.012)
     col[m] = np.stack([g, g, g * 1.08], -1)[m]
     orm[..., 1][m] = (0.50 + fine(2, 0.08))[m]
     orm[..., 2][m] = 0.9
     # the edges every used rifle shows: the black worn thin to dark steel
     m = block('edge')
-    g = 0.16 + fine(1, 0.06) + fine(4, 0.05)
+    g = 0.30 + fine(1, 0.06) + fine(4, 0.05)
     col[m] = np.stack([g, g, g * 1.03], -1)[m]
     orm[..., 1][m] = (0.42 + fine(2, 0.08))[m]
     orm[..., 2][m] = 1.0
     # bare bright steel: the bolt carrier, the muzzle, the selector's arc
     m = block('bright')
-    g = 0.50 + fine(1, 0.07) + fine(4, 0.05)
+    g = 0.62 + fine(1, 0.07) + fine(4, 0.05)
     col[m] = np.stack([g, g, g * 1.02], -1)[m]
     orm[..., 1][m] = (0.34 + fine(2, 0.08))[m]
     orm[..., 2][m] = 1.0
@@ -91,13 +92,13 @@ def paint_textures(size=512):
     m = block('bakelite')
     mot = np.kron(rng.random((size // 6 + 1, size // 6 + 1)).astype(np.float32), np.ones((6, 6), np.float32))[:size, :size]
     mot = 0.6 * mot + 0.4 * np.roll(mot, 3, 0)
-    b = np.array([0.20, 0.050, 0.022], np.float32)[None, None, :] * (0.65 + 0.7 * mot[..., None])
+    b = np.array([0.20, 0.07, 0.04], np.float32)[None, None, :] * (0.6 + 0.8 * mot[..., None])
     col[m] = b[m]
     orm[..., 1][m] = 0.30
     # the sling: khaki-olive canvas webbing
     m = block('canvas')
     weave = 0.5 + 0.5 * np.sin(2 * np.pi * xx * size / 3) * np.sin(2 * np.pi * yy * size / 3)
-    c = np.array([0.30, 0.27, 0.15], np.float32)[None, None, :] * (0.85 + 0.2 * weave[..., None])
+    c = np.array([0.36, 0.33, 0.20], np.float32)[None, None, :] * (0.85 + 0.2 * weave[..., None])
     col[m] = c[m]
     orm[..., 1][m] = 0.95
     m = block('bore')
@@ -258,8 +259,9 @@ class Build:
                 if name_b == 'wood':
                     # the layer lines run along the rifle: u is the place along it, v wraps round the section
                     u = min(max(co.x / LENGTH, 0.004), 0.996)
-                    across = co.z if abs(n.y) > 0.55 else co.y
-                    fr = (across / 46.0) % 1.0
+                    # the layers are sheets standing on edge, side by side across the stock: their lines show as
+                    # contours where the wood is rounded, close together seen from above, far apart on the flat sides
+                    fr = ((co.y + 0.2 * co.z) / 46.0) % 1.0
                     lp[uv].uv = (u, v0 + mv + fr * (v1 - v0 - 2 * mv))
                 else:
                     a = (co.x * 0.0131 + co.z * 0.0173 + co.y * 0.0071) % 1.0
@@ -286,52 +288,52 @@ def rifle(detail=0):
 
     # the fixed laminated stock: the straight comb a little under the bore's line, deep at the butt, slim at the wrist
     p = b.piece()
-    b.loft(p, [(3, -68, 90, 57, 16.5, 4.0), (40, -63, 90, 52, 18.5, 3.4), (130, -41, 90, 36, 18, 3.0), (212, -14, 90, 25.5, 16.5, 3.0), (243, -11, 90, 24.5, 15.5, 3.4)], n=N(14))
+    b.loft(p, [(3, -48.5, 90, 45, 16.5, 4.0), (45, -44.5, 90, 43.5, 18.5, 3.4), (130, -30.5, 90, 34.5, 18, 3.0), (205, -17, 90, 25, 16.5, 3.0), (238, -13, 90, 23, 15.5, 3.4)], n=N(14))
     b.add(p, 'wood')
     p = b.piece()      # the steel butt plate
-    b.loft(p, [(0, -68, 90, 58, 17.3, 4.0), (3.6, -68, 90, 58, 17.3, 4.0)], n=N(14))
+    b.loft(p, [(0, -48.5, 90, 46, 17.3, 4.0), (3.6, -48.5, 90, 46, 17.3, 4.0)], n=N(14))
     b.add(p, 'oxide', 'bright', 0.9)
 
     # the stamped receiver and its rear end
     p = b.piece()
-    b.prism(p, [(240, -36), (252, -44), (470, -44), (470, 18), (240, 18)], -16.5, 16.5)
+    b.prism(p, [(235, -30), (249, -40), (491, -40), (491, 12), (235, 12)], -16.5, 16.5)
     b.add(p, 'oxide', 'edge', 0.8)
     # the ribbed stamped dust cover, its arch from the receiver's rails
-    arch = [(16.5 * math.cos(t), 18 + 16.0 * math.sin(t)) for t in np.linspace(0, math.pi, N(10))]
+    arch = [(16.5 * math.copysign(abs(math.cos(t)) ** 0.6, math.cos(t)), 12 + 22.0 * math.sin(t) ** 0.6) for t in np.linspace(0, math.pi, N(10))]
     p = b.piece()
-    b.prism_x(p, arch, 250, 440)
+    b.prism_x(p, arch, 245, 453)
     b.add(p, 'oxide', 'edge', 0.7, min_angle=50)
     if hi:
-        for x in (290, 327, 364, 401):      # its cross ribs
+        for x in (288, 328, 368, 408):      # its cross ribs
             p = b.piece()
-            b.prism_x(p, [(17.3 * math.cos(t), 18 + 16.9 * math.sin(t)) for t in np.linspace(0.10, math.pi - 0.10, 9)], x, x + 6)
+            b.prism_x(p, [(17.3 * math.copysign(abs(math.cos(t)) ** 0.6, math.cos(t)), 12 + 22.9 * math.sin(t) ** 0.6) for t in np.linspace(0.12, math.pi - 0.12, 9)], x, x + 6)
             b.add(p, 'oxide', 'edge', 0.5, min_angle=50)
         # the rivets of the front and rear trunnions and the three axis pins, each side
         for side in (1, -1):
-            for (x, z, r) in [(448, 8, 2.4), (462, 8, 2.4), (448, -8, 2.4), (462, -8, 2.4), (455, -30, 2.4), (249, 4, 2.4), (249, -14, 2.4), (318, -12, 2.0), (339, -5, 2.0), (301, -9, 2.0), (392, -28, 2.6)]:
+            for (x, z, r) in [(466, 8, 2.4), (481, 8, 2.4), (466, -8, 2.4), (481, -8, 2.4), (473, -30, 2.4), (244, 4, 2.4), (244, -14, 2.4), (322, -12, 2.0), (343, -5, 2.0), (304, -9, 2.0), (410, -22, 3.2)]:
                 p = b.piece()
                 b.tube(p, (x, side * 16.4, z), (x, side * 17.3, z), r, n=8)
                 b.add(p, 'oxide', 'edge', 0.3)
         # the bolt carrier's bare steel seen through the right side's slot
         p = b.piece()
-        b.box(p, 366, 438, RIGHT * 17.0, RIGHT * 16.4, 6, 17.4)
+        b.box(p, 374, 446, RIGHT * 16.9, RIGHT * 16.4, 3, 11.4)
         b.add(p, 'bright')
     # the charging handle, on the right, the bolt closed
     p = b.piece()
-    b.prism(p, [(421, 8.5), (436, 8.5), (437, 16.5), (424, 17.5)], -40, -16.5) if RIGHT < 0 else None
+    b.prism(p, [(431, 3.5), (445, 3.5), (446, 11), (434, 12)], -39, -16.5)
     b.add(p, 'oxide', 'bright', 0.9)
 
     # the selector lever on the right, up at safe, with its finger tab; and its arc worn bright into the receiver
     if hi:
         p = b.piece()
-        b.prism(p, [(261, 2), (263, -4), (270, -6), (276, -2), (300, 5), (364, 9), (364, 16), (300, 14), (268, 9)], RIGHT * 18.6, RIGHT * 17.2)
+        b.prism(p, [(255, -3), (257, -9), (264, -11), (270, -7), (296, -1), (362, 3), (362, 10), (296, 8), (262, 4)], RIGHT * 18.6, RIGHT * 17.2)
         b.add(p, 'oxide', 'edge', 0.4)
         p = b.piece()
-        b.box(p, 356, 364, RIGHT * 25, RIGHT * 18.6, 9, 14)
+        b.box(p, 354, 362, RIGHT * 25, RIGHT * 18.6, 3, 8)
         b.add(p, 'oxide', 'bright', 0.6)
         p = b.piece()      # the arc: a thin strip lying on the receiver's side
-        c, r0, r1 = Vector((268, 0, 2)), 93.0, 95.0
-        angs = np.linspace(math.radians(4), math.radians(-21), 8)
+        c, r0, r1 = Vector((262, 0, -3)), 97.5, 98.7
+        angs = np.linspace(math.radians(1), math.radians(-20), 8)
         ring = [(c.x + r * math.cos(a), c.z + r * math.sin(a)) for a in angs for r in (r0,)] + [(c.x + r1 * math.cos(a), c.z + r1 * math.sin(a)) for a in angs[::-1]]
         vs = [p.verts.new((x, RIGHT * 16.56, z)) for x, z in ring]
         p.faces.new(vs)
@@ -339,20 +341,20 @@ def rifle(detail=0):
 
     # the rear sight: its block ahead of the dust cover, the tangent leaf hinged at its front, the notch at the rear
     p = b.piece()
-    b.prism(p, [(440, 18), (500, 18), (512, 26), (512, 34), (498, 40), (444, 40), (440, 34)], -11, 11)
+    b.prism(p, [(453, 12), (515, 12), (527, 22), (527, 32), (512, 38), (457, 38), (453, 33)], -11, 11)
     b.add(p, 'oxide', 'edge', 0.7)
     p = b.piece()
-    b.prism(p, [(446, 40), (540, 37), (540, 40), (449, 44), (449, 50), (446, 50)], -5, 5)
+    b.prism(p, [(461, 38), (556, 35.5), (556, 39), (464, 43), (464, 49), (461, 49)], -5, 5)
     b.add(p, 'oxide', 'edge', 0.4)
     if hi:
         p = b.piece()      # the slider and its catch
-        b.box(p, 500, 510, -9, 9, 37.5, 44.5)
+        b.box(p, 516, 526, -9, 9, 36, 43)
         b.add(p, 'oxide', 'edge', 0.5)
 
     # the pistol grip (phenolic), raked back
     rake = math.radians(20)
     d = Vector((-math.sin(rake), 0, -math.cos(rake)))
-    top = Vector((283, 0, -43))
+    top = Vector((275, 0, -39))
     secs = []
     for t, fb, w in [(0, 24, 14.5), (14, 20.5, 14.5), (55, 19, 14), (88, 18.5, 13.5), (99, 16, 12.5)]:
         c = top + d * t
@@ -363,17 +365,17 @@ def rifle(detail=0):
 
     # the trigger guard, the trigger and the magazine catch
     p = b.piece()
-    b.strap(p, [(300, -44), (301, -62), (312, -73), (350, -74), (364, -64), (369, -44)], -6.5, 6.5, 1.6)
+    b.strap(p, [(303, -40), (304, -60), (315, -71), (360, -72), (375, -62), (380, -40)], -6.5, 6.5, 1.8)
     b.add(p, 'oxide', 'edge', 0.3)
     p = b.piece()
-    b.prism(p, [(315, -44), (322, -44), (320.5, -56), (315, -66), (311.5, -65), (315.5, -55)], -3, 3)
+    b.prism(p, [(318, -40), (327, -40), (325.5, -53), (319, -65), (314.5, -64), (319.5, -53)], -3.2, 3.2)
     b.add(p, 'oxide', 'edge', 0.4)
     p = b.piece()
-    b.prism(p, [(369, -44), (377, -44), (378, -60), (372, -64), (369, -58)], -5, 5)
+    b.prism(p, [(377, -40), (384, -40), (385, -56), (380, -62), (377, -56)], -5, 5)
     b.add(p, 'oxide', 'edge', 0.4)
 
     # the 30-round steel magazine: its curve an arc, forward at the foot; ribs on its sides; the floor plate
-    R, x_top, z_top, arc_len = 232.0, 405.0, -44.0, 172.0
+    R, x_top, z_top, arc_len = 131.6, 417.0, -40.0, 157.0
     cx = x_top + R
     def on_arc(s):
         phi = s / R
@@ -391,7 +393,7 @@ def rifle(detail=0):
     b.loft(p, [(x, z, deg, 34.2, 14.6, 7.0), (x2, z2, deg, 34.2, 14.6, 7.0)], n=N(12))
     b.add(p, 'oxide', 'bright', 0.8, min_angle=40)
     if hi:
-        for s in (62, 96, 130):      # the side ribs
+        for s in (52, 84, 116):      # the side ribs
             xa, za, da = on_arc(s)
             xb, zb, db = on_arc(s + 5)
             p = b.piece()
@@ -400,47 +402,47 @@ def rifle(detail=0):
 
     # the barrel, the gas tube above it, the cleaning rod under it
     p = b.piece()
-    b.tube(p, (470, 0, 0), (846, 0, 0), 7.5, n=N(12))
+    b.tube(p, (491, 0, 0), (860, 0, 0), 7.2, n=N(12))
     b.add(p, 'oxide')
     p = b.piece()
-    b.tube(p, (498, 0, 22), (668, 0, 22), 8.2, n=N(10))
+    b.tube(p, (515, 0, 22), (716, 0, 22), 7.6, n=N(10))
     b.add(p, 'oxide')
     if hi:
         p = b.piece()
-        b.tube(p, (668, 0, -12.6), (853, 0, -12.6), 2.7, n=6)
-        b.tube(p, (853, 0, -12.6), (861, 0, -12.6), 3.7, n=6)
+        b.tube(p, (722, 0, -12.4), (862, 0, -12.4), 2.7, n=6)
+        b.tube(p, (862, 0, -12.4), (870, 0, -12.4), 3.7, n=6)
         b.add(p, 'oxide', 'bright', 0.4)
 
     # the laminated handguards: the lower with its palm swells, the upper over the gas tube
     p = b.piece()
-    b.loft(p, [(470, -10, 90, 20, 18, 3.4), (500, -10, 90, 20, 19, 3.2), (545, -10.5, 90, 20.5, 22.5, 3.0), (602, -10.5, 90, 20.5, 22.5, 3.0), (640, -10, 90, 19.5, 19.5, 3.2), (662, -10, 90, 19, 18.5, 3.4)], n=N(14))
+    b.loft(p, [(491, -8, 90, 22, 18, 3.4), (512, -8.5, 90, 22, 19, 3.2), (548, -9, 90, 22, 22.5, 3.0), (596, -9, 90, 22, 22.5, 3.0), (626, -8.5, 90, 21, 19.5, 3.2), (642, -8, 90, 20.5, 18.5, 3.4)], n=N(14))
     b.add(p, 'wood')
     p = b.piece()
-    b.loft(p, [(512, 23, 90, 13.5, 13.5, 2.3), (640, 23, 90, 13.0, 13.0, 2.3)], n=N(12))
+    b.loft(p, [(543, 23, 90, 13.5, 13.5, 2.3), (641, 23, 90, 13.0, 13.0, 2.3)], n=N(12))
     b.add(p, 'wood')
     p = b.piece()      # the handguard's retainer
-    b.box(p, 660, 668, -19.5, 19.5, -30, 10)
+    b.box(p, 640, 648, -19.5, 19.5, -29.5, 13)
     b.add(p, 'oxide', 'edge', 0.6)
 
     # the gas block, slanted forward, with the bayonet lug under it
     p = b.piece()
-    b.prism(p, [(664, -9), (700, -9), (705, -3), (692, 31), (664, 31)], -10, 10)
+    b.prism(p, [(716, -9.5), (742, -9.5), (747, -3), (737, 30.5), (716, 30.5)], -9.5, 9.5)
     b.add(p, 'oxide', 'edge', 0.8)
     if hi:
         p = b.piece()
-        b.box(p, 688, 703, -5, 5, -18, -9)
+        b.box(p, 730, 746, -5, 5, -18, -9)
         b.add(p, 'oxide', 'edge', 0.5)
 
     # the front sight: its tower, the two ears, the post between them
     p = b.piece()
-    b.prism(p, [(806, -9.5), (842, -9.5), (842, 9.5), (836, 9.5), (831, 30), (813, 30), (809, 9.5), (806, 9.5)], -7.5, 7.5)
+    b.prism(p, [(826, -9.5), (858, -9.5), (858, 9.5), (852, 9.5), (847, 29), (833, 29), (830, 9.5), (826, 9.5)], -7.0, 7.0)
     b.add(p, 'oxide', 'edge', 0.7)
     for side in (1, -1):
         p = b.piece()
-        b.prism(p, [(813, 30), (831, 30), (831, 45), (827, 52), (817, 52), (813, 45)], side * 4.6, side * 7.5)
+        b.prism(p, [(833, 29), (847, 29), (847, 43), (844, 50), (836, 50), (833, 43)], side * 4.4, side * 7.0)
         b.add(p, 'oxide', 'bright', 0.6)
     p = b.piece()
-    b.tube(p, (822, 0, 30), (822, 0, 49), 1.3, n=6)
+    b.tube(p, (840, 0, 29), (840, 0, 48.5), 1.3, n=6)
     b.add(p, 'oxide')
 
     # the slanted compensator: its lip low on the right, the bore dark inside it
@@ -451,8 +453,8 @@ def rifle(detail=0):
     for k in range(n):
         t = 2 * math.pi * k / n
         dirv = Vector((0, math.cos(t), math.sin(t)))
-        rear.append(p.verts.new((846, 9.3 * dirv.y, 9.3 * dirv.z)))
-        xf = 872.5 + 7.5 * dirv.dot(lip)
+        rear.append(p.verts.new((858, 9.3 * dirv.y, 9.3 * dirv.z)))
+        xf = 873.5 + 6.5 * dirv.dot(lip)
         front.append(p.verts.new((xf, 9.3 * dirv.y, 9.3 * dirv.z)))
         inner.append(p.verts.new((xf - 2.5, 4.4 * dirv.y, 4.4 * dirv.z)))
     for k in range(n):
@@ -469,7 +471,7 @@ def rifle(detail=0):
             f[b.blk] = BLOCK_ID['bore']
 
     # the sling's swivels: the front on the left of the retainer, the rear on the left of the stock
-    for (x, z, y) in [(664, -20, 19.5), (72, -60, 18.5)]:
+    for (x, z, y) in [(644, -18, 19.5), (72, -66, 17.5)]:
         p = b.piece()
         b.strap(p, [(x - 6, z + 5), (x - 6, z - 9), (x + 6, z - 9), (x + 6, z + 5)], y, y + 2.2, 2.0)
         b.add(p, 'oxide', 'edge', 0.3) if hi else b.add(p, 'oxide')
@@ -479,20 +481,20 @@ def rifle(detail=0):
 def sling(detail=0):
     """The canvas sling hanging slack along the left side, from the front swivel to the stock's."""
     b = Build(detail)
-    a, c = Vector((664, 0, -26)), Vector((72, 0, -66))
+    a, c = Vector((644, 0, -24)), Vector((72, 0, -72))
     n = 14 if detail == 0 else 6
     path = []
     for i in range(n + 1):
         t = i / n
         q = a.lerp(c, t)
-        path.append((q.x, q.z - 62 * math.sin(math.pi * t) ** 0.9))
+        path.append((q.x, q.z - 34 * math.sin(math.pi * t) ** 0.9))
     p = b.piece()
-    b.ribbon(p, path, 15.0, 20.2, 22.0)
+    b.ribbon(p, path, 12.5, 19.6, 21.4)
     b.add(p, 'canvas')
     if detail == 0:
         for (x, z) in (path[0], path[-1]):      # the steel hooks
             p = b.piece()
-            b.box(p, x - 7, x + 7, 19.8, 22.4, z - 6, z + 6)
+            b.box(p, x - 7, x + 7, 19.2, 21.8, z - 6, z + 6)
             b.add(p, 'oxide', 'edge', 0.4)
     return b
 
@@ -536,12 +538,12 @@ def point(name, mm, parent):
 
 # where the rifle is held and carried (millimetres), for the figure's hands and the sling's ends
 POINTS = {
-    'grip_r': (270, 0, -92),          # the right hand, round the pistol grip
-    'hand_l': (585, 0, -22),          # the left hand, under the lower handguard's swell
-    'sling_front': (664, 21, -26),
-    'sling_rear': (72, 20, -66),
+    'grip_r': (262, 0, -90),          # the right hand, round the pistol grip
+    'hand_l': (572, 0, -24),          # the left hand, under the lower handguard's swell
+    'sling_front': (644, 21, -24),
+    'sling_rear': (72, 19, -72),
     'muzzle': (880, 0, 0),
-    'butt': (0, 0, -68),
+    'butt': (0, 0, -48.5),
 }
 
 
@@ -575,14 +577,14 @@ def export(path, root):
 def render(root):
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
-    sc.cycles.samples = 48
+    sc.cycles.samples = 12 if QUICK else 48
     sc.cycles.use_denoising = True
     sc.render.film_transparent = False
     sc.view_settings.view_transform = 'Standard'
     w = bpy.data.worlds.new('w')
     w.use_nodes = True
     w.node_tree.nodes['Background'].inputs[0].default_value = (0.62, 0.60, 0.57, 1)
-    w.node_tree.nodes['Background'].inputs[1].default_value = 0.9
+    w.node_tree.nodes['Background'].inputs[1].default_value = 0.55
     sc.world = w
     def light(kind, loc, energy, size=1.0, rot=(0, 0, 0)):
         d = bpy.data.lights.new(kind, kind)
@@ -594,9 +596,9 @@ def render(root):
         o.rotation_euler = rot
         sc.collection.objects.link(o)
         return o
-    key = light('AREA', (0.25, -1.2, 1.1), 260, 1.6)
-    fill = light('AREA', (0.6, 1.3, 0.5), 120, 1.6)
-    top = light('AREA', (0.44, 0.0, 1.4), 90, 2.0)
+    key = light('AREA', (0.25, -1.2, 1.1), 85, 1.6)
+    fill = light('AREA', (0.6, 1.3, 0.5), 45, 1.6)
+    top = light('AREA', (0.44, 0.0, 1.4), 30, 2.0)
     cam_d = bpy.data.cameras.new('cam')
     cam = bpy.data.objects.new('cam', cam_d)
     sc.collection.objects.link(cam)
@@ -621,12 +623,47 @@ def render(root):
         sc.render.resolution_x, sc.render.resolution_y = res
         sc.render.filepath = os.path.join(OUT, name)
         bpy.ops.render.render(write_still=True)
-    shot('akm_right.png', (0.44, -3, -0.06), ortho=1.0)
+    shot('akm_right.png', (0.44, -3, -0.06), ortho=1.0, res=(1600, 640) if QUICK else (2000, 800))
+    if QUICK:
+        return
+    ruler(os.path.join(OUT, 'akm_right.png'), 2000 / 1000.0, 1000 - 440 * 2, 800 - 70)
     shot('akm_left.png', (0.44, 3, -0.06), ortho=1.0)
     shot('akm_top.png', (0.44, 0, 3), ortho=1.0, res=(2000, 400), at=(0.44, 0, 0))
     shot('akm_front.png', (3.5, 0, -0.06), ortho=0.42, res=(800, 800))
     shot('akm_three_quarter.png', (1.55, -1.35, 0.45), res=(2000, 1100), lens=70)
     shot('akm_close.png', (0.42, -0.62, 0.16), res=(2000, 1100), at=(0.40, 0, -0.03), lens=60)
+    # beside the player's figure (tool/char3d), the butt on the ground, for scale
+    man = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets_src', 'characters', 'man.glb')
+    if os.path.exists(man):
+        bpy.ops.import_scene.gltf(filepath=man)
+        root.rotation_euler = (0, math.radians(-90), 0)
+        root.location = (0.52, 0, 0.0)
+        for l, loc in ((key, (-0.6, -2.4, 2.4)), (fill, (1.6, -1.2, 1.2)), (top, (0.2, -0.4, 3.2))):
+            l.location = loc
+            l.data.energy *= 6
+            look(l, (0.2, 0, 0.9))
+        shot('akm_scale.png', (0.22, -6, 0.9), ortho=2.05, res=(1100, 1500), at=(0.22, 0, 0.9))
+
+
+def ruler(path, px_per_mm, x0, y):
+    """A centimetre ruler drawn on the side picture: x0 the butt's pixel, y the ruler's line."""
+    from PIL import Image, ImageDraw, ImageFont
+    im = Image.open(path).convert('RGB')
+    d = ImageDraw.Draw(im)
+    try:
+        font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 22)
+    except OSError:
+        font = ImageFont.load_default()
+    ink = (40, 38, 36)
+    d.line((x0, y, x0 + 880 * px_per_mm, y), fill=ink, width=2)
+    for mm in range(0, 881, 10):
+        x = x0 + mm * px_per_mm
+        h = 22 if mm % 100 == 0 else 14 if mm % 50 == 0 else 8
+        d.line((x, y, x, y - h), fill=ink, width=2)
+        if mm % 100 == 0:
+            d.text((x - 12, y + 6), str(mm // 10), fill=ink, font=font)
+    d.text((x0 + 880 * px_per_mm + 14, y - 12), 'cm', fill=ink, font=font)
+    im.save(path)
 
 
 for detail in (1, 0):
