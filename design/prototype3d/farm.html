@@ -1094,9 +1094,19 @@ function cardInfo(card) {
     value: Math.round((card.estimateLow + card.estimateHigh) / 2 / 500) * 500,
   };
 }
+// a test herd for the frame meter (its line «قطيع تجربة»; only with #fps): the yard filled to 40 head with copies of the
+// player's own camels, in the 3D view only (the game is not touched), so the herd's weight can be measured on a phone in
+// any game
+let demoHerd = false;
+const demoYard = (yard) => {
+  if (!demoHerd || !yard.length || yard.length >= 40) return yard;
+  const out = yard.slice(), cats = ['wodh', 'homr', 'shoqh', 'shoal', 'sofr', 'majaheem'];
+  for (let i = 0; out.length < 40; i++) out.push({ ...yard[i % yard.length], id: 'demo-' + i, category: cats[i % 6], ageDays: 400 + i * 97, pregnant: false });
+  return out;
+};
 function syncYard() {
   if (!LODS || !GAME) return;
-  const want = GAME.yard, ids = new Set(want.map((c) => c.id));
+  const want = demoYard(GAME.yard), ids = new Set(want.map((c) => c.id));
   for (let i = camels.length - 1; i >= 0; i--) {
     const c = camels[i];
     if (ids.has(c.id)) continue;
@@ -1833,18 +1843,20 @@ let shadowFrame = 0;
 const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0 } : null;
 if (meter) {
   meter.el.hidden = false;
-  meter.el.addEventListener('click', (e) => {
-    // the herd's drawing variant (HERD_MODES), its line in the open meter: the next one, kept, and the meter's figures
-    // started again so they are the variant's own
-    if (e.target.closest('[data-herd]') && HERD) {
-      HERD.mode = (HERD.mode + 1) % HERD_MODES.length;
-      try { localStorage.setItem('marah.herdMode', String(HERD.mode)); } catch { /* (kept for this visit only) */ }
-      meter.hist.fill(0); meter.n = 0; meter.jank = 0; meter.recent.fill(0); meter.ready = 0;
-      if (cpu) { cpu.game.fill(0); cpu.draw.fill(0); cpu.n = 0; cpu.sg = 0; cpu.sd = 0; }
-      meter.shown = 0; return;
-    }
-    meter.el.classList.toggle('open'); meter.shown = 0;
-  });      // (drawn again on the next frame, and measured then)
+  // the herd's lines in the open meter, on the finger's touch (the meter's text is written again every second: a tap's
+  // click could land on the new text's parent and close the meter instead): the test herd on or off, and the drawing's
+  // next variant (HERD_MODES), kept; the meter's figures start again, so they are the new state's own
+  let lineAt = -1e9;
+  meter.el.addEventListener('pointerdown', (e) => {
+    const demo = e.target.closest('[data-demo]'), mode = e.target.closest('[data-herd]');
+    if (!demo && !mode) return;
+    lineAt = performance.now();
+    if (demo) { demoHerd = !demoHerd; syncYard(); refreshLabels(); }
+    if (mode && HERD) { HERD.mode = (HERD.mode + 1) % HERD_MODES.length; try { localStorage.setItem('marah.herdMode', String(HERD.mode)); } catch { /* (kept for this visit only) */ } }
+    meter.hist.fill(0); meter.n = 0; meter.jank = 0; meter.recent.fill(0); meter.ready = 0;
+    cpu.game.fill(0); cpu.draw.fill(0); cpu.n = 0; cpu.sg = 0; cpu.sd = 0; meter.shown = 0;
+  });
+  meter.el.addEventListener('click', () => { if (performance.now() - lineAt < 1500) return; meter.el.classList.toggle('open'); meter.shown = 0; });      // (drawn again on the next frame, and measured then)
   measureHud();      // (shown now: the pins kept below it from the start, not only after a card or a turn, the review)
 }
 // the meter's details closed when a card opens: open, they covered the card's header and its close button
@@ -1886,7 +1898,7 @@ function meterFrame(now) {
   // save could not be read (the game started over; it is kept as .broken)
   const variant = HERD ? HERD_MODES[HERD.mode] : '';
   if (!meter.el.classList.contains('open')) { meterText(`<b>${fps}</b> · ${Math.round(p99)} م.ث · ${variant}${bad ? ' <span class="dot">●</span>' : ''}`); return; }
-  meterText(`<b>${fps}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><u data-herd>رسم القطيع: ${variant}</u><br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}${line4 ? '<br>' + line4 : ''}`);
+  meterText(`<b>${fps}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><u data-herd>رسم القطيع: ${variant}</u> · <u data-demo>قطيع تجربة: ${demoHerd ? 'شغّال' : 'طافي'}</u> · ${camels.length} راس<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}${line4 ? '<br>' + line4 : ''}`);
 }
 // the meter's text, once a second; the pins measured again only when its box changed size (a read of its size a
 // second, no more)
