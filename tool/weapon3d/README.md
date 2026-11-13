@@ -4,8 +4,9 @@ The owner asked for a Kalashnikov rifle (كلاش) for the hunting subject, and 
 no photos of his own (13 Nov 2026). `akm.py` builds it in Blender's Python: the shape from the dimensions below, one
 painted 512 px colour texture and one roughness/metal texture, no downloaded mesh or picture.
 
-What place the rifle has in the game is not decided: by the Saudi rules found so far it is no lawful hunting weapon
-(`docs/proposals/hunting.md`, awaiting the owner).
+Its place in the game is the owner's decision of 13 Nov 2026: it enters with its risk, as cheating does in the
+festivals, and is never shown as lawful. By the Saudi rules found it is no lawful hunting weapon and no private person
+may own one (`docs/proposals/hunting.md`, `docs/proposals/gdd_hunting_section.md`).
 
 ## The design
 
