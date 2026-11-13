@@ -651,6 +651,27 @@ void main() {
       expect(most, TamperKind.botox);
     });
 
+    test('the risk is told in three words, never the odds', () {
+      final seen = <RiskBand>{};
+      for (final k in TamperKind.values) {
+        final bands = [
+          for (var s = 1; s <= 3; s++) ContestRules.festivalRisk(k, s),
+        ];
+        seen.addAll(bands);
+        for (var i = 1; i < 3; i++) {
+          expect(bands[i].index, greaterThanOrEqualTo(bands[i - 1].index));
+        }
+      }
+      expect(seen, RiskBand.values.toSet());
+      expect(ContestRules.festivalRisk(TamperKind.botox, 3), RiskBand.high);
+      expect(ContestRules.foundMostlyBy(TamperKind.hormones), Stage.medical);
+      expect(
+        ContestRules.foundMostlyBy(TamperKind.tailCut),
+        Stage.tamperingExperts,
+      );
+      expect(ContestRules.outsideRisk(3), RiskBand.low);
+    });
+
     test('a treatment costs its price, raises its features on judging day '
         'only, and is the owner\'s secret', () {
       final g = newGame();
@@ -682,8 +703,8 @@ void main() {
       final v = GameView(g.state, g.me.id);
       expect(v.tamperings.single.kind, TamperKind.botox);
       expect(
-        v.tamperings.single.festivalCatch,
-        ContestRules.festivalCatchChance(TamperKind.botox, 2),
+        v.tamperings.single.festivalRisk,
+        ContestRules.festivalRisk(TamperKind.botox, 2),
       );
       // it wears off
       g.advanceDays(TamperKind.botox.lastsDays);
