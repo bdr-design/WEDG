@@ -45,6 +45,17 @@ committed as done, and every fix is reviewed again (CLAUDE.md).
 colour families and the approved ages (save v2); judging by the approved
 weights, the (field) numbers to their sources and the illnesses (saves v3,
 v4); feed and water as stores that run out and are ordered (save v5).
+G1 parts 4 and 5 are built (13 Nov, under review; save v8) to the owner's
+decisions of 13 Nov: the individual rounds (الفردي دق and جل by colour,
+مفاريد and دق of القعدان and البكار, الفحل وإنتاجه), the group rounds on the
+programme for the rivals only; one camel in one فردي round a festival; each
+round on its own day through the six stages; late entries with a fee until
+72 hours before; secret treatments of the seven real kinds, found at the
+tampering experts' and the medical committee's stages or outside the
+festivals, with the fine scaled to the cap, the ban on every festival for
+the edition and five more, the name (الصيت) lowered, and the news; rivals
+cheat too. Built only in the engine and its views (the المزاين app is drawn
+beside it).
 G2 is built but for the phone's numbers:
 - **The engine in the page:** compiled to JavaScript (`tool/proto_engine`,
   its worker 270 KB, 83 KB gzipped) and run in a Web Worker
