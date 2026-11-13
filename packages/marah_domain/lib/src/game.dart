@@ -85,11 +85,14 @@ class Game {
     // The start (the owner, 13 Nov 2026): one nursing she-camel of the
     // chosen colour family, seven years old, and her calf of four months (its
     // first three months of free nursing behind it, so her milk is sold from
-    // the first day).
+    // the first day). (balance) An ordinary camel, as a beginner's is: bred
+    // to a mean of 42 she is worth about 13,000 to 21,000 (a 52 had made some
+    // starts' camel worth 150,000, more than seven times the money), at the
+    // low end of the GDD's 10,000 to 40,000 for مقاني (GDD 6).
     final dam = gen.makeCamel(
       rng,
       owner: playerId,
-      mean: 52,
+      mean: 42,
       category: favourite,
       sex: Sex.female,
       ageDays: 7 * 365 + 40,
@@ -111,7 +114,7 @@ class Game {
       chip: randomChipNumber(rng),
       genes: Genetics.inherit(
         rng,
-        Genetics.randomGenes(rng, mean: 52),
+        Genetics.randomGenes(rng, mean: 42),
         dam.genes,
         crossbred: false,
       ),

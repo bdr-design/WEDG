@@ -30,7 +30,6 @@ const CSS = `
      narrow width was "not a phone's proportions", the dock over the widgets). An app longer than the screen scrolls; its
      top bar stays. */
   .phone[data-state="big"] .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
-  .phone[data-state="big"] .body > * { flex-shrink: 0; }      /* (scrolled, not squeezed) */
   .phone[data-state="big"] .nav { position: sticky; top: -1px; margin-top: -1px; padding-top: 1px; z-index: 3; background: var(--bg); box-shadow: 0 -3px 0 var(--bg); }      /* (held a pixel past the scroll's top edge, where it already rests, and painted a little above itself: that edge falls between two of the screen's pixels, and a row of the scrolled content showed there; resting a pixel lower, it stepped up as a scroll began) */
   * { box-sizing: border-box; margin: 0; }
   .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #0b8a5c; --acc-soft: #e3f4ec; --red: #e5372b; --amber: #c27a12; }
@@ -60,7 +59,7 @@ const CSS = `
   .row .lead svg { width: 18px; height: 18px; }
   .row b { font-size: 13.5px; font-weight: 600; }
   .row small { font-size: 11.5px; color: var(--ink2); }
-  .row .amt { grid-row: span 2; font: 600 14px/1 "Alexandria", sans-serif; direction: ltr; unicode-bidi: isolate; }
+  .row .qty { grid-row: span 2; font: 600 14px/1 "Alexandria", "IBM Plex Sans Arabic", sans-serif; white-space: nowrap; }
   .pos { color: var(--acc); }
   .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
   .sec { font-size: 12px; font-weight: 600; color: var(--ink2); padding-inline: 4px; margin-bottom: -6px; }
@@ -84,9 +83,9 @@ const CSS = `
   .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 2px; border-radius: 10px; background: #e3e3e8; }
   .seg span { text-align: center; padding: 6px 0; border-radius: 8px; font-weight: 600; font-size: 12.5px; color: #3a3a3f; }
   .seg span.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); color: var(--ink); }
-  .hs { display: contents; }      /* (the home's widgets and apps: as before, small) */
+  .hs { display: contents; }      /* (the home's widgets and apps laid out in the screen's own column) */
   .phone[data-state="big"] .fit { display: inline-block; white-space: nowrap; }      /* (a big number: shrunk to its card when it is wider, see fitNumbers) */
-  .phone.turned[data-state="big"] .body, .phone.turned[data-state="big"] .hs { touch-action: none; }      /* (the game turned: the phone scrolls them itself, see drag) */
+  .phone.turned[data-state="big"] .body { touch-action: none; }      /* (the game turned: the phone scrolls it itself, see drag) */
   /* ---------- الوايت and العلف (approved 12 Nov 2026: design/ui/phone_supplies.html) ---------- */
   .body > * { flex-shrink: 0; }
   .tank { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
@@ -127,7 +126,6 @@ const CSS = `
   .note { font-size: 11.5px; color: var(--ink2); padding-inline: 4px; margin-top: -6px; }
   .way .row { grid-template-columns: 36px 1fr; }
   .way .lead { background: #e6eef8; color: #2f7fcf; }
-  .row .tag { font-size: 11px; font-weight: 700; color: var(--amber); }
   .cmp { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; font-size: 11px; color: var(--ink2); margin-top: -4px; }
   .cmp b { display: block; font: 700 12px/1.3 "Alexandria", sans-serif; color: var(--ink); }
   .seg span { cursor: pointer; }
@@ -144,13 +142,22 @@ const I = {
     leaf: '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/>',
     minus: '<path d="M5 12h14"/>',
     alert: '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>',
+    milk: '<path d="M8.5 3.5h7M9 3.5v3l-2.2 3.3a3 3 0 0 0-.5 1.7v7.5a1.5 1.5 0 0 0 1.5 1.5h8.4a1.5 1.5 0 0 0 1.5-1.5V11.5a3 3 0 0 0-.5-1.7L15 6.5v-3"/><path d="M6.4 13h11.2"/>',
+    build: '<path d="M3.5 20.5h17"/><path d="M5.5 20.5V10l6.5-5 6.5 5v10.5"/><path d="M10 20.5v-5h4v5"/>',
+    camel: '<path d="M3 8.5c0-1 .8-1.6 1.7-1.6h.9c.9 0 1.5.7 1.4 1.6l-.2 1.2c-.1.8.2 1.5.8 2 .5.4 1.1.4 1.6 0 .5-.5.9-1 1.1-1.6.9-1.7 2.5-2.8 4.4-2.7 1.1.1 2.1.8 2.7 1.8.5.8 1.1 1.3 2 1.6 1.1.4 1.9 1.5 1.9 2.8V15c0 .6-.4 1.2-.9 1.5V20"/><path d="M6.4 12.2V20M9.5 15.5V20M15 15.5V20"/>',
+    pen: '<path d="M4 20V7l2-2 2 2v13M16 20V7l2-2 2 2v13M8 10h8M8 15h8"/>',
+    tank: '<rect x="6" y="4" width="12" height="11" rx="3"/><path d="M8 15v5M16 15v5M6 9h12"/>',
+    store: '<path d="M3 11 12 5l9 6"/><path d="M5 10v10h14V10"/><path d="M9 20v-5h6v5"/>',
+    caravan: '<rect x="3" y="7" width="15" height="9" rx="2"/><path d="M18 13h3M6 16v2M7 10h3v3H7zM12 10h3"/>',
+    tent: '<path d="M2.5 18 8 8h8l5.5 10z"/><path d="M8 8l-2 10M16 8l2 10M12 8v10"/>',
+    room: '<path d="M4 20V9l8-5 8 5v11z"/><path d="M9 20v-6h6v6M8 11h2M14 11h2"/>',
   };
 const svg = (k) => `<svg class="i" viewBox="0 0 24 24">${I[k]}</svg>`;
 // the status bar: the time is the player's own clock (kept to the minute while the phone is out)
 const clockText = () => { const d = new Date(); return `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const sbar = () => `<div class="sbar"><span class="clk">${clockText()}</span><span class="r"><svg width="16" height="11" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35"/></svg><span class="bat"></span></span></div>`;
 const nav = (end = '') => `<div class="nav"><button class="back">${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
-const APP_GO = { water: 'water', feed: 'feed' };      // the apps that open a screen
+const APP_GO = { water: 'water', feed: 'feed', milk: 'milk', build: 'build' };      // the apps that open a screen
 const badgeSaid = (extra, k) => { const m = extra.match(/class="bd">(\d+)</); return !m ? '' : k === 'water' ? '، الماء يخلص' : m[1] === '1' ? '، صنف يخلص' : '، الشعير والبرسيم يخلصون'; };
 const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra, k)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge)
 
@@ -168,6 +175,9 @@ const NOUN = {
   bag: ['كيس واحد', 'كيسين', 'أكياس', 'كيس'],
   bale: ['بالة وحدة', 'بالتين', 'بالات', 'بالة'],
   tanker: ['وايت واحد', 'وايتين', 'وايتات', 'وايت'],
+  head: ['راس واحد', 'راسين', 'روس', 'راس'],
+  month: ['شهر واحد', 'شهرين', 'شهور', 'شهر'],
+  shepherd: ['راعي واحد', 'راعيين', 'رعاة', 'راعي'],
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const days = (n) => count(n, 'day');
@@ -207,6 +217,11 @@ function refusal(r, command) {
   const code = r.error?.code, p = r.error?.params || {};
   const water = command.supply === 'water', where = water ? 'الخزان' : 'المستودع';
   const unit = water ? 'tanker' : command.supply === 'barley' ? 'bag' : 'bale';
+  if (command.type === 'buildFacility') {
+    if (code === 'insufficientFunds') return `رصيدك ما يكفي: البناء بـ ${n0(p.needed ?? 0)} ريال.`;
+    if (code === 'alreadyBuilt') return 'هذا مبني أو ينبني.';
+    return 'جرّب مرة ثانية.';
+  }
   if (code === 'insufficientFunds') return `رصيدك ما يكفي: الطلب بـ ${n0(p.needed ?? 0)} ريال.`;
   if (code === 'storeFull') return p.room ? `${where} ما يشيل إلا ${count(p.room, unit)} بعد.` : `${where} ما فيه مكان الحين.`;
   return 'جرّب مرة ثانية.';
@@ -229,10 +244,14 @@ function waterScreen() {
   }
   const row = (t) => {
     const tonnes = Math.round(t.litres / 1000), name = `وايت ${tonnes} طن`;
+    // the engine's rule: a tanker fills the tank to the top and takes the rest back, so it is taken once there is room
+    // for half its load; a tank smaller than that never takes it (a bigger one is built from العزبة)
     let line;
-    if (t.room > 0) line = `${n0(t.price)} ريال · ${need > 0 ? `يكفي ${days(Math.floor(t.litres / need))}` : 'يوصل بكرة'}`;
+    const fill = Math.min(t.litres, Math.max(0, f.tankL - have - coming));
+    if (t.room > 0) line = `${n0(t.price)} ريال · ${fill < t.litres ? `يعبّي الخزان ${n0(fill)} لتر والباقي يرجع` : need > 0 ? `يكفي ${days(Math.floor(t.litres / need))}` : 'يوصل بكرة'}`;
+    else if (f.tankL < t.litres / 2) line = 'خزانك ما يشيله، ابنِ خزان أكبر من العزبة';
     else {
-      const under = f.tankL - t.litres, wait = need > 0 ? Math.ceil((have + coming - under) / need) : null;
+      const under = f.tankL - t.litres / 2, wait = need > 0 ? Math.ceil((have + coming - under) / need) : null;
       line = `الخزان ما يشيله لين ينزل تحت ${n0(under)} لتر${wait ? `، بعد ${days(wait)} تقريبًا` : ''}`;
     }
     if (t.room > 0 && G.cash < t.price) line = `${n0(t.price)} ريال · رصيدك ما يكفي`;
@@ -246,7 +265,7 @@ function waterScreen() {
       <div class="ln">${lasts ? `يكفي ${days(lasts)} · ` : ''}يشربون ${n0(need)} لتر باليوم</div></div>
     <div class="sec">اطلب وايت</div>
     <div class="group">${f.tankers.map(row).join('')}</div>
-    <div class="note">${coming ? `بالطريق: ${n0(coming)} لتر، يوصل بكرة.` : 'بالطريق: ما فيه وايت.'}</div></div>`;
+    <div class="note">${coming ? `بالطريق: ${n0(coming)} لتر، يوصل بكرة${coming > f.tankL - have ? ' ويعبّي الخزان، والباقي يرجع' : ''}.` : 'بالطريق: ما فيه وايت.'}</div></div>`;
 }
 
 // a feed's need over [weeks], less what is in store and on its way, in whole units
@@ -292,7 +311,7 @@ function feedScreen() {
     const [wb, wa] = fitRoom(suggest(b, 1), suggest(a, 1), b, a, room), wt = wb * b.unitPrice + wa * a.unitPrice;
     const week = wt > 0 && wt <= G.cash;
     return `<div class="body">${nav()}<div class="title">العلف</div>${errCard()}
-      ${alertCard(`رصيدك ما يكفي لـ 3 أسابيع`, `عندك ${n0(G.cash)} ريال.${week ? ` يكفي لأسبوع: ${[wb ? count(wb, 'bag') : '', wa ? count(wa, 'bale') : ''].filter(Boolean).join(' و')}،` : ''} أو بع ناقة من الحراج.`)}
+      ${alertCard(`رصيدك ما يكفي لـ 3 أسابيع`, `عندك ${n0(G.cash)} ريال.${week ? ` يكفي لأسبوع: ${[wb ? count(wb, 'bag') : '', wa ? count(wa, 'bale') : ''].filter(Boolean).join(' و')}.` : ''}`)}
       ${week ? `<button class="btn ghost two" data-act="week"><span>اطلب لأسبوع</span><span>${n0(wt)} ريال</span></button>` : ''}
       ${store}${heading(ordered)}${rows(canUp)}
       <div class="order"><span><small>المجموع</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div></div>`;
@@ -322,20 +341,118 @@ function feedScreen() {
     ${store}${ration}${way}${heading(ordered)}${rows(canUp)}${order}</div>`;
 }
 
+// days from today to an engine date ('YYYY-MM-DD')
+const daysTo = (d) => Math.round((Date.parse(d + 'T00:00:00Z') - Date.parse(G.date + 'T00:00:00Z')) / 86400000);
+const litres = (v) => `${(Math.round(v * 10) / 10).toLocaleString('en-US')} لتر`;
+// a nursing camel's time since calving: days under a month, then months by the counting rule
+const sinceCalving = (d) => d < 30 ? (d <= 1 ? 'من يوم' : `من ${days(d)}`) : `من ${count(Math.floor(d / 30), 'month')}`;
+// الحليب (approved 13 Nov 2026: design/ui/phone_start_milk.jpg): today's milk, what was sold, each nursing camel, and how
+// much the calves keep, each choice with what it brings a day and what it does to the calves
+function milkScreen() {
+  if (!G) return `<div class="body">${nav()}<div class="title">الحليب</div>${waiting()}</div>`;
+  const M = G.farm.milk, cs = M.camels;
+  const total = cs.reduce((n, c) => n + c.litres, 0), sold = cs.reduce((n, c) => n + c.sold, 0), kept = total - sold;
+  const calves = cs.filter((c) => c.calfName).length;
+  const keptTo = calves > 1 ? 'للحيران' : 'لحوارها';
+  if (!cs.length) {
+    return `<div class="body">${nav()}<div class="title">الحليب</div>${errCard()}
+      <div class="tank"><small>حليب اليوم</small><div class="v"><b class="fit">0</b><span>لتر</span></div>
+        <div class="ln ink2">ما عندك ناقة مرضع. الناقة تدر سنة من ولادتها.</div>
+        ${M.thisMonth ? `<div class="ln ink2">دخل الحليب هالشهر ${n0(M.thisMonth)} ريال</div>` : ''}</div></div>`;
+  }
+  let line;
+  if (!sold) line = calves > 1 ? 'خليته كله للحيران' : 'خليته كله لحوارها';
+  else if (!M.incomeToday) line = `يمر المشتري بكرة وياخذ ${litres(sold)}`;      // (a new game's first day: nothing sold yet)
+  else line = `بعت ${litres(sold)} بـ ${n0(M.incomeToday)} ريال${kept > 0.05 ? `، وخليت ${keptTo} ${litres(kept)}` : ''}`;
+  const rows = cs.map((c) => `<div class="row"><span class="lead">${svg('camel')}</span><b>${c.name}</b><span class="qty">${litres(c.litres)}</span><small>مرضع ${sinceCalving(c.days)} · ${c.calfName ? `حوارها ${c.calfName}` : 'حليبها كله ينباع'}</small></div>`).join('');
+  // each choice: the riyals a day (a camel without her calf sells all hers whatever the choice), and the calves'
+  // growth by the engine's rule (Balance.calfMilkTarget): in their first three months a half share already slows them
+  const share = { all: 1, half: 0.5, quarter: 0.25 }, names = { all: 'كله', half: 'النص', quarter: 'الربع' };
+  const young = cs.some((c) => c.calfName && c.days < 90);
+  const grows = young ? { all: 'يكبر أحسن', half: 'يكبر أبطأ', quarter: 'يضعف' } : { all: 'يكبر أحسن', half: 'يكبر عادي', quarter: 'يكبر أبطأ' };
+  const perDay = (k) => Math.round(cs.reduce((n, c) => n + c.litres * (c.calfName ? 1 - share[k] : 1), 0) * M.price);
+  const keys = ['all', 'half', 'quarter'];
+  const seg = calves ? `<div class="sec">كم تخلي للحوار</div>
+    <div class="seg" role="group" aria-label="كم تخلي للحوار">${keys.map((k) => `<span data-act="share" data-p="${k}" role="button" tabindex="0" aria-pressed="${M.calfShare === k}" ${M.calfShare === k ? 'class="on"' : ''}>${names[k]}</span>`).join('')}</div>
+    <div class="cmp">${keys.map((k) => `<span><b>${n0(perDay(k))} ريال</b>باليوم<br>${grows[k]}</span>`).join('')}</div>` : '';
+  return `<div class="body">${nav()}<div class="title">الحليب</div>${errCard()}
+    <div class="tank"><small>حليب اليوم</small><div class="v"><b class="fit">${(Math.round(total * 10) / 10).toLocaleString('en-US')}</b><span>لتر</span></div>
+      <div class="ln">${line}</div>
+      <div class="ln ink2">دخل الحليب هالشهر ${n0(M.thisMonth)} ريال</div></div>
+    <div class="sec">الحلايب</div>
+    <div class="group">${rows}</div>
+    ${seg}
+    <div class="note">المشتري يمر كل يوم وياخذ الحليب، اللتر بـ ${n0(M.price)} ريال. الحوار يرضع لين يكمل سنة، وأول 3 شهور يبي حليب أمه كله.</div></div>`;
+}
+
+// العزبة (approved 13 Nov 2026: design/ui/phone_start_build.jpg): what the farm has, and the facilities it can build
+const FAC = {
+  pen: { icon: 'pen', what: 'يشيل 10 روس زيادة' },
+  tank: { name: 'خزان 30 طن', icon: 'tank', what: 'يشيل وايت 19 طن' },
+  store: { name: 'مستودع علف', icon: 'store', what: 'يشيل 10 طن علف' },
+  caravan: { name: 'كرفان الراعي', icon: 'caravan', what: 'لازم قبل الراعي' },
+  tent: { name: 'بيت الشعر', icon: 'tent', what: 'للضيوف والقهوة' },
+  room: { name: 'غرفة العزبة', icon: 'room', what: 'جلسة ومكيفات' },
+};
+const PEN_NTH = ['ثاني', 'ثالث', 'رابع', 'خامس', 'سادس'];
+function buildScreen() {
+  if (!G) return `<div class="body">${nav()}<div class="title">العزبة</div>${waiting()}</div>`;
+  const f = G.farm, F = Object.fromEntries(f.facilities.map((x) => [x.facility, x]));
+  const kind = (label, value) => `<div class="kind"><span>${label}</span><span class="d">${value}</span></div>`;
+  const pens = F.pen.has, store = F.store.has;
+  const care = f.shepherdsNeeded === 0 ? 'أنت ترعاها' : f.shepherds >= f.shepherdsNeeded ? count(f.shepherds, 'shepherd') : 'تحتاج راعي';
+  const have = `<div class="tank"><small>عزبتك</small>
+      ${kind(pens ? 'الشبوك' : 'الحوش', `يشيل ${count(f.capacity, 'head')} · عندك ${n0(G.herd.total)}`)}
+      ${kind('الخزان', `${n0(f.tankL)} لتر`)}
+      ${kind(store ? 'العلف' : 'مظلة العلف', `${n0(f.storeKg)} كجم`)}
+      ${kind('الرعاية', care)}</div>`;
+  const row = (x) => {
+    const d = FAC[x.facility], made = x.has + x.building;
+    const name = x.facility === 'pen' ? `شبك ${PEN_NTH[Math.min(made, PEN_NTH.length - 1)]}` : d.name;
+    const soon = x.building ? daysTo(x.doneOn) : null;
+    const building = x.building ? `ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}` : '';
+    let line, button = '';
+    if (made >= x.most && !x.building) line = x.facility === 'pen' ? 'بنيت الشبوك كلها' : 'مبني';
+    else if (made >= x.most) line = building;
+    else {
+      const poor = x.cannot === 'insufficientFunds';
+      line = [d.what, `${n0(x.price)} ريال`, poor ? 'رصيدك ما يكفي' : '', building].filter(Boolean).join(' · ');
+      button = `<span class="act"><button class="btn ${poor ? '' : 'pri'}" data-act="build" data-f="${x.facility}" ${poor ? 'disabled' : ''}>ابنه</button></span>`;
+    }
+    return `<div class="row"><span class="lead">${svg(d.icon)}</span><b>${name}</b>${button}<small>${line}</small></div>`;
+  };
+  return `<div class="body">${nav()}<div class="title">العزبة</div>${errCard()}
+    ${have}
+    <div class="sec">ابنِ ووسّع</div>
+    <div class="group">${f.facilities.map(row).join('')}</div>
+    <div class="note">اللي تبنيه يخلص بعد 3 أيام ويطلع مكانه في العزبة.</div></div>`;
+}
+
+const herdWord = () => {
+  if (!G) return '';
+  const m = G.farm.milk.camels;
+  return G.herd.total === 2 && m.length === 1 && m[0].calfName ? 'ناقة وحوارها' : unitWord(G.herd.total, 'head');
+};
+
 const S = {
-    // home: the date, the balance and the herd, and the apps that work on the game (the owner, 13 Nov: the others, and
+    // home: the date, the balance and the herd (its word: the start's nursing camel and her calf as they are, else the
+    // head by the counting rule), and the apps that work on the game (the owner, 13 Nov: the others, and
     // the example content of the design's screens, are not shown until they work on the engine)
     home: () => `<div class="body"><div class="hs">${dateLine()}
       <div class="widgets">
         <div class="wg"><small>الرصيد</small><div class="big2"><b class="fit">${G ? n0(G.cash) : '…'}</b></div><div class="ln ink2">ريال</div><div class="ln${G && !G.todayNet ? ' ink2' : ''}">${!G ? '' : G.todayNet > 0 ? `<span class="pos">دخل اليوم ${n0(G.todayNet)}</span>` : G.todayNet < 0 ? `صرفت اليوم ${n0(-G.todayNet)}` : 'ما فيه حركة اليوم'}</div></div>
-        <div class="wg"><small>الحلال</small><div class="big2"><b class="fit">${G ? n0(G.herd.total) : '…'}</b></div><div class="ln ink2">راس</div><div class="ln ink2">${G && G.herd.total ? `قيمته ${n0(G.herdValue)} ريال` : ''}</div></div>
+        <div class="wg"><small>الحلال</small><div class="big2"><b class="fit">${G ? n0(G.herd.total) : '…'}</b></div><div class="ln ink2">${herdWord()}</div><div class="ln ink2">${G && G.herd.total ? `قيمته ${n0(G.herdValue)} ريال` : ''}</div></div>
       </div>
       <div class="apps">
         ${app('water', 'الوايت', badge(lowCount(['water'])))}
         ${app('feed', 'العلف', badge(lowCount(['barley', 'alfalfa'])))}
+        ${app('milk', 'الحليب')}
+        ${app('build', 'العزبة')}
       </div></div></div>`,
     water: waterScreen,
     feed: feedScreen,
+    milk: milkScreen,
+    build: buildScreen,
   };
 
 export function createPhone({ host }) {
@@ -343,7 +460,7 @@ export function createPhone({ host }) {
   root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar" role="dialog" aria-label="الجوال" aria-hidden="true"><div class="dim"></div><div class="dev" tabindex="-1"><div class="scr" inert></div></div></div>`;
   host.appendChild(el);
   const box = root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim');
-  const st = { state: 'closed', play: false, screen: 'home', y: EDGE, s: SMALL };
+  const st = { state: 'closed', play: false, screen: 'home', s: SMALL };
   const listeners = new Set();
   let press = null, lastDown = 0, bigAt = 0, focusBack = null;
   const turned = () => document.body.classList.contains('rot');      // (farm.html: a phone held upright, the game turned a quarter)
@@ -352,11 +469,11 @@ export function createPhone({ host }) {
     if (v !== st.screen) ERR = null;
     if (v === 'feed' && st.screen !== 'feed') ORD.barley = ORD.alfalfa = null;      // (opened afresh: the order starts at three weeks' need)
     st.screen = v; scr.classList.toggle('home', v === 'home');
-    scr.innerHTML = `<span class="pill"></span>${sbar()}${S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0')}<div class="hb"></div>`;      // (a number kept on the line of the word after it: enlarged, «3,900 | ريال» and «9 | كم» split)
+    scr.innerHTML = `<span class="pill"></span>${sbar()}${S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0')}<div class="hb"></div>`;      // (a number kept on the line of the word after it: «20,000 | ريال» split across lines otherwise)
     fitNumbers();
   }
-  // enlarged, a big figure wider than its card is set smaller to fit it, as iOS fits a label to its width (a balance or a
-  // bid in the millions ran out of its card at 844 x 390); read once as a screen shows or the phone enlarges, never per frame
+  // enlarged, a big figure wider than its card is set smaller to fit it, as iOS fits a label to its width (a balance in
+  // the millions runs out of its widget); read once as a screen shows or the phone enlarges, never per frame
   function fitNumbers() {
     for (const e of scr.querySelectorAll('.fit')) {
       e.style.fontSize = '';
@@ -372,7 +489,7 @@ export function createPhone({ host }) {
   // a button the keyboard brings the focus to is scrolled into sight, clear of the top bar that stays (focused without
   // the browser's own scrolling, which moved the page). Along the phone: turned, the screen's x the other way
   function reveal(el) {
-    const sc = st.state === 'big' && el.closest && el.closest('.hs, .body');
+    const sc = st.state === 'big' && el.closest && el.closest('.body');
     if (!sc || sc.scrollHeight <= sc.clientHeight + 1 || el.closest('.nav')) return;      // (the top bar does not scroll: moved for it, the content stepped 52 pt a Tab)
     const span = (q) => { const r = q.getBoundingClientRect(); return turned() ? [innerWidth - r.right, innerWidth - r.left] : [r.top, r.bottom]; };
     const [s0, s1] = span(sc), k = sc.clientHeight / Math.max(1, s1 - s0), [e0, e1] = span(el);
@@ -389,20 +506,18 @@ export function createPhone({ host }) {
     box.style.setProperty('--s', st.s.toFixed(3));
     box.style.setProperty('--r', `calc(${st.play ? Math.round(28 * u) : 56}px + max(0px, var(--edge-r, 12px) - 12px))`);
     box.style.setProperty('--b', 'calc(10px + max(0px, var(--edge-b, 12px) - 12px))');
-    pan(st.y);
+    place();
   }
   // enlarged, the whole phone in the screen, in the middle: as large as the screen's height allows, never larger than
   // true size (the owner: "half of it under the screen", its dock and buttons out of reach; it must sit balanced)
   const bigScale = () => Math.min(1, (host.clientHeight - 2 * EDGE) / H, (host.clientWidth - 2 * EDGE) / W);
   let sized = '';
-  function pan(y) {
-    const sb = st.state === 'big' ? bigScale() : 1, room = host.clientHeight - H * sb;
-    if (sized !== sb.toFixed(4)) {      // (set only when it changes, as it enlarges or the screen turns: a finger sliding the phone moves it by transform alone)
-      sized = sb.toFixed(4);
-      box.style.setProperty('--sb', sized);
-    }
-    st.y = room >= 2 * EDGE - 0.5 ? room / 2 : Math.max(room - EDGE, Math.min(EDGE, y));
-    box.style.setProperty('--y', st.y.toFixed(1) + 'px');
+  function place() {
+    const sb = st.state === 'big' ? bigScale() : 1, key = `${sb.toFixed(4)} ${host.clientHeight}`;
+    if (sized === key) return;      // (set only when it changes, as it enlarges or the screen turns)
+    sized = key;
+    box.style.setProperty('--sb', sb.toFixed(4));
+    box.style.setProperty('--y', `${Math.max(EDGE, (host.clientHeight - H * sb) / 2).toFixed(1)}px`);
   }
   function set(state) {
     if (state === st.state) return;
@@ -410,7 +525,6 @@ export function createPhone({ host }) {
     if (st.state === 'closed') show('home');
     const was = st.state;
     st.state = state; box.dataset.state = state;
-    if (state === 'big') st.y = EDGE;
     // to assistive technology and the keyboard: closed, the phone is not there; small, it is a picture (a tap does
     // nothing); big, it is a modal dialog with the focus in it, given back to where it was when it shrinks
     box.setAttribute('aria-hidden', String(state === 'closed'));
@@ -435,30 +549,27 @@ export function createPhone({ host }) {
   addEventListener('pointermove', (e) => { if (press && e.pointerId === press.id && Math.hypot(e.clientX - press.x, e.clientY - press.y) > SLOP) endPress(); }, true);
   addEventListener('pointerup', (e) => { if (press && e.pointerId === press.id) endPress(); }, true);
   addEventListener('pointercancel', endPress, true);
-  // enlarged: a drag slides the phone up and down; a tap outside it makes it small again; a tap on it is the phone's
+  // enlarged: a tap outside it makes it small again; a tap on it is the phone's (a finger that slid is not a tap)
   let drag = null, slid = false;
   // The game turned (a phone held upright), the browser's own scrolling goes by the screen's axes and the enlarged phone's
   // content did not scroll at all. There the phone scrolls it itself, by the finger's travel along the phone (the page
-  // hands pointer events over in the game's frame, where the phone stands upright, at true size), with a fling as it
-  // lets go that slows as iOS's does (by 0.998 a millisecond). A finger slides the phone instead when it is taller than
-  // the screen.
+  // hands pointer events over in the game's frame, where the phone stands upright), with a fling as it lets go that
+  // slows as iOS's does (by 0.998 a millisecond). The phone is drawn at [k] of its size, so the content follows the
+  // finger at 1/k of its screen pixels (at 1, the content moved 0.59 of the finger's travel, the review).
   let fling = 0, flinging = false, stopTap = false;
-  const fits = () => host.clientHeight - H * bigScale() >= 2 * EDGE - 0.5;
   dev.addEventListener('pointerdown', (e) => {
     if (st.state !== 'big') return;
     stopTap = flinging; cancelAnimationFrame(fling); flinging = false;      // (a tap on a moving list only stops it, as on iOS)
-    const sc = turned() && fits() ? e.target.closest('.hs, .body') : null;
-    drag = { id: e.pointerId, y: e.clientY, y0: st.y, sc, top: sc ? sc.scrollTop : 0, t: e.timeStamp, last: e.clientY, v: 0 }; slid = false;
+    const sc = turned() ? e.target.closest('.body') : null;
+    drag = { id: e.pointerId, y: e.clientY, sc, top: sc ? sc.scrollTop : 0, t: e.timeStamp, last: e.clientY, v: 0, k: bigScale() }; slid = false;
   });
   dev.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     if (!slid && Math.abs(e.clientY - drag.y) > SLOP) slid = true;
-    if (!slid) return;
-    if (drag.sc) {
-      drag.sc.scrollTop = drag.top - (e.clientY - drag.y);
-      const dt = e.timeStamp - drag.t; if (dt > 0) drag.v = 0.8 * ((drag.last - e.clientY) / dt) + 0.2 * drag.v;
-      drag.t = e.timeStamp; drag.last = e.clientY;
-    } else pan(drag.y0 + e.clientY - drag.y);
+    if (!slid || !drag.sc) return;
+    drag.sc.scrollTop = drag.top - (e.clientY - drag.y) / drag.k;
+    const dt = e.timeStamp - drag.t; if (dt > 0) drag.v = 0.8 * ((drag.last - e.clientY) / drag.k / dt) + 0.2 * drag.v;
+    drag.t = e.timeStamp; drag.last = e.clientY;
   });
   const endDrag = (e) => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -476,17 +587,17 @@ export function createPhone({ host }) {
   dim.addEventListener('mousedown', (e) => e.preventDefault());      // (the mouse events after a long press by touch land on the dim and took the focus out of the phone)
   dim.addEventListener('click', () => { if (lastDown > bigAt) set('small'); });      // (not the lift of the very finger whose long press enlarged it: its click lands on the dim, now on top)
   // the screens the game's numbers fill are drawn again when they change, the scroll kept
-  const live = () => st.state !== 'closed' && (st.screen === 'home' || st.screen === 'water' || st.screen === 'feed');
+  const live = () => st.state !== 'closed';      // (every screen shows the game's own numbers)
   function redraw() {
-    const sc = scr.querySelector('.hs') || scr.querySelector('.body'), top = sc ? sc.scrollTop : 0;
+    const sc = scr.querySelector('.body'), top = sc ? sc.scrollTop : 0;
     show(st.screen);
-    const again = scr.querySelector('.hs') || scr.querySelector('.body');
+    const again = scr.querySelector('.body');
     if (again) again.scrollTop = top;
   }
   // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen);
   // a refusal is said on the screen, and what was not taken stays in the order
   let engine = null, busy = false;
-  const keyOf = (t) => ['act', 's', 'd', 'p', 't'].map((k) => t.dataset[k] ?? '').join('|');
+  const keyOf = (t) => ['act', 's', 'd', 'p', 't', 'f'].map((k) => t.dataset[k] ?? '').join('|');
   async function act(t) {
     const kind = t.dataset.act, focused = root.activeElement === t ? keyOf(t) : null;
     ERR = null;
@@ -505,6 +616,8 @@ export function createPhone({ host }) {
     const send = async (command) => { const r = await engine.dispatch(command); if (!r.ok) ERR = refusal(r, command); return r.ok; };
     try {
       if (kind === 'plan' && t.dataset.p !== G.farm.feedPlan) await send({ type: 'setFeedPlan', plan: t.dataset.p });
+      else if (kind === 'share' && t.dataset.p !== G.farm.milk.calfShare) await send({ type: 'setCalfShare', share: t.dataset.p });
+      else if (kind === 'build') await send({ type: 'buildFacility', facility: t.dataset.f });
       else if (kind === 'tanker') await send({ type: 'orderSupply', supply: 'water', units: 1, tanker: t.dataset.t });
       else if (kind === 'feed' || kind === 'week') {
         const b = sup('barley'), a = sup('alfalfa');
@@ -548,7 +661,7 @@ export function createPhone({ host }) {
   // big, Tab goes round the phone's own buttons only (the game behind the dim is not reachable)
   addEventListener('keydown', (e) => {
     if (st.state !== 'big' || e.key !== 'Tab') return;
-    const all = [...scr.querySelectorAll('[tabindex="0"], button')], at = all.indexOf(root.activeElement);
+    const all = [...scr.querySelectorAll('[tabindex="0"], button:not([disabled])')], at = all.indexOf(root.activeElement);      // (a greyed button takes no focus: in the round, the keyboard stuck on it, the review)
     if (!all.length) return;
     e.preventDefault(); focusIn(all[(at + (e.shiftKey ? -1 : 1) + all.length + (at < 0 && e.shiftKey ? 1 : 0)) % all.length]);
   }, true);

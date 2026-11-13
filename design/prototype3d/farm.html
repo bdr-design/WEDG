@@ -153,6 +153,7 @@
   .meter b { font-family: var(--display); font-size: 13px; }
   .meter.open { font-size: 11px; padding: 6px 10px; border-radius: 12px; }
   .meter .bad { color: var(--warn); }
+  .meter .dot { color: #ff4d3d; }
 
   /* ---------- loading */
   .status { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
@@ -857,6 +858,14 @@ function measureHud() {
   hud.x0 = rectOf(document.querySelector('.side')).right + 6; hud.x1 = hud.w - 10; hud.y0 = 8;
   let bottom = hud.h - 10;
   if (!popEl.hidden) { const r = rectOf(popEl); if (SIDE()) hud.x1 = r.left - 6; else bottom = Math.min(bottom, r.top); }
+  // the frame meter (#fps) in the top right corner: the pins kept below it (it takes taps, and a far place's pin slid
+  // under it: the tap opened the meter and no card, the review), and its details closed when a card opens (they
+  // covered the card's header and its close button)
+  const m = $('meter');
+  if (m && !m.hidden) {
+    if (!popEl.hidden) m.classList.remove('open');
+    hud.y0 = Math.max(hud.y0, rectOf(m).bottom - rectOf(stage).top + 6);
+  }
   hud.y1 = bottom - 6;
 }
 measureHud();
@@ -1384,7 +1393,7 @@ let shadowFrame = 0;
 const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0 } : null;
 if (meter) {
   meter.el.hidden = false;
-  meter.el.addEventListener('click', () => { meter.open = !meter.open; meter.el.classList.toggle('open', meter.open); meter.shown = 0; });
+  meter.el.addEventListener('click', () => { meter.el.classList.toggle('open'); meter.shown = 0; measureHud(); });      // (drawn again on the next frame)
 }
 // The resolution test on the owner's phone (12 Nov) alternated 1.5x and 70% of it: the same frame times (33.0 and 33.0
 // ms, the slowest 1% 44 and 43: every second refresh, so something else held the frame to 30 a second, and an upscaler
@@ -1417,9 +1426,11 @@ function meterFrame(now) {
   // the engine's cost to the page (its own work is on its thread): reading each new view of the game, and the save
   const es = window.marahEngine?.stats;
   const line4 = es ? `المحرك ${es.today ?? ''} · بدأ ${Math.round(es.startMs)} م.ث · العرض ${Math.round(es.snapshotChars / 1000)} ألف حرف في ${es.maxParseMs.toFixed(1)} م.ث · الحفظ ${Math.round(es.writeChars / 1000)} ألف حرف في ${Math.round(es.maxWriteMs)} م.ث${es.failedWrites ? ` · <span class="bad">فشل ${es.failedWrites}</span>` : ''}` : window.marahEngineError ? '<span class="bad">المحرك ما اشتغل</span>' : '';
-  const fps = Math.round(cnt / (sum / 1000)), bad = window.marahEngineError || window.marahEngine?.stats?.failedWrites;
-  // closed: the frames a second and the slowest 1%, and a red dot when the engine did not start or a save failed
-  if (!meter.open) { meter.el.innerHTML = `<b>${fps}</b> · ${Math.round(p99)} م.ث${bad ? ' <span class="bad">●</span>' : ''}`; return; }
+  const eng = window.marahEngine, fps = Math.round(cnt / (sum / 1000));
+  const bad = window.marahEngineError || eng?.stats?.failedWrites || String(eng?.status ?? '').startsWith('failed');
+  // closed: the frames a second and the slowest 1%, and a red dot when the engine did not start, a save failed, or the
+  // save could not be read (the game started over; it is kept as .broken)
+  if (!meter.el.classList.contains('open')) { meter.el.innerHTML = `<b>${fps}</b> · ${Math.round(p99)} م.ث${bad ? ' <span class="dot">●</span>' : ''}`; return; }
   meter.el.innerHTML = `<b>${fps}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}${line4 ? '<br>' + line4 : ''}`;
 }
 function tick(now) {

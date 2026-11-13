@@ -121,8 +121,9 @@ class _ProtoAppState extends State<ProtoApp> with WidgetsBindingObserver {
     await _server?.close(force: true);
     final server = await bindServer(_saves);
     _server = server;
-    // #fps shows the frame meter: frames a second, the slowest 1%, stutters,
-    // and the engine's costs; ?save= gives the page the key to its save.
+    // #fps shows the frame meter: frames a second and the slowest 1%; a tap
+    // on it opens the stutters and the engine's costs. ?save= gives the page
+    // the key to its save.
     await _web.loadRequest(
       Uri.parse(
         'http://127.0.0.1:${server.port}/index.html?save=${_saves.token}#fps',
