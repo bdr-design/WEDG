@@ -38,6 +38,10 @@ ID_BLOCK = {i: k for k, i in BLOCK_ID.items()}
 LENGTH = 880.0
 
 
+WOOD_PERIOD = 46.0      # mm of (y + 0.25 z) to one repeat of the layer lines; the wood block holds two repeats
+MARGIN = 0.04           # of a block, kept clear at its edges
+
+
 def paint_textures(size=512):
     """The colour and the occlusion/roughness/metal pictures, by block. Rows run bottom to top (v up)."""
     rng = np.random.default_rng(7)
@@ -55,32 +59,39 @@ def paint_textures(size=512):
         u0, v0, u1, v1 = BLOCKS[name]
         return (xx >= u0) & (xx < u1) & (yy >= v0) & (yy < v1)
 
-    # laminated birch under a red-brown shellac: thin layer lines along the length (along u), periodic in v so faces
-    # mapped anywhere in the block join; darker where hands hold it (the handguard's swell, the stock's wrist: by x)
+    # laminated birch under a red-brown shellac: an even colour with fine, straight layer lines along the length
+    # (along u) where the surface cuts through the plies. Across (v) the block holds two repeats of the lines, each
+    # exactly alike, so a face is mapped from whichever repeat keeps it whole (see Build.mesh). Darker where hands
+    # hold it (the handguard's swell, the stock's wrist: by x).
     m = block('wood')
-    v = (yy - 0.5) / 0.5
-    lines = 0.5 + 0.5 * np.sin(2 * np.pi * (v * 9 + 0.45 * np.sin(2 * np.pi * (xx * 3 + v)) + 0.15 * np.sin(2 * np.pi * xx * 11)))
-    lines = lines ** 2
-    streak = fine(2, 0.10) + 0.6 * np.kron(rng.random((size // 64 + 1, size // 4 + 1)).astype(np.float32) - 0.5, np.ones((64, 4), np.float32))[:size, :size] * 0.12
+    u0, v0, u1, v1 = BLOCKS['wood']
+    fr = (yy - v0 - (v1 - v0) * MARGIN) / ((v1 - v0) * (1 - 2 * MARGIN)) * 2.0      # the layer coordinate: 0..2
+    ph = 2 * np.pi * fr
+    lines = 0.5 + 0.5 * np.sin(14 * ph + 0.5 * np.sin(2 * np.pi * xx * 2 + ph) + 0.25 * np.sin(2 * np.pi * xx * 7 + 3 * ph))
+    lines = lines ** 3
+    n_rows = int(round(size * (v1 - v0) * (1 - 2 * MARGIN) / 2))      # one repeat's rows
+    one = np.kron(rng.random((n_rows // 2 + 1, size // 16 + 1)).astype(np.float32) - 0.5, np.ones((2, 16), np.float32))[:n_rows, :size]
+    row = np.clip(((fr % 1.0) * n_rows).astype(np.int32), 0, n_rows - 1)
+    streak = one[row, (xx * size).astype(np.int32).clip(0, size - 1)] * 0.10      # long streaks of the plies, repeating with the lines
     x_mm = xx * LENGTH
-    held = np.exp(-((x_mm - 585) / 60) ** 2) * 0.30 + np.exp(-((x_mm - 222) / 28) ** 2) * 0.26
-    base = np.array([0.44, 0.17, 0.065], np.float32)      # amber-red shellac over birch, darkened by years of handling
-    dark = np.array([0.24, 0.085, 0.035], np.float32)
-    w = (1 - 0.5 * lines)[..., None] * base + (0.5 * lines)[..., None] * dark
+    held = np.exp(-((x_mm - 585) / 60) ** 2) * 0.28 + np.exp(-((x_mm - 222) / 28) ** 2) * 0.24
+    base = np.array([0.43, 0.185, 0.075], np.float32)      # amber-red shellac over birch, darkened by years of handling
+    dark = np.array([0.30, 0.115, 0.045], np.float32)
+    w = (1 - 0.55 * lines)[..., None] * base + (0.55 * lines)[..., None] * dark
     w = w * (1 + streak[..., None]) * (1 - held[..., None])
     col[m] = w[m]
-    orm[..., 1][m] = (0.42 + 0.10 * lines + 0.25 * held)[m]
-    # black oxide steel: a deep satin black
+    orm[..., 1][m] = (0.42 + 0.08 * lines + 0.25 * held)[m]
+    # black oxide steel: a satin black, dark but still a metal (a blacker one reflects less than any real surface)
     m = block('oxide')
-    g = 0.085 + fine(1, 0.02) + fine(8, 0.012)
-    col[m] = np.stack([g, g, g * 1.08], -1)[m]
-    orm[..., 1][m] = (0.50 + fine(2, 0.08))[m]
-    orm[..., 2][m] = 0.9
-    # the edges every used rifle shows: the black worn thin to dark steel
+    g = 0.185 + fine(1, 0.022) + fine(8, 0.018)
+    col[m] = np.stack([g, g, g * 1.06], -1)[m]
+    orm[..., 1][m] = (0.46 + fine(2, 0.08))[m]
+    orm[..., 2][m] = 0.85
+    # the edges every used rifle shows: the black worn thin to steel
     m = block('edge')
-    g = 0.30 + fine(1, 0.06) + fine(4, 0.05)
+    g = 0.46 + fine(1, 0.06) + fine(4, 0.05)
     col[m] = np.stack([g, g, g * 1.03], -1)[m]
-    orm[..., 1][m] = (0.42 + fine(2, 0.08))[m]
+    orm[..., 1][m] = (0.40 + fine(2, 0.08))[m]
     orm[..., 2][m] = 1.0
     # bare bright steel: the bolt carrier, the muzzle, the selector's arc
     m = block('bright')
@@ -88,13 +99,20 @@ def paint_textures(size=512):
     col[m] = np.stack([g, g, g * 1.02], -1)[m]
     orm[..., 1][m] = (0.34 + fine(2, 0.08))[m]
     orm[..., 2][m] = 1.0
-    # the pistol grip: a dark red-brown phenolic, mottled, glossier than the wood
+    # the pistol grip: a dark red-brown moulded phenolic, glossier than the wood, softly clouded, with the fine
+    # diamond checkering of its side panels
     m = block('bakelite')
-    mot = np.kron(rng.random((size // 6 + 1, size // 6 + 1)).astype(np.float32), np.ones((6, 6), np.float32))[:size, :size]
-    mot = 0.6 * mot + 0.4 * np.roll(mot, 3, 0)
-    b = np.array([0.20, 0.07, 0.04], np.float32)[None, None, :] * (0.6 + 0.8 * mot[..., None])
+    cloud = rng.random((size // 32 + 2, size // 32 + 2)).astype(np.float32)
+    cy, cx_ = yy * size / 32, xx * size / 32
+    iy, ix = cy.astype(np.int32), cx_.astype(np.int32)
+    fy, fx = cy - iy, cx_ - ix
+    cloud = (cloud[iy, ix] * (1 - fy) * (1 - fx) + cloud[iy + 1, ix] * fy * (1 - fx) + cloud[iy, ix + 1] * (1 - fy) * fx + cloud[iy + 1, ix + 1] * fy * fx)
+    px, py = xx * size, yy * size
+    check = np.minimum(np.abs(((px + py) / 4.0) % 1.0 - 0.5), np.abs(((px - py) / 4.0) % 1.0 - 0.5)) * 2      # 0 in the cuts
+    cut = np.clip(1 - check * 2.2, 0, 1)
+    b = np.array([0.23, 0.085, 0.05], np.float32)[None, None, :] * (0.82 + 0.36 * cloud[..., None]) * (1 - 0.30 * cut[..., None])
     col[m] = b[m]
-    orm[..., 1][m] = 0.30
+    orm[..., 1][m] = (0.30 + 0.25 * cut)[m]
     # the sling: khaki-olive canvas webbing
     m = block('canvas')
     weave = 0.5 + 0.5 * np.sin(2 * np.pi * xx * size / 3) * np.sin(2 * np.pi * yy * size / 3)
@@ -147,6 +165,10 @@ class Build:
                 r = bmesh.ops.bevel(pm, geom=hard, offset=bevel, offset_type='OFFSET', segments=1, profile=0.5, affect='EDGES', clamp_overlap=True)
                 for f in r['faces']:
                     f[layer] = BLOCK_ID[wear or block]
+        # which edges stay hard: the steel's corners; on the rounded wood, grip and webbing only a cap's rim
+        sharp = math.radians(60 if block in ('wood', 'bakelite', 'canvas') else 32)
+        for e in pm.edges:
+            e.smooth = not (len(e.link_faces) == 2 and e.calc_face_angle(0) > sharp)
         me = bpy.data.meshes.new('piece')
         pm.to_mesh(me)
         pm.free()
@@ -239,42 +261,81 @@ class Build:
             nrm = Vector((-d.z, 0, d.x)) * half
             lo.append(p - nrm)
             hi.append(p + nrm)
-        for i in range(len(pts) - 1):
-            for y, flip in ((y0, False), (y1, True)):
-                q = [pm.verts.new((v.x, y, v.z)) for v in (lo[i], lo[i + 1], hi[i + 1], hi[i])]
-                pm.faces.new(q[::-1] if flip else q)
+        rings = [[pm.verts.new((v.x, y, v.z)) for v, y in ((lo[i], y0), (hi[i], y0), (hi[i], y1), (lo[i], y1))] for i in range(len(pts))]
+        for r0, r1 in zip(rings, rings[1:]):      # closed, so it has an outside: one side is drawn
+            for k in range(4):
+                pm.faces.new((r0[k], r0[(k + 1) % 4], r1[(k + 1) % 4], r1[k]))
+        pm.faces.new(rings[0][::-1])
+        pm.faces.new(rings[-1])
 
     # --- finishing
     def mesh(self, name):
         bm = self.bm
-        bmesh.ops.triangulate(bm, faces=bm.faces)
+        bmesh.ops.triangulate(bm, faces=bm.faces, quad_method='FIXED', ngon_method='EAR_CLIP')      # the same every run
         uv = bm.loops.layers.uv.new('uv')
+
+        def fit(vals, k):
+            """A face's coordinate brought whole into 0..1: shrunk by [k] if the face is longer than one repeat, then
+            moved by whole repeats (a repeat taken per corner would fold the block back across the face)."""
+            vals = [v / k for v in vals]
+            lo, hi = min(vals), max(vals)
+            base = math.floor(lo)
+            if hi - base > 1.0:
+                base = hi - 1.0
+            return [v - base for v in vals]
+
         for f in bm.faces:
             name_b = ID_BLOCK[f[self.blk]]
             u0, v0, u1, v1 = BLOCKS[name_b]
-            mu, mv = (u1 - u0) * 0.04, (v1 - v0) * 0.04
-            n = f.normal
-            for lp in f.loops:
-                co = lp.vert.co
-                if name_b == 'wood':
-                    # the layer lines run along the rifle: u is the place along it, v wraps round the section
-                    u = min(max(co.x / LENGTH, 0.004), 0.996)
-                    # the layers are sheets standing on edge, side by side across the stock: their lines show as
-                    # contours where the wood is rounded, close together seen from above, far apart on the flat sides
-                    fr = ((co.y + 0.2 * co.z) / 46.0) % 1.0
-                    lp[uv].uv = (u, v0 + mv + fr * (v1 - v0 - 2 * mv))
-                else:
-                    a = (co.x * 0.0131 + co.z * 0.0173 + co.y * 0.0071) % 1.0
-                    b = (co.y * 0.0193 + co.z * 0.0117 + co.x * 0.0057) % 1.0
-                    lp[uv].uv = (u0 + mu + a * (u1 - u0 - 2 * mu), v0 + mv + b * (v1 - v0 - 2 * mv))
+            mu, mv = (u1 - u0) * MARGIN, (v1 - v0) * MARGIN
+            cos = [lp.vert.co for lp in f.loops]
+            if name_b == 'wood':
+                # the layer lines run along the rifle: u is the place along it. The layers are sheets standing on
+                # edge, side by side across the stock: their lines show close together seen from above and far apart
+                # on the flat sides. The block holds two repeats, so a face starts in the first and stays whole.
+                us = [min(max(co.x / LENGTH, 0.004), 0.996) for co in cos]
+                fr = [(co.y + 0.25 * co.z) / WOOD_PERIOD for co in cos]
+                base = math.floor(min(fr))
+                fr = [v - base for v in fr]
+                if max(fr) > 2.0:
+                    fr = [v * 2.0 / max(fr) for v in fr]
+                for lp, u, v in zip(f.loops, us, fr):
+                    lp[uv].uv = (u, v0 + mv + v / 2.0 * (v1 - v0 - 2 * mv))
+            else:
+                a = [co.x * 0.0131 + co.z * 0.0173 + co.y * 0.0071 for co in cos]
+                b = [co.y * 0.0193 + co.z * 0.0117 + co.x * 0.0057 for co in cos]
+                k = max(1.0, (max(a) - min(a)) * 1.001, (max(b) - min(b)) * 1.001)      # the same both ways: no streaks
+                a, b = fit(a, k), fit(b, k)
+                for lp, x, y in zip(f.loops, a, b):
+                    lp[uv].uv = (u0 + mu + x * (u1 - u0 - 2 * mu), v0 + mv + y * (v1 - v0 - 2 * mv))
         bmesh.ops.scale(bm, vec=(0.001, 0.001, 0.001), verts=bm.verts)
         me = bpy.data.meshes.new(name)
         bm.to_mesh(me)
         bm.free()
         for p in me.polygons:
-            p.use_smooth = True
-        me.set_sharp_from_angle(angle=math.radians(32))
+            p.use_smooth = True      # the hard edges were marked piece by piece (Build.add)
         return me
+
+
+def resample(rows, n):
+    """[n] stations along a few given ones (the first column is the place), each other column carried through them
+    by a curve that never overshoots (monotone cubic), so a loft's outline is a curve and not a polyline."""
+    rows = np.array(rows, float)
+    x = rows[:, 0]
+    xs = np.linspace(x[0], x[-1], n)
+    out = [xs]
+    h = np.diff(x)
+    for c in range(1, rows.shape[1]):
+        y = rows[:, c]
+        d = np.diff(y) / h
+        m = np.zeros_like(y)
+        m[0], m[-1] = d[0], d[-1]
+        for i in range(1, len(y) - 1):
+            m[i] = 0.0 if d[i - 1] * d[i] <= 0 else 2.0 / (1.0 / d[i - 1] + 1.0 / d[i])
+        i = np.clip(np.searchsorted(x, xs, side='right') - 1, 0, len(x) - 2)
+        t = (xs - x[i]) / h[i]
+        out.append((2 * t**3 - 3 * t**2 + 1) * y[i] + (t**3 - 2 * t**2 + t) * h[i] * m[i] + (-2 * t**3 + 3 * t**2) * y[i + 1] + (t**3 - t**2) * h[i] * m[i + 1])
+    return [tuple(float(v) for v in r) for r in np.array(out).T]
 
 
 # ------------------------------------------------------------------ the rifle (millimetres; the sources in README.md)
@@ -288,10 +349,12 @@ def rifle(detail=0):
 
     # the fixed laminated stock: the straight comb a little under the bore's line, deep at the butt, slim at the wrist
     p = b.piece()
-    b.loft(p, [(3, -48.5, 90, 45, 16.5, 4.0), (45, -44.5, 90, 43.5, 18.5, 3.4), (130, -30.5, 90, 34.5, 18, 3.0), (205, -17, 90, 25, 16.5, 3.0), (238, -13, 90, 23, 15.5, 3.4)], n=N(14))
+    # (the comb runs level a little under the bore's line and rises only at the wrist; the underside climbs to it)
+    stock = [(3, -51.25, 90, 45.75, 16.5, 4.0), (45, -48.5, 90, 43.5, 18.5, 3.4), (130, -40, 90, 35, 18, 3.0), (200, -29, 90, 25, 16.5, 3.0), (224, -23, 90, 23, 16, 3.2), (238, -18, 90, 23, 15.5, 3.4)]
+    b.loft(p, resample(stock, 12 if hi else 6), n=N(22))
     b.add(p, 'wood')
     p = b.piece()      # the steel butt plate
-    b.loft(p, [(0, -48.5, 90, 46, 17.3, 4.0), (3.6, -48.5, 90, 46, 17.3, 4.0)], n=N(14))
+    b.loft(p, [(0, -51.25, 90, 46.5, 17.3, 4.0), (3.6, -51.25, 90, 46.5, 17.3, 4.0)], n=N(22))
     b.add(p, 'oxide', 'bright', 0.9)
 
     # the stamped receiver and its rear end
@@ -299,21 +362,32 @@ def rifle(detail=0):
     b.prism(p, [(235, -30), (249, -40), (491, -40), (491, 12), (235, 12)], -16.5, 16.5)
     b.add(p, 'oxide', 'edge', 0.8)
     # the ribbed stamped dust cover, its arch from the receiver's rails
-    arch = [(16.5 * math.copysign(abs(math.cos(t)) ** 0.6, math.cos(t)), 12 + 22.0 * math.sin(t) ** 0.6) for t in np.linspace(0, math.pi, N(10))]
+    # (its rear end falls away to the receiver's back, as the real cover does)
+    def arch(height, n):
+        return [(16.5 * math.copysign(abs(math.cos(t)) ** 0.6, math.cos(t)), 12 + height * math.sin(t) ** 0.6) for t in np.linspace(0, math.pi, n)]
     p = b.piece()
-    b.prism_x(p, arch, 245, 453)
+    rings = [[p.verts.new((x, y, z)) for y, z in arch(hgt, N(10))] for x, hgt in ((238, 7.0), (246, 15.5), (258, 21.0), (270, 22.0), (453, 22.0))]
+    for r0, r1 in zip(rings, rings[1:]):
+        for k in range(len(r0) - 1):
+            p.faces.new((r0[k], r0[k + 1], r1[k + 1], r1[k]))
+        p.faces.new((r0[-1], r0[0], r1[0], r1[-1]))
+    p.faces.new(rings[0][::-1])
+    p.faces.new(rings[-1])
     b.add(p, 'oxide', 'edge', 0.7, min_angle=50)
     if hi:
         for x in (288, 328, 368, 408):      # its cross ribs
             p = b.piece()
             b.prism_x(p, [(17.3 * math.copysign(abs(math.cos(t)) ** 0.6, math.cos(t)), 12 + 22.9 * math.sin(t) ** 0.6) for t in np.linspace(0.12, math.pi - 0.12, 9)], x, x + 6)
-            b.add(p, 'oxide', 'edge', 0.5, min_angle=50)
+            b.add(p, 'oxide')
         # the rivets of the front and rear trunnions and the three axis pins, each side
         for side in (1, -1):
-            for (x, z, r) in [(466, 8, 2.4), (481, 8, 2.4), (466, -8, 2.4), (481, -8, 2.4), (473, -30, 2.4), (244, 4, 2.4), (244, -14, 2.4), (322, -12, 2.0), (343, -5, 2.0), (304, -9, 2.0), (410, -22, 3.2)]:
+            for (x, z, r) in [(466, 8, 2.4), (481, 8, 2.4), (466, -8, 2.4), (481, -8, 2.4), (473, -30, 2.4), (244, 4, 2.4), (244, -14, 2.4), (322, -12, 2.0), (343, -5, 2.0), (304, -9, 2.0)]:
                 p = b.piece()
-                b.tube(p, (x, side * 16.4, z), (x, side * 17.3, z), r, n=8)
-                b.add(p, 'oxide', 'edge', 0.3)
+                b.tube(p, (x, side * 16.4, z), (x, side * 17.3, z), r, n=6)
+                b.add(p, 'oxide')
+            p = b.piece()      # the magazine well's dimple: a pressed oval
+            b.prism(p, [(412 + 10 * math.cos(t), -22 + 4 * math.sin(t)) for t in np.linspace(0, 2 * math.pi, 10, endpoint=False)], side * 16.4, side * 17.1)
+            b.add(p, 'oxide')
         # the bolt carrier's bare steel seen through the right side's slot
         p = b.piece()
         b.box(p, 374, 446, RIGHT * 16.9, RIGHT * 16.4, 3, 11.4)
@@ -330,14 +404,12 @@ def rifle(detail=0):
         b.add(p, 'oxide', 'edge', 0.4)
         p = b.piece()
         b.box(p, 354, 362, RIGHT * 25, RIGHT * 18.6, 3, 8)
-        b.add(p, 'oxide', 'bright', 0.6)
-        p = b.piece()      # the arc: a thin strip lying on the receiver's side
-        c, r0, r1 = Vector((262, 0, -3)), 97.5, 98.7
-        angs = np.linspace(math.radians(1), math.radians(-20), 8)
-        ring = [(c.x + r * math.cos(a), c.z + r * math.sin(a)) for a in angs for r in (r0,)] + [(c.x + r1 * math.cos(a), c.z + r1 * math.sin(a)) for a in angs[::-1]]
-        vs = [p.verts.new((x, RIGHT * 16.56, z)) for x, z in ring]
-        p.faces.new(vs)
-        b.add(p, 'bright')
+        b.add(p, 'oxide', 'edge', 0.6)
+        p = b.piece()      # the mark the lever's tip wears into the receiver: short, the black worn thin
+        c, r0, r1 = Vector((262, 0, -3)), 97.4, 98.8
+        angs = np.linspace(math.radians(1), math.radians(-9), 5)
+        b.prism(p, [(c.x + r0 * math.cos(a), c.z + r0 * math.sin(a)) for a in angs] + [(c.x + r1 * math.cos(a), c.z + r1 * math.sin(a)) for a in angs[::-1]], RIGHT * 16.75, RIGHT * 16.4)
+        b.add(p, 'edge')
 
     # the rear sight: its block ahead of the dust cover, the tangent leaf hinged at its front, the notch at the rear
     p = b.piece()
@@ -354,19 +426,21 @@ def rifle(detail=0):
     # the pistol grip (phenolic), raked back
     rake = math.radians(20)
     d = Vector((-math.sin(rake), 0, -math.cos(rake)))
-    top = Vector((275, 0, -39))
+    top = Vector((286.5, 0, -39))
     secs = []
-    for t, fb, w in [(0, 24, 14.5), (14, 20.5, 14.5), (55, 19, 14), (88, 18.5, 13.5), (99, 16, 12.5)]:
+    # (down the grip from the receiver, half its depth front to back, half its width): full under the receiver,
+    # waisted for the hand, swelling a little to its foot
+    for t, fb, w in resample([(0, 24.5, 14.5), (10, 24.0, 14.8), (25, 23.4, 14.8), (56, 20.8, 14.2), (88, 19.8, 14.0), (96, 19.4, 13.6), (101, 16.5, 12.0)], 9 if hi else 5):
         c = top + d * t
         secs.append((c.x, c.z, -20.0, fb, w, 2.7))      # the long axis front to back, square to the grip's rake
     p = b.piece()
-    b.loft(p, secs, n=N(12))
+    b.loft(p, secs, n=N(20))
     b.add(p, 'bakelite')
 
     # the trigger guard, the trigger and the magazine catch
     p = b.piece()
-    b.strap(p, [(303, -40), (304, -60), (315, -71), (360, -72), (375, -62), (380, -40)], -6.5, 6.5, 1.8)
-    b.add(p, 'oxide', 'edge', 0.3)
+    b.strap(p, [(310, -40), (311, -55), (320, -64.5), (360, -65.5), (374, -57), (380, -40)], -6.5, 6.5, 3.4)
+    b.add(p, 'oxide', 'edge', 0.5)
     p = b.piece()
     b.prism(p, [(318, -40), (327, -40), (325.5, -53), (319, -65), (314.5, -64), (319.5, -53)], -3.2, 3.2)
     b.add(p, 'oxide', 'edge', 0.4)
@@ -375,30 +449,41 @@ def rifle(detail=0):
     b.add(p, 'oxide', 'edge', 0.4)
 
     # the 30-round steel magazine: its curve an arc, forward at the foot; ribs on its sides; the floor plate
-    R, x_top, z_top, arc_len = 131.6, 417.0, -40.0, 157.0
-    cx = x_top + R
+    # (it leaves the receiver already leaning forward, on a wide arc: fitted to the museum rifle's outline)
+    R, x_top, z_top, arc_len, lean = 185.0, 417.0, -40.0, 159.0, math.radians(10)
+    cx, cz = x_top + R * math.cos(lean), z_top + R * math.sin(lean)
     def on_arc(s):
-        phi = s / R
-        return cx - R * math.cos(phi), z_top - R * math.sin(phi), math.degrees(phi)
+        phi = lean + s / R
+        return cx - R * math.cos(phi), cz - R * math.sin(phi), math.degrees(phi)
     secs = []
-    for s in np.linspace(-6, arc_len, 9 if hi else 5):
+    for s in np.linspace(-16, arc_len, 10 if hi else 5):
         x, z, deg = on_arc(s)
         secs.append((x, z, deg, 33.0, 13.6, 7.0))      # 66 mm front to back, 27 mm wide
     p = b.piece()
-    b.loft(p, secs, n=N(12))
+    b.loft(p, secs, n=N(14))
     b.add(p, 'oxide', 'edge', 0.9, min_angle=40)
     x, z, deg = on_arc(arc_len)
     x2, z2, _ = on_arc(arc_len + 3.5)
     p = b.piece()
-    b.loft(p, [(x, z, deg, 34.2, 14.6, 7.0), (x2, z2, deg, 34.2, 14.6, 7.0)], n=N(12))
+    b.loft(p, [(x, z, deg, 34.2, 14.6, 7.0), (x2, z2, deg, 34.2, 14.6, 7.0)], n=N(14))
     b.add(p, 'oxide', 'bright', 0.8, min_angle=40)
     if hi:
-        for s in (52, 84, 116):      # the side ribs
-            xa, za, da = on_arc(s)
-            xb, zb, db = on_arc(s + 5)
-            p = b.piece()
-            b.loft(p, [(xa, za, da, 30.0, 14.7, 7.0), (xb, zb, db, 30.0, 14.7, 7.0)], n=12)
-            b.add(p, 'oxide', 'edge', 0.5, min_angle=40)
+        # the pressed ribs: long, along the magazine's curve, three on each side
+        for side in (1, -1):
+            for off in (-17.0, 0.0, 17.0):
+                p = b.piece()
+                rings = []
+                for s in np.linspace(14, arc_len - 12, 7):
+                    x, z, deg = on_arc(s)
+                    ax = Vector((math.cos(math.radians(deg)), 0, math.sin(math.radians(deg))))
+                    c = Vector((x, 0, z))
+                    rings.append([p.verts.new(c + ax * (off + da) + Vector((0, side * y, 0))) for da, y in ((-2.2, 13.0), (2.2, 13.0), (1.5, 14.5), (-1.5, 14.5))])
+                for r0, r1 in zip(rings, rings[1:]):
+                    for k in range(4):
+                        p.faces.new((r0[k], r0[(k + 1) % 4], r1[(k + 1) % 4], r1[k]))
+                p.faces.new(rings[0][::-1])
+                p.faces.new(rings[-1])
+                b.add(p, 'oxide')
 
     # the barrel, the gas tube above it, the cleaning rod under it
     p = b.piece()
@@ -409,16 +494,17 @@ def rifle(detail=0):
     b.add(p, 'oxide')
     if hi:
         p = b.piece()
-        b.tube(p, (722, 0, -12.4), (862, 0, -12.4), 2.7, n=6)
+        b.tube(p, (646, 0, -12.4), (862, 0, -12.4), 2.7, n=6)
         b.tube(p, (862, 0, -12.4), (870, 0, -12.4), 3.7, n=6)
-        b.add(p, 'oxide', 'bright', 0.4)
+        b.add(p, 'oxide')
 
     # the laminated handguards: the lower with its palm swells, the upper over the gas tube
     p = b.piece()
-    b.loft(p, [(491, -8, 90, 22, 18, 3.4), (512, -8.5, 90, 22, 19, 3.2), (548, -9, 90, 22, 22.5, 3.0), (596, -9, 90, 22, 22.5, 3.0), (626, -8.5, 90, 21, 19.5, 3.2), (642, -8, 90, 20.5, 18.5, 3.4)], n=N(14))
+    lower = [(491, -8, 90, 22, 18, 3.4), (512, -9.5, 90, 23, 19, 3.2), (548, -9.5, 90, 22.5, 22.5, 3.0), (596, -9, 90, 22, 22.5, 3.0), (626, -8.5, 90, 21, 19.5, 3.2), (642, -8, 90, 20.5, 18.5, 3.4)]
+    b.loft(p, resample(lower, 9 if hi else 6), n=N(22))
     b.add(p, 'wood')
     p = b.piece()
-    b.loft(p, [(543, 23, 90, 13.5, 13.5, 2.3), (641, 23, 90, 13.0, 13.0, 2.3)], n=N(12))
+    b.loft(p, [(543, 23, 90, 13.5, 13.5, 2.3), (641, 23, 90, 13.0, 13.0, 2.3)], n=N(16))
     b.add(p, 'wood')
     p = b.piece()      # the handguard's retainer
     b.box(p, 640, 648, -19.5, 19.5, -29.5, 13)
@@ -426,7 +512,7 @@ def rifle(detail=0):
 
     # the gas block, slanted forward, with the bayonet lug under it
     p = b.piece()
-    b.prism(p, [(716, -9.5), (742, -9.5), (747, -3), (737, 30.5), (716, 30.5)], -9.5, 9.5)
+    b.prism(p, [(716, -9.5), (742, -9.5), (747, -3), (747, 8), (740.5, 12.5), (734, 19), (729.5, 25.5), (727, 30.5), (716, 30.5)], -9.5, 9.5)
     b.add(p, 'oxide', 'edge', 0.8)
     if hi:
         p = b.piece()
@@ -474,7 +560,7 @@ def rifle(detail=0):
     for (x, z, y) in [(644, -18, 19.5), (72, -66, 17.5)]:
         p = b.piece()
         b.strap(p, [(x - 6, z + 5), (x - 6, z - 9), (x + 6, z - 9), (x + 6, z + 5)], y, y + 2.2, 2.0)
-        b.add(p, 'oxide', 'edge', 0.3) if hi else b.add(p, 'oxide')
+        b.add(p, 'oxide')
     return b
 
 
@@ -500,10 +586,11 @@ def sling(detail=0):
 
 
 # ------------------------------------------------------------------ the scene, the files, the pictures
-def material():
-    col, orm = paint_textures()
+def material(size):
+    col, orm = paint_textures(size)
     m = bpy.data.materials.new('akm')
     m.use_nodes = True
+    m.use_backface_culling = True      # every part is closed: one side to draw, in the shadow pass too
     nt = m.node_tree
     bsdf = nt.nodes['Principled BSDF']
     tc = nt.nodes.new('ShaderNodeTexImage')
@@ -527,35 +614,40 @@ def obj(name, me, mat, parent=None):
     return o
 
 
-def point(name, mm, parent):
+def point(name, mm, parent, pitch=0.0):
     e = bpy.data.objects.new(name, None)
     e.empty_display_size = 0.02
     e.location = Vector(mm) * 0.001
+    e.rotation_euler = (0, math.radians(pitch), 0)
     e.parent = parent
     bpy.context.scene.collection.objects.link(e)
     return e
 
 
-# where the rifle is held and carried (millimetres), for the figure's hands and the sling's ends
+# where the rifle is held and carried (millimetres), for the figure's hands and the sling's ends. Each point's own
+# axes are the rifle's (X to the muzzle, Z up), but grip_r's Z runs up the pistol grip (raked back 20 degrees).
 POINTS = {
-    'grip_r': (262, 0, -90),          # the right hand, round the pistol grip
+    'grip_r': (268, 0, -90),          # the right hand, round the pistol grip
     'hand_l': (572, 0, -24),          # the left hand, under the lower handguard's swell
     'sling_front': (644, 21, -24),
     'sling_rear': (72, 19, -72),
     'muzzle': (880, 0, 0),
-    'butt': (0, 0, -48.5),
+    'butt': (0, 0, -51.25),
 }
+PITCH = {'grip_r': 20.0}
 
 
 def build_scene(detail):
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    mat = material()
+    mat = material(512 if detail == 0 else 256)
     root = bpy.data.objects.new('akm' if detail == 0 else 'akm_lod1', None)
     bpy.context.scene.collection.objects.link(root)
     body = obj('akm_body', rifle(detail).mesh('akm_body'), mat, root)
-    strap = obj('akm_sling', sling(detail).mesh('akm_sling'), mat, root)
+    # the sling hangs slack under a rifle that is held; on a slung rifle the strap goes over the shoulder and belongs
+    # to the figure, so the far model has none
+    strap = obj('akm_sling', sling(detail).mesh('akm_sling'), mat, root) if detail == 0 else None
     for k, v in POINTS.items():
-        point(k, v, root)
+        point(k, v, root, PITCH.get(k, 0.0))
     return root, body, strap
 
 
@@ -564,7 +656,7 @@ def measure(body, strap):
         return sum(len(p.vertices) - 2 for p in o.data.polygons)
     co = np.array([v.co[:] for v in body.data.vertices]) * 1000
     lo, hi = co.min(0), co.max(0)
-    return {'tris_body': tris(body), 'tris_sling': tris(strap), 'length': hi[0] - lo[0], 'height': hi[2] - lo[2], 'width': hi[1] - lo[1], 'x0': lo[0], 'x1': hi[0], 'z0': lo[2], 'z1': hi[2]}
+    return {'tris_body': tris(body), 'tris_sling': tris(strap) if strap else 0, 'length': hi[0] - lo[0], 'height': hi[2] - lo[2], 'width': hi[1] - lo[1], 'x0': lo[0], 'x1': hi[0], 'z0': lo[2], 'z1': hi[2]}
 
 
 def export(path, root):
@@ -640,7 +732,7 @@ def render(root):
         root.location = (0.52, 0, 0.0)
         for l, loc in ((key, (-0.6, -2.4, 2.4)), (fill, (1.6, -1.2, 1.2)), (top, (0.2, -0.4, 3.2))):
             l.location = loc
-            l.data.energy *= 6
+            l.data.energy *= 2.2
             look(l, (0.2, 0, 0.9))
         shot('akm_scale.png', (0.22, -6, 0.9), ortho=2.05, res=(1100, 1500), at=(0.22, 0, 0.9))
 
