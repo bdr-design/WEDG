@@ -118,8 +118,9 @@ class Presenter {
         kind: t.kind,
         strength: t.strength,
         until: t.until,
-        festivalCatch: t.festivalCatch,
-        monthlyOutside: t.monthlyOutside,
+        festivalRisk: t.festivalRisk,
+        outsideRisk: t.outsideRisk,
+        foundMostlyBy: t.foundMostlyBy,
         fineIfFound: t.fineIfFound,
       ),
   ];

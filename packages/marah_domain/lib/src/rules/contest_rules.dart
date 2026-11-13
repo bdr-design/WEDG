@@ -120,7 +120,32 @@ class ContestRules {
   static double monthlyOutsideChance(int strength) =>
       1 - math.pow(1 - Balance.outsideCatchPerDay * strength, 30).toDouble();
 
+  /// The risk as the player hears it (the review of e2775ff: the views say
+  /// the risk in words, never the odds): (balance) low under 30%, high from
+  /// 60%.
+  static RiskBand band(double chance) => chance < 0.3
+      ? RiskBand.low
+      : chance < 0.6
+      ? RiskBand.medium
+      : RiskBand.high;
+
+  /// The risk a festival finds [kind] at [strength].
+  static RiskBand festivalRisk(TamperKind kind, int strength) =>
+      band(festivalCatchChance(kind, strength));
+
+  /// The risk it is found outside the festivals in a month (not listed for
+  /// sale, never treated by the vet).
+  static RiskBand outsideRisk(int strength) =>
+      band(monthlyOutsideChance(strength));
+
+  /// Who finds [kind] most: the tampering experts or the medical committee.
+  static Stage foundMostlyBy(TamperKind kind) =>
+      kind.experts >= kind.medical ? Stage.tamperingExperts : Stage.medical;
+
   /// What the secret vet takes for a treatment.
   static int tamperPrice(TamperKind kind, int strength) =>
       kind.price * strength;
 }
+
+/// A risk in words: what a player is told of a chance (never the number).
+enum RiskBand { low, medium, high }

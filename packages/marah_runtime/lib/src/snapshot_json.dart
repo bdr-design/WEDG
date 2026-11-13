@@ -315,15 +315,16 @@ class SnapshotJson {
     'kind': t.kind.name,
     'strength': t.strength,
     'until': t.until.value,
-    'festivalCatch': _hundredth(t.festivalCatch),
-    'monthlyOutside': _hundredth(t.monthlyOutside),
+    'festivalRisk': t.festivalRisk.name,
+    'outsideRisk': t.outsideRisk.name,
+    'foundMostlyBy': t.foundMostlyBy.name,
     'fineIfFound': t.fineIfFound,
   };
 
   /// The festival rules the screens say (Balance, TamperKind): the late
   /// fee, the hours before a round it closes, the ban's length, and each
-  /// treatment's price, fine cap, features and the chance a festival finds
-  /// it at each strength.
+  /// treatment's price, fine cap, features, its risk at a festival at each
+  /// strength in words and who finds it most.
   static Map<String, Object?> festivalRules() => {
     'lateEntryFee': Balance.lateEntryFee,
     'lateEntryHoursBefore': Balance.lateEntryHoursBefore,
@@ -340,15 +341,13 @@ class SnapshotJson {
             for (var s = 1; s <= 3; s++) ContestRules.tamperPrice(k, s),
           ],
           'fine': [for (var s = 1; s <= 3; s++) Balance.tamperFine(k, s)],
-          'festivalCatch': [
-            for (var s = 1; s <= 3; s++)
-              _hundredth(ContestRules.festivalCatchChance(k, s)),
+          'festivalRisk': [
+            for (var s = 1; s <= 3; s++) ContestRules.festivalRisk(k, s).name,
           ],
+          'foundMostlyBy': ContestRules.foundMostlyBy(k).name,
         },
     ],
   };
-
-  static double _hundredth(double v) => (v * 100).roundToDouble() / 100;
 
   /// To a tenth: a litre to a tenth is what the screens show, and the full
   /// doubles were most of the milk's bytes.

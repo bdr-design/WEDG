@@ -336,8 +336,9 @@ class TamperingCard {
     required this.kind,
     required this.strength,
     required this.until,
-    required this.festivalCatch,
-    required this.monthlyOutside,
+    required this.festivalRisk,
+    required this.outsideRisk,
+    required this.foundMostlyBy,
     required this.fineIfFound,
   });
 
@@ -347,10 +348,11 @@ class TamperingCard {
   final int strength;
   final GameDay until;
 
-  /// The chance a festival finds it (both stages), and outside one in a
-  /// month.
-  final double festivalCatch;
-  final double monthlyOutside;
+  /// The risk a festival finds it, outside one in a month, and who finds
+  /// it most: in words, never the odds.
+  final RiskBand festivalRisk;
+  final RiskBand outsideRisk;
+  final Stage foundMostlyBy;
   final int fineIfFound;
 
   @override

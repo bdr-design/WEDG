@@ -584,8 +584,8 @@ class RoundView {
   bool get enterable => kind.enterable;
 }
 
-/// One of the player's own secret treatments and its risk: the chance a
-/// festival finds it (both stages), and outside one in a month.
+/// One of the player's own secret treatments and its risk, in words: at a
+/// festival, outside one in a month, and who finds it most (never the odds).
 class TamperingView {
   TamperingView._(this._t, this.camel);
   final Tampering _t;
@@ -593,8 +593,8 @@ class TamperingView {
   TamperKind get kind => _t.kind;
   int get strength => _t.strength;
   GameDay get until => _t.until;
-  double get festivalCatch =>
-      ContestRules.festivalCatchChance(_t.kind, _t.strength);
-  double get monthlyOutside => ContestRules.monthlyOutsideChance(_t.strength);
+  RiskBand get festivalRisk => ContestRules.festivalRisk(_t.kind, _t.strength);
+  RiskBand get outsideRisk => ContestRules.outsideRisk(_t.strength);
+  Stage get foundMostlyBy => ContestRules.foundMostlyBy(_t.kind);
   int get fineIfFound => Balance.tamperFine(_t.kind, _t.strength);
 }

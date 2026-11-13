@@ -135,7 +135,16 @@ void main() {
     final rounds = d['rounds']! as List;
     expect(rounds, isNotEmpty);
     expect((rounds.first as Map).keys, containsAll(['kind', 'day', 'field']));
-    expect(snap['festivalRules'], isA<Map<String, Object?>>());
+    final rules = snap['festivalRules']! as Map<String, Object?>;
+    // the risk in words, never the odds
+    for (final k in rules['tamperKinds']! as List) {
+      final kind = k as Map;
+      expect(
+        kind['festivalRisk'],
+        everyElement(isIn(['low', 'medium', 'high'])),
+      );
+      expect(kind.values.whereType<double>(), isEmpty);
+    }
     expect(snap['tamperings'], isEmpty);
     final none = await page.call('festival', {'festival': 'nope'});
     expect(none['ok'], isFalse);
