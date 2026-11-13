@@ -277,7 +277,7 @@ class Camel {
     'crossbred': crossbred,
     'purchasePrice': purchasePrice,
     'lastPlayerOwner': lastPlayerOwner?.value,
-    'bannedThrough': bannedThrough,
+    if (bannedThrough != null) 'bannedThrough': bannedThrough,
     'placings': [for (final p in placings) p.toJson()],
   };
 

@@ -204,12 +204,12 @@ class ResultRow {
     'owner': ownerId.value,
     'score': score,
     'prize': prize,
-    'camel': camelId?.value,
-    'marks': marks == null
-        ? null
-        : {for (final e in marks!.entries) e.key.name: e.value},
-    'removedAt': removedAt?.name,
-    'reason': reason?.name,
+    // the empty fields left out: most rows are rivals' places
+    if (camelId != null) 'camel': camelId!.value,
+    if (marks != null)
+      'marks': {for (final e in marks!.entries) e.key.name: e.value},
+    if (removedAt != null) 'removedAt': removedAt!.name,
+    if (reason != null) 'reason': reason!.name,
     'head': head,
   };
 
