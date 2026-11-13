@@ -61,6 +61,20 @@ int _extras(Game game, int week, Map<String, int> done) {
     done[kind] = (done[kind] ?? 0) + 1;
   }
 
+  // a round's day the bot's last week ended on, told hour by hour (as the
+  // engine does by the clock), and the treatment man's messages read and the
+  // findings told, as the phone does
+  if (game.nextTelling != null) {
+    for (final m in Balance.stageMinutes) {
+      if (game.tellTo(m).isNotEmpty || m == Balance.stageMinutes.last) {
+        done['tellTo'] = (done['tellTo'] ?? 0) + 1;
+      }
+    }
+  }
+  if (week % 3 == 0 && game.me.dealer.any((m) => !m.read)) {
+    send(ReadMessages(me));
+  }
+  if (game.me.untold.isNotEmpty) send(MarkFindingsTold(me, 1));
   var v = GameView(game.state, me);
   if (week % 8 == 0) {
     send(

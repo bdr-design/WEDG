@@ -75,7 +75,7 @@ jobs:
           echo "VM: $vm_end / JS save read on the VM: $js_read"
           test -n "$vm_end" && test "$vm_end" = "$js_read"
           # each command the bot never sends went through at least once
-          for c in buyListing cancelListing declineOffer listForSale mateWithOwnBull renameCamel setCalfShare setFeedPlan tamper withdrawEntry; do
+          for c in buyListing cancelListing declineOffer listForSale markFindingsTold mateWithOwnBull readMessages renameCamel setCalfShare setFeedPlan tamper tellTo withdrawEntry; do
             grep '^extras' "$RUNNER_TEMP/vm.txt" | grep -Eq "$c [1-9]" || { echo "$c never went through"; exit 1; }
           done
           # the worker the prototype loads compiles, answers in node with a fake page, and the page's own side

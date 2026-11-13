@@ -402,7 +402,10 @@ class SaveCodec {
   /// a round's day is told stage by stage (a judged round was told whole
   /// already: its six stages counted told, and nothing waits to be told);
   /// the secret treatment man has sent no message yet; the treatments found
-  /// outside a festival before were told then, by the events.
+  /// outside a festival that the phone could still have told (its last 40
+  /// events of the player's: a tamperingFound with no festival and no
+  /// saleRefused for the camel that day, the oldest first) wait untold, as
+  /// the phone told them once from the events and kept no mark a save holds.
   static Map<String, Object?> _v8ToV9(Map<String, Object?> input) {
     final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
     final world = data['world']! as Map<String, Object?>;
@@ -413,10 +416,34 @@ class SaveCodec {
         r['told'] = r['results'] == null ? 0 : 6;
       }
     }
+    final inboxes = (data['inboxes'] as Map<String, Object?>?) ?? const {};
     for (final pl in (data['players'] as List<Object?>?) ?? const []) {
-      (pl! as Map<String, Object?>)
+      final p = pl! as Map<String, Object?>;
+      final box = [
+        for (final e in (inboxes[p['id']] as List<Object?>?) ?? const [])
+          e! as Map<String, Object?>,
+      ];
+      final last = box.length > 40 ? box.sublist(box.length - 40) : box;
+      final refused = {
+        for (final e in last)
+          if (e['type'] == 'saleRefused') '${e['day']}|${e['camel']}',
+      };
+      p
         ..['dealer'] = <Object?>[]
-        ..['untold'] = <Object?>[];
+        ..['untold'] = [
+          for (final e in last)
+            if (e['type'] == 'tamperingFound' &&
+                e['festival'] == null &&
+                !refused.contains('${e['day']}|${e['camel']}'))
+              {
+                'camel': e['camel'],
+                'name': e['name'],
+                'kind': e['kind'],
+                'fine': e['fine'],
+                'knew': ((e['fine'] as int?) ?? 0) > 0,
+                'day': e['day'],
+              },
+        ];
     }
     return data;
   }

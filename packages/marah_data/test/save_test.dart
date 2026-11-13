@@ -531,6 +531,16 @@ void main() {
     expect(g.tellTo(Game.minutesInDay), isEmpty);
   });
 
+  test('v8 to v9: a finding the old phone had not told yet waits untold', () {
+    final r = codec.decode(
+      File('test/fixtures/save_v8_found.json').readAsStringSync(),
+    );
+    final state = (r as Loaded).state;
+    final f = state.players.values.single.untold.single;
+    expect((f.name, f.kind, f.fine, f.knew), ('سيف', TamperKind.dye, 0, false));
+    expect(checkInvariants(state), isEmpty);
+  });
+
   test('v9 holds a message from the treatment man and an untold finding', () {
     final state =
         (codec.decode(File(fixtures[9]!).readAsStringSync()) as Loaded).state;
