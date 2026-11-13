@@ -11,6 +11,7 @@ import '../rules/balance.dart';
 import '../rules/contest_rules.dart';
 import '../rules/genetics.dart';
 import '../rules/judging.dart';
+import '../rules/milk.dart';
 import '../rules/names.dart';
 import '../rules/pasture.dart';
 import '../rules/provisions.dart';
@@ -30,6 +31,7 @@ const List<DailySystem> dailyPipeline = [
   CalendarSystem(),
   UpkeepSystem(),
   CareSystem(),
+  MilkSystem(),
   HealthSystem(),
   BreedingSystem(),
   MarketSystem(),
@@ -69,6 +71,7 @@ class UpkeepSystem implements DailySystem {
   @override
   void run(Sim sim) {
     for (final p in sim.state.players.values) {
+      _finish(sim, p);
       _deliver(sim, p);
       _consume(sim, p);
       if (sim.today.date.day == 1) {
@@ -89,6 +92,26 @@ class UpkeepSystem implements DailySystem {
     }
   }
 
+  /// The facilities done today stand on the farm from today.
+  static void _finish(Sim sim, PlayerState p) {
+    final f = p.farm;
+    for (final b in f.building.where((b) => b.doneOn <= sim.today)) {
+      f.built[b.facility] = f.has(b.facility) + 1;
+      switch (b.facility) {
+        case Facility.pen:
+          f.capacity += 10;
+        case Facility.tank:
+          f.tankL += 30000;
+        case Facility.store:
+          f.storeKg += 10000;
+        case Facility.caravan || Facility.tent || Facility.room:
+          break;
+      }
+      sim.emit(FacilityBuilt(sim.today, owner: p.id, facility: b.facility));
+    }
+    f.building.removeWhere((b) => b.doneOn <= sim.today);
+  }
+
   static void _deliver(Sim sim, PlayerState p) {
     final f = p.farm;
     for (final d in f.deliveries.where((d) => d.arrivesOn <= sim.today)) {
@@ -99,7 +122,9 @@ class UpkeepSystem implements DailySystem {
         case Supply.alfalfa:
           f.alfalfaKg += amount;
         case Supply.water:
-          f.waterL += amount;
+          // filled to the top; the rest goes back with the tanker
+          final room = f.tankL - f.waterL;
+          f.waterL += amount < room ? amount : (room > 0 ? room : 0);
       }
       sim.emit(
         SupplyDelivered(
@@ -175,8 +200,11 @@ class UpkeepSystem implements DailySystem {
 class CareSystem implements DailySystem {
   const CareSystem();
 
-  static int shepherdsNeeded(int head) =>
-      head == 0 ? 1 : (head / Balance.camelsPerShepherd).ceil();
+  /// The player tends a small herd himself (Balance.ownerTendsUpTo); past
+  /// it, a shepherd for each 25 head.
+  static int shepherdsNeeded(int head) => head <= Balance.ownerTendsUpTo
+      ? 0
+      : (head / Balance.camelsPerShepherd).ceil();
 
   @override
   void run(Sim sim) {
@@ -185,6 +213,7 @@ class CareSystem implements DailySystem {
       final needed = shepherdsNeeded(herd.length);
       final short = p.farm.shepherds < needed;
       final crowded = herd.length > p.farm.capacity;
+      final byId = {for (final c in herd) c.id: c};
       for (final c in herd) {
         // the ration's condition for the share of it the herd got (unfed, a
         // camel drifts to 35: balance), and lower again without water
@@ -200,6 +229,16 @@ class CareSystem implements DailySystem {
         if (crowded) target -= Balance.crowdedPenalty;
         if (c.health == HealthStatus.sick) target -= Balance.sickPenalty;
         if (c.health == HealthStatus.treated) target -= Balance.treatedPenalty;
+        // a suckling calf by the milk its dam's milking leaves it
+        final age = c.ageDays(sim.today);
+        if (age < Balance.lactationDays && c.dam != null) {
+          final dam = byId[c.dam!.id];
+          if (dam != null &&
+              dam.lastCalvedOn == c.born &&
+              Milk.inMilkDays(dam, sim.today) != null) {
+            target += Balance.calfMilkTarget(p.farm.calfShare, age);
+          }
+        }
         final preg = c.pregnancy;
         if (preg != null &&
             preg.confirmed &&
@@ -216,6 +255,29 @@ class CareSystem implements DailySystem {
       }
     }
     // Camels owned by the world's other owners keep a steady condition.
+  }
+}
+
+// ------------------------------------------------------------- milk
+
+/// The nursing camels are milked and what their calves do not keep is sold
+/// to the buyer who comes each day (GDD 12.1; the owner, 13 Nov 2026).
+class MilkSystem implements DailySystem {
+  const MilkSystem();
+
+  @override
+  void run(Sim sim) {
+    for (final p in sim.state.players.values) {
+      var sold = 0.0;
+      for (final m in Milk.today(sim.world, p.id, p.farm, sim.today)) {
+        sold += m.sold;
+      }
+      final income = (sold * Balance.milkPrice).round();
+      if (income > 0) sim.bill(p, Riyal(income), LedgerCategory.milk);
+      p.farm
+        ..milkIncome = income
+        ..milkOn = sim.today;
+    }
   }
 }
 

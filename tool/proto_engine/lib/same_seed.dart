@@ -24,6 +24,9 @@ Iterable<String> sameSeedLines({
     favourite: ColorCategory.majaheem,
     startedAt: DateTime.utc(2026, 11, 1),
   );
+  // the old start's money (SAR 600,000), so the rich farm's paths run too:
+  // a bull bought, festivals entered and withdrawn from
+  grant(game, 580000);
   final bot = Bot(game);
   var extras = 0;
   final done = SplayTreeMap<String, int>();

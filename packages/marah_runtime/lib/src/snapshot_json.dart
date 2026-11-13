@@ -48,7 +48,6 @@ class SnapshotJson {
     'feedPlan': f.feedPlan.name,
     'dailyFeed': f.dailyFeed,
     'monthlyWages': f.monthlyWages,
-    'expansionCost': f.expansionCost,
     'storeKg': f.storeKg,
     'tankL': f.tankL,
     'dryDays': f.dryDays,
@@ -74,6 +73,35 @@ class SnapshotJson {
           'conditionTarget': r.conditionTarget,
         },
     ],
+    'facilities': [
+      for (final x in f.facilities)
+        {
+          'facility': x.facility.name,
+          'price': x.price,
+          'has': x.has,
+          'most': x.most,
+          'building': x.building,
+          'doneOn': x.doneOn == null ? null : _date(x.doneOn!),
+          'cannot': x.cannot?.name,
+        },
+    ],
+    'milk': {
+      'camels': [
+        for (final m in f.milk.camels)
+          {
+            'id': m.id.value,
+            'name': m.name,
+            'days': m.days,
+            'calfName': m.calfName,
+            'litres': m.litres,
+            'sold': m.sold,
+          },
+      ],
+      'calfShare': f.milk.calfShare.name,
+      'price': f.milk.price,
+      'incomeToday': f.milk.incomeToday,
+      'thisMonth': f.milk.thisMonth,
+    },
     'supplies': [
       for (final x in f.supplies)
         {

@@ -46,7 +46,14 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         _str(j['name']),
       ),
       'setShepherds' => SetShepherds(me, _int(j['count'])),
-      'expandFarm' => ExpandFarm(me),
+      'buildFacility' => BuildFacility(
+        me,
+        Facility.values.byName(_str(j['facility'])),
+      ),
+      'setCalfShare' => SetCalfShare(
+        me,
+        CalfShare.values.byName(_str(j['share'])),
+      ),
       'enterRound' => EnterRound(
         me,
         FestivalId(_str(j['festival'])),
@@ -128,7 +135,11 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'name': name,
   },
   SetShepherds(:final count) => {'type': 'setShepherds', 'count': count},
-  ExpandFarm() => {'type': 'expandFarm'},
+  BuildFacility(:final facility) => {
+    'type': 'buildFacility',
+    'facility': facility.name,
+  },
+  SetCalfShare(:final share) => {'type': 'setCalfShare', 'share': share.name},
   EnterRound(:final festival, :final round, :final camel) => {
     'type': 'enterRound',
     'festival': festival.value,

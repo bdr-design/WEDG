@@ -38,7 +38,8 @@ Result handle(Sim sim, Command cmd) {
     SetFeedPlan() => _feedPlan(sim, p, cmd),
     OrderSupply() => _order(sim, p, cmd),
     SetShepherds() => _shepherds(sim, p, cmd),
-    ExpandFarm() => _expand(sim, p),
+    BuildFacility() => _build(sim, p, cmd),
+    SetCalfShare() => _calfShare(sim, p, cmd),
     EnterRound() => _enter(sim, p, cmd),
     WithdrawEntry() => _withdraw(sim, p, cmd),
   };
@@ -403,9 +404,9 @@ Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
   final size = water
       ? Provisions.tankerSize(cmd.tanker)
       : Provisions.unitSize(cmd.supply);
-  final fits = (Provisions.room(p.farm, cmd.supply) / size).floor();
+  final fits = Provisions.fits(p.farm, cmd.supply, size);
   if (cmd.units > fits) {
-    return _err(sim, ErrorCode.storeFull, {'room': fits < 0 ? 0 : fits});
+    return _err(sim, ErrorCode.storeFull, {'room': fits});
   }
   final unit = water
       ? Provisions.tankerPrice(cmd.tanker)
@@ -443,35 +444,54 @@ Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
 }
 
 Result _shepherds(Sim sim, PlayerState p, SetShepherds cmd) {
-  if (cmd.count < 1 || cmd.count > Balance.maxShepherds) {
+  if (cmd.count < 0 || cmd.count > Balance.maxShepherds) {
     return _err(sim, ErrorCode.invalidAmount);
+  }
+  // a shepherd lives in his caravan on the farm (none: the player tends the
+  // herd himself)
+  if (cmd.count > 0 && p.farm.has(Facility.caravan) == 0) {
+    return _err(sim, ErrorCode.needsFacility, {
+      'facility': Facility.caravan.name,
+    });
   }
   p.farm.shepherds = cmd.count;
   sim.emit(ShepherdsChanged(sim.today, owner: p.id, count: cmd.count));
   return _ok(sim);
 }
 
-Riyal expansionCost(PlayerState p) =>
-    Riyal((Balance.expansionCost * p.farm.region.land / 500).round() * 500);
-
-Result _expand(Sim sim, PlayerState p) {
-  final cost = expansionCost(p);
-  if (p.cash < cost) {
-    return _err(sim, ErrorCode.insufficientFunds, {'needed': cost.value});
+/// Why [f] cannot be built now, or null.
+DomainError? cannotBuild(PlayerState p, Facility f) {
+  if (p.farm.hasOrBuilding(f) >= f.most) {
+    return const DomainError(ErrorCode.alreadyBuilt);
   }
-  sim.pay(p, -cost, LedgerCategory.construction);
-  p.farm
-    ..capacity += Balance.expansionStep
-    ..storeKg += Balance.expansionStep * Balance.storeKgPerHead
-    ..tankL += Balance.expansionStep * Balance.tankLPerHead;
+  if (p.cash.value < f.price) {
+    return DomainError(ErrorCode.insufficientFunds, {'needed': f.price});
+  }
+  return null;
+}
+
+Result _build(Sim sim, PlayerState p, BuildFacility cmd) {
+  final f = cmd.facility;
+  final no = cannotBuild(p, f);
+  if (no != null) return _err(sim, no.code, no.params);
+  sim.pay(p, Riyal(-f.price), LedgerCategory.construction, ref: f.name);
+  final done = sim.today + Balance.buildDays;
+  p.farm.building.add(Construction(f, done));
   sim.emit(
-    FarmExpanded(
+    FacilityOrdered(
       sim.today,
       owner: p.id,
-      capacity: p.farm.capacity,
-      cost: cost.value,
+      facility: f,
+      cost: f.price,
+      doneOn: done,
     ),
   );
+  return _ok(sim);
+}
+
+Result _calfShare(Sim sim, PlayerState p, SetCalfShare cmd) {
+  p.farm.calfShare = cmd.share;
+  sim.emit(CalfShareChanged(sim.today, owner: p.id, share: cmd.share));
   return _ok(sim);
 }
 

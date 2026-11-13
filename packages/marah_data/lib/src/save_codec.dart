@@ -19,12 +19,19 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 6;
+  static const currentVersion = 7;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
   static final Map<int, Map<String, Object?> Function(Map<String, Object?>)>
-  migrations = {1: _v1ToV2, 2: _v2ToV3, 3: _v3ToV4, 4: _v4ToV5, 5: _v5ToV6};
+  migrations = {
+    1: _v1ToV2,
+    2: _v2ToV3,
+    3: _v3ToV4,
+    4: _v4ToV5,
+    5: _v5ToV6,
+    6: _v6ToV7,
+  };
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
   /// - the colour family مغاتير is gone (it is only the umbrella name of the
@@ -276,6 +283,34 @@ class SaveCodec {
         final order = d! as Map<String, Object?>;
         order['size'] = v5Unit[order['supply']];
       }
+    }
+    return data;
+  }
+
+  /// v6 to v7 (the owner's decisions of 13 Nov 2026: the farm starts small
+  /// and every facility is bought; milk is sold each day): a farm saved
+  /// before was made whole, with the old start's pens, tank, store and a
+  /// shepherd, so it is given every facility, as many as it can have (the
+  /// names and counts written here so the step never depends on today's
+  /// classes); half the milk to the calves; no milk sold yet.
+  static Map<String, Object?> _v6ToV7(Map<String, Object?> input) {
+    final data = jsonDecode(jsonEncode(input)) as Map<String, Object?>;
+    for (final pl in (data['players'] as List<Object?>?) ?? const []) {
+      final farm =
+          (pl! as Map<String, Object?>)['farm']! as Map<String, Object?>;
+      farm
+        ..['calfShare'] = 'half'
+        ..['milkIncome'] = 0
+        ..['milkOn'] = null
+        ..['built'] = <String, Object?>{
+          'pen': 5,
+          'tank': 1,
+          'store': 1,
+          'caravan': 1,
+          'tent': 1,
+          'room': 1,
+        }
+        ..['building'] = <Object?>[];
     }
     return data;
   }

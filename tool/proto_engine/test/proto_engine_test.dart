@@ -44,7 +44,8 @@ void main() {
       {'type': 'treat', 'camel': 'c5'},
       {'type': 'renameCamel', 'camel': 'c5', 'name': 'الشعلة'},
       {'type': 'setShepherds', 'count': 3},
-      {'type': 'expandFarm'},
+      {'type': 'buildFacility', 'facility': 'tank'},
+      {'type': 'setCalfShare', 'share': 'quarter'},
       {'type': 'enterRound', 'festival': 'f1', 'round': 'r1', 'camel': 'c6'},
       {'type': 'withdrawEntry', 'festival': 'f1', 'round': 'r1', 'camel': 'c6'},
     ];
@@ -57,7 +58,7 @@ void main() {
         expect(commandToJson(c), j);
       }
       final types = {for (final j in every) j['type']};
-      expect(types, hasLength(17)); // every kind of command
+      expect(types, hasLength(18)); // every kind of command
     });
 
     test('the actor is always the player, whatever the JSON says', () {
@@ -294,6 +295,7 @@ void main() {
             'type': 'orderSupply',
             'supply': 'water',
             'units': 1,
+            'tanker': 'small',
           })!,
         );
         expect(r.ok, isTrue, reason: r is Err ? '${r.error.code}' : '');

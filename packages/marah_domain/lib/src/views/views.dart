@@ -14,11 +14,30 @@ import '../model/player.dart';
 import '../rules/balance.dart';
 import '../rules/eligibility.dart';
 import '../rules/judging.dart';
+import '../rules/milk.dart';
 import '../rules/pasture.dart';
 import '../rules/provisions.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
 import '../systems/systems.dart';
+
+/// One nursing camel's milk today, as the player sees it.
+class MilkView {
+  const MilkView({
+    required this.camel,
+    required this.days,
+    required this.calf,
+    required this.litres,
+    required this.sold,
+  });
+  final CamelView camel;
+
+  /// Days since she calved.
+  final int days;
+  final CamelView? calf;
+  final double litres;
+  final double sold;
+}
 
 /// What one player is allowed to see of a camel: what the eye sees and
 /// what is on record. Breeding values, hidden deviations, the exact market
@@ -259,8 +278,7 @@ class GameView {
     final size = s == Supply.water
         ? Provisions.tankerSize(tanker)
         : Provisions.unitSize(s);
-    final r = (Provisions.room(me.farm, s) / size).floor();
-    return r < 0 ? 0 : r;
+    return Provisions.fits(me.farm, s, size);
   }
 
   /// What the herd's feed would cost a day under [plan].
@@ -272,12 +290,51 @@ class GameView {
   );
 
   /// The money in and out today (the ledger's entries of the day, the
-  /// opening balance not among them).
+  /// opening balance not among them, and today's milk, which the ledger
+  /// keeps as one row a month).
   Riyal get todayNet => Riyal(
     me.ledger
-        .where((e) => e.day == today && e.category != LedgerCategory.opening)
-        .fold(0, (n, e) => n + e.amount.value),
+            .where(
+              (e) =>
+                  e.day == today &&
+                  e.category != LedgerCategory.opening &&
+                  e.category != LedgerCategory.milk,
+            )
+            .fold(0, (n, e) => n + e.amount.value) +
+        milkIncomeToday,
   );
+
+  /// Today's milk: each nursing camel's litres, what her calf keeps and
+  /// what was sold.
+  List<MilkView> get milk => [
+    for (final m in Milk.today(_w, viewer, me.farm, today))
+      MilkView(
+        camel: _view(m.camel),
+        days: m.days,
+        calf: m.calf == null ? null : _view(m.calf!),
+        litres: m.litres,
+        sold: m.sold,
+      ),
+  ];
+
+  /// What today's milk brought (none before the day's milking: a new
+  /// game's first day).
+  int get milkIncomeToday => me.farm.milkOn == today ? me.farm.milkIncome : 0;
+
+  /// What the milk has brought this month.
+  Riyal get milkThisMonth {
+    final d = today.date;
+    final month = '${d.year}-${d.month.toString().padLeft(2, '0')}';
+    return me.ledger
+            .where((e) => e.month == month && e.category == LedgerCategory.milk)
+            .firstOrNull
+            ?.amount ??
+        Riyal.zero;
+  }
+
+  /// Why [f] cannot be built now (all built or building, or the money),
+  /// or null.
+  DomainError? cannotBuild(Facility f) => handlers.cannotBuild(me, f);
 
   /// What a [tanker] of water costs.
   Riyal tankerPrice(Tanker tanker) =>
@@ -295,7 +352,6 @@ class GameView {
   Riyal get monthlyWages =>
       Riyal(me.farm.shepherds * Balance.shepherdMonthlyWage);
   int get shepherdsNeeded => CareSystem.shepherdsNeeded(herd.length);
-  Riyal get expansionCost => handlers.expansionCost(me);
 
   /// What the broker pays now, only for the viewer's own camels.
   Riyal? quickSalePrice(CamelId id) {

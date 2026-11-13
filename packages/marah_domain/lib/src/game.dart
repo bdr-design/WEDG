@@ -8,9 +8,12 @@ import 'common/rng.dart';
 import 'common/time.dart';
 import 'events.dart';
 import 'handlers/handlers.dart' as handlers;
+import 'model/camel.dart';
 import 'model/game_state.dart';
 import 'model/player.dart';
 import 'rules/balance.dart';
+import 'rules/genetics.dart';
+import 'rules/names.dart';
 import 'rules/provisions.dart';
 import 'rules/valuation.dart';
 import 'sim.dart';
@@ -60,7 +63,7 @@ class Game {
         name: farmName,
         region: region,
         capacity: Balance.startingCapacity,
-        shepherds: 1,
+        shepherds: 0,
         feedPlan: FeedPlan.standard,
         storeKg: Balance.startingStoreKg,
         tankL: Balance.startingTankL,
@@ -79,24 +82,53 @@ class Game {
 
     final gen = WorldGen(sim);
     final rng = sim.rng(['setup']);
-    // Starter herd of the chosen colour family.
-    for (final (age, mean) in const [
-      (6 * 365 + 120, 54.0),
-      (4 * 365 + 200, 52.0),
-      (2 * 365 + 90, 50.0),
-    ]) {
-      final c = gen.makeCamel(
+    // The start (the owner, 13 Nov 2026): one nursing she-camel of the
+    // chosen colour family, seven years old, and her calf of four months (its
+    // first three months of free nursing behind it, so her milk is sold from
+    // the first day).
+    final dam = gen.makeCamel(
+      rng,
+      owner: playerId,
+      mean: 52,
+      category: favourite,
+      sex: Sex.female,
+      ageDays: 7 * 365 + 40,
+    );
+    final calfAge = 120;
+    dam
+      ..acquiredOn = start - 400
+      ..lastPlayerOwner = playerId
+      ..calvings = 2
+      ..lastCalvedOn = start - calfAge;
+    final calfSex = rng.chance(0.5) ? Sex.female : Sex.male;
+    final calf = Camel(
+      id: sim.world.ids.camel(),
+      name: randomCamelName(rng, female: calfSex == Sex.female),
+      sex: calfSex,
+      category: favourite,
+      born: start - calfAge,
+      ownerId: playerId,
+      chip: randomChipNumber(rng),
+      genes: Genetics.inherit(
         rng,
-        owner: playerId,
-        mean: mean,
+        Genetics.randomGenes(rng, mean: 52),
+        dam.genes,
+        crossbred: false,
+      ),
+      env: Genetics.randomEnv(rng),
+      condition: q2(clampDouble(dam.condition - 2, 45, 90)),
+      acquiredOn: start - calfAge,
+      lastPlayerOwner: playerId,
+      sire: ParentRef(
+        id: sim.world.ids.camel(),
+        name: randomCamelName(rng, female: false),
         category: favourite,
-        sex: Sex.female,
-        ageDays: age,
-      );
-      c
-        ..acquiredOn = start - 200
-        ..lastPlayerOwner = playerId
-        ..purchasePrice = Valuation.value(c, start).value;
+      ),
+      dam: dam.asParent,
+    );
+    sim.world.camels[calf.id] = calf;
+    for (final c in [dam, calf]) {
+      c.purchasePrice = Valuation.value(c, start).value;
     }
     // a month of the starter herd's needs in store (balance)
     {

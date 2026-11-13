@@ -41,6 +41,14 @@ enum ErrorCode {
   /// that still fit).
   storeFull,
 
+  /// A facility the farm has all it can of, or is building
+  /// (Facility.most).
+  alreadyBuilt,
+
+  /// The farm needs a facility first ({'facility'}: its name; a shepherd
+  /// needs the caravan).
+  needsFacility,
+
   /// The engine hit a bug; the game was restored from the last save.
   internalError,
 }

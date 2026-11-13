@@ -54,9 +54,9 @@ const { startEngine } = await import(pathToFileURL(path.join(here, '../../../des
 setPage('');
 const a = await startEngine({ newGame: { seed: 5 } });
 assert.strictEqual(a.status, 'new');
-assert.ok(a.snapshot && a.snapshot.herd.total === 3, 'a snapshot came');
+assert.ok(a.snapshot && a.snapshot.herd.total === 2, 'a snapshot came (the start: a nursing camel and her calf)');
 assert.ok(storage.get('marah.proto.marah.save'), 'kept in localStorage');
-assert.strictEqual((await a.dispatch({ type: 'orderSupply', supply: 'water', units: 1 })).ok, true);
+assert.strictEqual((await a.dispatch({ type: 'orderSupply', supply: 'water', units: 1, tanker: 'small' })).ok, true);
 assert.strictEqual((await a.dispatch({ type: 'orderSupply', supply: 'water', units: 1.5 })).error, 'badCommand');
 assert.strictEqual((await a.startOver({ region: 'mars' })).error, 'badNewGame', 'resolved, not thrown');
 assert.ok(a.stats.writes > 0 && a.stats.failedWrites === 0 && a.stats.snapshotChars > 1000);

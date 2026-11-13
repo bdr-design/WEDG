@@ -31,11 +31,11 @@ const reply = (id) => until((m) => (m.type === 'reply' || m.type === 'error') &&
   require(path.resolve(process.argv[2]));
   await until((m) => m.type === 'ready');
   send({ op: 'start', id: 1, newGame: { seed: 7 } });
-  send({ op: 'dispatch', id: 2, command: { type: 'orderSupply', supply: 'water', units: 1 } });
+  send({ op: 'dispatch', id: 2, command: { type: 'orderSupply', supply: 'water', units: 1, tanker: 'small' } });
   assert.strictEqual((await reply(1)).status, 'new');
   assert.strictEqual((await reply(2)).ok, true);
   const snap = (await until((m) => m.type === 'snapshot')).snapshot;
-  assert.strictEqual(snap.herd.total, 3);
+  assert.strictEqual(snap.herd.total, 2);      // (the start: a nursing camel and her calf)
   assert.ok(kept['marah.save'] && kept['marah.save.prev'], 'the save and its fallback kept');
   send('{not json');
   assert.ok(got.some((m) => m.type === 'error' && m.error === 'badMessage'));

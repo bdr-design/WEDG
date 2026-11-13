@@ -104,8 +104,17 @@ final class SetShepherds extends Command {
   final int count;
 }
 
-final class ExpandFarm extends Command {
-  const ExpandFarm(super.actor);
+/// Builds a facility on the farm (paid now, done in Balance.buildDays).
+final class BuildFacility extends Command {
+  const BuildFacility(super.actor, this.facility);
+  final Facility facility;
+}
+
+/// How much of the nursing camels' milk their calves keep; the rest is
+/// milked and sold each day.
+final class SetCalfShare extends Command {
+  const SetCalfShare(super.actor, this.share);
+  final CalfShare share;
 }
 
 // --------------------------------------------------------------- contests

@@ -53,7 +53,7 @@ void main() {
       expect(snapshots(), isNotEmpty);
       final s = snapshots().last;
       expect(s.playerName, 'بدر');
-      expect(s.herd.total, 3);
+      expect(s.herd.total, 2);
       expect(s.market, isNotEmpty);
       expect(backend.data['marah.save'], isNotNull);
       await e.close();
@@ -108,11 +108,11 @@ void main() {
         final e = core();
         await e.newGame(params);
         final me = e.game!.me.id;
-        await e.dispatch(SetShepherds(me, 4));
+        await e.dispatch(SetCalfShare(me, CalfShare.quarter));
         await e.pause();
         final again = core();
         expect(await again.open(), isA<GameOpened>());
-        expect(again.game!.me.farm.shepherds, 4);
+        expect(again.game!.me.farm.calfShare, CalfShare.quarter);
         await e.close();
         await again.close();
       },
@@ -122,7 +122,7 @@ void main() {
         'one can be restored', () async {
       final e = core();
       await e.newGame(params);
-      await e.dispatch(SetShepherds(e.game!.me.id, 2));
+      await e.dispatch(SetCalfShare(e.game!.me.id, CalfShare.all));
       await e.close();
       final ok = core(); // a successful open proves the save readable
       expect(await ok.open(), isA<GameOpened>());
@@ -135,7 +135,7 @@ void main() {
       await b.flush();
       expect(backend.data['marah.save'], '{broken');
       expect(await b.openPrevious(), isA<GameOpened>());
-      expect(b.game!.me.farm.shepherds, 2);
+      expect(b.game!.me.farm.calfShare, CalfShare.all);
       await b.close();
     });
 
@@ -150,7 +150,7 @@ void main() {
         );
         await e.newGame(params);
         flaky.failWrites = true;
-        await e.dispatch(SetShepherds(e.game!.me.id, 5));
+        await e.dispatch(SetCalfShare(e.game!.me.id, CalfShare.quarter));
         await e.flush();
         final failed = pushes.whereType<SaveStatus>().last;
         expect(failed.ok, isFalse);
@@ -159,7 +159,7 @@ void main() {
         expect(pushes.whereType<SaveStatus>().last.ok, isTrue);
         final again = EngineCore(store: SaveStore(flaky), emit: (_) {});
         await again.open();
-        expect(again.game!.me.farm.shepherds, 5);
+        expect(again.game!.me.farm.calfShare, CalfShare.quarter);
         await e.close();
       },
     );
@@ -215,10 +215,10 @@ void main() {
       final e = core();
       await e.newGame(params);
       final me = e.game!.me.id;
-      await e.dispatch(SetShepherds(me, 3));
+      await e.dispatch(SetCalfShare(me, CalfShare.all));
       final again = core();
       expect(await again.open(), isA<GameOpened>());
-      expect(again.game!.me.farm.shepherds, 3);
+      expect(again.game!.me.farm.calfShare, CalfShare.all);
       await e.close();
       await again.close();
     });
@@ -256,7 +256,7 @@ void main() {
         final late = await client.snapshots.first.timeout(
           const Duration(seconds: 2),
         );
-        expect(late.herd.total, 3);
+        expect(late.herd.total, 2);
         expect(client.latest, same(late));
         await client.dispose();
       },
@@ -325,7 +325,7 @@ void main() {
       final first = client.snapshots.first;
       await client.newGame(params);
       final snap = await first.timeout(const Duration(seconds: 10));
-      expect(snap.herd.total, 3);
+      expect(snap.herd.total, 2);
 
       // Snapshots replay the latest to new listeners: wait for a newer one.
       final next = client.snapshots.firstWhere(
@@ -379,16 +379,22 @@ void main() {
       final e = EngineCore(store: SaveStore(MemoryBackend()), emit: (_) {});
       await e.newGame(params);
       final all = await e.herdPage(const HerdQuery(limit: 2));
-      expect(all!.total, 3);
+      expect(all!.total, 2);
       expect(all.cards, hasLength(2));
       expect(
         all.cards.first.quality,
         greaterThanOrEqualTo(all.cards[1].quality),
       );
-      final rest = await e.herdPage(const HerdQuery(offset: 2, limit: 2));
+      final first = await e.herdPage(const HerdQuery(limit: 1));
+      final rest = await e.herdPage(const HerdQuery(offset: 1, limit: 1));
+      expect(first!.cards, hasLength(1));
       expect(rest!.cards, hasLength(1));
+      expect(rest.cards.single.id, isNot(first.cards.single.id));
       final males = await e.herdPage(const HerdQuery(filter: HerdFilter.males));
+      // grown males only (two years and over): the start's calf is not one
       expect(males!.total, 0);
+      final young = await e.herdPage(const HerdQuery(filter: HerdFilter.young));
+      expect(young!.total, 1);
       await e.close();
     });
 

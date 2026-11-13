@@ -6,6 +6,8 @@
 /// on 12 Nov 2026 (docs/plan-gameplay.md, G1 part 2).
 library;
 
+import '../model/player.dart';
+
 class Balance {
   const Balance._();
 
@@ -93,8 +95,9 @@ class Balance {
   static const oldAgeDeathPerYear = 0.0004;
 
   // ------------------------------------------------------------ economy
-  /// (balance) Starting money.
-  static const startingCash = 600000;
+  /// Starting money with the one nursing she-camel and her calf (the
+  /// owner's decision of 13 Nov 2026).
+  static const startingCash = 20000;
 
   // ------------------------------------------------------------ provisions
   /// (field) A bag of imported barley: 50 kg, SAR 67.9 (GASTAT's average
@@ -128,20 +131,20 @@ class Balance {
   static const barleyDryMatter = 0.88;
   static const alfalfaDryMatter = 0.89;
 
-  /// (balance) Each head of room built adds a month of an adult's standard
-  /// ration as delivered to the feed store (30 x 11 kg of dry matter, 12.4 kg
-  /// of feed) and of summer water to the tank (30 x 30 L).
-  static const storeKgPerHead = 375;
-  static const tankLPerHead = 900;
-
   /// (balance) Days an order takes to arrive.
   static const deliveryDays = 1;
 
-  /// (balance) The feed store's and the water tank's sizes on a new farm, and
-  /// what a new farm starts with (30 days of the herd's needs).
-  static const startingStoreKg = 20000;
-  static const startingTankL = 40000;
+  /// A new farm (the owner, 13 Nov 2026: it starts small and grows by what is
+  /// bought): a 6,000 L tank, the size a 6 t tanker fills ((field) a vertical
+  /// 6,000 L tank SAR 2,835, research section 7); (balance) a feed shade for
+  /// 1,000 kg (twenty bags); 30 days of the herd's needs in them.
+  static const startingStoreKg = 1000;
+  static const startingTankL = 6000;
   static const startingStockDays = 30;
+
+  /// (balance) The player tends this many head himself; past it the farm
+  /// needs shepherds (and their caravan).
+  static const ownerTendsUpTo = 10;
 
   /// Water a day (litres). (field) A nursing camel drinks 37 to 46 L
   /// (section 6): 42. (balance) The others by the season: camels go about 17
@@ -201,10 +204,48 @@ class Balance {
   static const camelsPerShepherd = 25;
   static const maxShepherds = 40;
 
-  /// (balance) Farm building.
-  static const startingCapacity = 20;
-  static const expansionStep = 10;
-  static const expansionCost = 28000;
+  /// (balance) The first pen's room (a pen with a shade and a trough).
+  static const startingCapacity = 6;
+
+  /// Days a facility takes to build (balance; the owner approved "it is
+  /// done after three days", 13 Nov 2026).
+  static const buildDays = 3;
+
+  // ------------------------------------------------------------ milk
+  /// (field) A she-camel's common average is no more than about 5 L a day;
+  /// high producers give 10 or more, low ones 5 or less; مجاهيم give the most
+  /// (research sections 7). (balance) Each nursing camel's own level drawn
+  /// from 3.5 to 6.5 L, مجاهيم a quarter more, over a lactation of a year
+  /// from calving ((field) 190 to 404 days across studies), rising to its
+  /// peak at six weeks and falling to half of it by the year's end.
+  static const milkLevelMin = 3.5;
+  static const milkLevelMax = 6.5;
+  static const majaheemMilk = 1.25;
+  static const lactationDays = 365;
+  static const milkPeakDay = 45;
+
+  /// (balance) The litre's price to the buyer who comes each day (the
+  /// owner's choice of 13 Nov 2026; no reliable farm-gate price was found:
+  /// about SAR 8.5 from a 2019 aggregator, 10 to 15 from a forum).
+  static const milkPrice = 10;
+
+  /// (field) In the traditional Saudi system the calf nurses freely for its
+  /// first three months (research section 7). (balance) What the milk left
+  /// to it does to a suckling calf's condition target: all of it more,
+  /// half the same, a quarter less, and more so in its first three months.
+  static const freeNursingDays = 90;
+  static double calfMilkTarget(CalfShare share, int ageDays) =>
+      ageDays < freeNursingDays
+      ? switch (share) {
+          CalfShare.all => 6,
+          CalfShare.half => -6,
+          CalfShare.quarter => -14,
+        }
+      : switch (share) {
+          CalfShare.all => 4,
+          CalfShare.half => 0,
+          CalfShare.quarter => -5,
+        };
 
   /// (balance) Trucking: loading cost plus per km, scaled by head count.
   static int transportCost(int km, int head) =>

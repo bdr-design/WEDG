@@ -428,6 +428,119 @@ class TankerSummary {
   int get hashCode => Object.hash(tanker, litres, price, room);
 }
 
+/// A facility the farm can build (the owner, 13 Nov 2026), how many it has
+/// and is building, and why it cannot be built now (a [DomainError] code, or
+/// null).
+class FacilitySummary {
+  const FacilitySummary({
+    required this.facility,
+    required this.price,
+    required this.has,
+    required this.most,
+    required this.building,
+    required this.doneOn,
+    required this.cannot,
+  });
+
+  final Facility facility;
+  final int price;
+  final int has;
+  final int most;
+
+  /// How many are being built, and the day the first of them is done.
+  final int building;
+  final GameDay? doneOn;
+  final ErrorCode? cannot;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FacilitySummary &&
+      other.facility == facility &&
+      other.price == price &&
+      other.has == has &&
+      other.most == most &&
+      other.building == building &&
+      other.doneOn == doneOn &&
+      other.cannot == cannot;
+
+  @override
+  int get hashCode =>
+      Object.hash(facility, price, has, most, building, doneOn, cannot);
+}
+
+/// One nursing camel's milk today.
+class MilkCamel {
+  const MilkCamel({
+    required this.id,
+    required this.name,
+    required this.days,
+    required this.calfName,
+    required this.litres,
+    required this.sold,
+  });
+
+  final CamelId id;
+  final String name;
+
+  /// Days since she calved.
+  final int days;
+
+  /// Her calf while it suckles, or null (sold, dead or weaned: all her milk
+  /// is sold).
+  final String? calfName;
+  final double litres;
+  final double sold;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MilkCamel &&
+      other.id == id &&
+      other.name == name &&
+      other.days == days &&
+      other.calfName == calfName &&
+      other.litres == litres &&
+      other.sold == sold;
+
+  @override
+  int get hashCode => Object.hash(id, name, days, calfName, litres, sold);
+}
+
+/// The farm's milk (the owner, 13 Nov 2026: sold every day; the player
+/// chooses how much the calves keep).
+class MilkSummary {
+  const MilkSummary({
+    required this.camels,
+    required this.calfShare,
+    required this.price,
+    required this.incomeToday,
+    required this.thisMonth,
+  });
+
+  final List<MilkCamel> camels;
+  final CalfShare calfShare;
+
+  /// A litre's price.
+  final int price;
+
+  /// What today's milk brought (0 before the day's milking), and this
+  /// month's.
+  final int incomeToday;
+  final int thisMonth;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MilkSummary &&
+      _listEquals(other.camels, camels) &&
+      other.calfShare == calfShare &&
+      other.price == price &&
+      other.incomeToday == incomeToday &&
+      other.thisMonth == thisMonth;
+
+  @override
+  int get hashCode =>
+      Object.hashAll([...camels, calfShare, price, incomeToday, thisMonth]);
+}
+
 class FarmSummary {
   const FarmSummary({
     required this.name,
@@ -438,7 +551,6 @@ class FarmSummary {
     required this.feedPlan,
     required this.dailyFeed,
     required this.monthlyWages,
-    required this.expansionCost,
     required this.supplies,
     required this.storeKg,
     required this.tankL,
@@ -447,6 +559,8 @@ class FarmSummary {
     required this.pastureGreen,
     required this.thirstDays,
     required this.rations,
+    required this.facilities,
+    required this.milk,
   });
 
   final String name;
@@ -457,7 +571,6 @@ class FarmSummary {
   final FeedPlan feedPlan;
   final int dailyFeed;
   final int monthlyWages;
-  final int expansionCost;
 
   /// Barley, alfalfa and water, in that order.
   final List<SupplySummary> supplies;
@@ -478,6 +591,10 @@ class FarmSummary {
   /// The three rations, light first.
   final List<RationSummary> rations;
 
+  /// What the farm can build, in Facility's order.
+  final List<FacilitySummary> facilities;
+  final MilkSummary milk;
+
   @override
   bool operator ==(Object other) =>
       other is FarmSummary &&
@@ -489,7 +606,6 @@ class FarmSummary {
       other.feedPlan == feedPlan &&
       other.dailyFeed == dailyFeed &&
       other.monthlyWages == monthlyWages &&
-      other.expansionCost == expansionCost &&
       _listEquals(other.supplies, supplies) &&
       other.storeKg == storeKg &&
       other.tankL == tankL &&
@@ -497,7 +613,9 @@ class FarmSummary {
       _listEquals(other.tankers, tankers) &&
       other.pastureGreen == pastureGreen &&
       other.thirstDays == thirstDays &&
-      _listEquals(other.rations, rations);
+      _listEquals(other.rations, rations) &&
+      _listEquals(other.facilities, facilities) &&
+      other.milk == milk;
 
   @override
   int get hashCode => Object.hashAll([
@@ -509,7 +627,6 @@ class FarmSummary {
     feedPlan,
     dailyFeed,
     monthlyWages,
-    expansionCost,
     ...supplies,
     storeKg,
     tankL,
@@ -518,6 +635,8 @@ class FarmSummary {
     pastureGreen,
     thirstDays,
     ...rations,
+    ...facilities,
+    milk,
   ]);
 }
 

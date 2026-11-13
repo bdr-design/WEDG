@@ -20,9 +20,12 @@ Game sampleGame() {
     bot.week();
   }
   // orders on their way, a small tanker's among them (sizes kept since v6)
-  g.me.farm.waterL = g.me.farm.tankL - 7000;
+  g.me.farm.waterL = g.me.farm.tankL - 6000.0;
   g.dispatch(OrderSupply(g.me.id, Supply.water, 1, tanker: Tanker.small));
   g.dispatch(OrderSupply(g.me.id, Supply.barley, 2));
+  // a facility being built and the calves' share of the milk (since v7)
+  g.dispatch(SetCalfShare(g.me.id, CalfShare.quarter));
+  g.dispatch(BuildFacility(g.me.id, Facility.pen));
   return g;
 }
 
@@ -37,7 +40,18 @@ const fixtures = {
   4: 'test/fixtures/save_v4.json',
   5: 'test/fixtures/save_v5.json',
   6: 'test/fixtures/save_v6.json',
+  7: 'test/fixtures/save_v7.json',
 };
+
+/// [data] at version [from] brought up to today's by the later steps, as
+/// loading does (each step's own test decodes its output with today's classes).
+Map<String, Object?> toNow(Map<String, Object?> data, int from) {
+  var out = data;
+  for (var v = from; v < SaveCodec.currentVersion; v++) {
+    out = SaveCodec.migrations[v]!(out);
+  }
+  return out;
+}
 
 void main() {
   const codec = SaveCodec();
@@ -160,11 +174,7 @@ void main() {
         expect(ids.contains(m.group(1)), isTrue, reason: m.group(1));
       }
       // decoded by today's classes after the later steps too
-      final state = GameState.fromJson(
-        SaveCodec.migrations[4]!(
-          SaveCodec.migrations[3]!(SaveCodec.migrations[2]!(after)),
-        ),
-      );
+      final state = GameState.fromJson(toNow(after, 2));
       expect(checkInvariants(state), isEmpty);
     },
   );
@@ -323,14 +333,7 @@ void main() {
     }
     final text = jsonEncode(after);
     expect(text.contains('"legs"'), isFalse);
-    expect(
-      checkInvariants(
-        GameState.fromJson(
-          SaveCodec.migrations[4]!(SaveCodec.migrations[3]!(after)),
-        ),
-      ),
-      isEmpty,
-    );
+    expect(checkInvariants(GameState.fromJson(toNow(after, 3))), isEmpty);
   });
 
   test('v3 to v4: a camel down with brucellosis is well, its events gone', () {
@@ -362,10 +365,7 @@ void main() {
     expect(c['sickSince'], isNull);
     expect(((out['inboxes']! as Map).values.first as List).length, n - 1);
     expect(jsonEncode(out).contains('brucellosis'), isFalse);
-    expect(
-      checkInvariants(GameState.fromJson(SaveCodec.migrations[4]!(out))),
-      isEmpty,
-    );
+    expect(checkInvariants(GameState.fromJson(toNow(out, 4))), isEmpty);
   });
 
   test('v4 to v5: every farm gets a store and a tank with a month in them', () {
@@ -388,7 +388,7 @@ void main() {
     expect(farm['barleyKg'] as num, greaterThan(0));
     expect(farm['waterL'] as num, greaterThan(0));
     expect(farm['deliveries'], isEmpty);
-    final state = GameState.fromJson(out);
+    final state = GameState.fromJson(toNow(out, 5));
     expect(checkInvariants(state), isEmpty);
     // it plays a month with the stores it was given
     final g = Game(state)..advanceDays(30);
@@ -413,9 +413,25 @@ void main() {
                 as Map)['deliveries']!
             as List;
     expect([for (final o in orders) (o as Map)['size']], [20000, 50, 25]);
-    final state = GameState.fromJson(out);
+    final state = GameState.fromJson(toNow(out, 6));
     expect(checkInvariants(state), isEmpty);
     expect(state.players.values.first.farm.deliveries.first.size, 20000);
+  });
+
+  test('v6 to v7: a farm saved before has every facility', () {
+    final raw = jsonDecode(
+      File(fixtures[6]!).readAsStringSync(),
+    ) as Map<String, Object?>;
+    final out = SaveCodec.migrations[6]!(raw['data']! as Map<String, Object?>);
+    final state = GameState.fromJson(out);
+    expect(checkInvariants(state), isEmpty);
+    final farm = state.players.values.first.farm;
+    for (final f in Facility.values) {
+      expect(farm.has(f), f.most, reason: f.name);
+    }
+    expect(farm.building, isEmpty);
+    expect(farm.calfShare, CalfShare.half);
+    expect(farm.milkOn, isNull);
   });
 
   group('rejects without losing anything', () {

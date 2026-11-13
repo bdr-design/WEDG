@@ -118,6 +118,20 @@ sealed class DomainEvent {
         capacity: j['capacity']! as int,
         cost: j['cost']! as int,
       ),
+      'facilityOrdered' => FacilityOrdered(
+        day,
+        owner: owner,
+        camel: camel,
+        facility: Facility.values.byName(j['facility']! as String),
+        cost: j['cost']! as int,
+        doneOn: GameDay(j['doneOn']! as int),
+      ),
+      'facilityBuilt' => FacilityBuilt(
+        day,
+        owner: owner,
+        camel: camel,
+        facility: Facility.values.byName(j['facility']! as String),
+      ),
       'shepherdsChanged' => ShepherdsChanged(
         day,
         owner: owner,
@@ -151,6 +165,12 @@ sealed class DomainEvent {
         owner: owner,
         camel: camel,
         plan: FeedPlan.values.byName(j['plan']! as String),
+      ),
+      'calfShareChanged' => CalfShareChanged(
+        day,
+        owner: owner,
+        camel: camel,
+        share: CalfShare.values.byName(j['share']! as String),
       ),
       'camelRenamed' => CamelRenamed(
         day,
@@ -487,6 +507,8 @@ final class OfferDeclined extends DomainEvent {
   Map<String, Object?> fieldsToJson() => {};
 }
 
+/// The farm grew by a block of room (before the facilities of 13 Nov 2026;
+/// kept so the event logs of saves from then still read).
 final class FarmExpanded extends DomainEvent {
   const FarmExpanded(
     super.day, {
@@ -501,6 +523,44 @@ final class FarmExpanded extends DomainEvent {
   String get type => 'farmExpanded';
   @override
   Map<String, Object?> fieldsToJson() => {'capacity': capacity, 'cost': cost};
+}
+
+/// A facility paid for and begun; done on [doneOn].
+final class FacilityOrdered extends DomainEvent {
+  const FacilityOrdered(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.facility,
+    required this.cost,
+    required this.doneOn,
+  });
+  final Facility facility;
+  final int cost;
+  final GameDay doneOn;
+  @override
+  String get type => 'facilityOrdered';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'facility': facility.name,
+    'cost': cost,
+    'doneOn': doneOn.value,
+  };
+}
+
+/// A facility finished: it stands on the farm from today.
+final class FacilityBuilt extends DomainEvent {
+  const FacilityBuilt(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.facility,
+  });
+  final Facility facility;
+  @override
+  String get type => 'facilityBuilt';
+  @override
+  Map<String, Object?> fieldsToJson() => {'facility': facility.name};
 }
 
 final class ShepherdsChanged extends DomainEvent {
@@ -600,6 +660,22 @@ final class FeedPlanChanged extends DomainEvent {
   String get type => 'feedPlanChanged';
   @override
   Map<String, Object?> fieldsToJson() => {'plan': plan.name};
+}
+
+/// The calves' share of the milk changed (saved, and the screens drawn
+/// again, as for every change).
+final class CalfShareChanged extends DomainEvent {
+  const CalfShareChanged(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.share,
+  });
+  final CalfShare share;
+  @override
+  String get type => 'calfShareChanged';
+  @override
+  Map<String, Object?> fieldsToJson() => {'share': share.name};
 }
 
 final class CamelRenamed extends DomainEvent {

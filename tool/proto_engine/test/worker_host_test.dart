@@ -167,7 +167,7 @@ void main() {
     );
     expect(
       await page.call('dispatch', {
-        'command': {'type': 'setShepherds', 'count': 1},
+        'command': {'type': 'setCalfShare', 'share': 'all'},
       }),
       containsPair('ok', true),
     );
@@ -235,7 +235,12 @@ void main() {
     await page.call('start', {'newGame': newGame});
     page.refuse = true;
     await page.call('dispatch', {
-      'command': {'type': 'orderSupply', 'supply': 'water', 'units': 1},
+      'command': {
+        'type': 'orderSupply',
+        'supply': 'water',
+        'units': 1,
+        'tanker': 'small',
+      },
     });
     await page.waitFor((m) => m['type'] == 'save' && m['ok'] == false);
     page.refuse = false;
@@ -285,7 +290,12 @@ void main() {
       isNotEmpty,
     );
     await page.call('dispatch', {
-      'command': {'type': 'orderSupply', 'supply': 'water', 'units': 1},
+      'command': {
+        'type': 'orderSupply',
+        'supply': 'water',
+        'units': 1,
+        'tanker': 'small',
+      },
     });
     await page.call('pause');
     // opened again from the server's files
@@ -343,7 +353,7 @@ void main() {
     await Future<void>.delayed(const Duration(seconds: 2));
     final sw = Stopwatch()..start();
     await page.call('dispatch', {
-      'command': {'type': 'setShepherds', 'count': 1},
+      'command': {'type': 'setCalfShare', 'share': 'all'},
     });
     expect(
       sw.elapsedMilliseconds,

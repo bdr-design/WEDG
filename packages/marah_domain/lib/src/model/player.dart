@@ -63,6 +63,64 @@ class Delivery {
   );
 }
 
+/// What the player can build on the farm (the owner's decision of 13 Nov
+/// 2026: the farm starts small, a pen, a 6,000 L tank and a feed shade, and
+/// every other facility is bought and built in its place). Prices in riyals:
+/// (field) the 30,000 L tank's from its maker (Marjan, SAR 14,110, research
+/// section 7); (balance) the rest, approved by the owner. [most] is how many
+/// the farm can have.
+enum Facility {
+  /// Another pen: room for ten more head.
+  pen(price: 12000, most: 5),
+
+  /// A 30,000 L tank beside the first: a 19 t tanker fits it.
+  tank(price: 14110, most: 1),
+
+  /// A feed store for ten tonnes.
+  store(price: 18000, most: 1),
+
+  /// The shepherd's caravan: needed before a shepherd is hired.
+  caravan(price: 25000, most: 1),
+
+  /// The tent for guests and coffee (بيت الشعر).
+  tent(price: 15000, most: 1),
+
+  /// The farm's room, a sitting room with air conditioning.
+  room(price: 60000, most: 1);
+
+  const Facility({required this.price, required this.most});
+  final int price;
+  final int most;
+}
+
+/// A facility being built, done on [doneOn].
+class Construction {
+  const Construction(this.facility, this.doneOn);
+  final Facility facility;
+  final GameDay doneOn;
+
+  Map<String, Object?> toJson() => {
+    'facility': facility.name,
+    'doneOn': doneOn.value,
+  };
+
+  static Construction fromJson(Map<String, Object?> j) => Construction(
+    Facility.values.byName(j['facility']! as String),
+    GameDay(j['doneOn']! as int),
+  );
+}
+
+/// How much of a nursing camel's milk is left to her calf; the rest is
+/// milked and sold (the owner's decision of 13 Nov 2026).
+enum CalfShare {
+  all(1),
+  half(0.5),
+  quarter(0.25);
+
+  const CalfShare(this.part);
+  final double part;
+}
+
 /// The player's farm (العزبة).
 class Farm {
   Farm({
@@ -78,10 +136,17 @@ class Farm {
     this.waterL = 0,
     this.dryDays = 0,
     this.fedShare = 1,
+    this.calfShare = CalfShare.half,
+    this.milkIncome = 0,
+    this.milkOn,
     List<Delivery>? deliveries,
     Set<Supply>? short,
+    Map<Facility, int>? built,
+    List<Construction>? building,
   }) : deliveries = deliveries ?? [],
-       short = short ?? {};
+       short = short ?? {},
+       built = built ?? {},
+       building = building ?? [];
 
   String name;
   Region region;
@@ -111,6 +176,25 @@ class Farm {
   final Set<Supply> short;
   final List<Delivery> deliveries;
 
+  /// The milk left to the calves.
+  CalfShare calfShare;
+
+  /// What the last day's milk brought, and the day (none yet on a new
+  /// game's first day).
+  int milkIncome;
+  GameDay? milkOn;
+
+  /// The facilities built beyond the first pen, tank and feed shade, and
+  /// how many of each; and those being built.
+  final Map<Facility, int> built;
+  final List<Construction> building;
+
+  int has(Facility f) => built[f] ?? 0;
+
+  /// Built, or being built.
+  int hasOrBuilding(Facility f) =>
+      has(f) + building.where((b) => b.facility == f).length;
+
   Map<String, Object?> toJson() => {
     'name': name,
     'region': region.name,
@@ -129,6 +213,14 @@ class Farm {
         if (short.contains(s)) s.name,
     ],
     'deliveries': [for (final d in deliveries) d.toJson()],
+    'calfShare': calfShare.name,
+    'milkIncome': milkIncome,
+    'milkOn': milkOn?.value,
+    'built': {
+      for (final f in Facility.values)
+        if (has(f) > 0) f.name: has(f),
+    },
+    'building': [for (final b in building) b.toJson()],
   };
 
   static Farm fromJson(Map<String, Object?> j) => Farm(
@@ -152,6 +244,17 @@ class Farm {
       for (final d in j['deliveries']! as List<Object?>)
         Delivery.fromJson(d! as Map<String, Object?>),
     ],
+    calfShare: CalfShare.values.byName(j['calfShare']! as String),
+    milkIncome: j['milkIncome']! as int,
+    milkOn: j['milkOn'] == null ? null : GameDay(j['milkOn']! as int),
+    built: {
+      for (final e in (j['built']! as Map<String, Object?>).entries)
+        Facility.values.byName(e.key): e.value! as int,
+    },
+    building: [
+      for (final b in j['building']! as List<Object?>)
+        Construction.fromJson(b! as Map<String, Object?>),
+    ],
   );
 }
 
@@ -168,6 +271,7 @@ enum LedgerCategory {
   studFee,
   commission,
   construction,
+  milk,
 }
 
 /// One money movement. Recurring costs (feed, wages) are kept as one row per

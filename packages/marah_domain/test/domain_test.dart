@@ -5,6 +5,7 @@ import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/persistence.dart';
 import 'package:marah_domain/src/rules/genetics.dart';
 import 'package:marah_domain/src/rules/judging.dart';
+import 'package:marah_domain/src/rules/milk.dart';
 import 'package:marah_domain/src/rules/valuation.dart';
 import 'package:marah_domain/src/sim.dart';
 import 'package:marah_domain/src/systems/systems.dart';
@@ -372,25 +373,32 @@ void main() {
       expect(v.todayNet.value, 0);
       g.dispatch(OrderSupply(g.me.id, Supply.barley, 2));
       expect(v.todayNet.value, -2 * v.unitPrice(Supply.barley).value);
-      // the next day starts again from its own entries
-      g.advanceDays(1);
+      // the next day starts again from its own entries, and the day's milk
+      // (kept in the ledger as one row a month)
+      g.advanceDays(2);
       final next = GameView(g.state, g.me.id);
+      expect(next.milkIncomeToday, greaterThan(0));
       expect(
         next.todayNet.value,
         g.me.ledger
-            .where((e) => e.day == next.today)
-            .fold(0, (n, e) => n + e.amount.value),
+                .where(
+                  (e) =>
+                      e.day == next.today && e.category != LedgerCategory.milk,
+                )
+                .fold(0, (n, e) => n + e.amount.value) +
+            next.milkIncomeToday,
       );
     });
 
     test('a small tanker tops up a tank the large one does not fit', () {
       final g = newGame(4);
-      final f = g.me.farm;
-      // the tank 30,000 L full of 40,000: no room for 19 t, room for 6 t
-      f.waterL = f.tankL - 10000;
+      final f = g.me.farm
+        ..tankL = 40000
+        ..waterL = 31000;
+      // 9,000 L of room: not half a 19 t load, a 6 t one and a half
       final v = GameView(g.state, g.me.id);
       expect(v.roomFor(Supply.water), 0);
-      expect(v.roomFor(Supply.water, tanker: Tanker.small), 1);
+      expect(v.roomFor(Supply.water, tanker: Tanker.small), 2);
       expect(
         (g.dispatch(OrderSupply(g.me.id, Supply.water, 1)) as Err).error.code,
         ErrorCode.storeFull,
@@ -409,6 +417,32 @@ void main() {
       // six tonnes in, a day's drinking out
       expect(f.waterL, greaterThan(before + 6000 - 500));
       expect(f.waterL, lessThanOrEqualTo(before + 6000));
+    });
+
+    test('a tanker fills the tank to the top and takes the rest back', () {
+      final g = newGame(5);
+      final f = g.me.farm..waterL = 2000; // of the start's 6,000 L
+      final v = GameView(g.state, g.me.id);
+      // 4,000 L of room: more than half a 6 t load
+      expect(v.roomFor(Supply.water, tanker: Tanker.small), 1);
+      expect(
+        g
+            .dispatch(
+              OrderSupply(g.me.id, Supply.water, 1, tanker: Tanker.small),
+            )
+            .ok,
+        isTrue,
+      );
+      g.advanceDays(1);
+      expect(f.waterL, lessThanOrEqualTo(f.tankL.toDouble()));
+      expect(f.waterL, greaterThan(f.tankL - 100.0));
+      // with 3,500 L in it, less than half a load of room: not yet
+      f.waterL = 3500;
+      expect(
+        GameView(g.state, g.me.id).roomFor(Supply.water, tanker: Tanker.small),
+        0,
+      );
+      expectClean(g);
     });
 
     test('the pasture is looked up once a farm a day, and only when dry', () {
@@ -545,25 +579,168 @@ void main() {
       expect(g.state.world.aliveOwnedBy(g.me.id), isEmpty);
     });
 
+    test('a nursing camel drinks 42 L; a 30 t tank built adds to the tank', () {
+      final g = newGame(7);
+      final dam = g.state.world
+          .aliveOwnedBy(g.me.id)
+          .firstWhere((c) => c.lastCalvedOn != null);
+      expect(Provisions.waterFor(dam, g.today), 42);
+      final tank = g.me.farm.tankL, cash = g.me.cash.value;
+      expect(g.dispatch(BuildFacility(g.me.id, Facility.tank)).ok, isTrue);
+      expect(g.me.cash.value, cash - Facility.tank.price);
+      g.advanceDays(Balance.buildDays - 1);
+      expect(g.me.farm.tankL, tank, reason: 'not done before its day');
+      g.advanceDays(1);
+      expect(g.me.farm.tankL - tank, 30000);
+      expect(g.me.farm.has(Facility.tank), 1);
+      expect(
+        (g.dispatch(BuildFacility(g.me.id, Facility.tank)) as Err).error.code,
+        ErrorCode.alreadyBuilt,
+      );
+      expectClean(g);
+    });
+  });
+
+  group('Milk and the farm that grows (the owner, 13 Nov 2026)', () {
+    Camel damOf(Game g) => g.state.world
+        .aliveOwnedBy(g.me.id)
+        .firstWhere((c) => c.lastCalvedOn != null && c.sex == Sex.female);
+    Camel calfOf(Game g) => g.state.world
+        .aliveOwnedBy(g.me.id)
+        .firstWhere((c) => c.dam != null && c.dam!.id == damOf(g).id);
+
+    test('the milk is sold each day; the calf keeps its share', () {
+      final g = stocked(newGame(21))..advanceDays(1);
+      final v = GameView(g.state, g.me.id);
+      final m = v.milk.single;
+      expect(m.litres, inInclusiveRange(2.5, 9.5));
+      expect(m.sold, closeTo(m.litres * (1 - CalfShare.half.part), 1e-9));
+      expect(v.milkIncomeToday, (m.sold * Balance.milkPrice).round());
+      final cash = g.me.cash.value;
+      g.advanceDays(1);
+      final v2 = GameView(g.state, g.me.id);
+      expect(g.me.cash.value - cash, v2.milkIncomeToday);
+      expect(v2.milkThisMonth.value, greaterThan(0));
+      expectClean(g);
+    });
+
     test(
-      'a nursing camel drinks 42 L; room built adds to the store and tank',
+      'all of it to the calf sells none; a quarter sells more than half',
       () {
-        final g = newGame(7);
-        final dam = g.state.world.aliveOwnedBy(g.me.id).first
-          ..lastCalvedOn = g.today - 30;
-        expect(Provisions.waterFor(dam, g.today), 42);
-        final store = g.me.farm.storeKg, tank = g.me.farm.tankL;
-        expect(g.dispatch(ExpandFarm(g.me.id)).ok, isTrue);
-        expect(
-          g.me.farm.storeKg - store,
-          Balance.expansionStep * Balance.storeKgPerHead,
-        );
-        expect(
-          g.me.farm.tankL - tank,
-          Balance.expansionStep * Balance.tankLPerHead,
-        );
+        int income(CalfShare share) {
+          final g = stocked(newGame(22));
+          g.dispatch(SetCalfShare(g.me.id, share));
+          g.advanceDays(10);
+          return g.me.ledger
+              .where((e) => e.category == LedgerCategory.milk)
+              .fold(0, (n, e) => n + e.amount.value);
+        }
+
+        expect(income(CalfShare.all), 0);
+        expect(income(CalfShare.quarter), greaterThan(income(CalfShare.half)));
       },
     );
+
+    test('the calf grows better on more of the milk', () {
+      double condition(CalfShare share) {
+        final g = stocked(newGame(23));
+        g.dispatch(SetCalfShare(g.me.id, share));
+        g.advanceDays(60);
+        return calfOf(g).condition;
+      }
+
+      expect(
+        condition(CalfShare.all),
+        greaterThan(condition(CalfShare.quarter) + 4),
+      );
+    });
+
+    test('without her calf all the milk is sold; dry after a year', () {
+      final g = stocked(newGame(24));
+      final calf = calfOf(g);
+      expect(g.dispatch(QuickSale(g.me.id, calf.id)).ok, isTrue);
+      g.advanceDays(1);
+      final m = GameView(g.state, g.me.id).milk.single;
+      expect(m.calf, isNull);
+      expect(m.sold, m.litres);
+      // a year from calving she is dry
+      final dam = damOf(g);
+      g.advanceDays(
+        Balance.lactationDays - g.today.daysSince(dam.lastCalvedOn!),
+      );
+      expect(Milk.inMilkDays(dam, g.today), isNull);
+      expect(GameView(g.state, g.me.id).milk, isEmpty);
+    });
+
+    test('a she-camel gives about 5 L a day over her lactation (the real '
+        'common average)', () {
+      final g = newGame(25);
+      final sim = Sim(g.state);
+      final gen = WorldGen(sim);
+      final rng = sim.rng(['milk-test']);
+      var sum = 0.0, n = 0;
+      for (var i = 0; i < 300; i++) {
+        final c = gen.makeCamel(
+          rng,
+          owner: g.me.id,
+          mean: 50,
+          category: ColorCategory.wodh,
+          sex: Sex.female,
+          ageDays: 6 * 365,
+        );
+        for (var d = 0; d < Balance.lactationDays; d += 5) {
+          sum += Milk.level(c, g.state.world.seed) * Milk.shape(d);
+          n++;
+        }
+      }
+      expect(sum / n, inInclusiveRange(4.0, 5.5));
+    });
+
+    test('the player tends up to ten head; past it shepherds and their '
+        'caravan', () {
+      expect(CareSystem.shepherdsNeeded(2), 0);
+      expect(CareSystem.shepherdsNeeded(Balance.ownerTendsUpTo), 0);
+      expect(CareSystem.shepherdsNeeded(Balance.ownerTendsUpTo + 1), 1);
+      expect(CareSystem.shepherdsNeeded(60), 3);
+    });
+
+    test('a facility is paid on ordering, built in three days, and no more '
+        'than its most', () {
+      final g = stocked(newGame(26));
+      final sim = Sim(g.state);
+      sim.pay(g.me, const Riyal(200000), LedgerCategory.sale);
+      final store = g.me.farm.storeKg;
+      expect(g.dispatch(BuildFacility(g.me.id, Facility.store)).ok, isTrue);
+      expect(
+        (g.dispatch(BuildFacility(g.me.id, Facility.store)) as Err).error.code,
+        ErrorCode.alreadyBuilt,
+        reason: 'one being built counts',
+      );
+      g.advanceDays(Balance.buildDays);
+      expect(g.me.farm.storeKg, store + 10000);
+      for (var i = 0; i < Facility.pen.most; i++) {
+        expect(g.dispatch(BuildFacility(g.me.id, Facility.pen)).ok, isTrue);
+      }
+      expect(
+        (g.dispatch(BuildFacility(g.me.id, Facility.pen)) as Err).error.code,
+        ErrorCode.alreadyBuilt,
+      );
+      g.advanceDays(Balance.buildDays);
+      expect(
+        g.me.farm.capacity,
+        Balance.startingCapacity + 10 * Facility.pen.most,
+      );
+      expect(g.dispatch(BuildFacility(g.me.id, Facility.caravan)).ok, isTrue);
+      expect(
+        (g.dispatch(SetShepherds(g.me.id, 1)) as Err).error.code,
+        ErrorCode.needsFacility,
+        reason: 'the caravan is not done yet',
+      );
+      g.advanceDays(Balance.buildDays);
+      expect(g.dispatch(SetShepherds(g.me.id, 1)).ok, isTrue);
+      expect(snapshot(reload(g)), snapshot(g));
+      expectClean(g);
+    });
   });
 
   group('Colour families', () {
@@ -641,11 +818,23 @@ void main() {
   });
 
   group('New game', () {
-    test('starts with a herd, a market, studs and a season', () {
+    test('starts with one nursing camel and her calf, a market, studs and a '
+        'season', () {
       final g = newGame();
       final v = GameView(g.state, g.me.id);
-      expect(v.herd, hasLength(3));
+      expect(v.herd, hasLength(2));
       expect(v.herd.every((c) => c.category == ColorCategory.majaheem), isTrue);
+      final dam = v.herd.firstWhere((c) => c.lastCalvedOn != null);
+      final calf = v.herd.firstWhere((c) => c.id != dam.id);
+      expect(dam.sex, Sex.female);
+      expect(calf.dam!.id, dam.id);
+      expect(calf.born, dam.lastCalvedOn);
+      expect(calf.ageDays, greaterThanOrEqualTo(Balance.freeNursingDays));
+      expect(g.me.farm.shepherds, 0);
+      expect(g.me.farm.capacity, Balance.startingCapacity);
+      expect(g.me.farm.tankL, Balance.startingTankL);
+      expect(v.milk, hasLength(1));
+      expect(v.milk.single.calf!.id, calf.id);
       expect(v.market.length, greaterThan(20));
       expect(v.studs, isNotEmpty);
       expect(v.festivals, isNotEmpty);
@@ -711,7 +900,9 @@ void main() {
       expect(r.error.code, ErrorCode.insufficientFunds);
 
       final g2 = newGame();
-      g2.me.farm.capacity = 3;
+      g2.me
+        ..cash = const Riyal(10000000)
+        ..farm.capacity = 2;
       final l2 = GameView(g2.state, g2.me.id).market.first;
       final r2 = g2.dispatch(BuyListing(g2.me.id, l2.id)) as Err;
       expect(r2.error.code, ErrorCode.farmFull);
@@ -789,7 +980,7 @@ void main() {
       final value = Valuation.value(g.state.world.camels[c.id]!, g.today);
       expect(price.value, lessThan(value.value));
       expect(g.dispatch(QuickSale(g.me.id, c.id)).ok, isTrue);
-      expect(GameView(g.state, g.me.id).herd, hasLength(2));
+      expect(GameView(g.state, g.me.id).herd, hasLength(1));
       expectClean(g);
     });
   });
@@ -801,6 +992,8 @@ void main() {
         g.state,
         g.me.id,
       ).herd.firstWhere((c) => c.ageDays > 6 * 365);
+      // past her rest after calving (the start's camel calved 120 days ago)
+      g.state.world.camels[f.id]!.lastCalvedOn = g.today - 400;
       final stud = g.state.world.studs.values.first;
       final r = g.dispatch(MateWithStud(g.me.id, f.id, stud.id)) as Err;
       expect(r.error.code, ErrorCode.notBreedingSeason);
@@ -1056,19 +1249,29 @@ void main() {
       expect(g.dispatch(SetFeedPlan(g.me.id, FeedPlan.premium)).ok, isTrue);
       expect(g.me.farm.feedPlan, FeedPlan.premium);
 
-      expect(g.dispatch(SetShepherds(g.me.id, 3)).ok, isTrue);
+      // a shepherd needs his caravan first; none (the player tends the herd)
+      // is allowed
       expect(
-        (g.dispatch(SetShepherds(g.me.id, 0)) as Err).error.code,
+        (g.dispatch(SetShepherds(g.me.id, 3)) as Err).error.code,
+        ErrorCode.needsFacility,
+      );
+      expect(g.dispatch(SetShepherds(g.me.id, 0)).ok, isTrue);
+      expect(
+        (g.dispatch(SetShepherds(g.me.id, -1)) as Err).error.code,
         ErrorCode.invalidAmount,
       );
 
       final cash = g.me.cash;
-      final cost = GameView(g.state, g.me.id).expansionCost;
-      expect(g.dispatch(ExpandFarm(g.me.id)).ok, isTrue);
-      expect(g.me.cash, cash - cost);
+      expect(g.dispatch(BuildFacility(g.me.id, Facility.pen)).ok, isTrue);
+      expect(g.me.cash, cash - const Riyal(12000));
+      g.advanceDays(Balance.buildDays);
+      expect(g.me.farm.capacity, Balance.startingCapacity + 10);
+      // the caravan costs more than is left
       expect(
-        g.me.farm.capacity,
-        Balance.startingCapacity + Balance.expansionStep,
+        (g.dispatch(
+          BuildFacility(g.me.id, Facility.caravan),
+        ) as Err).error.code,
+        ErrorCode.insufficientFunds,
       );
       expectClean(g);
     });

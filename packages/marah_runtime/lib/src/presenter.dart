@@ -129,7 +129,6 @@ class Presenter {
       feedPlan: me.farm.feedPlan,
       dailyFeed: v.dailyFeed.value,
       monthlyWages: v.monthlyWages.value,
-      expansionCost: v.expansionCost.value,
       supplies: [
         for (final s in Supply.values)
           SupplySummary(
@@ -178,6 +177,38 @@ class Presenter {
             conditionTarget: r.conditionTarget,
           ),
       ],
+      facilities: [
+        for (final f in Facility.values)
+          FacilitySummary(
+            facility: f,
+            price: f.price,
+            has: me.farm.has(f),
+            most: f.most,
+            building: me.farm.building.where((b) => b.facility == f).length,
+            doneOn: me.farm.building
+                .where((b) => b.facility == f)
+                .map((b) => b.doneOn)
+                .firstOrNull,
+            cannot: v.cannotBuild(f)?.code,
+          ),
+      ],
+      milk: MilkSummary(
+        camels: [
+          for (final m in v.milk)
+            MilkCamel(
+              id: m.camel.id,
+              name: m.camel.name,
+              days: m.days,
+              calfName: m.calf?.name,
+              litres: m.litres,
+              sold: m.sold,
+            ),
+        ],
+        calfShare: me.farm.calfShare,
+        price: Balance.milkPrice,
+        incomeToday: v.milkIncomeToday,
+        thisMonth: v.milkThisMonth.value,
+      ),
     );
     final summary = _summary(herdViews, v);
     final top = _sorted(

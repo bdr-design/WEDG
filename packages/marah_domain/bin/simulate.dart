@@ -17,6 +17,9 @@ void main(List<String> args) {
       region: Region.values[seed % Region.values.length],
       favourite: ColorCategory.values[seed % ColorCategory.values.length],
     );
+    // the old start's money (SAR 600,000; a game starts with 20,000 since
+    // 13 Nov 2026), so the run grows a herd and enters festivals as before
+    grant(game, 580000);
     final bot = Bot(game);
     final watch = Stopwatch()..start();
     final problem = bot.run(years * 52);

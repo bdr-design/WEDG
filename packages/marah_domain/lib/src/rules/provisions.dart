@@ -103,6 +103,19 @@ class Provisions {
       ? f.tankL - stocked(f, Supply.water)
       : f.storeKg - stocked(f, Supply.barley) - stocked(f, Supply.alfalfa);
 
+  /// How many [units] of [size] fit the room left. Feed must fit whole.
+  /// A tanker fills the tank to the top and takes the rest back, paid all
+  /// the same, so one may be ordered once the tank has room for half its load
+  /// (balance; the 6,000 L tank a new farm starts with would otherwise take a
+  /// 6 t tanker only when quite empty, the day before a dry day).
+  static int fits(Farm f, Supply s, int size) {
+    final r = room(f, s);
+    final n = s == Supply.water
+        ? ((r + size / 2) / size).floor()
+        : (r / size).floor();
+    return n < 0 ? 0 : n;
+  }
+
   /// Whole days a store lasts at [need] a day (null when nothing is needed).
   static int? daysLeft(double stock, double need) =>
       need <= 0 ? null : (stock / need).floor();

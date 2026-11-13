@@ -7,9 +7,18 @@ import '../events.dart';
 import '../game.dart';
 import '../invariants.dart';
 import '../model/camel.dart';
+import '../model/contest.dart';
 import '../model/player.dart';
 import '../rules/provisions.dart';
+import '../sim.dart';
 import '../views/views.dart';
+
+/// Gives the player [amount] more money, recorded in the ledger as the
+/// opening balance is (the invariants hold): for checks that need a rich
+/// farm's paths (a bull bought, festivals entered) now that a game starts
+/// with SAR 20,000.
+void grant(Game game, int amount) =>
+    Sim(game.state).pay(game.me, Riyal(amount), LedgerCategory.opening);
 
 /// A scripted player that uses every feature, for long-run simulations and
 /// tests. It plays sensibly, not optimally.
@@ -59,15 +68,32 @@ class Bot {
                   Provisions.unitSize(s))
               .ceil();
       final units = want < v.roomFor(s) ? want : v.roomFor(s);
-      if (units > 0) _do(OrderSupply(me, s, units));
+      if (units > 0) {
+        _do(OrderSupply(me, s, units));
+      } else if (s == Supply.water && v.roomFor(s, tanker: Tanker.small) > 0) {
+        // a tank the 19 t tanker does not fit: the 6 t one
+        _do(OrderSupply(me, s, 1, tanker: Tanker.small));
+      }
     }
 
+    // the farm grows with the herd: the bigger tank and the feed store,
+    // the caravan before the first shepherd, and pens when it is nearly full
+    final farm = v.me.farm;
+    void build(Facility f, {required bool when}) {
+      if (when && v.cannotBuild(f) == null && v.me.cash.value > f.price * 2) {
+        _do(BuildFacility(me, f));
+      }
+    }
+
+    build(Facility.tank, when: v.herd.length >= 5);
+    build(Facility.store, when: v.herd.length >= 8);
     final needed = v.shepherdsNeeded;
-    if (v.me.farm.shepherds != needed) _do(SetShepherds(me, needed));
-
-    if (v.herd.length >= v.me.farm.capacity - 1 && v.me.cash.value > 250000) {
-      _do(ExpandFarm(me));
+    build(Facility.caravan, when: needed > 0);
+    if (farm.shepherds != needed &&
+        (needed == 0 || farm.has(Facility.caravan) > 0)) {
+      _do(SetShepherds(me, needed));
     }
+    build(Facility.pen, when: v.herd.length >= farm.capacity - 1);
 
     // Breeding season: put eligible females to the best affordable stud.
     if (v.breedingSeason) {
@@ -75,15 +101,25 @@ class Bot {
         ..sort((a, b) => b.bull.quality.compareTo(a.bull.quality));
       for (final f in v.herd.where((c) => c.sex == Sex.female)) {
         if (v.canBreed(f.id) != null) continue;
+        // (a quarter of the money at most, the trucking counted: since
+        // 13 Nov 2026 the game starts with SAR 20,000, not 600,000)
         final stud = studs
-            .where((s) => s.stud.fee.value < view.me.cash.value * 0.05)
+            .where(
+              (s) =>
+                  s.stud.fee.value + s.transport.value <
+                  view.me.cash.value * 0.25,
+            )
             .firstOrNull;
         if (stud != null) _do(MateWithStud(me, f.id, stud.stud.id));
       }
     }
 
-    // Enter every camel that fits an open round.
-    for (final f in v.festivals.where((f) => f.registrationOpen(v.today))) {
+    // Enter every camel that fits an open round, when the trucking to the
+    // festivals is affordable.
+    final festivals = v.me.cash.value > 60000
+        ? v.festivals.where((f) => f.registrationOpen(v.today))
+        : const <Festival>[];
+    for (final f in festivals) {
       for (final c in view.herd) {
         for (final r in f.rounds) {
           if (view.canEnter(f.id, r.id, c.id) == null) {
@@ -94,15 +130,16 @@ class Bot {
       }
     }
 
-    // Buy a promising young female when rich.
-    if (v.me.cash.value > 400000 && v.herd.length < v.me.farm.capacity) {
+    // Buy a promising young female when the money allows.
+    if (v.me.cash.value > 50000 && v.herd.length < v.me.farm.capacity) {
       final pick =
           v.market
               .where(
                 (l) =>
                     l.camel.sex == Sex.female &&
                     l.camel.ageDays < 5 * 365 &&
-                    l.askPrice.value < v.me.cash.value * 0.3,
+                    l.askPrice.value + l.transport.value <
+                        v.me.cash.value * 0.1,
               )
               .toList()
             ..sort((a, b) => b.camel.quality.compareTo(a.camel.quality));
@@ -133,7 +170,7 @@ class Bot {
     }
 
     // Short of money: sell the least valuable camel to the broker.
-    if (view.me.cash < const Riyal(20000) && view.herd.length > 2) {
+    if (view.me.cash < const Riyal(3000) && view.herd.length > 2) {
       final cheapest = view.herd.toList()
         ..sort((a, b) => a.estimate.$1.compareTo(b.estimate.$1));
       for (final c in cheapest) {
