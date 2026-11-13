@@ -58,7 +58,7 @@ class Valuation {
   }
 
   static Riyal value(Camel c, GameDay today) {
-    final q = Judging.quality(c, today);
+    final q = Judging.priceQuality(c, today);
     var v =
         basePrice(c.ageClass(today), c.sex) *
         qualityMultiplier(q) *

@@ -2,6 +2,7 @@ import '../catalog/catalog.dart';
 import '../common/rng.dart';
 import '../common/time.dart';
 import '../model/camel.dart';
+import '../model/tampering.dart';
 import 'balance.dart';
 
 /// What a camel's body shows, and how a judging panel scores it.
@@ -23,7 +24,12 @@ class Judging {
   static const neutralCondition = 72.0;
 
   /// What the eye sees for [t] (0–100).
-  static double observed(Camel c, Trait t, GameDay today) {
+  static double observed(
+    Camel c,
+    Trait t,
+    GameDay today, {
+    bool treated = true,
+  }) {
     var v = c.genes[t]! + c.env[t]!;
     v += (c.condition - neutralCondition) * (conditionSensitivity[t] ?? 0);
     if (c.health != HealthStatus.healthy) {
@@ -32,7 +38,7 @@ class Judging {
     final years = c.ageYears(today);
     if (years >= 16) v -= (years - 15) * 1.2;
     // a secret treatment makes her look finer while it lasts (GDD 7.1)
-    for (final x in c.treatments) {
+    for (final x in treated ? c.treatments : const <Tampering>[]) {
       if (x.activeOn(today) && x.kind.traits.contains(t)) {
         v += Balance.tamperTraitGain(x.kind, x.strength);
       }
@@ -62,6 +68,26 @@ class Judging {
   }
 
   static final _looks = Expando<(Object, double)>('looks');
+
+  /// The look as it would be without her treatments (the same as [quality]
+  /// for a camel with none showing).
+  static double untreatedQuality(Camel c, GameDay today) {
+    if (!c.treatments.any((t) => t.activeOn(today))) return quality(c, today);
+    var sum = 0.0;
+    for (final t in Trait.values) {
+      sum += observed(c, t, today, treated: false) * t.weight;
+    }
+    return sum;
+  }
+
+  /// The look a buyer pays for: a treatment's lift counts only in part
+  /// (the owner, 13 Nov 2026: the price rises, but by less than at judging).
+  static double priceQuality(Camel c, GameDay today) {
+    final q = quality(c, today);
+    if (c.treatments.isEmpty) return q;
+    final q0 = untreatedQuality(c, today);
+    return q0 + Balance.tamperPriceShare * (q - q0);
+  }
 
   static Object _lookKey(Camel c, GameDay today) => (
     today.value,
