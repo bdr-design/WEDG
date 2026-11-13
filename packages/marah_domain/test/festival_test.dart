@@ -945,7 +945,7 @@ void main() {
   test('the bot plays festivals, cheats now and then, and every invariant '
       'holds', () {
     final g = newGame(5);
-    final bot = Bot(g);
+    final bot = Bot(g, cheats: true);
     expect(bot.run(52 * 3), isNull);
     final placings = g.state.world.camels.values
         .where((c) => c.ownerId == g.me.id)
@@ -956,5 +956,39 @@ void main() {
       isTrue,
     );
     expect(checkInvariants(g.state), isEmpty);
+  });
+
+  test('an honest bot keeps entering the festivals for ten years', () {
+    for (final seed in [1, 2, 3, 4]) {
+      final g = Game.create(
+        seed: seed * 7919,
+        playerName: 'bot',
+        farmName: 'bot farm',
+        region: Region.values[seed % Region.values.length],
+        favourite: ColorCategory.values[seed % ColorCategory.values.length],
+        startedAt: DateTime.utc(2026, 11, 8),
+      );
+      grant(g, 580000);
+      final bot = Bot(g);
+      for (var w = 0; w < 52 * 10; w++) {
+        for (final e in bot.week()) {
+          expect(e, isNot(isA<TamperingFound>()));
+        }
+      }
+      // a season with no camel of an age a round takes can pass without
+      // an entry (no adult male round but الفحل's; جل from the second
+      // calf): 9 of the 10 on the slowest seed, measured
+      expect(
+        bot.entriesBySeason.keys.where((y) => y >= 2026 && y < 2036).length,
+        greaterThanOrEqualTo(8),
+        reason: 'seed $seed: ${bot.entriesBySeason}',
+      );
+      expect(
+        bot.entriesBySeason.containsKey(2035),
+        isTrue,
+        reason: 'seed $seed still enters in the last season',
+      );
+      expect(g.state.world.bans, isNot(contains(g.me.id)));
+    }
   });
 }
