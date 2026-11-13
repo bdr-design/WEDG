@@ -635,14 +635,7 @@ class MarketSystem implements DailySystem {
       final c = w.camels[l.camelId];
       if (c == null || !c.isAlive) continue;
       final r = sim.rng(['buyers', l.id.value]);
-      // the seller's name in the family moves what buyers offer (GDD 8)
-      // a declared treated camel at her natural look (decision 15)
-      final value =
-          (Valuation.value(c, sim.today, natural: l.declared).value *
-                  Balance.reputationPriceFactor(
-                    sim.player(l.sellerId)!.reputationIn(c.category),
-                  ))
-              .round();
+      final value = offerValue(sim, l, c);
       final ratio = l.askPrice.value / (value <= 0 ? 1 : value);
       final p = clampDouble(
         Balance.buyerInterest / (ratio * ratio * ratio),
@@ -714,6 +707,16 @@ class MarketSystem implements DailySystem {
     }
   }
 }
+
+/// What buyers reckon a player's listed camel worth when they make their
+/// offers: her value, moved by the seller's name in her family (GDD 8); a
+/// declared treated camel at her natural look (the owner's decision 15).
+int offerValue(Sim sim, Listing l, Camel c) =>
+    (Valuation.value(c, sim.today, natural: l.declared).value *
+            Balance.reputationPriceFactor(
+              sim.player(l.sellerId)!.reputationIn(c.category),
+            ))
+        .round();
 
 // ------------------------------------------------------------- cheating
 

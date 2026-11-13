@@ -1872,6 +1872,86 @@ void main() {
       );
     });
 
+    test('the broker pays a declared camel her natural price', () {
+      final g = newGame();
+      final c = treatedBy(g, g.state.world.owners.keys.first, known: [g.me.id]);
+      for (final k in TamperKind.values) {
+        if (k == TamperKind.hormones) continue;
+        c.treatments.add(
+          Tampering(kind: k, strength: 3, on: g.today, until: g.today + 20),
+        );
+      }
+      final untreated = Camel.fromJson(c.toJson()..remove('treatments'));
+      g.state.world.camels[untreated.id] = untreated;
+      final s0 = Sim(g.state);
+      expect(
+        handlers.quickSalePrice(c, s0, declared: true),
+        handlers.quickSalePrice(untreated, s0),
+      );
+      expect(
+        handlers.quickSalePrice(c, s0).value,
+        greaterThan(handlers.quickSalePrice(c, s0, declared: true).value),
+      );
+      g.state.world.camels[c.id] = c;
+    });
+
+    test('buyers reckon a declared listing at her natural look', () {
+      final g = newGame();
+      final c = treatedBy(g, g.state.world.owners.keys.first, known: [g.me.id]);
+      g.dispatch(ListForSale(g.me.id, c.id, 100000, declared: true));
+      final l = g.state.world.listings.values.firstWhere(
+        (l) => l.camelId == c.id,
+      );
+      final s0 = Sim(g.state);
+      expect(
+        offerValue(s0, l, c),
+        Valuation.value(c, g.today, natural: true).value,
+      );
+      expect(
+        Valuation.value(c, g.today).value,
+        greaterThan(Valuation.value(c, g.today, natural: true).value),
+      );
+    });
+
+    test('a declared listing shows its treatment to every buyer; bought, '
+        'the buyer knows', () {
+      final g = newGame();
+      // a second player in the world, as online
+      final other = PlayerState.fromJson(g.me.toJson()..['id'] = 'p-second');
+      g.state.players[other.id] = other;
+      grant(g, 0);
+      final c = treatedBy(g, g.state.world.owners.keys.first, known: [g.me.id]);
+      g.dispatch(ListForSale(g.me.id, c.id, 60000));
+      expect(
+        GameView(g.state, other.id).listingOf(c.id)!.knownTreatments,
+        isEmpty,
+      );
+      g.dispatch(
+        CancelListing(
+          g.me.id,
+          g.state.world.listings.values.firstWhere((l) => l.camelId == c.id).id,
+        ),
+      );
+      g.dispatch(ListForSale(g.me.id, c.id, 60000, declared: true));
+      final seen = GameView(g.state, other.id).listingOf(c.id)!;
+      expect(seen.declared, isTrue);
+      expect(seen.knownTreatments, [TamperKind.hormones]);
+      // the other player buys her: he was told
+      other.cash = const Riyal(10000000);
+      other.ledger.add(
+        LedgerEntry(
+          day: g.today,
+          category: LedgerCategory.opening,
+          amount: const Riyal(10000000),
+        ),
+      );
+      final l = g.state.world.listings.values.firstWhere(
+        (l) => l.camelId == c.id,
+      );
+      expect(g.dispatch(BuyListing(other.id, l.id)).ok, isTrue);
+      expect(c.treatments.single.knownBy, contains(other.id));
+    });
+
     test('nothing to declare without a treatment he knows of', () {
       final g = newGame();
       final c = treatedBy(g, g.state.world.owners.keys.first);

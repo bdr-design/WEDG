@@ -96,6 +96,14 @@ Result _buyAt(Sim sim, PlayerState p, Listing l, Riyal price) {
   }
   sim.pay(p, -price, LedgerCategory.purchase, ref: c.id.value);
   sim.pay(p, -move, LedgerCategory.transport, ref: c.id.value);
+  // a declared treated camel: the buyer was told (the owner's decision 15)
+  if (l.declared) {
+    for (final t in c.treatments) {
+      if (t.activeOn(sim.today) && !t.knownBy.contains(p.id)) {
+        t.knownBy.add(p.id);
+      }
+    }
+  }
   sim.world.listings.remove(l.id);
   sim.world.offers.removeWhere((_, o) => o.listingId == l.id);
   c
