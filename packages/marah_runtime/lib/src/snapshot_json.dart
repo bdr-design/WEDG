@@ -344,6 +344,9 @@ class SnapshotJson {
           if (e.removedAt != null) 'removedAt': e.removedAt!.name,
           if (e.reason != null) 'reason': e.reason!.name,
           if (e.reputation != null) 'reputation': e.reputation!.name,
+          if (e.foundAt != null) 'foundAt': e.foundAt!.name,
+          if (e.foundKind != null) 'foundKind': e.foundKind!.name,
+          if (e.fine > 0) 'fine': e.fine,
         },
     ],
   };

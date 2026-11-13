@@ -1702,6 +1702,18 @@ void main() {
           if (out?.reason == RemovalReason.cut) {
             cutThenFound++;
             expect(out?.stage, Stage.preliminary);
+            // her row says it, from the finding's stage on
+            final row = GameView(g.state, g.me.id)
+                .festival(f.id)!
+                .rounds
+                .firstWhere((x) => x.id == r.id)
+                .results!
+                .firstWhere((x) => x.camelId == c.id);
+            expect(
+              (row.foundAt, row.foundKind, row.fine),
+              (t.stage, TamperKind.botox, t.fine),
+            );
+            expect(row.reputation, ReputationMove.fell);
           } else {
             expect(
               (out?.reason, out?.stage),

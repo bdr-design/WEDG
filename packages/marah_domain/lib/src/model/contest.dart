@@ -177,6 +177,9 @@ class ResultRow {
     this.removedAt,
     this.reason,
     this.head = 1,
+    this.foundAt,
+    this.foundKind,
+    this.fine = 0,
   });
 
   /// The place in the final judging; null when a stage removed the entry.
@@ -199,6 +202,14 @@ class ResultRow {
   /// Camels in the entry.
   final int head;
 
+  /// A player's entry the clinical check found treated: the stage it is
+  /// told at (whether or not the entry was still in the round: one the
+  /// preliminary cut is found all the same), the first kind found and the
+  /// fines for all found in it.
+  final Stage? foundAt;
+  final TamperKind? foundKind;
+  final int fine;
+
   Map<String, Object?> toJson() => {
     'rank': rank,
     'name': camelName,
@@ -212,6 +223,9 @@ class ResultRow {
     if (removedAt != null) 'removedAt': removedAt!.name,
     if (reason != null) 'reason': reason!.name,
     'head': head,
+    if (foundAt != null) 'foundAt': foundAt!.name,
+    if (foundKind != null) 'foundKind': foundKind!.name,
+    if (fine != 0) 'fine': fine,
   };
 
   static ResultRow fromJson(Map<String, Object?> j) => ResultRow(
@@ -234,6 +248,13 @@ class ResultRow {
         ? null
         : RemovalReason.values.byName(j['reason']! as String),
     head: j['head']! as int,
+    foundAt: j['foundAt'] == null
+        ? null
+        : Stage.values.byName(j['foundAt']! as String),
+    foundKind: j['foundKind'] == null
+        ? null
+        : TamperKind.values.byName(j['foundKind']! as String),
+    fine: (j['fine'] as int?) ?? 0,
   );
 }
 

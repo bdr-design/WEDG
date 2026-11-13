@@ -114,6 +114,9 @@ class Presenter {
             removedAt: row?.removedAt,
             reason: row?.reason,
             reputation: row?.reputation,
+            foundAt: row?.foundAt,
+            foundKind: row?.foundKind,
+            fine: row?.fine ?? 0,
           ),
         );
       }

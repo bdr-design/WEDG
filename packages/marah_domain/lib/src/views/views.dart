@@ -649,10 +649,10 @@ class RoundView {
                           row.rank == null &&
                           row.removedAt != null &&
                           row.removedAt!.index < r.told)
-                        ResultView._(row, v),
+                        ResultView._(row, v, r.told),
                   ]
                 : null)
-          : [for (final row in r.results!) ResultView._(row, v)];
+          : [for (final row in r.results!) ResultView._(row, v, r.told)];
 
   final RoundId id;
   final RoundKind kind;
@@ -692,8 +692,17 @@ class RoundView {
 /// and the stage an entry left at; never its score or marks, the player's
 /// own included (hidden values: the judges' marks are not announced).
 class ResultView {
-  ResultView._(ResultRow r, GameView v)
-    : rank = r.rank,
+  ResultView._(ResultRow r, GameView v, int told)
+    : foundAt = r.ownerId == v.viewer && (r.foundAt?.index ?? 99) < told
+          ? r.foundAt
+          : null,
+      foundKind = r.ownerId == v.viewer && (r.foundAt?.index ?? 99) < told
+          ? r.foundKind
+          : null,
+      fine = r.ownerId == v.viewer && (r.foundAt?.index ?? 99) < told
+          ? r.fine
+          : 0,
+      rank = r.rank,
       camelName = r.camelName,
       ownerId = r.ownerId,
       ownerName = v.ownerName(r.ownerId),
@@ -704,7 +713,8 @@ class ResultView {
       camelId = r.ownerId == v.viewer ? r.camelId : null,
       reputation = r.ownerId != v.viewer
           ? null
-          : r.reason == RemovalReason.tampering
+          : r.reason == RemovalReason.tampering ||
+                (r.foundAt?.index ?? 99) < told
           ? ReputationMove.fell
           : (r.rank ?? 99) <= 10
           ? ReputationMove.rose
@@ -724,6 +734,14 @@ class ResultView {
   /// Only on the viewer's own rows.
   final CamelId? camelId;
 
+  /// Only on the viewer's own rows, once its stage is told: the treatment
+  /// the check found (told at the tampering experts' or the medical
+  /// committee's stage, the entry cut at the preliminary or not), and the
+  /// fines.
+  final Stage? foundAt;
+  final TamperKind? foundKind;
+  final int fine;
+
   /// Only on the viewer's own rows: what the entry did to his name in its
   /// family (GDD 8: the top ten raise it, a treatment found lowers it).
   final ReputationMove? reputation;
@@ -739,6 +757,9 @@ class ResultView {
     if (removedAt != null) 'removedAt': removedAt!.name,
     if (reason != null) 'reason': reason!.name,
     if (reputation != null) 'reputation': reputation!.name,
+    if (foundAt != null) 'foundAt': foundAt!.name,
+    if (foundKind != null) 'foundKind': foundKind!.name,
+    if (fine > 0) 'fine': fine,
   };
 }
 

@@ -1191,6 +1191,11 @@ class ContestSystem implements DailySystem {
     }
     for (final c in comps) {
       if (c.rival || c.inField) continue;
+      final ids = {for (final x in c.camels) x.id};
+      final found = [
+        for (final x in r.found)
+          if (x.camel != null && ids.contains(x.camel)) x,
+      ];
       rows.add(
         ResultRow(
           rank: null,
@@ -1203,6 +1208,9 @@ class ContestSystem implements DailySystem {
           removedAt: c.removedAt,
           reason: c.reason,
           head: c.head,
+          foundAt: found.isEmpty ? null : found.first.stage,
+          foundKind: found.isEmpty ? null : found.first.kind,
+          fine: found.fold(0, (n, x) => n + x.fine),
         ),
       );
     }

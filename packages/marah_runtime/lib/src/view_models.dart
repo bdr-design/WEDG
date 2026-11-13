@@ -385,6 +385,9 @@ class MyEntryCard {
     this.removedAt,
     this.reason,
     this.reputation,
+    this.foundAt,
+    this.foundKind,
+    this.fine = 0,
   });
 
   final CamelId camel;
@@ -402,9 +405,17 @@ class MyEntryCard {
   final RemovalReason? reason;
   final ReputationMove? reputation;
 
+  /// The treatment the check found, once its stage is told, and the fines.
+  final Stage? foundAt;
+  final TamperKind? foundKind;
+  final int fine;
+
   @override
   bool operator ==(Object other) =>
       other is MyEntryCard &&
+      other.foundAt == foundAt &&
+      other.foundKind == foundKind &&
+      other.fine == fine &&
       other.camel == camel &&
       other.name == name &&
       other.sex == sex &&
@@ -436,6 +447,9 @@ class MyEntryCard {
     removedAt,
     reason,
     reputation,
+    foundAt,
+    foundKind,
+    fine,
   );
 }
 
