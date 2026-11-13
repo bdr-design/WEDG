@@ -49,12 +49,14 @@ double avgMs(void Function() f, int reps) {
 
 /// The fastest of [reps] runs: the work's own cost, steady on a shared
 /// machine where another process's spike can stretch any one run (the
-/// budgets below once failed only under load). The snapshot's and the
-/// festival page's fastest run reuses the day's looks; their cost the first
-/// time in a day is printed by 'measured values'.
-double fastestMs(void Function() f, int reps) {
+/// budgets below once failed only under load). With [newDay], each run is
+/// the first of a new day (the day advanced untimed before it), so the
+/// herd's looks are worked out afresh, as the first snapshot and the first
+/// festival page of a day do (a later one reuses them).
+double fastestMs(void Function() f, int reps, {void Function()? newDay}) {
   var best = double.infinity;
   for (var i = 0; i < reps; i++) {
+    newDay?.call();
     final sw = Stopwatch()..start();
     f();
     final ms = sw.elapsedMicroseconds / 1000;
@@ -83,7 +85,11 @@ void main() {
 
   test('the screen snapshot stays under 250 ms at 10,000 head', () {
     expect(
-      fastestMs(() => Presenter(g.state, g.me.id).snapshot(1), 5),
+      fastestMs(
+        () => Presenter(g.state, g.me.id).snapshot(1),
+        5,
+        newDay: () => g.advanceDays(1),
+      ),
       lessThan(250),
     );
   });
@@ -103,7 +109,11 @@ void main() {
       (f) => f.tier == FestivalTier.grand,
     );
     expect(
-      fastestMs(() => Presenter(g.state, g.me.id).festivalDetail(f.id), 3),
+      fastestMs(
+        () => Presenter(g.state, g.me.id).festivalDetail(f.id),
+        3,
+        newDay: () => g.advanceDays(1),
+      ),
       lessThan(250),
     );
   });
