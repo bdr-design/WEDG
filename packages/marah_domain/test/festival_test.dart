@@ -2358,7 +2358,7 @@ void main() {
       expect(GameView(g.state, g.me.id).dealerMessages, hasLength(1));
     });
 
-    test('an unread message is never dropped for room', () {
+    test('the read ones are dropped for room first, then the oldest', () {
       final g = newGame();
       for (var i = 0; i < Balance.dealerMessagesKept + 5; i++) {
         g.me.dealer.add(
@@ -2382,6 +2382,31 @@ void main() {
         g.me.dealer.where((m) => !m.read),
         hasLength(1 + (Balance.dealerMessagesKept + 5 + 1) ~/ 2),
       );
+      // never opened: the latest 20 kept
+      g.me.dealer
+        ..clear()
+        ..addAll([
+          for (var i = 0; i < 30; i++)
+            DealerMessage(
+              camel: CamelId('u$i'),
+              name: 'u$i',
+              festival: const FestivalId('f'),
+              round: const RoundId('r'),
+              day: g.today,
+            ),
+        ]);
+      final c2 = camelFor(g, roundOf(f, RoundKind.mafareed, sex: Sex.male));
+      g.dispatch(
+        EnterRound(
+          g.me.id,
+          f.id,
+          roundOf(f, RoundKind.mafareed, sex: Sex.male).id,
+          [c2.id],
+        ),
+      );
+      expect(g.me.dealer, hasLength(Balance.dealerMessagesKept));
+      expect(g.me.dealer.first.camel, const CamelId('u11'));
+      expect(g.me.dealer.last.camel, c2.id);
     });
 
     test('a finding outside a sale waits untold until the phone tells it', () {

@@ -708,18 +708,18 @@ Result _enter(Sim sim, PlayerState p, EnterRound cmd) {
       day: sim.today,
     ),
   );
-  final over = p.dealer.length - Balance.dealerMessagesKept;
-  if (over > 0) {
-    // the oldest read ones go first; an unread one is kept until read
-    for (var i = 0, gone = 0; i < p.dealer.length && gone < over;) {
-      if (p.dealer[i].read) {
-        p.dealer.removeAt(i);
-        gone++;
-      } else {
-        i++;
-      }
+  var over = p.dealer.length - Balance.dealerMessagesKept;
+  // the oldest read ones go first, then the oldest unread (long past
+  // rounds: a player who never opens the chat keeps the latest 20)
+  for (var i = 0; i < p.dealer.length && over > 0;) {
+    if (p.dealer[i].read) {
+      p.dealer.removeAt(i);
+      over--;
+    } else {
+      i++;
     }
   }
+  if (over > 0) p.dealer.removeRange(0, over);
   return _ok(sim);
 }
 

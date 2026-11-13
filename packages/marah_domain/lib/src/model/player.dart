@@ -347,8 +347,9 @@ class LedgerEntry {
 /// A message from the man who offers the secret treatment
 /// (Balance.dealerName), sent when the player registers a camel (the owner,
 /// 13 Nov 2026: he messages in secret after a registration, in the phone's
-/// «المحادثات»; the festival's own app never offers it). Kept until read,
-/// and after, [Balance.dealerMessagesKept] at most.
+/// «المحادثات»; the festival's own app never offers it). Kept until read;
+/// [Balance.dealerMessagesKept] at most, the read ones dropped first, then
+/// the oldest.
 class DealerMessage {
   DealerMessage({
     required this.camel,
