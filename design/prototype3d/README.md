@@ -76,7 +76,8 @@ registering with each camel's own round or the engine's refusal, the round's
 day told stage by stage at the engine's hours, the results, and the day a
 treatment is found) and «المحادثات» (the treatment man's secret chat, his
 message after each registration, the seven kinds and their strengths, bought by
-two taps). A notice (a registration open, a stage told, a result, his message)
+two taps), and in الحراج the vet's look before buying (one a day, from the money), what it finds, and selling a
+camel known to be treated declared (listed or to the broker) or the engine's refusal (approved 14 Nov). A notice (a registration open, a stage told, a result, his message)
 is a red badge on the app, as الحراج's offers are; nothing is written over the
 game. A camel bought comes on the truck
 the next day and joins the yard then. The design's other phone screens come in as each works on the

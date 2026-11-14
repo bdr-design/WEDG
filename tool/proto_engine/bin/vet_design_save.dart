@@ -8,8 +8,9 @@
 //  - played: his eldest camel (نورة, the start's she-camel) treated by her owner (Tamper), and the engine's refusal
 //    of her declared sale (ownTreatment).
 // One state is staged (the finding outside the ring called directly); every figure shown is the engine's own.
-// Run `dart run bin/vet_design_save.dart <out.json> [<before.json>]` in tool/proto_engine; the page opens it from
-// localStorage. <before.json>: the same game before the vet's first look (the phone's look is played on it).
+// Run `dart run bin/vet_design_save.dart <out.json> [<before.json> [<knew.json>]]` in tool/proto_engine; the page opens it from
+// localStorage. <before.json>: the same game before the vet's first look (the phone's look is played on it);
+// <knew.json>: the game after he bought, knowing, the listing his vet found (the declared sale refused: item 12).
 import 'dart:io';
 
 import 'package:marah_data/marah_data.dart';
@@ -93,6 +94,20 @@ void main(List<String> args) {
       .reduce((a, b) => a.ageDays(g.today) >= b.ageDays(g.today) ? a : b);
   g.dispatch(Tamper(me, noura.id, TamperKind.dye, 1));
   clockToWorld();
+  // (a third file, when named: the same game after he bought the listing
+  // his vet found, knowing, the next day: the owner's item 12, refused)
+  if (args.length > 2 && w.listings.containsKey(first.id)) {
+    final copy = Game(GameState.fromJson(g.state.toJson()));
+    grant(copy, first.askPrice.value + 20000);
+    final r = copy.dispatch(BuyListing(me, first.id));
+    if (!r.ok) throw StateError('the found listing was not bought: $r');
+    copy.advanceDays(1);
+    copy.state
+      ..clockShiftMs =
+          -copy.today.daysSince(copy.state.startedOn) * 86400000 ~/ 7
+      ..lastSeenUtcMs = now.millisecondsSinceEpoch;
+    File(args[2]).writeAsStringSync(const SaveCodec().encode(copy.state));
+  }
   File(args.first).writeAsStringSync(const SaveCodec().encode(g.state));
   stdout.writeln(
     'played $days days, looks $looks, found ${found()}, '
