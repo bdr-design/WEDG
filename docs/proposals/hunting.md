@@ -301,9 +301,11 @@ docs/agents/owner_instructions_2026-11-14_night.md):**
 - **«ايه»: trapping is what he meant** (the director's reading, told back to him before he slept).
   The player traps wild passage falcons in their season and sells them at the auction (decision 2,
   «تجارة ثانية»).
-- **It is a camp, for days** («مخيم وايام»). *Our reading, not his words (section 10, question 1):* his
-  decision 7 (an outing of hours, back the same day) stays for falconry outings (المقناص), not for
-  trapping.
+- **It is a camp, for days** («مخيم وايام»).
+- **The falcon outing may be days too** (14 Nov, his words: «خل الطلعة ايام مافي مشكلة»). Decision
+  7's "a few hours, back the same day" no longer binds the outing; the rest of decision 7 stands
+  («العزبة تمشي مثل كل يوم»). Whether a one-day outing stays possible beside a trip of days is not
+  in his words: the design shows it and he chooses.
 - **The catch depends on the player's gear,** in his words «تجهيزاتك وحمامك وغيره والخيمه المتنقله
   وغيره»: his gear, his pigeons and the rest, the mobile tent. The nets and the other items in 9.2
   come from the research, not from his words.
@@ -479,10 +481,10 @@ In the one list, section 10 (numbers 1 and 4–9). Two are answered: trapping is
 The proxy answers them tonight, and the owner may overturn any answer. Recommendation first;
 the Arabic line to put to him is in 13.8.
 
-1. **Decision 7 for falconry only?** He said of trapping «مخيم وايام», and his decision 7 was an
-   outing of hours, back the same day. Our reading: decision 7 stays for المقناص with the falcon,
-   while trapping is a camp of days with the farm running as on any day. *Recommended:* yes.
-   > *The proxy's provisional answer (item 8):* keep the reading, marked as ours, for him to confirm.
+1. ~~**Decision 7 for falconry only?**~~ **Answered by the owner (14 Nov):** «خل الطلعة ايام مافي
+   مشكلة». Our reading (decision 7 for falconry, days for trapping only) is withdrawn: the falcon
+   outing may be days too, and the farm runs as on any day. A one-day outing beside it is for the
+   design to show him.
 2. **Aiming with the air rifle.** *Recommended:* a tap on the flock and a result by chance and the
    rifle's reach, with no crosshair game. A crosshair is closer to a shooter and a little heavier.
    *Not put to the proxy: waiting for the owner.*
