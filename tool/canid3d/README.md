@@ -36,7 +36,7 @@ corners, the toes out of the paw) and meshed as one closed surface, as `tool/cam
 | `wolf_*_lod1.glb` | the wolf, far: the same skin decimated | 1,300 each | 1 | 256 px |
 | `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, its collar and the collar's ring (3 pieces); barking, also the four canines | 6,216 / 6,216 / 6,360 | 1 | 512 px |
 | `dog_*_lod1.glb` | the guard dog, far: the skin and the collar (2 pieces) | 1,420 each | 1 | 256 px |
-| `stray_alert.glb`, `stray_bark.glb` | the stray, close: one skin (the barking file adds the canines) | 5,600 / 5,744 | 1 | 512 px |
+| `stray_alert.glb`, `stray_bark.glb` | the stray, close: one skin (the barking file adds the canines) | 5,600 / 5,742 | 1 | 512 px |
 | `stray_*_lod1.glb` | the stray, far | 1,300 each | 1 | 256 px |
 
 - **One mesh and one material per file, one-sided:** the skin and every extra piece are closed. The collar is in the
@@ -45,9 +45,17 @@ corners, the toes out of the paw) and meshed as one closed surface, as `tool/cam
   map (the fur's grain: fine streaks along the hair's run and the coat's coarser lie); roughness is one value
   (0.85). 512 px close is 2.67 MiB uncompressed with mipmaps (both textures, RGBA8, counted as ADR 0005 counts them),
   about 0.67 MiB as ASTC 4×4. 256 px far is 0.67 MiB uncompressed.
-- **The texture layout:** Blender's smart projection of the skin, packed, the head given 1.8 times the texture per
-  millimetre (the unwrap is made on a copy whose head is swollen, then copied back). The texture covers about 60% of
-  its square.
+- **The texture layout:** Blender's smart projection of the skin, packed with a margin of 0.006 of the layout (3
+  texels at 512 px) between islands and at the border, the head given 2.4 times the texture per millimetre (the unwrap
+  is made on a copy whose head is swollen, then copied back). The texture covers about 45% of its square.
+  - **No two texture triangles overlap:** where the decimated skin folds a sliver under its neighbour, the projection
+    overlaps; one face of each such pair is moved to a free place of its own. `build.py` rasterises every triangle at
+    2048 px and stops the build if any two share texels.
+  - Empty texels take their nearest painted texel's colour, which within a margin is the island's own.
+  - The samplers clamp to the edge (nothing wraps in from the far border); the tangents are written into the file
+    (the normal map is in their frame).
+  - **The margin, a trade-off:** a margin of 0.010–0.013 (5–7 texels, the reviewer's suggestion) left only 25–30%
+    of the square covered, half the texture's sharpness; 3 texels keep 45%.
 - **Reproducible:** the same code writes the same GLB files byte for byte. The exporter's triangle order is settled
   after writing (`common.settle`, as in `tool/weapon3d/akm.py` and `tool/bird3d`). Checked by building every file
   twice and comparing checksums (the report gives the result).
@@ -58,7 +66,7 @@ The pictures are in `design/canids/` (JPEG):
 - **Each animal and pose:** from the side (orthographic, with a centimetre ruler along the ground) and from three
   quarters.
 - **Standing and barking poses:** a close view of the head.
-- **Standing:** the front view; **every pose:** the view from above.
+- **Standing:** the front view, the view from above, and the forepaws close from three-quarter front with a raking light (`*_alert_paws.jpg`).
 - `canids_far_15m.jpg`: the far models (standing) from the game's camera at 15 m in the game's light, as the phone
   shows them, with a ×4 enlargement.
 - `canids_scale.jpg`: all of them beside the player's figure and a calf a few days old.
@@ -103,7 +111,7 @@ The budget is ADR 0005's: 200 draws and 400k triangles a frame with shadows, and
 - **Standing (all three animals):** the femur about 20° from upright (21° the wolf, 17° the dog: the reviewer's
   20–30°), the stifle at about 116–120°, the hock at about 126°, every paw flat on the ground.
 - **The wolf's run:** the right fore alone on the ground, the left reaching, the hind legs stretched back after their
-  push with the hocks at about 152° and 164° (not dead straight), the back bent (10° per withers height along it),
+  push with both hocks at about 152° by this build's measure (the reviewer's measure from the named points reads a few degrees more; about 160° was asked), the back bent (10° per withers height along it),
   the tail streaming back and a little down. Muybridge's dog gallop (plate 707), the reviewer's reference, could not
   be opened from my tools; the pose follows the reviewer's description of it.
 - **The dog lying:** on its chest, the elbows and forearms resting on the ground (the skin is pressed flat where it
@@ -142,7 +150,7 @@ Sources:
 | Weight (for the record) | about 20 kg on average (one source 25 kg); females possibly as little as 10 kg | en.wikipedia, citing Lopez 2004 *(opened by the reviewer)*; Saudipedia, mawdoo3 *(search)*; a forum post *(search, weak)* | the skin's volume 27.8 L. Less the summer coat's depth (about 1.5 cm over about 0.6 m² of skin, about 9 L), that is about 19 L, so about 19 kg at a body's density: inside the range |
 | Length | 114 cm, not saying what it measures; head and body not found for this subspecies | Saudipedia *(search)* | nose to tail base 996 mm; overall, nose to tail as it hangs, 1,158 mm |
 | Tail | "reaches its hocks" | Saudipedia *(search)* | 390 mm (0.60 H), about 40 mm across at the root, fullest at mid-length; its tip about level with the hocks (the side picture) |
-| Skull length | about 200.8 mm (cranial length) | animal database pages citing older literature *(search, weak)* | head, occiput to nose, 227 mm (with the skin, nose and fur); the muzzle (eye to nose) 0.50 of it, 74 and 69 mm wide at 0.62 and 0.76 of the head; 127 mm across the cheeks |
+| Skull length | about 200.8 mm (cranial length) | animal database pages citing older literature *(search, weak)* | head, occiput to nose, 227 mm (with the skin, nose and fur); the muzzle (eye to nose) 0.52 of it, 80 mm wide at its base and about 64 mm at its middle; 127 mm wide at the eyes (the eyes 65 mm apart: 1.95 times, the reviewer's head-front photograph about 2.1), 138 mm across the cheeks; a stop, the forehead rising about 20 mm behind the eyes |
 | Ears | "proportionally larger" than other wolves'; no length found | en.wikipedia, citing Mills 1945 *(opened by the reviewer)* | 107 mm tall, 69 mm at the base, their bases' centres 104 mm apart on the skull's corners *(a game choice)* |
 | Chest depth, leg lengths, paw size | not found | – | chest bottom 328 mm, elbows 299 mm, hocks 145 mm; forepaw 73 × 53 mm *(game choices, from canid proportions)* |
 
@@ -177,8 +185,11 @@ pattern, not confirmed for *arabs*.
 **The fused middle toe pads** (the third and fourth toes' pads, occasionally joined behind; told in the tracks;
 en.wikipedia citing Ferguson & Menache 2002 *(opened by the reviewer)*; ar.wikipedia, citing Macdonald 1992, says the two
 middle toes are fused):
-- Each paw is part of the skin: four toe bulges in front (the middle two longest), the dark claw tips painted, the
-  dark pads below; on the forelegs the carpal pad, a small bump behind the wrist.
+- Each paw is part of the skin: four toe bulges in front (the middle two longest) with the clefts between them cut
+  in, the dark claw tips painted, the dark pads below; on the forelegs the carpal pad, a small bump behind the wrist.
+  The field is kept unblurred at the paws and the decimation spares them, so the toes survive. The forepaw is about
+  83 mm long (the reviewer's 80–90). The legs are not thickened: the reviewer measured the photographs' pastern
+  (about 30 mm) and forearm (about 51 mm), which the model matches.
 - The fused pads are under the foot, so they would show only in a print in the sand or a paw turned up: they are not
   modelled or painted (a track decal could carry them later).
 
@@ -300,7 +311,8 @@ python build.py OUT scale,night,winter,far render
 CANID_VOLUME=1 ...                          # also the standing model's volume
 ```
 
-Blender is the `bpy` module (the project's `blendenv`). The GLB files are copied to `assets_src/canids/` and the
+Blender is the `bpy` module (the project's `blendenv`), with numpy, SciPy and scikit-image (marching cubes) in the
+same environment. The GLB files are copied to `assets_src/canids/` and the
 pictures to `design/canids/`.
 
 ## The rig and clips to come (not built)
@@ -352,10 +364,19 @@ animation texture beyond it, as ADR 0005 plans for the camels: 32 bones × about
 - **The volume check is rough:** it subtracts an assumed coat depth.
 - **The game has no night**, so the night pictures' light is my choice.
 - **Not modelled:** the fused pads (under the foot), teeth in the closed mouth, and the inside of the mouth beyond a
-  painted tongue and gums. The eyes and the lip line are paint on the skin (about 20 texels for an eye).
-- **The skin's small faults:** where a leg meets the trunk the decimated skin can show a faint crease; the stray's
-  loin is 16% under the dog's (the reviewer asked 10-15%); the dog's neck stands 55 mm over the withers when it holds
-  its head high (a dog's neck crest; the wolf's is +6 mm).
+  painted tongue and gums.
+
+## Known gaps, plainly (for the owner)
+
+- **The eyes and the lip line are paint** on the skin: close up they show the texture's steps (an eye is about 25
+  texels long).
+- **Where a leg meets the trunk** the skin can show a faint crease, and a little webbing between the elbow and the
+  chest.
+- **The dog's neck** stands about 55 mm over the withers when it holds its head high (a dog's neck crest; the wolf's
+  summer neck is +6 mm).
+- **Muybridge's plate 707** (the dog's gallop) could not be opened; the run follows the reviewer's description.
+- **The stray's loin** is 16% under the dog's (the reviewer asked 10–15%).
+- **The game has no night yet:** the night pictures' moonlight is my choice.
 
 ## Questions for the owner (my recommendation first)
 
