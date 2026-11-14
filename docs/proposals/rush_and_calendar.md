@@ -234,11 +234,19 @@ outing may last days), all use one mechanism. Hunting is not built; it will call
 `EngineCore.away(AwayPlan plan) → AwayResult`. `Game` holds the part with no clock: `Game.runAway(plan, onDay)`.
 
 - **The plan:**
-  - a target day;
-  - the stops, as conditions on the game's state, checked after each simulated day;
-  - a landing minute of the day (06:00 for the calendar);
-  - extra conditions a caller adds (the hunt: its outing's own end; his falcon's daily care, a named hook
-    `AwayStop.falconCare`, empty until hunting is built).
+  - a target day: any number of days ahead, up to 365. **A call of one day is the common case for the hunting camp**:
+    one night per tap («نام لين الفجر»), each tap one call to tomorrow (task T13: design/hunt/trip_board.jpg,
+    docs/proposals/hunting_season_design.md);
+  - the stops, as conditions on the game's state, checked after each simulated day (section 6's table);
+  - **the landing minute, a parameter**: 06:00 for the calendar; the working hour's start for the camp or the trip;
+  - **extra stop conditions a caller adds**, checked with the others after each day: the camp's supplies out, the
+    trapping season's end, the trip's chosen end; his falcon's daily care (a named hook `AwayStop.falconCare`, empty
+    until hunting is built);
+  - **travel time through the same call**: the drive to the hunting ground and back is days or hours of the plan
+    (`AwayPlan.travel`), simulated like any other, with the stops still checked;
+  - **extra lines a caller adds to the card and the summary**: the card before leaving takes the caller's lines
+    (gear, camp supplies, distance) under its own; the summary takes its lines (days out, birds seen and caught,
+    released) above its own. The calendar's card and summary views are the same views, with no extra lines.
 - **The loop:** the catch-up's own loop over `advanceDays(1)`, yielding every 6 ms. After each day:
   - the day's events go to the summary's counters;
   - the stop conditions are read from the state (and the day's events where the state cannot tell);
@@ -257,7 +265,9 @@ outing may last days), all use one mechanism. Hunting is not built; it will call
   - `clockShiftMs = floor((nowµs − startedAtµs − elapsed) / 1000)` (floor: the elapsed time comes out at most 1 ms
     long, so the minute stays `m`).
   - Then the ordinary catch-up and `tellTo(minuteOfDay)` go on from there. Landing at 06:00 means no stage of a round
-    is told until 07:00, as on any played day.
+    is told until 07:00, as on any played day. A caller landing later (the camp's working hour) on his round's day
+    gets the round's stop on the eve instead, so no stage is told before he sees it.
+  - With a one-day call the same sum lands each tap at the landing minute of tomorrow, whatever minute the tap came.
 - **One save at the end, then marked good** (`store.markGood()`, as `_start` and `newGame` do,
   `engine_core.dart:126,143`). Otherwise `openPrevious` would open the world before the jump with its old anchor, and
   a jump could be undone to use what it revealed.
@@ -286,7 +296,7 @@ the engine and nothing to a frame, and writes nothing over the game.
   he has them.
 - **A day or season picked** (view 4): its month as a grid, the day ringed, what is on it, «امشِ لين …».
 
-### The card before the jump (views 5 and 6)
+### The card before the jump (views 5, 6 and 9; the standing order in view 7)
 
 - **The days each store lasts** against the days asked, from today's need, with a button that fills it by the phone's
   own order. For water it says, as الوايت does, that part of a tanker goes back unpaid when the tank is near full.
@@ -306,7 +316,7 @@ the engine and nothing to a frame, and writes nothing over the game.
   force.
 - **Forward only:** «التقويم يمشي لقدام بس: الأيام اللي تمضي ما ترجع.» The go button takes two taps.
 
-### Under way (view 7)
+### Under way (view 10)
 
 The day reached, a bar, the days done of the stretch, the milk's money so far, the stores' days. «وقّف هنا» ends it at
 the day reached (section 5's flag), at any moment. With a large herd the screen says it may take seconds.
@@ -364,7 +374,7 @@ day.
   before مزاين حائل's registration closed, since نورة could enter. The drawn stop is kept because it shows a store
   stop; the registration stop is drawn from the round's save.)
 
-### At the end (view 9)
+### At the end (view 12)
 
 What happened, from the engine's events and ledger, in the phone's words: the days and dates, the milk's money, what
 was delivered, who fell ill, recovered or died, calves born, festivals opened, a ban ended or a listing expired, and
