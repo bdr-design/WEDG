@@ -49,7 +49,7 @@ const DSF = 1;      // (the owner's screen at 1x: at 2x SwiftShader draws too sl
 // the page's hooks this script needs, added to the served copy only (nothing in the page changes)
 const HOOK = `window.__phone = phone;
 window.__open = openPlace; window.__close = closePop; window.__camera = camera; window.__controls = controls; window.__ICONS = ICONS;
-window.__addPlace = (pl) => { PLACES.push(pl); const el = document.createElement('button'); el.type = 'button'; labelLayer.appendChild(el); pl.el = el; labels.push(pl); order.push(pl); refreshLabels(); return pl; };`;
+window.__addPlace = (pl) => { PLACES.push(pl); const el = document.createElement('button'); el.type = 'button'; labelLayer.appendChild(el); pl.el = el; labels.push(pl); order.push(pl); refreshLabels(); (window.__added = window.__added || []).push(pl); return pl; };`;
 // the WebGL calls a frame, main pass and shadow map apart (from $SC/review_de2/draws.js)
 const COUNTER = () => {
   const s = { draws: 0, tris: 0, sd: 0, st: 0 }; let fb = null;
@@ -211,11 +211,12 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');      // (a p
     await close();
   }
 
+  await p.evaluate(() => (window.__added || []).forEach((l) => { l.off = true; }));      // (the grounds' pins are not on the farm's frames)
   // ================================================================ the falcons' room at the farm
   if (ONLY.includes('room')) {
     await p.evaluate(() => { const c = window.__controls, cam = window.__camera; c.target.set(-12, 0, 20); cam.position.set(-60, 34, 70); c.update(); });
     await p.waitForTimeout(2500);
-    await draw(at(330, 205, SV.room) + pin(405, 205, 'room'));
+    await draw(at(440, 250, SV.room.replace('width="150" height="100"', 'width="112" height="75"')) + pin(496, 252, 'room'));
     await shot('trip_04_room', 'the farm: the falcons\' room drawn (a stand-in building) with its pin');
     await open({ key: 'room', name: 'غرفة الصقور', icon: 'room', c: { sub: 'أوكار ومقيض · تشيل 4 صقور', stats: [['الصقور', '2', ''], ['تبي دعو', '1', '', 'warn'], ['المقيض', 'بالصيف']],
       html: '<div class="note">سهيل · شاهين بحري فرخ، طرحته أنت. غيث · حر فرخ، من مزاد المزارع: ما دعيته من أمس.</div>', actions: [{ label: 'ادعهم', primary: true }, { label: 'نادي الصقور' }] } });
@@ -238,11 +239,15 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');      // (a p
     await p.waitForFunction(() => Math.abs(window.__play.debug.carState.v) < 0.3, null, { timeout: 120000 }).catch(() => {});
     await p.keyboard.up('KeyS');
     await p.waitForTimeout(2500);
+    await p.evaluate(() => window.__play.debug.toggleView());      // (behind -> the driver's seat, counted, and back)
+    await p.waitForTimeout(3000);
     await count('seat (count only)', 'parked, from the driver\'s seat: the cabin drawn (the hooded falcon on its perch in the cabin would be seen here)');
+    await p.evaluate(() => window.__play.debug.toggleView());
+    await p.waitForTimeout(3000);
     const carBtn = (ic, id, label) => p.evaluate(([ic, id, label]) => { document.querySelectorAll('.pl-car .added').forEach((e) => e.remove()); const row = document.querySelector('.pl-car'); const bt = document.createElement('button'); bt.className = 'pl-ib added'; bt.id = id; bt.setAttribute('aria-label', label); bt.innerHTML = ic; row.insertBefore(bt, row.querySelector('[data-c="more"]')); }, [ic, id, label]);
     const CAMP = (falcon) => at(70, 196, SV.tent) + (falcon ? `<div style="left:300px;top:220px;width:60px;height:140px">${img('saker_hooded_perch', 0, 0, 48)}</div>` : at(300, 300, SV.cage) + at(250, 330, SV.nets)) + at(200, 318, SV.supplies) + pin(180, 200, 'tent');
     if (ONLY.includes('trip')) {
-      await p.evaluate(() => window.__play.debug.toggleView());      // (back from the seat to behind the car)
+      await p.evaluate(() => { const d = window.__play.debug; if (d.state.view !== 3) d.toggleView(); });
       await p.waitForTimeout(3000);
       await carBtn(FALCON_ICON, 'falconBtn', 'الصقر');
       await draw(CAMP(true));
