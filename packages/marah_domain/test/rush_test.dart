@@ -331,6 +331,31 @@ void main() {
       );
     });
 
+    test('a large herd: as many tankers as the tank takes, never dry', () {
+      final g = newGame();
+      final sim = Sim(g.state), gen = WorldGen(sim), f = g.me.farm;
+      for (var i = 0; i < 300; i++) {
+        gen.makeCamel(sim.rng(['big', i]), owner: g.me.id, mean: 50);
+      }
+      final n = Provisions.needs(sim.herdOf(g.me.id), f.feedPlan, g.today);
+      f
+        ..capacity = 400
+        ..shepherds = 12
+        ..tankL = (n.water * 20).round()
+        ..storeKg = ((n.barley + n.alfalfa) * 20).round()
+        ..waterL = n.water * 10
+        ..barleyKg = n.barley * 10
+        ..alfalfaKg = n.alfalfa * 10;
+      give(g, 5000000);
+      g.dispatch(SetStandingOrder(g.me.id, StandingOrder.water, on: true));
+      g.dispatch(SetStandingOrder(g.me.id, StandingOrder.feed, on: true));
+      for (var d = 0; d < 90; d++) {
+        g.advanceDays(1);
+        expect(f.dryDays, 0, reason: 'day $d');
+        expect(f.short, isEmpty, reason: 'day $d');
+      }
+    });
+
     test('refused at the account limit: said, nothing sent', () {
       final g = newGame();
       final me = g.me.id;
