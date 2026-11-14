@@ -66,7 +66,7 @@ const CSS = `
   .row .lead svg { width: 18px; height: 18px; }
   .row b { font-size: 13.5px; font-weight: 600; }
   .row small { font-size: 11.5px; color: var(--ink2); }
-  .row .qty { grid-row: span 2; font: 600 14px/1 "Alexandria", "IBM Plex Sans Arabic", sans-serif; white-space: nowrap; }
+  .row .qty { grid-row: span 2; font: 600 14px/1 "Alexandria", "IBM Plex Sans Arabic", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }      /* (tabular after the font shorthand, which resets the phone's tabular-nums: the column's figures line up, the audit) */
   .pos { color: var(--acc); }
   .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
   .sec { font-size: 12px; font-weight: 600; color: var(--ink2); padding-inline: 4px; margin-bottom: -6px; }
@@ -121,7 +121,7 @@ const CSS = `
   .stp button[disabled] { background: #eeeef1; color: #b8b8bd; cursor: default; }
   .stp button svg { width: 16px; height: 16px; stroke-width: 2.6; }
   .stp .n { min-width: 54px; text-align: center; font-weight: 700; font-size: 13px; }
-  .stp .n b { font: 700 15px/1 "Alexandria", sans-serif; }
+  .stp .n b { font: 700 15px/1 "Alexandria", sans-serif; font-variant-numeric: tabular-nums; }
   .row.ord .lead { grid-column: 1; grid-row: 1 / span 2; }
   .row.ord b { grid-column: 2; grid-row: 1; }
   .row.ord small { grid-column: 2; grid-row: 2; }
@@ -146,7 +146,7 @@ const CSS = `
   .balance .v span { font-size: 15px; font-weight: 600; color: var(--ink2); margin-inline-start: 4px; letter-spacing: normal; }
   .balance .ln { font-size: 12px; font-weight: 500; }
   .balance .v.bad { color: var(--red); }      /* (a balance under zero: what the player owes, «عليك») */
-  .row .amt { grid-row: span 2; font: 600 14px/1 "Alexandria", sans-serif; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
+  .row .amt { grid-row: span 2; font: 600 14px/1 "Alexandria", sans-serif; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
   .row .amt.pos { color: var(--acc); }
   .row .lead.out { background: #f1f1f4; color: #55555b; }
   /* ---------- الحراج (approved 13 Nov 2026: design/ui/phone_haraj.jpg, its list styles from design/ui/phone.html) ---------- */
@@ -161,7 +161,7 @@ const CSS = `
   .it b { font-size: 13.5px; font-weight: 700; }
   .it small { font-size: 11.5px; color: var(--ink2); }
   .it .pr { display: flex; align-items: center; }
-  .it .pr .price { font: 700 15px/1 "Alexandria", sans-serif; margin-inline-end: auto; }
+  .it .pr .price { font: 700 15px/1 "Alexandria", sans-serif; font-variant-numeric: tabular-nums; margin-inline-end: auto; }
   .it.big { grid-template-columns: 96px 1fr; }
   .it.big .ph { width: 96px; height: 96px; grid-row: span 5; }
   .it.off { opacity: .55; }
