@@ -267,7 +267,7 @@ const CSS = `
   /* ---------- the camel's page in الحراج, compact with no scroll (the owner, 14 Nov 2026, item 21: every block, word
      and type size kept; the spaces between the blocks a little tighter and the camel's photo 84 instead of 96) ---------- */
   .body.hjl { gap: 6px; }
-  .hjl .tank { padding: 10px 14px; gap: 2px; }
+  .hjl .tank { padding: 8px 14px; gap: 2px; }
   .hjl .kind { margin-top: 2px; }
   .hjl .row { min-height: 46px; padding-block: 6px; }
   .hjl .it.big { grid-template-columns: 84px 1fr; }
@@ -278,7 +278,8 @@ const CSS = `
   .hjl .row.vet .act { grid-row: 1; }
   .hjl .row.vet .act .btn { white-space: nowrap; }      /* («افحص بكرة» on one line: the note under it gave the button no more room) */
   .hjl .row.vet small { grid-column: 2 / 4; }      /* (the vet's note on its own line under the title and the button, not three short lines beside it) */
-  .hjl .lnk { margin-top: -4px; }      /* (T15's buy-now link kept close under the buy button it belongs to) */
+  .hjl .lnk { margin-top: -4px; }
+  .hjl .note.ans b { color: var(--ink); font-weight: 700; }      /* (the seller's answer in the سوم's block: the owner's item 26) */      /* (T15's buy-now link kept close under the buy button it belongs to) */
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }      /* (what is said after an order, for a screen reader: outside the screen the redraws replace) */
 `;
 
@@ -895,7 +896,10 @@ function listingScreen() {
     ? alertCard(l.declared ? `${her(c, 'معروضة', 'معروض')} معلن إن ${her(c, 'فيها', 'فيه')} ${tamperNames(kinds)}` : `البيطري لقى ${her(c, 'فيها', 'فيه')} ${tamperNames(kinds)}`, `محد يدري غيرك. لو ${her(c, 'اشتريتها وسجلتها', 'اشتريته وسجلته')} بمزاين وانكشف، الغرامة والحرمان عليك. والتجميل يروح مع الوقت.`)
     : `<div class="group"><div class="row vet"><span class="lead">${svg('scope')}</span><b>${n ? `البيطري ${her(c, 'فحصها', 'فحصه')}\u00a0${times}` : `${her(c, 'افحصها', 'افحصه')} عند البيطري`}</b><span class="act"><button class="btn ghost" data-act="vet" data-id="${esc(l.id)}" aria-label="${l.checkedToday ? `البيطري ${her(c, 'فحصها', 'فحصه')} اليوم، افحص بكرة` : `افحص ${esc(c.name)} عند البيطري بـ ${n0(fee)} ريال`}" ${l.checkedToday || vetPoor ? 'disabled' : ''}>${l.checkedToday ? 'افحص بكرة' : 'افحص'}</button></span><small>${l.checkedToday ? 'ما لقى شي · ' : ''}الفحص بـ ${n0(fee)} ريال، وكل يوم فحص\u00a0جديد${vetPoor && !l.checkedToday ? ' · رصيدك ما يكفي' : ''}</small></div></div>`;
   const bidRow = `<div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} ${her(c, 'عليها', 'عليه')}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
-  return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${msgCard()}${errCard()}
+  // the seller's answer to a سوم is said in the سوم's own block, where the line that he answers at once stood (the
+  // owner's item 26); any other word stays on the card at the top
+  const answer = HJ.msg && HJ.msg.bid ? HJ.msg : null;
+  return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${answer ? '' : msgCard()}${errCard()}
     <div class="it big"><span class="ph">${photo(c)}</span>${facts}</div>
     ${vetRow}
     <div class="tank"><small>اللي تدفعه</small>
@@ -910,7 +914,7 @@ function listingScreen() {
     ${bidRow}
     <button class="btn ${canBid ? 'ghost' : ''} wide" data-act="bid" ${canBid ? '' : 'disabled'}>سوم بـ ${n0(HJ.bid)}</button>
     ${left > 0 && !full && !canPayBid && G.cash >= 0 ? `<div class="note">لو قبل سومك تدفع ${n0(HJ.bid + l.transport)} ريال مع النقل، ورصيدك ما يكفي.</div>` : ''}
-    <div class="note">يرد عليك على طول: يقبل، أو ينزل لك، أو يرفض. والنقل ${her(c, 'يوصلها', 'يوصله')} بكرة لعزبتك.</div></div>`;
+    ${answer ? `<div class="note ans"><b>${answer.title}.</b> ${answer.line} والنقل ${her(c, 'يوصلها', 'يوصله')} بكرة لعزبتك.</div>` : `<div class="note">يرد عليك على طول: يقبل، أو ينزل لك، أو يرفض. والنقل ${her(c, 'يوصلها', 'يوصله')} بكرة لعزبتك.</div>`}</div>`;
 }
 // one's own camels to sell: those on the farm (the 3D yard's, the first 40 to come), each with what stops a sale
 function pickScreen() {
@@ -2201,10 +2205,10 @@ export function createPhone({ host }) {
         const more = `تسوم مرة ثانية (باقي لك ${count(left, 'bid')})`;
         const then = afford
           ? [her(c, `تقدر تشتريها بـ ${n0(ask)}`, `تقدر تشتريه بـ ${n0(ask)}`), left > 0 ? `أو ${more}` : 'وما عاد يقبل منك سوم']
-          : [`رصيدك ما يكفي ${n0(ask + l.transport)} ريال مع النقل`, left > 0 ? `بس تقدر ${more}` : 'وما عاد يقبل منك سوم'];
+          : [`رصيدك ما يكفي\u00a0${n0(ask + l.transport)} ريال مع النقل`, left > 0 ? `بس تقدر ${more}` : 'وما عاد يقبل منك سوم'];
         HJ.msg = r.error.code === 'bargainCountered'
-          ? { title: `${esc(l.sellerName)} نزل لـ ${n0(ask)} ريال`, line: `${then.join('، ')}.` }
-          : { title: `${esc(l.sellerName)} رفض سومك`, line: `ما يبيع بهالسعر. ${then.join('، ')}.` };
+          ? { title: `${esc(l.sellerName)} نزل لـ ${n0(ask)} ريال`, line: `${then.join('، ')}.`, bid: true }
+          : { title: `${esc(l.sellerName)} رفض سومك`, line: `ما يبيع بهالسعر. ${then.join('، ')}.`, bid: true };
       } else if (!r.ok) ERR = refusal(r, command);
     }
     // one's own camel listed at one's price (to إعلاناتي, where the offers come) or sold to the broker now
