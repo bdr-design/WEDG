@@ -84,15 +84,31 @@ Result orderGear(Sim sim, PlayerState p, OrderGear cmd) {
   if (cmd.units < 1) {
     return Err(const DomainError(ErrorCode.invalidAmount), sim.drain());
   }
-  final room = gearRoom(p, cmd.gear);
-  if (cmd.units > room) {
-    return refuse(sim, HuntRefusal.gearFull, {'room': room});
+  if (cmd.gear == Gear.tracker) {
+    // one for one named falcon of his, without one and none on its way
+    final f = cmd.falcon == null ? null : p.falconry?.falcon(cmd.falcon!);
+    if (f == null) return refuse(sim, HuntRefusal.falconAway);
+    if (cmd.units != 1 ||
+        f.tracker ||
+        p.hunt.coming.any((d) => d.falcon == f.id)) {
+      return refuse(sim, HuntRefusal.hasTracker);
+    }
+  } else {
+    final room = gearRoom(p, cmd.gear);
+    if (cmd.units > room) {
+      return refuse(sim, HuntRefusal.gearFull, {
+        'room': room,
+        'gear': cmd.gear.name,
+      });
+    }
   }
   final cost = cmd.gear.price * cmd.units;
   final money = cashFor(p, cost);
   if (money != null) return Err(money, sim.drain());
   final arrives = sim.today + Balance.deliveryDays;
-  p.hunt.coming.add(GearDelivery(cmd.gear, cmd.units, arrives));
+  p.hunt.coming.add(
+    GearDelivery(cmd.gear, cmd.units, arrives, falcon: cmd.falcon),
+  );
   // (the tracker is the falcon's, not the trapping's: booked with the
   // falcons)
   sim.pay(
@@ -236,13 +252,52 @@ DomainError _no(HuntRefusal why, [Map<String, Object> more = const {}]) =>
 bool ready(Falcon f) =>
     f.where == FalconWhere.home && f.dauDays >= HuntBalance.dauDaysNeeded;
 
-/// Why [kind] cannot go to [ground] for [nights] now, or null.
+/// The working hours of [kind] on [day]: trapping first light to sunset
+/// (Q-2), falconry an hour after sunrise to an hour before sunset [135].
+int workStart(TripKind kind, GameDay day) =>
+    kind == TripKind.trapping ? HuntSun.dawn(day) : HuntSun.sunrise(day) + 60;
+int workEnd(TripKind kind, GameDay day) =>
+    kind == TripKind.trapping ? HuntSun.sunset(day) : HuntSun.sunset(day) - 60;
+
+/// The drive's minutes to [g] from [p]'s farm (Ground.hoursFrom).
+int driveMinutes(PlayerState p, Ground g) =>
+    (g.hoursFrom(p.farm.region) * 60).round();
+
+/// Leaving on [day] at [minute] for [g]: the day and the minute he is at it,
+/// at its working hour (before it: he waits for it; after it: the next
+/// day's).
+(GameDay, int) arrival(
+  PlayerState p,
+  TripKind kind,
+  Ground g,
+  GameDay day,
+  int minute,
+) {
+  final t = minute + driveMinutes(p, g);
+  var d = day + t ~/ _day;
+  var m = t % _day;
+  if (m < workStart(kind, d)) m = workStart(kind, d);
+  if (m > workEnd(kind, d)) {
+    d = d + 1;
+    m = workStart(kind, d);
+  }
+  return (d, m);
+}
+
+/// [p]'s trip ended if its drive home is over by [day] at [minute].
+void settleTrip(Sim sim, PlayerState p, int minute) {
+  final t = p.falconry?.trip;
+  if (t != null && t.home(sim.today, minute)) endTripNow(sim, p);
+}
+
+/// Why [kind] cannot go to [ground] for [nights] at [minute], or null.
 DomainError? cannotStart(
   Sim sim,
   PlayerState p,
   TripKind kind,
   Ground ground,
   int nights,
+  int minute,
 ) {
   final h = p.falconry;
   if (h?.trip != null) return _no(HuntRefusal.onTrip);
@@ -268,8 +323,15 @@ DomainError? cannotStart(
     }
     if (!(h?.falcons.any(ready) ?? false)) return _no(HuntRefusal.notReady);
   }
-  if (nights == 0 && !ground.oneDayFrom(p.farm.region)) {
-    return _no(HuntRefusal.tooFar);
+  if (nights == 0) {
+    if (!ground.oneDayFrom(p.farm.region)) return _no(HuntRefusal.tooFar);
+    // there and back inside the day, with some of its working hours there
+    final (d, m) = arrival(p, kind, ground, today, minute);
+    if (d != today ||
+        m >= workEnd(kind, today) ||
+        m + driveMinutes(p, ground) > _day) {
+      return _no(HuntRefusal.noTime);
+    }
   }
   if (nights > 0 && (h?.has(Gear.supplies) ?? 0) == 0) {
     return _no(HuntRefusal.noSupplies);
@@ -278,14 +340,19 @@ DomainError? cannotStart(
 }
 
 Result startTrip(Sim sim, PlayerState p, StartTrip cmd) {
-  final no = cannotStart(sim, p, cmd.kind, cmd.ground, cmd.nights);
+  final minute = cmd.minute ?? 0;
+  settleTrip(sim, p, minute);
+  final no = cannotStart(sim, p, cmd.kind, cmd.ground, cmd.nights, minute);
   if (no != null) return Err(no, sim.drain());
+  final (d, m) = arrival(p, cmd.kind, cmd.ground, sim.today, minute);
   p.hunt.trip = Trip(
     kind: cmd.kind,
     ground: cmd.ground,
     startedOn: sim.today,
-    endOn: sim.today + cmd.nights,
+    endOn: d + cmd.nights,
     oneDay: cmd.nights == 0,
+    arriveOn: d,
+    arriveMinute: m,
   );
   sim.emit(
     TripChanged(
@@ -294,6 +361,7 @@ Result startTrip(Sim sim, PlayerState p, StartTrip cmd) {
       what: TripChange.started,
       kind: cmd.kind,
       ground: cmd.ground,
+      lines: {'arriveOn': d.value, 'arriveMinute': m},
     ),
   );
   return Ok(sim.drain());
@@ -311,7 +379,7 @@ Map<String, int> tripLines(Trip t, GameDay today) => {
   'suppliesUsed': t.suppliesUsed,
 };
 
-/// Ends [p]'s trip today (his tap, or a day's outing at the day's end).
+/// Ends [p]'s trip today: he is home.
 void endTripNow(Sim sim, PlayerState p) {
   final h = p.falconry;
   final t = h?.trip;
@@ -329,25 +397,53 @@ void endTripNow(Sim sim, PlayerState p) {
   );
 }
 
+/// Breaks camp: the drive home starts now (from the ground, or from where
+/// the drive out has reached: the same time back), and he is home when it
+/// is over.
 Result endTrip(Sim sim, PlayerState p, EndTrip cmd) {
-  if (p.falconry?.trip == null) return refuse(sim, HuntRefusal.notOnTrip);
-  endTripNow(sim, p);
+  final minute = cmd.minute ?? 0;
+  final t = p.falconry?.trip;
+  if (t == null || t.returning) return refuse(sim, HuntRefusal.notOnTrip);
+  // the whole road home (from the ground, or from the road out: game
+  // choice, the same time back)
+  final at = minute + driveMinutes(p, t.ground);
+  t
+    ..homeOn = sim.today + at ~/ _day
+    ..homeMinute = at % _day;
+  sim.emit(
+    TripChanged(
+      sim.today,
+      owner: p.id,
+      what: TripChange.homeward,
+      kind: t.kind,
+      ground: t.ground,
+      lines: {'homeOn': t.homeOn!.value, 'homeMinute': t.homeMinute!},
+    ),
+  );
+  settleTrip(sim, p, minute);
   return Ok(sim.drain());
 }
 
 Result moveCamp(Sim sim, PlayerState p, MoveCamp cmd) {
   final t = p.falconry?.trip;
-  if (t == null || t.kind != TripKind.trapping || t.oneDay) {
+  if (t == null || t.kind != TripKind.trapping || t.oneDay || t.returning) {
     return refuse(sim, HuntRefusal.notOnTrip);
   }
   if (p.hunt.has(Gear.mobileTent) == 0) return refuse(sim, HuntRefusal.noTent);
   if (!cmd.ground.trapping) return refuse(sim, HuntRefusal.offGround);
+  // the drive to the new ground is game time too: there the next working
+  // hour it can be reached, and no ground worked twice in a day
+  final (d, m) = arrival(
+    p,
+    t.kind,
+    cmd.ground,
+    sim.today,
+    workEnd(t.kind, sim.today),
+  );
   t
     ..ground = cmd.ground
-    // the day's falcon was the old ground's
-    ..workDay = null;
-  t.today(sim.today);
-  t.resolved = true;
+    ..arriveOn = d
+    ..arriveMinute = m;
   sim.emit(
     TripChanged(
       sim.today,
@@ -355,6 +451,7 @@ Result moveCamp(Sim sim, PlayerState p, MoveCamp cmd) {
       what: TripChange.moved,
       kind: t.kind,
       ground: cmd.ground,
+      lines: {'arriveOn': d.value, 'arriveMinute': m},
     ),
   );
   return Ok(sim.drain());
@@ -364,7 +461,8 @@ Result moveCamp(Sim sim, PlayerState p, MoveCamp cmd) {
 
 /// Why the net cannot be used where [at] is at [minute], or null: off a
 /// trapping ground, out of the season, without the permit, at night, not
-/// camped there. The order is the warning's (the place first).
+/// camped there or not there yet, another ground worked today. The order
+/// is the warning's (the place first).
 DomainError? cannotTrap(Sim sim, PlayerState p, HuntAt at, int minute) {
   final g = at.ground;
   if (g == null || !g.trapping) return _no(HuntRefusal.offGround);
@@ -378,36 +476,57 @@ DomainError? cannotTrap(Sim sim, PlayerState p, HuntAt at, int minute) {
   }
   if (!HuntSun.trappingHours(today, minute)) return _no(HuntRefusal.night);
   final t = h!.trip;
-  if (t == null || t.kind != TripKind.trapping || t.ground != g) {
+  if (t == null ||
+      t.kind != TripKind.trapping ||
+      t.ground != g ||
+      t.returning) {
     return _no(HuntRefusal.notOnTrip);
   }
+  if (!t.there(today, minute)) {
+    return _no(HuntRefusal.driving, {
+      'day': t.arriveOn.value,
+      'minute': t.arriveMinute,
+    });
+  }
+  final w = h.work;
+  if (w != null && w.day == today && w.ground != g) {
+    return _no(HuntRefusal.oneGroundADay);
+  }
   return null;
+}
+
+/// Today's trapping at [g] (made on the day's first look or lure).
+DayWork workOn(Sim sim, Falconry h, Ground g) {
+  final w = h.work;
+  if (w != null && w.day == sim.today) return w;
+  return h.work = DayWork(day: sim.today, ground: g);
 }
 
 Result spotFalcon(Sim sim, PlayerState p, SpotFalcon cmd) {
   final minute = cmd.minute ?? 0;
   final no = cannotTrap(sim, p, cmd.at, minute);
   if (no != null) return Err(no, sim.drain());
-  final t = p.hunt.trip!..today(sim.today);
-  final w = HuntSun.window(sim.today, minute)!;
-  final passer = TrapOdds.passer(sim.world.seed, t.ground, sim.today);
+  final g = cmd.at.ground!;
+  final work = workOn(sim, p.hunt, g);
+  final win = HuntSun.window(sim.today, minute)!;
+  final passer = TrapOdds.passer(sim.world.seed, g, sim.today);
   // one look a window counts: the same falcon is seen or missed however
   // often he looks (no help from tapping)
-  final first = t.looked.add(w);
-  var seen = t.sighted && !t.resolved && passer?.window == w;
-  if (!seen && first && passer != null && !t.resolved && passer.window == w) {
+  final first = work.looked.add(win);
+  final here = passer != null && !work.resolved && passer.window == win;
+  if (here && first && !work.sighted) {
     final eye = p.hunt.has(Gear.binoculars) > 0
         ? TrapOdds.spotBinoculars
         : TrapOdds.spotEyes;
-    seen = sim.rng(['trapSpot', t.ground.name, w.name]).chance(eye);
-    t.sighted = seen;
+    work.sighted = sim.rng(['trapSpot', g.name, win.name]).chance(eye);
   }
+  final seen = here && work.sighted;
   sim.emit(
     TrapResult(
       sim.today,
       owner: p.id,
       outcome: seen ? TrapOutcome.inSight : TrapOutcome.nothingInSight,
-      window: seen ? w : null,
+      window: seen ? win : null,
     ),
   );
   return Ok(sim.drain());
@@ -422,9 +541,11 @@ Result releaseLure(Sim sim, PlayerState p, ReleaseLure cmd) {
       ? h.has(Gear.pigeon) > 0 && h.has(Gear.pigeonNet) > 0
       : h.has(Gear.birdNet) > 0;
   if (!has) return refuse(sim, HuntRefusal.noLure, {'lure': cmd.lure.name});
-  final t = h.trip!..today(sim.today);
-  final w = HuntSun.window(sim.today, minute)!;
-  final passer = TrapOdds.passer(sim.world.seed, t.ground, sim.today);
+  final g = cmd.at.ground!;
+  final t = h.trip!;
+  final work = workOn(sim, h, g);
+  final win = HuntSun.window(sim.today, minute)!;
+  final passer = TrapOdds.passer(sim.world.seed, g, sim.today);
   void out(TrapOutcome o, {FalconSpecies? s, bool? farkh, String? falcon}) =>
       sim.emit(
         TrapResult(
@@ -437,34 +558,34 @@ Result releaseLure(Sim sim, PlayerState p, ReleaseLure cmd) {
         ),
       );
   // nothing seen: nothing comes, and the pigeon flies back
-  if (!t.sighted || t.resolved || passer == null || passer.window != w) {
+  if (!work.sighted ||
+      work.resolved ||
+      passer == null ||
+      passer.window != win) {
     out(TrapOutcome.nothingCame);
     return Ok(sim.drain());
   }
   if (cmd.lure == Lure.pigeon) h.gear[Gear.pigeon] = h.has(Gear.pigeon) - 1;
   // the same lure after a refusal is half as likely to be taken
-  final same = t.tries; // tries so far at this falcon
-  final base = cmd.lure == Lure.pigeon
+  var take = cmd.lure == Lure.pigeon
       ? TrapOdds.takePigeon
       : TrapOdds.takeBirdNet;
-  final halves = _sameBefore(t, cmd.lure);
-  var take = base;
-  for (var i = 0; i < halves; i++) {
+  for (var i = 0; i < (work.lures[cmd.lure] ?? 0); i++) {
     take /= 2;
   }
-  final rng = sim.rng(['trapTake', t.ground.name, same]);
-  _noteLure(t, cmd.lure);
-  t.tries++;
+  final rng = sim.rng(['trapTake', g.name, work.tries]);
+  work.lures[cmd.lure] = (work.lures[cmd.lure] ?? 0) + 1;
+  work.tries++;
   if (!rng.chance(take)) {
-    if (t.tries >= TrapOdds.triesMost) {
-      t.resolved = true;
+    if (work.tries >= TrapOdds.triesMost) {
+      work.resolved = true;
       out(TrapOutcome.refusedAndWent);
     } else {
       out(TrapOutcome.refused);
     }
     return Ok(sim.drain());
   }
-  t.resolved = true;
+  work.resolved = true;
   if (!rng.chance(TrapOdds.hold)) {
     t.stooped++;
     out(TrapOutcome.stooped);
@@ -475,27 +596,23 @@ Result releaseLure(Sim sim, PlayerState p, ReleaseLure cmd) {
     out(TrapOutcome.released, s: passer.species, farkh: passer.farkh);
     return Ok(sim.drain());
   }
-  final bird = _netted(sim, p, t.ground, rng);
+  // (a bird in the net when the trapping auction has closed for the year
+  // cannot be: the season and the auction end the same day, Q-13/15)
+  assert(FalconRoute.trapping.openOn(sim.today));
+  final bird = _netted(sim, p, g, rng);
   h.held.add(bird);
   t.caught++;
   out(TrapOutcome.netted, s: bird.species, farkh: true, falcon: bird.id.value);
   return Ok(sim.drain());
 }
 
-/// The lures tried at the day's falcon, by kind: kept in [Trip.casts] under
-/// a key of their own (the day's map is cleared with the day).
-int _sameBefore(Trip t, Lure l) => t.casts['lure:${l.name}'] ?? 0;
-void _noteLure(Trip t, Lure l) =>
-    t.casts['lure:${l.name}'] = _sameBefore(t, l) + 1;
-
-/// A passage peregrine of the year in the net: its size and weight, its
-/// worth at the trapping auction (HIDDEN, drawn from the real spread), its
-/// skill (HIDDEN).
+/// A passage peregrine of the year in the net (a female, as every sale
+/// read: the answers, phase 2): its size and weight, its worth at the
+/// trapping auction (HIDDEN, the real spread), its skill (HIDDEN).
 Falcon _netted(Sim sim, PlayerState p, Ground g, Rng rng) {
-  const female = true; // females only for now (the answers, phase 2)
   final (len, wid, wt) = HuntBalance.sizeOf(
     FalconSpecies.passagePeregrine,
-    female,
+    true,
     rng,
   );
   final value = HuntBalance.worthAt(FalconRoute.trapping, rng.nextDouble());
@@ -503,7 +620,7 @@ Falcon _netted(Sim sim, PlayerState p, Ground g, Rng rng) {
     id: sim.world.ids.falcon(),
     name: nextName(p),
     species: FalconSpecies.passagePeregrine,
-    female: female,
+    female: true,
     hatched: sim.today.date.year,
     how: FalconHow.trapped,
     on: sim.today,
@@ -511,7 +628,10 @@ Falcon _netted(Sim sim, PlayerState p, Ground g, Rng rng) {
     lengthQ: len,
     widthQ: wid,
     weightG: wt,
-    skill: FalconMarket.q(0.3 + 0.5 * rng.nextDouble()),
+    skill: FalconMarket.q(
+      HuntBalance.trappedSkillBase +
+          HuntBalance.trappedSkillSpread * rng.nextDouble(),
+    ),
     value: value,
     caredOn: sim.today,
   );
@@ -530,10 +650,17 @@ void clubCheck(Sim sim, Falcon f) {
 
 Result enterTrapAuction(Sim sim, PlayerState p, EnterTrapAuction cmd) {
   final f = _held(p, cmd.falcon);
-  if (f == null) return refuse(sim, HuntRefusal.notHeld);
-  if (!FalconRoute.trapping.openOn(sim.today)) {
-    return refuse(sim, HuntRefusal.auctionClosed);
+  if (f == null) {
+    final mine = p.falconry?.falcon(cmd.falcon);
+    return refuse(
+      sim,
+      mine != null && mine.keep
+          ? HuntRefusal.keptNotForSale
+          : HuntRefusal.notHeld,
+    );
   }
+  // (a held bird is in the season: on the auction's last day it is entered,
+  // the day after set free, FalconrySystem)
   clubCheck(sim, f);
   p.hunt.entered.add(f.id);
   sim.emit(
@@ -601,7 +728,9 @@ Result releaseFalcon(Sim sim, PlayerState p, ReleaseFalcon cmd) {
 
 // --------------------------------------------------------------- falconry
 
-/// Why [f] cannot be cast where [at] is now, or null.
+/// Why [f] cannot be cast where [at] is now, or null. A cast needs a
+/// falconry trip (a day's outing or a trip of days) at that very ground,
+/// arrived there.
 DomainError? cannotCast(
   Sim sim,
   PlayerState p,
@@ -618,11 +747,13 @@ DomainError? cannotCast(
       return _no(HuntRefusal.coast);
     case HuntOff.reserve:
       return _no(HuntRefusal.reserve);
-    case HuntOff.open || null:
+    case HuntOff.open:
+      return _no(HuntRefusal.notOnTrip);
+    case null:
       break;
   }
-  final g = at.ground;
-  if (g != null && !g.hunting) return _no(HuntRefusal.notHuntingGround);
+  final g = at.ground!;
+  if (!g.hunting) return _no(HuntRefusal.notHuntingGround);
   if (PermitKind.hunting.seasonOn(today) == null) {
     return _no(HuntRefusal.outOfSeason, {'kind': 'hunting'});
   }
@@ -631,26 +762,35 @@ DomainError? cannotCast(
     return _no(HuntRefusal.noPermit, {'kind': 'hunting'});
   }
   if (!HuntSun.huntingHours(today, minute)) return _no(HuntRefusal.notByDay);
+  final t = h!.trip;
+  if (t == null ||
+      t.kind != TripKind.falconry ||
+      t.ground != g ||
+      t.returning) {
+    return _no(HuntRefusal.notOnTrip);
+  }
+  if (!t.there(today, minute)) {
+    return _no(HuntRefusal.driving, {
+      'day': t.arriveOn.value,
+      'minute': t.arriveMinute,
+    });
+  }
   if (moving) return _no(HuntRefusal.movingCar);
   if (quarryAt(g, today) == null) return _no(HuntRefusal.noQuarry);
   if (f == null || f.where != FalconWhere.home) {
     return _no(HuntRefusal.falconAway);
   }
   if (f.dauDays < HuntBalance.dauDaysNeeded) return _no(HuntRefusal.notReady);
-  final t = h!.trip;
-  if (t != null &&
-      t.workDay == today &&
-      (t.casts[f.id.value] ?? 0) >= TrapOdds.flightsADay) {
+  if (f.flightsOn(today) >= TrapOdds.flightsADay) {
     return _no(HuntRefusal.flownOut);
   }
   return null;
 }
 
-/// The quarry lawful at [g] (null: open land) today, the houbara first in
-/// the estate; or null.
-Quarry? quarryAt(Ground? g, GameDay day) {
-  final kinds = g == null ? const [Quarry.stoneCurlew] : g.quarry;
-  for (final q in kinds) {
+/// The quarry lawful at [g] today, the houbara first in the estate; or
+/// null.
+Quarry? quarryAt(Ground g, GameDay day) {
+  for (final q in g.quarry) {
     if (q.openOn(day)) return q;
   }
   return null;
@@ -668,20 +808,23 @@ Result castFalcon(Sim sim, PlayerState p, CastFalcon cmd) {
     minute: minute,
   );
   if (no != null) return Err(no, sim.drain());
-  final h = p.hunt;
-  // a cast on no trip is a day's flight from where he stands: it is counted
-  // on a trip if there is one
-  final t = h.trip?..today(sim.today);
-  final n = t?.casts[f!.id.value] ?? 0;
-  t?.casts[f!.id.value] = n + 1;
-  final q = quarryAt(cmd.at.ground, sim.today)!;
-  final rng = sim.rng(['cast', f!.id.value, n, minute ~/ 60]);
+  final t = p.hunt.trip!;
+  final g = t.ground;
+  final n = f!.flightsOn(sim.today);
+  final q = quarryAt(g, sim.today)!;
+  // keyed by the falcon, the day and the flight: a reload or another hour
+  // brings the same flight
+  final rng = sim.rng(['cast', f.id.value, n]);
   f
+    ..flownOn = sim.today
+    ..flownToday = n + 1
     ..flights += 1
     ..caredOn = sim.today; // a day it flew counts as cared for (Q-24)
-  t?.flights++;
+  t.flights++;
   if (rng.chance(TrapOdds.lost)) {
-    f.where = FalconWhere.lost;
+    f
+      ..where = FalconWhere.lost
+      ..lostOn = sim.today;
     sim.emit(
       CastResult(
         sim.today,
@@ -693,10 +836,10 @@ Result castFalcon(Sim sim, PlayerState p, CastFalcon cmd) {
     );
     return Ok(sim.drain());
   }
-  final caught = rng.chance(TrapOdds.castChance(f.skill, cmd.at.ground, q));
+  final caught = rng.chance(TrapOdds.castChance(f.skill, g, q));
   if (caught) {
     f.taken[q] = (f.taken[q] ?? 0) + 1;
-    t?.taken++;
+    t.taken++;
   }
   sim.emit(
     CastResult(
@@ -717,17 +860,19 @@ Result searchFalcon(Sim sim, PlayerState p, SearchFalcon cmd) {
   if (f == null || f.where != FalconWhere.lost) {
     return refuse(sim, HuntRefusal.notLost);
   }
-  // each falcon wears its own tracker (the answers' Q-27): one held for
-  // each falcon up to the count
-  final i = h!.falcons.indexOf(f);
-  final tracked = i < h.has(Gear.tracker);
-  final found = sim
-      .rng(['falconSearch', f.id.value])
-      .chance(tracked ? TrapOdds.foundWithTracker : TrapOdds.foundWithout);
+  if (f.searchedOn == sim.today) return refuse(sim, HuntRefusal.searchedToday);
+  f.searchedOn = sim.today;
+  // each day lost halves the chance of finding it; after
+  // TrapOdds.searchDays it is gone (FalconrySystem)
+  var chance = f.tracker ? TrapOdds.foundWithTracker : TrapOdds.foundWithout;
+  for (var i = 0; i < sim.today.daysSince(f.lostOn ?? sim.today); i++) {
+    chance /= 2;
+  }
+  final found = sim.rng(['falconSearch', f.id.value]).chance(chance);
   if (found) {
-    f.where = FalconWhere.home;
-  } else {
-    h.falcons.remove(f);
+    f
+      ..where = FalconWhere.home
+      ..lostOn = null;
   }
   sim.emit(
     FalconFate(
@@ -735,16 +880,18 @@ Result searchFalcon(Sim sim, PlayerState p, SearchFalcon cmd) {
       owner: p.id,
       falcon: f.id.value,
       name: f.name,
-      fate: found ? Fate.found : Fate.gone,
+      fate: found ? Fate.found : Fate.notFound,
     ),
   );
   return Ok(sim.drain());
 }
 
 Result careFalcons(Sim sim, PlayerState p, CareFalcons cmd) {
+  settleTrip(sim, p, cmd.minute ?? 0);
   final h = p.falconry;
-  if (h == null || h.falcons.isEmpty)
-    return refuse(sim, HuntRefusal.falconAway);
+  if (h == null || h.falcons.isEmpty) return refuse(sim, HuntRefusal.noFalcons);
+  // الدعو is done in the room: not from a camp or a drive
+  if (h.trip != null) return refuse(sim, HuntRefusal.awayFromFarm);
   if (HuntBalance.moultMonths.contains(sim.today.month)) {
     return refuse(sim, HuntRefusal.moult);
   }
@@ -770,3 +917,6 @@ Result careFalcons(Sim sim, PlayerState p, CareFalcons cmd) {
   }
   return Ok(sim.drain());
 }
+
+/// Minutes in a game day (Game.minutesInDay).
+const _day = 1440;

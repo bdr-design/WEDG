@@ -26,6 +26,16 @@ class HuntBalance {
   static const releaseFrom = (2, 1);
   static const releaseTo = (4, 30);
 
+  /// A falcon's hunting skill (HIDDEN, 0 to 1): a trapped bird's
+  /// 0.3 + 0.5u; an auction's lot 0.3 + 0.4u + 0.2 × where its worth sits in
+  /// its route's spread (dearer birds hunt a little better on the whole).
+  /// Game choices: no source measures a falcon's skill.
+  static const trappedSkillBase = 0.3;
+  static const trappedSkillSpread = 0.5;
+  static const lotSkillBase = 0.3;
+  static const lotSkillSpread = 0.4;
+  static const lotSkillByWorth = 0.2;
+
   /// The falcons' room holds 4 (game choice, the season's design).
   static const roomHolds = 4;
 
@@ -109,16 +119,18 @@ class HuntBalance {
   /// The opening bid of a lot worth [value], drawn mostly on its own so
   /// that it tells little of the worth (the answers, phase 2): three times
   /// in four from 30,000 to 50,000 (under every trapping bird's worth: it
-  /// tells nothing), else from 50,000 up to 150,000, never above the worth
-  /// (a weak tie, measured in the tests); the span 30,000 to 150,000 is the
-  /// trapping auction's [217]. At the other two routes the same shares of
+  /// tells nothing), else from 50,000 up to 100,000, never above the worth
+  /// (a weak tie: in no 10,000 band of openings does the dear share pass
+  /// about 0.3, measured in the tests); inside the trapping auction's
+  /// 30,000 to 150,000 [217], its top third left out so that a high opening
+  /// does not tell a dear bird. At the other two routes the same shares of
   /// their own floor (game choice). To the nearest 5,000 (1,000 under
   /// 20,000).
   static int opening(FalconRoute route, int value, Rng rng) {
     final floor = worth[route]!.first.$2;
     final lo = route == FalconRoute.trapping ? 30000 : floor * 6 ~/ 10;
     final mid = route == FalconRoute.trapping ? 50000 : floor;
-    final top = route == FalconRoute.trapping ? 150000 : value;
+    final top = route == FalconRoute.trapping ? 100000 : value;
     final step = value < 20000 ? 1000 : 5000;
     final low = rng.chance(0.75);
     final u = rng.nextDouble();

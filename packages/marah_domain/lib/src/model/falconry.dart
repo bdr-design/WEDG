@@ -43,6 +43,11 @@ class Falcon {
     Map<Quarry, int>? taken,
     this.where = FalconWhere.home,
     this.keep = false,
+    this.flownOn,
+    this.flownToday = 0,
+    this.lostOn,
+    this.searchedOn,
+    this.tracker = false,
   }) : taken = taken ?? {};
 
   final FalconId id;
@@ -102,6 +107,21 @@ class Falcon {
   /// (the owner's decision 8 of 14 Nov 2026).
   bool keep;
 
+  /// The last day it flew and its flights that day (TrapOdds.flightsADay).
+  GameDay? flownOn;
+  int flownToday;
+
+  /// The day it was lost, and the last day he looked for it.
+  GameDay? lostOn;
+  GameDay? searchedOn;
+
+  /// It wears its own tracker (fitted to it when the one ordered for it
+  /// came: the answers' Q-27).
+  bool tracker;
+
+  /// Its flights today.
+  int flightsOn(GameDay day) => flownOn == day ? flownToday : 0;
+
   FalconAge ageOn(GameDay day) => FalconAge.on(day, hatched);
 
   Map<String, Object?> toJson() => {
@@ -130,6 +150,11 @@ class Falcon {
       'taken': {for (final e in taken.entries) e.key.name: e.value},
     if (where != FalconWhere.home) 'where': where.name,
     if (keep) 'keep': true,
+    if (flownOn != null) 'flownOn': flownOn!.value,
+    if (flownToday != 0) 'flownToday': flownToday,
+    if (lostOn != null) 'lostOn': lostOn!.value,
+    if (searchedOn != null) 'searchedOn': searchedOn!.value,
+    if (tracker) 'tracker': true,
   };
 
   static Falcon fromJson(Map<String, Object?> j) => Falcon(
@@ -167,31 +192,44 @@ class Falcon {
         ? FalconWhere.home
         : FalconWhere.values.byName(j['where']! as String),
     keep: j['keep'] == true,
+    flownOn: j['flownOn'] == null ? null : GameDay(j['flownOn']! as int),
+    flownToday: (j['flownToday'] as int?) ?? 0,
+    lostOn: j['lostOn'] == null ? null : GameDay(j['lostOn']! as int),
+    searchedOn: j['searchedOn'] == null
+        ? null
+        : GameDay(j['searchedOn']! as int),
+    tracker: j['tracker'] == true,
   );
 }
 
 /// Gear on its way to the farm (as feed comes: Balance.deliveryDays).
 class GearDelivery {
-  const GearDelivery(this.gear, this.units, this.arrivesOn);
+  const GearDelivery(this.gear, this.units, this.arrivesOn, {this.falcon});
   final Gear gear;
   final int units;
   final GameDay arrivesOn;
+
+  /// The falcon a tracker is for (fitted to it on arrival).
+  final FalconId? falcon;
 
   Map<String, Object?> toJson() => {
     'gear': gear.name,
     'units': units,
     'arrivesOn': arrivesOn.value,
+    if (falcon != null) 'falcon': falcon!.value,
   };
 
   static GearDelivery fromJson(Map<String, Object?> j) => GearDelivery(
     Gear.values.byName(j['gear']! as String),
     j['units']! as int,
     GameDay(j['arrivesOn']! as int),
+    falcon: j['falcon'] == null ? null : FalconId(j['falcon']! as String),
   );
 }
 
 /// A stretch away for falcons (the trip of days with a camp, or a day's
-/// outing to a near ground): the farm runs as on any day meanwhile.
+/// outing to a near ground): the drive out, the days at the ground, the
+/// drive home; the farm runs as on any day meanwhile.
 class Trip {
   Trip({
     required this.kind,
@@ -199,20 +237,17 @@ class Trip {
     required this.startedOn,
     required this.endOn,
     required this.oneDay,
-    this.workDay,
-    this.sighted = false,
-    this.tries = 0,
-    this.resolved = false,
-    Set<TrapWindow>? looked,
-    Map<String, int>? casts,
+    required this.arriveOn,
+    required this.arriveMinute,
+    this.homeOn,
+    this.homeMinute,
     this.caught = 0,
     this.released = 0,
     this.stooped = 0,
     this.flights = 0,
     this.taken = 0,
     this.suppliesUsed = 0,
-  }) : looked = looked ?? {},
-       casts = casts ?? {};
+  });
 
   final TripKind kind;
 
@@ -224,15 +259,23 @@ class Trip {
   final GameDay endOn;
   final bool oneDay;
 
-  /// The day's work: the day it is for, and on it the falcon he has seen,
-  /// the lures tried at it, whether it is done with (in the net, stooped and
-  /// not held, or gone), the windows he has looked in; each falcon's flights.
-  GameDay? workDay;
-  bool sighted;
-  int tries;
-  bool resolved;
-  final Set<TrapWindow> looked;
-  final Map<String, int> casts;
+  /// When the drive out reaches the ground (its working hour), and, once
+  /// he has broken camp, when the drive home reaches the farm.
+  GameDay arriveOn;
+  int arriveMinute;
+  GameDay? homeOn;
+  int? homeMinute;
+
+  bool get returning => homeOn != null;
+
+  /// At the ground on [day] at [minute]: arrived, and not on the way home.
+  bool there(GameDay day, int minute) =>
+      !returning &&
+      (day > arriveOn || (day == arriveOn && minute >= arriveMinute));
+
+  /// Home by [day] at [minute].
+  bool home(GameDay day, int minute) =>
+      returning && (day > homeOn! || (day == homeOn && minute >= homeMinute!));
 
   /// The trip's own lines for the summary.
   int caught;
@@ -242,32 +285,16 @@ class Trip {
   int taken;
   int suppliesUsed;
 
-  /// The day's work made today's.
-  void today(GameDay d) {
-    if (workDay == d) return;
-    workDay = d;
-    sighted = false;
-    tries = 0;
-    resolved = false;
-    looked.clear();
-    casts.clear();
-  }
-
   Map<String, Object?> toJson() => {
     'kind': kind.name,
     'ground': ground.name,
     'startedOn': startedOn.value,
     'endOn': endOn.value,
     'oneDay': oneDay,
-    if (workDay != null) 'workDay': workDay!.value,
-    'sighted': sighted,
-    'tries': tries,
-    'resolved': resolved,
-    'looked': [
-      for (final w in TrapWindow.values)
-        if (looked.contains(w)) w.name,
-    ],
-    'casts': casts,
+    'arriveOn': arriveOn.value,
+    'arriveMinute': arriveMinute,
+    if (homeOn != null) 'homeOn': homeOn!.value,
+    'homeMinute': ?homeMinute,
     'caught': caught,
     'released': released,
     'stooped': stooped,
@@ -282,7 +309,59 @@ class Trip {
     startedOn: GameDay(j['startedOn']! as int),
     endOn: GameDay(j['endOn']! as int),
     oneDay: j['oneDay']! as bool,
-    workDay: j['workDay'] == null ? null : GameDay(j['workDay']! as int),
+    arriveOn: GameDay(j['arriveOn']! as int),
+    arriveMinute: j['arriveMinute']! as int,
+    homeOn: j['homeOn'] == null ? null : GameDay(j['homeOn']! as int),
+    homeMinute: j['homeMinute'] as int?,
+    caught: j['caught']! as int,
+    released: j['released']! as int,
+    stooped: j['stooped']! as int,
+    flights: j['flights']! as int,
+    taken: j['taken']! as int,
+    suppliesUsed: j['suppliesUsed']! as int,
+  );
+}
+
+/// A day's trapping, kept on the player by the day (never on a trip: a camp
+/// broken and made again finds the same day): the one ground he works that
+/// day, the falcon he has seen, the lures tried at it, whether it is done
+/// with, the windows he has looked in.
+class DayWork {
+  DayWork({
+    required this.day,
+    required this.ground,
+    this.sighted = false,
+    this.tries = 0,
+    this.resolved = false,
+    Set<TrapWindow>? looked,
+    Map<Lure, int>? lures,
+  }) : looked = looked ?? {},
+       lures = lures ?? {};
+
+  final GameDay day;
+  final Ground ground;
+  bool sighted;
+  int tries;
+  bool resolved;
+  final Set<TrapWindow> looked;
+  final Map<Lure, int> lures;
+
+  Map<String, Object?> toJson() => {
+    'day': day.value,
+    'ground': ground.name,
+    'sighted': sighted,
+    'tries': tries,
+    'resolved': resolved,
+    'looked': [
+      for (final w in TrapWindow.values)
+        if (looked.contains(w)) w.name,
+    ],
+    'lures': {for (final e in lures.entries) e.key.name: e.value},
+  };
+
+  static DayWork fromJson(Map<String, Object?> j) => DayWork(
+    day: GameDay(j['day']! as int),
+    ground: Ground.values.byName(j['ground']! as String),
     sighted: j['sighted']! as bool,
     tries: j['tries']! as int,
     resolved: j['resolved']! as bool,
@@ -290,16 +369,10 @@ class Trip {
       for (final w in j['looked']! as List<Object?>)
         TrapWindow.values.byName(w! as String),
     },
-    casts: {
-      for (final e in (j['casts']! as Map<String, Object?>).entries)
-        e.key: e.value! as int,
+    lures: {
+      for (final e in (j['lures']! as Map<String, Object?>).entries)
+        Lure.values.byName(e.key): e.value! as int,
     },
-    caught: j['caught']! as int,
-    released: j['released']! as int,
-    stooped: j['stooped']! as int,
-    flights: j['flights']! as int,
-    taken: j['taken']! as int,
-    suppliesUsed: j['suppliesUsed']! as int,
   );
 }
 
@@ -315,6 +388,7 @@ class Falconry {
     List<Falcon>? held,
     Set<FalconId>? entered,
     this.trip,
+    this.work,
   }) : falcons = falcons ?? [],
        held = held ?? [],
        entered = entered ?? {},
@@ -350,6 +424,9 @@ class Falconry {
   /// The trip or the day's outing he is on, or null at home.
   Trip? trip;
 
+  /// The last day's trapping (DayWork).
+  DayWork? work;
+
   /// One of his birds, in the room or held for sale.
   Falcon? any(FalconId id) =>
       falcon(id) ?? held.where((f) => f.id == id).firstOrNull;
@@ -379,6 +456,7 @@ class Falconry {
     if (held.isNotEmpty) 'held': [for (final f in held) f.toJson()],
     if (entered.isNotEmpty) 'entered': [for (final f in entered) f.value],
     if (trip != null) 'trip': trip!.toJson(),
+    if (work != null) 'work': work!.toJson(),
   };
 
   static Falconry fromJson(Map<String, Object?> j) => Falconry(
@@ -411,5 +489,8 @@ class Falconry {
     trip: j['trip'] == null
         ? null
         : Trip.fromJson(j['trip']! as Map<String, Object?>),
+    work: j['work'] == null
+        ? null
+        : DayWork.fromJson(j['work']! as Map<String, Object?>),
   );
 }

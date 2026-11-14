@@ -87,7 +87,11 @@ class FalconMarket {
     final value = HuntBalance.worthAt(route, rng.nextDouble());
     final opening = HuntBalance.opening(route, value, rng);
     // (dearer birds hunt a little better on the whole: game choice)
-    final skill = q(0.3 + 0.4 * rng.nextDouble() + 0.2 * _rank(route, value));
+    final skill = q(
+      HuntBalance.lotSkillBase +
+          HuntBalance.lotSkillSpread * rng.nextDouble() +
+          HuntBalance.lotSkillByWorth * _rank(route, value),
+    );
     final trapped = route == FalconRoute.trapping;
     final grounds = [
       for (final gr in Ground.values)
