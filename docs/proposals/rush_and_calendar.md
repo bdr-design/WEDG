@@ -107,10 +107,15 @@ So a rush of water or feed is offered **only on a day the herd went short**, and
     `fedShare = (barley eaten + alfalfa eaten) / need`; `short` loses a feed that now covers the day.
   - **Today's condition:** `CareSystem` ran at dawn with the short day. The difference is applied once to each
     camel: `condition += conditionPull × ((plan target − 35) × (fedShare′ − fedShare) + (thirstPenalty if the day
-    stopped counting dry))`, clamped as Care clamps. The update is linear in its target, so this is what Care would
-    have made of the corrected day. How much of the day's loss it undoes (all of today's, as here) is a game choice.
-  - A camel that died of thirst at dawn stays dead. A thirst death comes from yesterday's count (`systems.dart:
-    412-418`), and the rush resets the count for tomorrow: that is its real worth.
+    stopped counting dry))`, clamped as Care clamps. Care's update is linear in its target, so this is what Care
+    would have made of the corrected day, up to Care's rounding to 0.01 (`q2`) and its clamp to 5..98: deterministic
+    either way. How much of the day's loss it undoes (all of today's, as here) is a game choice.
+  - A camel that died of thirst at dawn stays dead. At dawn `_consume` adds today's dry day to the count before
+    `HealthSystem` reads it (`systems.dart:412-418`), so that death came from a count that already held today; the
+    rush resets the count for tomorrow: that is its real worth.
+  - **Today's milk stands** (the second review, N1): `MilkSystem` billed today's milk at dawn from the short day's
+    `fedShare` and `dryDays`. The day's record keeps the dawn's litres, and الحليب reads them from there, so the view
+    never shows a fed day's litres beside the short day's money in the bank.
 - **When the herd is not short today**, nothing is offered. The row says honestly «الطلبة العادية توصل قبل شرب حلالك
   بكرة» (water) and «… قبل علفة حلالك بكرة» (feed).
 - **A played day equals a jumped day.** The rule reads only the day's record, never the minute, so a rush at 08:00 and
@@ -247,6 +252,11 @@ outing may last days), all use one mechanism. Hunting is not built; it will call
   - **extra lines a caller adds to the card and the summary**: the card before leaving takes the caller's lines
     (gear, camp supplies, distance) under its own; the summary takes its lines (days out, birds seen and caught,
     released) above its own. The calendar's card and summary views are the same views, with no extra lines.
+  - **A caller's daily work is a daily system, never a loop callback** (the second review, N3). A camp's daily work
+    (its supplies used, its trapping) is a step of the engine's own daily pipeline, keyed by the game's state (a camp
+    under way), so a played day and a jumped day run the same code. The standing order and the vet's contract are
+    built the same way (steps of `UpkeepSystem` and `HealthSystem`). The away call only advances days and reads
+    conditions; it changes nothing itself.
 - **The loop:** the catch-up's own loop over `advanceDays(1)`, yielding every 6 ms. After each day:
   - the day's events go to the summary's counters;
   - the stop conditions are read from the state (and the day's events where the state cannot tell);
@@ -370,9 +380,10 @@ day.
 - Played on the fast clock with those orders, the engine's first store stop came on Sunday 15 November (barley,
   3 days left).
 - The milk had brought SAR 851, three orders had come, three festivals had opened registration, nothing fell ill.
-- (That run predates the registration stop. With it, the jump would first have stopped on 8 October, three days
-  before مزاين حائل's registration closed, since نورة could enter. The drawn stop is kept because it shows a store
-  stop; the registration stop is drawn from the round's save.)
+- **That run predates the registration stop** (the second review, N9). Under the revised stops the jump would first
+  stop on 8 October, three days before مزاين حائل's registration closed, since نورة could enter. The stopped and summary
+  pictures (views 11 and 12) are captioned so in `phone_calendar.jpg`'s README row, and are to be re-made from the
+  built thing. The registration stop itself is listed in the card's stops (view 6).
 
 ### At the end (view 12)
 
