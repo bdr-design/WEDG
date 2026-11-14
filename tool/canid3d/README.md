@@ -174,8 +174,8 @@ en.wikipedia *(search)*; other pages say the two middle toes are fused):
 | What | Real | Source | Model |
 |---|---|---|---|
 | Shoulder height | males 50–60 cm, females 45–50 cm | Kennel Club and UKC Canaan Dog standards *(search)* | 560 mm, a male |
-| Weight (for the record) | 18–25 kg | the same *(search)* | – |
-| Build | square, chest to the elbows, loin tucked up, wedge head, short erect ears broad at the base, bushy tail curled over the back when alert | the same; saudi-archaeology.com *(search)* | nose to tail base 821 mm; head 210 mm; ears 78 × 63 mm; the tail curled over the back |
+| Weight (for the record) | 18–25 kg | the same *(search)* | volume 21.5 L; less about 5 L of short coat, about 16–17 kg: at the range's low end, a lean working dog. The first build came to 18.6 L (about 13 kg), too light and sighthound-like, so its chest, neck, legs and muzzle were filled out |
+| Build | square, chest to the elbows, loin tucked up, wedge head, short erect ears broad at the base, bushy tail curled over the back when alert | the same; saudi-archaeology.com *(search)* | nose to tail base 812 mm; head 202 mm; chest 164 mm wide, its bottom 276 mm up, elbows 248 mm; ears 78 × 63 mm; the tail curled over the back |
 | Coat | short to medium, harsh; sand to red-brown, white, black, with or without white markings | breed standards *(search)* | sandy, white chest, belly, socks and tail tip: one of the type's colours, a game choice |
 | Collar | not found as a practice for herders' dogs | – | a dark leather collar 26 mm wide with a steel ring under the throat *(a game choice: it marks the dog as the player's own)* |
 

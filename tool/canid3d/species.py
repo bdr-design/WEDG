@@ -186,6 +186,18 @@ DOG.update(
     # the collar: at this place along the neck, its distance off the coat, width and thickness (mm)
     collar=(0.42, 2.0, 26.0, 4.0),
 )
+# fuller than the wolf: the pariah type's 'moderately broad and deep' chest and 18-25 kg on a 50-60 cm dog (the
+# first build, at the widths above, came to 18.6 L before its coat: too light); the muzzle a wedge, not a sighthound's
+DOG['torso'] = [(x, top, bot - 0.008 * (x > -0.2), w * 1.16, wl * 1.22) for x, top, bot, w, wl in DOG['torso']]
+DOG['neck'] = [(f, w * 1.10, c * 1.06, t * 1.06) for f, w, c, t in DOG['neck']]
+DOG['head'] = [(t, cz, up * (1.0 + 0.10 * t), dn * (1.0 + 0.12 * t), w * (1.0 + 0.16 * t)) for t, cz, up, dn, w in DOG['head']]
+DOG['jaw'] = [(t, cz, up * 1.1, dn * 1.1, w * 1.14) for t, cz, up, dn, w in DOG['jaw']]
+DOG['head_len'] = 0.36
+DOG['fore_sizes'] = {k: (w * 1.08, f * 1.08, b * 1.08) for k, (w, f, b) in DOG['fore_sizes'].items()}
+DOG['hind_sizes'] = {k: (w * 1.10, f * 1.08, b * 1.08) for k, (w, f, b) in DOG['hind_sizes'].items()}
+DOG['shoulder'] = (0.46, 0.640, 0.088)
+DOG['hip'] = (-0.36, 0.700, 0.078)
+DOG['stance'] = dict(fore=dict(x=0.33, y=0.082, meta=15.0), hind=dict(x=-0.48, y=0.076, meta=8.0))
 
 DOG_POSES = {
     'alert': dict(neck=55, head=8),
