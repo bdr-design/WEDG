@@ -312,7 +312,8 @@ class QApplier:
         for side, s in ((1, 'L'), (-1, 'R')):
             target, planted, curl = sp['feet'][s]
             if target == 'trail':
-                tb = W @ (V3(self.trail) * V3((1, side, 1)) * MM) / MM
+                tx, ty, tz = self.trail
+                tb = W @ (bird.torso_point(self.body, tx, tz, ty * side) * MM) / MM      # behind the body, in its own frame
                 P.leg(s, tb, (W.to_3x3() @ V3((-1, 0, 0.6))))
                 for nm in TOES:
                     ax = P.rest[f'{nm}1.{s}'].to_3x3() @ V3((1, 0, 0))
@@ -369,7 +370,7 @@ class Clips:
         self.alert_neck = (0, 0, 0) if name == 'houbara' else (0, 0)
         self.run_neck = (-28, -18, 10) if name == 'houbara' else (-30, 8)
         self.fly_neck = (-62, -10, 8) if name == 'houbara' else (-60, 20)
-        self.trail = (-60, 30, -60) if name == 'houbara' else (-80, 20, -40)
+        self.trail = (-70, 30, -45) if name == 'houbara' else (-90, 16, -30)      # torso frame: the feet behind, under the tail
 
     def flap(self, ph, amp, mean):
         up = mean + amp * math.cos(2 * math.pi * ph)

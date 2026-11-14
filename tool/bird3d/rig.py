@@ -629,22 +629,26 @@ class SakerClips:
                 'mesh': 'open', 'wing': w, 'tail_spread': 1.0, 'clench': 1.0, 'air': V3((-15000, 0, 0))}
 
     def stoop(self, f):
-        """From the glide into the stoop: the wings drawn in to the body, the body tipped down 55 degrees, the head
-        in line looking ahead; held."""
-        k = ramp(f, 0, 12)
+        """From the glide into the stoop: the spread mesh's wings drawn in by its bones to the tightest outline that
+        still reads right (SWAP_OPEN, by 12), the body tipped down 55 degrees, the head in line; held. No swap here:
+        tried, the folded mesh matched the spread one at best 0.69 at this angle, a visible pop; `bind` starts from
+        the same outline."""
+        pitch = -55 * ramp(f, 0, 12) + 1.5 * math.sin(f / 2.0) * ramp(f, 0, 12)
+        air = V3((-30000 * math.cos(math.radians(pitch)), 0, 30000 * math.sin(math.radians(-pitch))))
         g = self.glide(0)['wing']
-        tight = {'up': 14, 'sweep': 58, 'fore': -72, 'hand': 88, 'twist': 0, 'hand_up': 4, 'hand_twist': 0}
-        w = {kk: lerp(g.get(kk, 0.0), tight[kk], k) for kk in tight}
-        pitch = -55 * k + 1.5 * math.sin(f / 2.0) * k
-        return {'pitch': pitch, 'head_pitch': 0.8 * pitch, 'tb': V3((0, 0, 0)), 'feet': ('free', 1.0), 'mesh': 'open',
-                'wing': w, 'tail_spread': 1.0 - 0.1 * k, 'clench': 1.0, 'air': V3((-30000 * math.cos(math.radians(pitch)), 0, 30000 * math.sin(math.radians(-pitch))))}
+        k = ramp(f, 0, 12)
+        w = {kk: lerp(g.get(kk, 0.0), SWAP_OPEN.get(kk, 0.0), k) for kk in set(g) | set(SWAP_OPEN)}
+        return {'pitch': pitch, 'head_pitch': 0.8 * pitch, 'tb': V3((0, 0, 0)), 'feet': ('free', 1.0), 'clench': 1.0,
+                'air': air, 'tail_spread': 1.0, 'mesh': 'open', 'wing': w}
 
     def bind(self, f):
         """Binding to the quarry: thrown up from the dive, the wings braking, the legs and open feet struck forward;
         the feet close at frame 10 (on the quarry, not drawn), then heavy beats to hold."""
-        pitch = keys(f, [(0, -30), (8, 38), (14, 30), (24, 20)])
+        pitch = keys(f, [(0, -55), (8, 38), (14, 30), (24, 20)])
         if f < 10:
-            w = {kk: lerp(self.RAISED[kk], self.wings_flap(0.25, amp=46)[kk], ramp(f, 2, 10)) for kk in self.RAISED}
+            # from the stoop's end: the spread mesh in the swap's outline (SWAP_OPEN), opening to the brake
+            r = {kk: lerp(SWAP_OPEN.get(kk, 0.0), self.RAISED[kk], ramp(f, 0, 4)) for kk in self.RAISED}
+            w = {kk: lerp(r[kk], self.wings_flap(0.25, amp=46)[kk], ramp(f, 4, 10)) for kk in self.RAISED}
             w['sweep'] -= 18 * ramp(f, 3, 9)
         else:
             w = self.wings_flap(((f - 10) / 6.0) % 1.0, amp=50, mean=10)
@@ -1022,7 +1026,7 @@ VIEWS = {'side': (0, -1, 0), 'three_quarter': (-1, -1, -0.5), 'front': (-1, 0, 0
 SHAPE_ACTIONS = {}
 FAR = []
 SHEET_PREFIX = ['saker']
-QTOL, LTOL, STOL = 0.0015, 0.00005, 0.001
+QTOL, LTOL, STOL = 0.0002, 0.00001, 0.0005      # tight: the chain from the root to a talon must stay within a millimetre
 
 
 def add_hidden_morph(o, body):
@@ -1234,31 +1238,31 @@ def contact_sheet(arm, meshes, frames_mesh, name, frames, out, view='side', res=
 
 
 def tune_swaps(arm, meshes, clips):
-    """For each clip's swap, the folded wing's opening that best matches the spread mesh in that very frame."""
+    """The stoop's swap: the folded wing's opening that best matches the spread mesh at SWAP_OPEN in that frame."""
     import itertools
     A = Applier(arm, clips)
     A.toe_verts = toe_vertex_sets(meshes['fold'])
-    for name, f in (('land_cuff', 37),):
-        sp = getattr(clips, name)(f)
-        sp = dict(sp, wing=dict(SWAP_OPEN))
-        sp.pop('fold', None)
-        A.apply(dict(sp, mesh='open'), 0, key=False)
-        bpy.context.view_layer.update()
-        coO, triO = evaluated_co(meshes['open'])
-        best = None
-        fp = {'out': 24, 'up': 34, 'twist': 0, 'tip_out': 20, 'tip_up': -45}
-        A.apply(dict(sp, mesh='fold', fold=fp), 0, key=False)
-        bpy.context.view_layer.update()
-        coF, triF = evaluated_co(meshes['fold'])
-        for up, sw, fo, ha, tw in itertools.product((-15, -5, 5, 15), (60, 72, 84), (-70, -90), (160, 180), (-10, 10)):
-            w = {'up': up, 'sweep': sw, 'fore': fo, 'hand': ha, 'twist': tw}
-            A.apply(dict(sp, mesh='open', wing=w, fold=fp), 0, key=False)
+    for o in meshes.values():
+        sk = o.data.shape_keys
+        if sk:
+            sk.key_blocks['hidden'].value = 0.0
+    sp = clips.stoop(8)
+    best = None
+    c = dict(SWAP_FOLD)
+    step = {'out': 12, 'up': 14, 'tip_out': 12, 'tip_up': 12}
+    for rnd in range(3):
+        for out, up, to, tu in itertools.product(*[(c[k] - step[k], c[k], c[k] + step[k]) for k in ('out', 'up', 'tip_out', 'tip_up')]):
+            fp = {'out': out, 'up': up, 'twist': 0, 'tip_out': to, 'tip_up': tu}
+            A.apply(dict(sp, fold=fp, wing=dict(SWAP_OPEN)), 0, key=False)
             bpy.context.view_layer.update()
             coO, triO = evaluated_co(meshes['open'])
+            coF, triF = evaluated_co(meshes['fold'])
             sc = min(pair_iou(coO, triO, coF, triF, VIEWS['side']), pair_iou(coO, triO, coF, triF, VIEWS['three_quarter']))
             if best is None or sc > best[0]:
-                best = (sc, up, sw, fo, ha, tw)
-        print(f'{name} frame {f}: best overlap %.3f with the spread wing at up %d sweep %d fore %d hand %d twist %d' % best)
+                best = (sc, dict(fp))
+        c = best[1]
+        step = {k: max(4, v * 0.6) for k, v in step.items()}
+        print('stoop round', rnd, 'overlap %.3f' % best[0], best[1])
 
 
 def tune(arm, meshes, clips, body):
