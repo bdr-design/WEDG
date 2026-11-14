@@ -78,12 +78,11 @@ class HoubaraPaint(Base):
         col, al, occ = plumage(X, Y, w, l, self.SAND, self.SAND * 1.04, self.VERM, 0.0, 0.0, nz, shade=0.08)
         v = vermiculate(X, Y, self.n)
         col = lerp_col(col, self.VERM * 1.1, v * 0.72)
-        al2, ac, idx = __import__('common').feathers(X, Y, w, l)
-        # a dark arrowhead (chevron) toward each feather's tip, and a dusky middle on many
-        arrow = (np.abs(al2 - 0.60 - 0.30 * np.abs(ac)) < 0.13) & (np.abs(ac) < 0.8) & (hash01(idx, 2.0) < marks)
-        col = lerp_col(col, self.VERM * 0.75, arrow * 0.9)
-        mid = (1 - soft(np.abs(ac), 0.15, 0.4)) * soft(al2, 0.2, 0.45) * (1 - soft(al2, 0.55, 0.65)) * (hash01(idx, 4.0) < marks)
-        col = lerp_col(col, self.VERM, mid * 0.5)
+        # dark arrowhead and bar marks, scattered and slanted at random (no grid)
+        mk = streaks(Y, X, w * 1.1, l * 1.4, w * 0.75, l * 0.32, int(w * 7), density=marks, tilt=30)
+        col = lerp_col(col, self.VERM * 0.75, mk * 0.85)
+        blot = soft(self.n(X + 91, Y + 37, w * 0.6), 0.25, 0.6)
+        col = lerp_col(col, self.VERM, blot * 0.25)
         return col, occ
 
     def body_p(self, S, T):
@@ -218,7 +217,8 @@ class CurlewPaint(Base):
 
     def streaked(self, X, Y, w, l, base, nz, sw=0.16):
         """Sandy feathers with pale edges and dark shaft streaks of varied length, width and slant."""
-        col, al, occ = plumage(X, Y, w, l, base, base * 1.06, self.STREAK, 0.0, 0.12, nz, shade=0.08)
+        col, al, occ = plumage(X, Y, w, l, base, base * 1.04, self.STREAK, 0.0, 0.05, nz, shade=0.05)
+        col = col * (0.94 + 0.12 * soft(self.n(X + 13, Y + 29, w * 0.8), -0.5, 0.5))[..., None]
         st = streaks(X, Y, l * 1.3, w * 0.9, l * 1.5, max(w * sw * 1.4, 0.9), int(w * 10), density=0.9, tilt=10)
         return lerp_col(col, self.STREAK, st * 0.9), al, occ
 

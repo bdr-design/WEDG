@@ -138,12 +138,12 @@ def dass(level=0):
     rows = [   # (x, half height up, down, half width, squareness): from the wrist over the hand and the fist
         (-105, 47, 47, 45, 2.2), (-100, 49, 49, 47, 2.2), (-92, 47, 47, 44, 2.2), (-80, 44, 44, 39, 2.2),
         (-68, 43, 43, 36, 2.3), (-50, 44, 45, 34, 2.4), (-25, 50, 53, 36, 2.6), (5, 52, 53, 37, 2.8),
-        (30, 48, 46, 35, 2.8), (44, 38, 36, 31, 2.6), (54, 18, 18, 20, 2.2),
+        (30, 48, 46, 35, 2.8), (44, 40, 38, 32, 2.6), (53, 30, 28, 27, 2.4), (59, 16, 15, 16, 2.2), (61, 3, 3, 3, 2.0),
     ]
     if level != 0:
-        rows = [rows[0], rows[2], rows[4], rows[6], rows[7], rows[9], rows[10]]
+        rows = [rows[0], rows[2], rows[4], rows[6], rows[7], rows[9], rows[11], rows[12]]
     secs = [Sec(o + X * x, Z, Y, au, ad, b, b, p=p) for (x, au, ad, b, p) in rows]
-    s = [(x + 105) / 159.0 for (x, *_r) in rows]
+    s = [(x + 105) / 166.0 for (x, *_r) in rows]
     out.append(loft('leather', secs, n, s=s, caps=(True, True)))
     if level == 0:
         # the cuff's rolled edge

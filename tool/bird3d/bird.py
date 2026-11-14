@@ -157,9 +157,9 @@ def beak(body, spec, det):
         L = b['cere']
         cs = []
         for f in (0.0, 0.35, 0.7, 1.0):
-            q = o + t * (L * f - 4) + u * 0.6
+            q = o + t * (L * f - 8) + u * 0.6
             au, ad, bl, br = sizes[0]
-            k = 1.10 - 0.12 * f
+            k = 1.16 - 0.18 * f
             cs.append(Sec(q, u, v, au * k, ad * 0.85, bl * k, br * k, p=2.2))
         out.append(loft('skin', cs, det.beak_ring, caps=(True, True)))
     return out
@@ -208,7 +208,7 @@ def eyes(body, spec, det):
             above = (u - look_dir * u.dot(look_dir)).normalized()
             for i in range(m):
                 f = i / (m - 1)
-                q = centre + above * (r * 0.92) + look_dir * (r * 0.42) + t * (length * (f - 0.45))
+                q = centre + above * (r * 0.95) + look_dir * (r * 0.05) + t * (length * (f - 0.45))
                 k = math.sin(math.pi * (0.08 + 0.84 * f))
                 secs.append(Sec(q, above, look_dir.cross(above) * side, height * k + 0.3, height * k + 0.3, width * k + 0.3, p=2.0))
             pc = loft('body', secs, 8 if det.level == 0 else 5, caps=(True, True))

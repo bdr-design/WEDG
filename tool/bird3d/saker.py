@@ -34,7 +34,7 @@ SPEC = {
     'name': 'saker',
     'beak': {'length': 21, 'droop': 14, 'droop_pow': 2.0, 'h0': 12.0, 'low': 0.72, 'w0': 7.4, 'h_pow': 0.85,
              'w_pow': 1.0, 'h_tip': 0.7, 'w_tip': 0.5, 'cere': 7, 'lower': (13, 6.5, 6.4), 'sink': 7, 'tooth': 0.62},
-    'eye': {'d': 263, 'up': 5.0, 'r': 8.2, 'out': 0.80, 'fwd': 22, 'ring': 2.8, 'brow': (22, 3.4, 3.6)},
+    'eye': {'d': 263, 'up': 5.0, 'r': 8.2, 'out': 0.80, 'fwd': 22, 'ring': 2.8, 'brow': (24, 2.4, 5.5)},
     'fold': [      # tip to wrist: (x, z_top, z_bottom, y_mid, half_thickness, bend); the tips 70 mm short of the tail's
         (-135, 16, 9, 10, 1.6, 0.5),
         (-95, 20, 4, 15, 2.6, 1.5),
@@ -65,7 +65,7 @@ SPEC = {
     ],
     'wrist_y': 215,
     'tail_root': 20, 'tail_up': 3,
-    'leg': {'knee': (95, -38, 20), 'tibia': 104, 'tarsus': 57, 'shank_r': (26, 22, 17, 13, 9.5),
+    'leg': {'knee': (95, -28, 20), 'tibia': 110, 'tarsus': 57, 'shank_r': (30, 24, 17, 13, 9.5),
             'tarsus_r': (6.6, 5.6, 6.2), 'jess_at': 0.5, 'trouser': 0.38},
     'toes': [      # (heading deg, length, radius, (claw length, claw arc deg), curl)
         (0, 52, 4.6, (21, 125), 0),      # the middle toe
@@ -111,7 +111,11 @@ def build(pose_name, level):
     body = bird.Body(stations(pose), pose, det, head_weight=2.0)
     parts = {'body': [body.piece(det)]}
     parts['body'] += bird.beak(body, SPEC, det)
-    parts['body'] += bird.eyes(body, SPEC, det)
+    spec = SPEC
+    if pose_name in ('hooded', 'fist'):
+        # under the hood: no brow ridge or eye ring to push through the leather
+        spec = dict(SPEC, eye={k: v for k, v in SPEC['eye'].items() if k not in ('brow', 'ring')})
+    parts['body'] += bird.eyes(body, spec, det)
     if pose['wings'] == 'fold':
         parts['body'] += bird.folded_wing(body, SPEC, det)
     else:

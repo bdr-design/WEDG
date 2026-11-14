@@ -264,7 +264,7 @@ class SakerPaint:
         fx = fan - fi
         shaft = np.abs(fx - 0.5) < 0.05
         edge = np.abs(fx - 0.5) > 0.46
-        rem_zone = np.where(upper, soft(c, 0.42 - 0.12 * hand, 0.55 - 0.12 * hand), soft(c, 0.50 - 0.14 * hand, 0.60 - 0.14 * hand))
+        rem_zone = np.where(upper, soft(c, 0.42 - 0.12 * hand, 0.55 - 0.12 * hand), soft(c, 0.50 - 0.34 * hand, 0.60 - 0.34 * hand))
         # upper side: dark brown coverts with rufous fringes; brown remiges, the primaries darker
         cov, _, occc = plumage(Y, Xc, 10.0, 8.0, self.BROWN, self.FRINGE, self.BROWN, 0.0, 0.16, nz)
         rem_u = lerp_col(self.BROWN * 0.92, self.PRIM, hand)[..., :] if False else None
