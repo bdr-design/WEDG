@@ -83,7 +83,7 @@ class Coat:
         self.er = rest.S['eye'][3] * self.H
         # the almond's height to its length: the dog's eye is set more to the front, so it is opened wider for the
         # front view to read it as open
-        self.eye_open = 0.52 if kind.startswith('wolf') else 0.78
+        self.eye_open = 0.52 if kind.startswith('wolf') else 0.95
         for sg, side in ((1, 'l'), (-1, 'r')):
             c = np.array(tuple(rest.points['eye_' + side]))
             out = np.radians(rest.S['eye_out'])
@@ -206,7 +206,7 @@ class Coat:
                 a = q @ across * sg
             else:
                 a = q @ hd
-            b = q @ hn + 0.22 * a
+            b = q @ hn + (0.22 if self.eye_open < 0.6 else 0.08) * a
             d = np.sqrt(a * a + (b / self.eye_open) ** 2) / self.er
             # painted by its place along and up the head only, on its own side: the eye sits a little into the
             # cheek's fur, so its almond is laid on the surface over it, not on the bulge's own curve
@@ -238,7 +238,7 @@ class Coat:
                 col = mix(col, C(0.55, 0.28, 0.30), sstep(0.70, 0.90, top))          # the tongue and gums
         else:
             under = sstep(-0.45, -0.80, N[..., 2] * 0.85 + 0.15 * N[..., 0])
-            mouth = under * sstep(0.42, 0.52, a)
+            mouth = under * sstep(0.56, 0.62, a)
             col = mix(col, black, sstep(0.05, 0.25, mouth) * sstep(0.55, 0.35, mouth))   # the lips' thin dark line
             if self.mouth_open:
                 col = mix(col, C(0.42, 0.22, 0.22), sstep(0.55, 0.9, mouth))         # the roof of the mouth

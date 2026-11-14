@@ -175,7 +175,7 @@ DOG.update(
         (0.97, 0.002, 0.012, 0.014, 0.026),
     ],
     nose=(0.985, -0.020, 0.026),
-    eye=(0.53, 0.040, 0.058, 0.0160),
+    eye=(0.53, 0.040, 0.058, 0.0175),
     eye_out=40.0,
     # erect, broad at the base, rounded tips (the Canaan standard)
     ear=(0.135, 0.125, 0.015),
