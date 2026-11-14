@@ -557,6 +557,53 @@ void main() {
     });
   });
 
+  group('with money for testing on (TestMoney, T14)', () {
+    int ledgerSum(PlayerState p) =>
+        p.ledger.fold(0, (n, e) => n + e.amount.value);
+
+    test('a rush goes through, a real cost the ledger and the bank keep', () {
+      final g = newGame();
+      final me = g.me;
+      expect(g.dispatch(SetTestMoney(me.id, on: true)).ok, isTrue);
+      g.dispatch(BuildFacility(me.id, Facility.pen));
+      final r = g.dispatch(RushBuild(me.id, Facility.pen));
+      expect(r.ok, isTrue, reason: '$r');
+      expect(g.me.farm.has(Facility.pen), 1);
+      // the price as it is without the switch: half the pen's for three days
+      expect(r.events.whereType<Rushed>().single.fee, 6000);
+      expect(rushRows(g), 6000);
+      // ordered and hurried at once: the same, and still its own row
+      final now = g.dispatch(BuildFacility(me.id, Facility.tent, now: true));
+      expect(now.ok, isTrue, reason: '$now');
+      expect(rushRows(g), 6000 + 7500);
+      // (the floor made good before each order, so the second paid from it)
+      expect(me.cash.value, TestMoney.floor - 7500 - Facility.tent.price);
+      expect(ledgerSum(me), me.cash.value);
+      expect(checkInvariants(g.state), isEmpty);
+
+      // the bank: the rush a line of its own beside the test money, in the
+      // month's spending and net; the test money apart from both
+      final v = GameView(g.state, me.id);
+      final m = v.moneyMonths.first;
+      final rush = m.lines.where((l) => l.kind == MoneyKind.rush).single;
+      expect(rush.amount, -(6000 + 7500));
+      expect(m.lines.where((l) => l.kind == MoneyKind.testMoney), hasLength(1));
+      expect(m.testMoney, greaterThan(0));
+      final farm = m.lines.where((l) => l.kind != MoneyKind.testMoney);
+      expect(
+        m.net,
+        farm.fold(0, (n, l) => n + l.amount),
+        reason: 'the net is the farm\'s lines, the rush in, test money out',
+      );
+      expect(m.spent, greaterThanOrEqualTo(6000 + 7500));
+      final total = v.moneyMonths.fold(
+        v.openingBalance.value,
+        (n, x) => n + x.net + x.testMoney,
+      );
+      expect(total, me.cash.value);
+    });
+  });
+
   test('an AwayRun to a day equals the days advanced (VM and JavaScript)', () {
     Game scripted() {
       final g = newGame();

@@ -585,6 +585,25 @@ void main() {
       expect(g.me.farm.today, isNotNull);
     });
 
+    test('a v10 save written by T14\'s build, a camel on the truck', () {
+      final r = codec.decode(
+        File('test/fixtures/save_v10_t14_truck.json').readAsStringSync(),
+      );
+      expect(r, isA<Loaded>(), reason: '$r');
+      final state = (r as Loaded).state;
+      expect(checkInvariants(state), isEmpty);
+      final me = state.players.values.single;
+      final truck = state.world
+          .aliveOwnedBy(me.id)
+          .where((c) => c.acquiredOn == state.world.day)
+          .single;
+      expect(GameView(state, me.id).camel(truck.id)!.onTheWay, isTrue);
+      final g = Game(state)..advanceDays(7);
+      expect(checkInvariants(g.state), isEmpty);
+      expect(GameView(g.state, me.id).camel(truck.id)!.onTheWay, isFalse);
+      expect(g.me.farm.has(Facility.pen), 1);
+    });
+
     test('the v9 fixture brought up and played a week', () {
       final state =
           (codec.decode(File(fixtures[9]!).readAsStringSync()) as Loaded).state;
