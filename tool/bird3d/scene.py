@@ -109,3 +109,58 @@ def scale(B):
     # a closer look at the fist: the hooded falcon on the glove beside the figure
     png = st.shot('birds_fist', fist + V3((1.1, -0.9, 0.25)), fist + V3((0, 0, 0.16)), lens=70, res=(800, 600) if B.QUICK else (1200, 900))
     B.finish(png)
+
+
+def scale_peregrine(B):
+    """The peregrine of the year beside the saker and the man: the hooded peregrine on his glove, the two falcons
+    unhooded on their perches side by side (the saker nearer the man), a ruler."""
+    out = B.OUT
+    need = ['dass.glb', 'wakr.glb', 'peregrine_fist.glb', 'peregrine_alert.glb', 'saker_alert.glb']
+    for n in need:
+        if not os.path.exists(os.path.join(out, n)):
+            raise SystemExit(f'{n} missing: build the birds and the gear first')
+    B.fresh()
+    bpy.ops.import_scene.gltf(filepath=B.MAN)
+    for o in list(bpy.data.objects):
+        if o.name.startswith('Icosphere'):
+            bpy.data.objects.remove(o)
+    rig = [o for o in bpy.data.objects if o.type == 'ARMATURE'][0]
+    if rig.animation_data:
+        rig.animation_data.action = None
+    hand, axis = pose_arm(rig)
+    fist = hand + axis * 0.045
+    yaw = math.degrees(math.atan2(axis.y, axis.x))
+    glove = load(os.path.join(out, 'dass.glb'), 'dass')
+    top = fist + V3((0, 0, 0.052)) - V3((math.cos(math.radians(yaw)), math.sin(math.radians(yaw)), 0)) * (-0.015)
+    place(glove, top, yaw)
+    place(load(os.path.join(out, 'peregrine_fist.glb'), 'peregrine_fist'), top + V3((0, 0, 0.002)), yaw)
+    for y, name in ((-1.0, 'saker_alert'), (-1.55, 'peregrine_alert')):
+        place(load(os.path.join(out, 'wakr.glb'), 'wakr'), (0.0, y, 0.30), -90)
+        place(load(os.path.join(out, name + '.glb'), name), (0.0, y, 0.30), -90)
+    st = common.Studio(out, samples=12 if B.QUICK else 24)
+    st.rig_lights(V3((0, -0.4, 0.8)), dist=3.2)
+    cy, cz, ortho = -0.45, 0.95, 3.2
+    res = (900, 560) if B.QUICK else (1800, 1120)
+    png = st.shot('peregrine_scale', (6.0, cy, cz), (0.0, cy, cz), ortho=ortho, res=res)
+    pxmm = res[0] / (ortho * 1000)
+    yg = res[1] / 2 + cz * 1000 * pxmm
+    vruler(png, pxmm, 30, yg, 2000)
+    B.finish(png)
+    # the two falcons close, side by side on their perches, with a centimetre ruler
+    mid = V3((0.0, -1.275, 0.48))
+    o2 = 0.95
+    res2 = (1000, 700) if B.QUICK else (1600, 1120)
+    png = st.shot('peregrine_beside_saker', (6.0, mid.y, mid.z), mid, ortho=o2, res=res2)
+    if png:
+        pxmm = res2[0] / (o2 * 1000)
+        common.ruler(png, pxmm, res2[0] / 2 - 0.35 * 1000 * pxmm, res2[1] - 30, 700)
+        from PIL import Image, ImageDraw
+        im = Image.open(png).convert('RGB')
+        d = ImageDraw.Draw(im)
+        f = common.font(26)
+        d.text((20, 16), 'peregrine of the year, female (left) and saker of the year, female (right): '
+               'awaiting the owner\'s approval of the look', fill=(30, 28, 26), font=common.font(20))
+        d.text((res2[0] * 0.12, 60), 'peregrine', fill=(30, 28, 26), font=f)
+        d.text((res2[0] * 0.70, 60), 'saker', fill=(30, 28, 26), font=f)
+        im.save(png)
+    B.finish(png)

@@ -98,6 +98,8 @@ def finish(png, ruler=None):
 def species(name):
     if name == 'saker':
         import saker as m
+    elif name == 'peregrine':
+        import peregrine as m
     elif name in ('houbara', 'curlew'):
         import quarry
         m = quarry.HOUBARA if name == 'houbara' else quarry.CURLEW
@@ -137,7 +139,7 @@ def build_bird(name, pose, level, pictures=False):
     return root, objs, pts, body
 
 
-MASS = {'saker': (0.97, 1.30), 'houbara': (1.8, 2.4), 'curlew': (0.29, 0.535)}      # kg: README.md says from where
+MASS = {'saker': (0.97, 1.30), 'peregrine': (0.925, 1.333), 'houbara': (1.8, 2.4), 'curlew': (0.29, 0.535)}      # kg: README.md says from where
 
 
 def measures(name, pose, objs, spec, lo, hi):
@@ -171,20 +173,19 @@ def measures(name, pose, objs, spec, lo, hi):
     return out
 
 
-def run_saker():
-    import saker
+def run_saker(name='saker'):
     for pose in ('hooded', 'fist', 'alert', 'flight'):
         for level in ((1, 0) if pose != 'fist' else (0,)):
-            root, objs, pts, body = build_bird('saker', pose, level)
+            root, objs, pts, body = build_bird(name, pose, level)
         if RENDER and pose != 'fist':
-            pictures_bird('saker', pose, root, objs, pts)
+            pictures_bird(name, pose, root, objs, pts)
 
 
 def pictures_bird(name, pose, root, objs, pts):
     """Side (with a centimetre ruler), three-quarter, close on the head, (in flight) from below and behind."""
     st = common.Studio(OUT, samples=10 if QUICK else 24, ground=(pose != 'flight'))
     lo, hi = bounds(objs)
-    if name == 'saker' and pose in ('hooded', 'alert') and os.path.exists(os.path.join(OUT, 'wakr.glb')):
+    if name in ('saker', 'peregrine') and pose in ('hooded', 'alert') and os.path.exists(os.path.join(OUT, 'wakr.glb')):
         # on her perch, its top under her feet, the sand 300 mm below
         import scene
         scene.load(os.path.join(OUT, 'wakr.glb'), 'wakr')
@@ -242,8 +243,8 @@ def pictures_bird(name, pose, root, objs, pts):
 if __name__ == '__main__':
     todo = ['saker', 'houbara', 'curlew', 'gear'] if WHAT == 'all' else WHAT.split(',')
     for w in todo:
-        if w == 'saker':
-            run_saker()
+        if w in ('saker', 'peregrine'):
+            run_saker(w)
         elif w in ('houbara', 'curlew'):
             import quarry
             quarry.run(w, sys.modules[__name__])
@@ -253,3 +254,6 @@ if __name__ == '__main__':
         elif w == 'scale':
             import scene
             scene.scale(sys.modules[__name__])
+        elif w == 'peregrine_scale':
+            import scene
+            scene.scale_peregrine(sys.modules[__name__])

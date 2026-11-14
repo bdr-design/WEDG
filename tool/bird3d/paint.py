@@ -35,6 +35,8 @@ def atlas(name):
 def paint(name, at, size, body):
     if name == 'saker':
         p = SakerPaint(body, size)
+    elif name == 'peregrine':
+        p = PeregrinePaint(body, size)
     else:
         import paint_quarry
         p = paint_quarry.painter(name, body, size)
@@ -148,6 +150,9 @@ class SakerPaint:
     FACE = C(0.86, 0.79, 0.67)           # cheeks and throat, buff
     PRIM = C(0.25, 0.19, 0.15)           # the primaries, darker than the coverts
     SKIN = C(0.60, 0.64, 0.66)           # a young bird's cere, eye ring and feet: bluish grey
+    FOLD_L = 335.0                       # the folded wing, wrist to tip (mm)
+    TAIL_L = 225.0                       # the tail, root to tip (mm)
+    UNDERWING_BARRED = False
     HORN = C(0.56, 0.61, 0.67)           # the beak's base: bluish horn
     HORN_TIP = C(0.11, 0.11, 0.13)
     CLAW = C(0.05, 0.05, 0.055)
@@ -217,10 +222,10 @@ class SakerPaint:
     def fold_p(self, S, T):
         """The folded wing's outside: S from the primaries' tips (0) to the wrist (1), T 0..0.5 its outer face top to
         bottom (the inner face, hidden, the same)."""
-        L = 335.0
+        L = self.FOLD_L
         X = (1 - S) * L                      # mm behind the wrist
         tt = np.minimum(T, 1 - T) * 2        # 0 the top edge, 1 the bottom edge
-        H = 70 * (1 - 0.8 * soft(X, 160, 335))
+        H = 70 * (1 - 0.8 * soft(X, 160 * L / 335.0, L))
         Yv = tt * H
         nz = self.n(X + 50, Yv + 50, 5.0)
         # coverts near the wrist: small, dark-centred, rufous-fringed; the greater coverts larger
@@ -234,7 +239,7 @@ class SakerPaint:
         prim = prim * (0.80 + 0.28 * soft(fe, 0.0, 0.85)[..., None])        # each primary darker at its overlapped edge
         prim = lerp_col(prim, self.FRINGE * 0.8, (fe > 0.93) * 0.5)
         tips = np.zeros_like(X)
-        for k, xt in enumerate((335, 322, 306, 288, 268)):
+        for k, xt in enumerate(np.array((335, 322, 306, 288, 268)) * (L / 335.0)):
             tips = np.maximum(tips, band(X, xt - 3.5, xt, 1.0) * soft(Yv, 0, 4) * (1 - soft(Yv, 4 + 3 * k, 10 + 3 * k)))
         prim = lerp_col(prim, self.FRINGE * 1.05, tips * 0.8)
         col = lerp_col(cov, gc, soft(X, 45, 70))
@@ -278,6 +283,9 @@ class SakerPaint:
         # grey-buff, barred, with dusky tips
         ucov, _, _ = plumage(Y, Xc, 9.0, 7.0, self.BROWN * 0.85, self.CREAM * 0.9, self.STREAK, 0.0, 0.08, nz, shade=0.06, sides=0.3)
         ucov = lerp_col(ucov, self.CREAM * 0.9, streaks(Y, Xc, 9.0, 8.0, 4.0, 2.4, 3, density=0.6) * 0.6)
+        if self.UNDERWING_BARRED:      # the peregrine's underwing: coverts as barred as the flight feathers, no dark band
+            cb = np.abs(((Xc / 7.0 + Y / 40.0) % 1.0) - 0.5) < 0.2
+            ucov = self.CREAM[None, None, :] * 0.92 * (1 - 0.55 * cb[..., None]) * (1 + 0.04 * nz[..., None])
         bars = np.abs(((Xc / 13.0 + fi * 0.37) % 1.0) - 0.5) < 0.17
         rem_d = C(0.86, 0.83, 0.77)[None, None, :] * (1 - 0.16 * bars[..., None]) * (1 - 0.08 * edge[..., None])
         tipdark = soft(c, 0.92, 0.99)
@@ -288,7 +296,7 @@ class SakerPaint:
         return col, 0.85 + 0.05 * nz, occ
 
     def tail_p(self, S, T):
-        X = S * 225.0
+        X = S * self.TAIL_L
         top = T < 0.5
         a = np.where(top, np.abs(T * 4 - 1), np.abs((T - 0.5) * 4 - 1))       # 0 the middle, 1 the edge
         Yw = a * 33
@@ -302,7 +310,7 @@ class SakerPaint:
         up = lerp_col(up, self.FRINGE * 1.1, spot * (0.25 + 0.5 * soft(a, 0.25, 0.8)) * soft(X, 40, 60))
         shafts = (np.abs(((Yw / 9.0) % 1.0) - 0.5) < 0.04) & (feather < 4)
         up = up * (1 - 0.15 * shafts[..., None])
-        tip = soft(X, 212, 218)
+        tip = soft(X, self.TAIL_L - 13, self.TAIL_L - 7)
         up = lerp_col(up, C(0.86, 0.79, 0.67), tip)
         # below: paler, more evenly barred
         dn = C(0.78, 0.72, 0.62)[None, None, :] * (1 - 0.30 * bars[..., None] * soft(X, 40, 60)[..., None])
@@ -382,3 +390,91 @@ def cord_p(S, T):
 
 def steel_p(S, T):
     return np.broadcast_to(C(0.55, 0.56, 0.58), S.shape + (3,)).copy(), 0.35 * np.ones_like(S), np.ones_like(S)
+
+
+# ------------------------------------------------------------------ the peregrine of the year (a first-year female)
+class PeregrinePaint(SakerPaint):
+    """A passage peregrine in her first plumage (README.md, "The peregrine of the year", for each mark's source):
+    brown above with buff fringes (browner than an adult's slate), cream-buff below with long dark streaks, not bars;
+    a broad dark moustache on a pale cheek, a paler crown (the tundra race calidus is paler, especially on the
+    crown); the underwing evenly barred; the tail barred buff with a pale tip; a pale bluish cere and eye ring."""
+    BROWN = C(0.31, 0.24, 0.19)          # upperparts: a colder brown than the saker's
+    FRINGE = C(0.62, 0.50, 0.37)         # buff fringes
+    CREAM = C(0.90, 0.83, 0.71)          # underparts' ground
+    STREAK = C(0.22, 0.16, 0.12)         # the long dark streaks
+    CROWN = C(0.50, 0.41, 0.33)          # a streaked crown, paler than the nominate race's (calidus)
+    FACE = C(0.92, 0.87, 0.77)           # the pale cheek and throat
+    MOUS = C(0.17, 0.13, 0.11)           # the broad moustache
+    PRIM = C(0.24, 0.19, 0.16)
+    SKIN = C(0.66, 0.71, 0.74)           # the pale bluish cere and eye ring of a bird of the year (en.wikipedia)
+    FEET = C(0.74, 0.74, 0.62)           # the feet: pale greenish yellow (game choice from field guides, not opened)
+    FOLD_L = 318.0
+    TAIL_L = 178.0
+    UNDERWING_BARRED = True
+
+    def __init__(self, body, size):
+        super().__init__(body, size)
+        import peregrine
+        self.spec = peregrine.SPEC
+
+    def skin_p(self, S, T):
+        col, rough, occ = super().skin_p(S, T)
+        return col * (self.FEET / self.SKIN)[None, None, :], rough, occ
+
+    def body_p(self, S, T):
+        D, Y, P, tt, au, ad, b = body_coords(self.body, S, T)
+        nz = self.n(D + 300, Y + 300, 6.0) + 0.5 * self.n(D + 300, Y + 300, 2.0)
+        head = soft(D, 205, 224)
+        belly = soft(tt, 0.17, 0.27)
+        fw = 12 - 7 * head
+        fl = 9 - 5.4 * head
+        back, al_b, occ_b = plumage(-D, Y, fw, fl, self.BROWN, self.FRINGE, self.STREAK, 0.0, 0.045, nz, shade=0.10, sides=0.3)
+        # the underparts: long, narrow, regular dark streaks (a young peregrine's), densest on the flanks, the
+        # throat and upper breast plain
+        under, al_u, occ_u = plumage(-D, Y, 7.0, 5.0, self.CREAM, self.CREAM * 1.02, self.STREAK, 0.0, 0.0, nz, shade=0.05)
+        flank = soft(tt, 0.19, 0.27) * (1 - soft(tt, 0.38, 0.47))
+        dens = np.clip(1.0 - 0.9 * soft(D, 168, 192) - 0.9 * (1 - soft(D, 20, 55)), 0, 1)
+        sl = 24.0 - 6.0 * soft(D, 140, 185)
+        sw = 3.6 + 1.6 * flank - 1.2 * soft(D, 150, 185)
+        st = streaks(-D, Y, sl * 0.85, 7.0, sl, sw, 21, density=1.0, tilt=5) * np.clip(dens * 1.3, 0, 1)
+        under = lerp_col(under, self.STREAK[None, None, :] * (1 + 0.1 * nz[..., None]), st * 0.95)
+        col = lerp_col(back, under, belly)
+        occ = occ_b * (1 - belly) + occ_u * belly
+        # the head: a paler streaked crown, dark nape, the broad moustache from under the eye down the cheek, a
+        # pale cheek patch behind it, a thin dark line behind the eye, the throat plain cream
+        ed, ey = eye_place(self.body, self.spec['eye'])
+        crown_c, _, _ = plumage(-D, Y, 4.0, 3.0, self.CROWN, self.CROWN, self.STREAK, 0.0, 0.0, nz, shade=0.06)
+        crown_c = lerp_col(crown_c, self.STREAK, streaks(-D, Y, 6.0, 3.6, 6.0, 1.6, 25, density=0.9, tilt=8) * 0.8)
+        face = self.FACE[None, None, :] * (1 + 0.03 * nz[..., None])
+        hc = lerp_col(crown_c, face, soft(Y, ey - 4, ey + 8))
+        hc = lerp_col(hc, back, (1 - soft(D, 222, 240)) * (1 - soft(Y, 6, 30)) * 0.9)
+        stripe, _ = seg_dist(D, Y, (ed - 7, ey - 1), (ed - 26, ey + 3))
+        hc = lerp_col(hc, self.MOUS[None, None, :], np.clip(1 - (stripe - 1.8) / 1.6, 0, 1) * 0.75)
+        # the moustache: broad (about 18 mm at the eye, narrowing), from the eye's front and below it down past the jaw's angle
+        mous, f = seg_dist(D, Y, (ed + 3, ey + 5), (ed - 11, ey + 31))
+        hc = lerp_col(hc, self.MOUS[None, None, :], np.clip(1 - (mous - 9.0 + 2.5 * f) / 1.8, 0, 1) * (0.97 - 0.15 * f))
+        sub, _ = seg_dist(D, Y, (ed + 3, ey + 2), (ed - 4, ey + 7))
+        hc = lerp_col(hc, self.MOUS[None, None, :], np.clip(1 - (sub - 3.0) / 1.5, 0, 1) * 0.9)
+        sup, _ = seg_dist(D, Y, (ed + 6, ey - 8.5), (ed - 20, ey - 8))
+        hc = lerp_col(hc, self.FACE[None, None, :] * 0.95, np.clip(1 - (sup - 1.2) / 1.6, 0, 1) * 0.4)
+        col = lerp_col(col, hc, head)
+        occ = occ * (1 - head) + head * (1 - 0.04 * (1 - soft(nz, -0.5, 0.5)))
+        return col, 0.86 + 0.06 * nz, occ
+
+    def tail_p(self, S, T):
+        """Above: brown with narrow complete buff bars (a young peregrine's), a buff tip; below: pale, barred."""
+        X = S * self.TAIL_L
+        top = T < 0.5
+        a = np.where(top, np.abs(T * 4 - 1), np.abs((T - 0.5) * 4 - 1))
+        Yw = a * 30
+        nz = self.n(X + 9, Yw + 9, 5.0)
+        bars = np.abs((((X + 3 * a) / 19.0) % 1.0) - 0.5) < 0.12
+        up = (self.BROWN * 1.06)[None, None, :] * (1 + 0.05 * nz[..., None])
+        up = lerp_col(up, self.FRINGE * 1.05, bars * soft(X, 30, 45) * 0.75)
+        shafts = np.abs(((Yw / 9.0) % 1.0) - 0.5) < 0.04
+        up = up * (1 - 0.12 * shafts[..., None])
+        tip = soft(X, self.TAIL_L - 11, self.TAIL_L - 6)
+        up = lerp_col(up, C(0.88, 0.80, 0.66), tip)
+        dn = C(0.80, 0.74, 0.64)[None, None, :] * (1 - 0.32 * bars[..., None] * soft(X, 30, 45)[..., None])
+        dn = lerp_col(dn, C(0.9, 0.86, 0.78), tip)
+        return np.where(top[..., None], up, dn), 0.85 + 0.04 * nz, np.ones_like(X)

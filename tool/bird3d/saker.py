@@ -139,36 +139,41 @@ def build(pose_name, level):
     return parts, pts, body
 
 
-def points(body, pose):
+def points(body, pose, hood_d=252, neck_d=185):
     """Named points for the rig and the gear to come."""
     o, t, up = bird.torso(body)
     p = {}
-    c, tt, u, v = body.frame_at(252)
+    c, tt, u, v = body.frame_at(hood_d)
     p['hood'] = (c + u * 4, tt, u)                    # where the hood sits: its middle, its forward and up
     p['head'] = (c, tt, u)
     p['beak_tip'] = (body.at(body.d_end) + tt * 24 - u * 13, tt, u)
     p['wing_root_l'] = (bird.torso_point(body, 150, 22, 30), t, up)
     p['wing_root_r'] = (bird.torso_point(body, 150, 22, -30), t, up)
     p['tail_base'] = (o, t, up)
-    p['neck_base'] = (body.at(185), *body.frame_at(185)[1:3])
+    p['neck_base'] = (body.at(neck_d), *body.frame_at(neck_d)[1:3])
     return p
 
 
 def hood(body, det):
     """The Arab hood (البرقع): soft leather round the head from the nape to the beak's root, open under the throat
     (its lower edge inside the throat's feathers), with its top knot and the two braces at the back."""
+    return hood_on(body, det)
+
+
+def hood_on(body, det, d0=220, d1=289, knot=246, braces=224):
+    """The hood on a head whose nape is at d0 and bill's root at d1 (the saker's by default)."""
     secs = []
     n = 9 if det.level == 0 else 5
     for i in range(n):
-        d = 220 + (289 - 220) * i / (n - 1)
+        d = d0 + (d1 - d0) * i / (n - 1)
         au, ad, b = body.size_at(d)
         c, t, u, v = body.frame_at(d)
-        grow = 5.2 * (1 - 0.35 * max(0.0, (d - 270) / 16))
+        grow = 5.2 * (1 - 0.35 * max(0.0, (d - (d1 - 19)) / 16))
         secs.append(Sec(c, u, v, au + grow, max(ad - 5, 4), b + grow, b + grow, p=2.1))
     out = [loft('hood', secs, det.body_ring, caps=(True, True))]
     # the top knot: a small plaited leather knot sitting on the crown, with a short tuft of thong ends
-    c, t, u, v = body.frame_at(246)
-    au, ad, b = body.size_at(246)
+    c, t, u, v = body.frame_at(knot)
+    au, ad, b = body.size_at(knot)
     base = c + u * (au + 4.0)
     out.append(bird.ball('hood_knot', base + u * 2.6, 3.4, 8 if det.level == 0 else 5))
     if det.level == 0:
@@ -177,8 +182,8 @@ def hood(body, det):
             tip = a + u * 4.0 - t * (5 + 2 * k) + v * side * 2.5
             out.append(tube('hood_knot', [a, a.lerp(tip, 0.5) + u * 1.0, tip], [1.1, 0.9, 0.5], 4, up=t))
         # the braces: two leather thongs drawn through the back, their ends hanging down the nape
-        c, t, u, v = body.frame_at(224)
-        au, ad, b = body.size_at(224)
+        c, t, u, v = body.frame_at(braces)
+        au, ad, b = body.size_at(braces)
         for side in (1, -1):
             a = c + u * (au + 4.5) + v * side * 7
             pts = smooth_path([a, a - t * 6 + u * 1 + v * side * 5, a - t * 10 - u * 10 + v * side * 9,
