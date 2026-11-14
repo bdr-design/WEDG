@@ -650,10 +650,11 @@ const CAT_COAT = { majaheem: 'majaheem', wodh: 'wodh', shoqh: 'shaqh', shoal: 's
 const GRAZE = LAYOUT.graze;
 const camels = [];
 const SPEED = 1.15;            // the walk clip plants each foot and moves it back at this speed (1.67 m strides)
-// the camel's detail levels by its distance from the camera: the full one (40k triangles) within 8 m, 8k to 48 m, 1.5k
-// beyond. The full one was used to 16 m; at 8 to 16 m (a camel a fifth to a third of the screen's height) the 8k one
-// differs in 2% of its pixels in shape and light (1-2 px of edge) and saved up to 64k triangles in the yard's heaviest
-// view. The camel whose card is open keeps the full one to 16 m (its close view is at 14 m). Each bound is 3% further
+// the camel's detail levels by its distance from the camera: the full one (40k triangles) within 8 m, 4k to 48 m, 1.5k
+// beyond. The middle level was 8k triangles until the owner's choice of 14 Nov 2026 («النسخة الوسط الأخف الحين»: the
+// 4k one, tool/camel3d/lods.py's lod1_4k; ADR 0005); the bounds are as they were. The full one was used to 16 m; at 8 to
+// 16 m (a camel a fifth to a third of the screen's height) the 8k one differed in 2% of its pixels in shape and light
+// (1-2 px of edge) and saved up to 64k triangles in the yard's heaviest view. The camel whose card is open keeps the full one to 16 m (its close view is at 14 m). Each bound is 3% further
 // going out and 3% nearer coming in, so a camel at the bound does not flicker between two.
 const LOD_D = [8, 48], LOD_NEAR_OPEN = 16;
 
@@ -906,7 +907,7 @@ function buildHerd(T) {
   // a shadow-only caster's material: drawn in the shadow map only (as SHADOW_ONLY: hidden while the frame's list is made)
   const casterMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }); casterMat.visible = false; SHADOW_MATS.set('herd', casterMat);
   // the five draws: the picture at each level (every level takes the shadows falling on it: the far one did not, and a
-  // camel past 48 m under a pen's shade was drawn in full sun; it costs no draw and no triangle), and the shadow cast by the 8k level for a camel drawn at the full one, by the 1.5k level for the others (as the
+  // camel past 48 m under a pen's shade was drawn in full sun; it costs no draw and no triangle), and the shadow cast by the middle (4k) level for a camel drawn at the full one, by the 1.5k level for the others (as the
   // stand-ins did)
   const kinds = [[0, 'coat'], [1, 'coat'], [2, 'coat'], [1, 'shadow'], [2, 'shadow']];
   let cap = 0, meshes = [];
@@ -1742,8 +1743,8 @@ function view(kind) {
     camera.position.set(25, 6, -17);
   } else {
     // (with the meter's test herd on, the near view is one fixed view over the pens from the south, 15 m up: the phone
-    // test's map shot, the same every time, with the test herd in sight (39 of the 40 at the 8k level, about 544k
-    // triangles with everything built); a normal game's near view is as it was)
+    // test's map shot, the same every time, with the test herd in sight (39 of the 40 at the middle level); a normal
+    // game's near view is as it was)
     const testNear = kind === 'near' && demoHerd && !follow && !(pop && pop.camel);
     const tgt = follow ? follow.root.position : pop && pop.camel ? pop.camel.root.position : testNear ? tmpAway.set(-14, 0, -30) : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
     const off = testNear ? tmpTo.set(6, 15, 30) : kind === 'near' ? tmpTo.set(7, 3.2, 9) : scr.w > scr.h ? tmpTo.set(-104, 40, 66) : tmpTo.set(-150, 78, 112);
@@ -1823,7 +1824,8 @@ function tapWorld(x, y) {
 }
 
 // ------------------------------------------------------------ load and run
-Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
+// (the middle level is the 4k one: the owner's choice of 14 Nov, «النسخة الوسط الأخف الحين»; the 8k lod1.json is kept)
+Promise.all(['lod0.json', 'lod1_4k.json', 'lod2.json'].map(loadLod)).then((T) => {
   shareCoatMaps(T);
   LODS = T;
   HERD = buildHerd(T);
