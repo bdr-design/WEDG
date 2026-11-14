@@ -1741,7 +1741,10 @@ function view(kind) {
     controls.target.set(12, 1.4, 5);
     camera.position.set(25, 6, -17);
   } else {
-    const tgt = follow ? follow.root.position : pop && pop.camel ? pop.camel.root.position : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
+    // (with the meter's test herd on, the near view is one fixed view of the big pen, the test herd in it: the phone test's
+    // map shot, the same every time; a normal game's near view is as it was)
+    const testNear = kind === 'near' && demoHerd && !follow && !(pop && pop.camel);
+    const tgt = follow ? follow.root.position : pop && pop.camel ? pop.camel.root.position : testNear ? tmpAway.set(-14, 0, -32) : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
     const off = kind === 'near' ? tmpTo.set(7, 3.2, 9) : scr.w > scr.h ? tmpTo.set(-104, 40, 66) : tmpTo.set(-150, 78, 112);
     controls.target.copy(tgt).setY(1);
     camera.position.copy(controls.target).add(off);
