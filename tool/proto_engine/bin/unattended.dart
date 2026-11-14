@@ -13,6 +13,8 @@
 //            do), with and without every camel that falls ill treated the day she does (what a vet's contract
 //            would do): what the illnesses alone cost a herd left alone.
 import 'package:marah_domain/marah_domain.dart';
+import 'package:marah_domain/src/rules/account.dart';
+import 'package:marah_domain/src/rules/eligibility.dart';
 import 'package:marah_domain/src/sim.dart';
 import 'package:marah_domain/src/world_gen.dart';
 
@@ -105,11 +107,17 @@ void run(
   }
 }
 
-/// A jump of [span] days with the stops the design proposes (docs/proposals/rush_and_calendar.md): it hands the game
-/// back on an illness, a death, a store down to its last days, money below zero, an offer or a treatment found; the
-/// "player" then does what each asks (treats the camel, fills the store and the tank) and jumps on to the same day.
-/// [standing]: the store and the tank kept full (a standing order); [vet]: each illness treated the day it comes (a
-/// vet's contract), so neither stops the jump.
+/// A jump of [span] days with the stops the design proposes (docs/proposals/rush_and_calendar.md, section 5),
+/// checked on the game's state after each day as the jump would: an illness; a death of illness or thirst; a store
+/// down to its last 3 days or a day gone short; the money going below zero; the merchant's account at its limit or
+/// an order or a treatment refused; an offer; a fine (a treatment found); his round's day; a festival's registration
+/// closing in 3 days with a camel of his that could enter and is not entered (once a festival); the breeding season
+/// opening with a female the engine lets him breed (once a year); the herd outgrowing its pens. At each stop the
+/// "player" does what it asks (treats the sick, fills the store and the tank by orders, as the phone would) and
+/// jumps on. [standing]: a standing order, the supplier's top-up sent when a store comes down to 3 days, paid as an
+/// order is (cash, then the account to its limit); [vet]: a vet's contract, each illness treated the day it comes,
+/// paid as the vet is now (on account when the cash is short) and its monthly fee (the proposed SAR 1,000 and 20 a
+/// head, a game choice) taken on the 1st. Nothing is free: what the engine would charge is charged.
 void jump(
   String name,
   Game Function() make,
@@ -122,32 +130,129 @@ void jump(
   final target = g.today + span;
   final stops = <String, int>{};
   final firstStop = <String, int>{};
+  final told = <String>{};
   var legs = 1;
+  var wasNegative = g.me.cash.isNegative;
+  var wasFull = false;
+  var wasCrowded = false;
   final sw = Stopwatch()..start();
-  while (g.today < target) {
-    if (standing) {
-      final f = g.me.farm;
-      f
-        ..barleyKg = f.storeKg * 0.3
-        ..alfalfaKg = f.storeKg * 0.7
-        ..waterL = f.tankL.toDouble();
+  final sim = Sim(g.state);
+
+  int fill() {
+    // the orders that fill the tank and the store (as the card's buttons and the standing order send them)
+    var refused = 0;
+    final f = g.me.farm;
+    final water = Provisions.fits(f, Supply.water, Balance.waterLoadL);
+    final small = Provisions.fits(f, Supply.water, Balance.smallWaterLoadL);
+    Result? r;
+    if (water > 0) {
+      r = g.dispatch(OrderSupply(me, Supply.water, water));
+    } else if (small > 0) {
+      r = g.dispatch(
+        OrderSupply(me, Supply.water, small, tanker: Tanker.small),
+      );
     }
+    if (r != null && !r.ok) refused++;
+    final bags = Provisions.fits(f, Supply.barley, Balance.barleyBagKg);
+    if (bags > 1) {
+      if (!g.dispatch(OrderSupply(me, Supply.barley, bags * 3 ~/ 10)).ok)
+        refused++;
+    }
+    final bales = Provisions.fits(f, Supply.alfalfa, Balance.alfalfaBaleKg);
+    if (bales > 0) {
+      if (!g.dispatch(OrderSupply(me, Supply.alfalfa, bales)).ok) refused++;
+    }
+    return refused;
+  }
+
+  bool low() {
+    final f = g.me.farm;
+    final n = Provisions.needs(
+      g.state.world.aliveOwnedBy(me),
+      f.feedPlan,
+      g.today,
+    );
+    bool l(double have, double need) =>
+        need > 0 && have / need <= Balance.lowStockDays;
+    final coming = f.deliveries.isNotEmpty;
+    return !coming &&
+        (l(f.barleyKg, n.barley) ||
+            l(f.alfalfaKg, n.alfalfa) ||
+            l(f.waterL, n.water));
+  }
+
+  while (g.today < target) {
     final why = <String>{};
-    for (final e in g.advanceDays(1)) {
+    final events = g.advanceDays(1);
+    final today = g.today;
+    final herd = g.state.world.aliveOwnedBy(me).toList();
+    if (vet && today.date.day == 1 && herd.isNotEmpty) {
+      sim.pay(g.me, Riyal(-(1000 + 20 * herd.length)), LedgerCategory.vet);
+    }
+    for (final e in events) {
       if (e.owner != me) continue;
       if (e is FellSick) {
         if (vet) {
-          g.me.onAccount = 0;
-          g.dispatch(Treat(me, e.camel!));
+          if (!g.dispatch(Treat(me, e.camel!)).ok) why.add('account');
         } else {
           why.add('illness');
         }
       }
-      if (e is Died) why.add('death');
-      if (e is SupplyLow) why.add('supply');
-      if (e is CashNegative) why.add('money');
+      if (e is Died &&
+          (e.cause == DeathCause.illness || e.cause == DeathCause.thirst))
+        why.add('death');
+      if (e is SupplyLow && !standing) why.add('supply');
       if (e is OfferReceived) why.add('offer');
-      if (e is TamperingFound) why.add('found');
+      if (e is TamperingFound || e is SaleRefused) why.add('fine');
+    }
+    if (standing && low() && fill() > 0) why.add('account');
+    if (standing && g.me.farm.dryDays > 0) why.add('supply');
+    // money below zero, on the cash itself (the engine's notice comes only on wages day)
+    final negative = g.me.cash.isNegative;
+    if (negative && !wasNegative) why.add('money');
+    wasNegative = negative;
+    final full = g.me.onAccount >= Account.limit(herd, g.me, today);
+    if (full && !wasFull) why.add('account');
+    wasFull = full;
+    final crowded = herd.length > g.me.farm.capacity;
+    if (crowded && !wasCrowded) why.add('crowded');
+    wasCrowded = crowded;
+    for (final f in g.state.world.festivals.values) {
+      if (f.done) continue;
+      for (final r in f.rounds) {
+        if (r.day == today && r.entries.any((x) => x.ownerId == me))
+          why.add('round');
+      }
+      if (f.closesOn.daysSince(today) == 3 && told.add('reg ${f.id.value}')) {
+        final entered = f.rounds.any(
+          (r) => r.entries.any((x) => x.ownerId == me),
+        );
+        final could =
+            !entered &&
+            f.rounds.any(
+              (r) =>
+                  r.size == 1 &&
+                  herd.any(
+                    (c) =>
+                        Eligibility.canEnter(
+                          g.state.world,
+                          f,
+                          r,
+                          [c],
+                          me,
+                          today,
+                        ) ==
+                        null,
+                  ),
+            );
+        if (could) why.add('registration');
+      }
+    }
+    if (today.month == 11 &&
+        today.date.day == 1 &&
+        told.add('breed ${today.year}') &&
+        herd.any((c) => Eligibility.femaleCanBreed(c, today) == null)) {
+      why.add('breeding');
     }
     if (why.isEmpty || g.today >= target) continue;
     legs++;
@@ -160,24 +265,7 @@ void jump(
     for (final c in g.state.world.aliveOwnedBy(me).toList()) {
       if (c.health == HealthStatus.sick) g.dispatch(Treat(me, c.id));
     }
-    if (why.contains('supply')) {
-      final f = g.me.farm;
-      final water = Provisions.fits(f, Supply.water, Balance.waterLoadL);
-      if (water > 0) {
-        g.dispatch(OrderSupply(me, Supply.water, water));
-      } else {
-        final small = Provisions.fits(f, Supply.water, Balance.smallWaterLoadL);
-        if (small > 0) {
-          g.dispatch(
-            OrderSupply(me, Supply.water, small, tanker: Tanker.small),
-          );
-        }
-      }
-      final bags = Provisions.fits(f, Supply.barley, Balance.barleyBagKg);
-      if (bags > 1) g.dispatch(OrderSupply(me, Supply.barley, bags * 3 ~/ 10));
-      final bales = Provisions.fits(f, Supply.alfalfa, Balance.alfalfaBaleKg);
-      if (bales > 0) g.dispatch(OrderSupply(me, Supply.alfalfa, bales));
-    }
+    if (why.contains('supply')) fill();
   }
   // ignore: avoid_print
   print(
@@ -191,28 +279,56 @@ Game big() {
   final g = start();
   g.me.farm
     ..capacity = 10010
-    ..shepherds = 400
-    ..storeKg = 1 << 30
-    ..tankL = 1 << 30;
+    ..shepherds = 400;
   final sim = Sim(g.state);
   final gen = WorldGen(sim);
   for (var i = 0; i < 9998; i++) {
     gen.makeCamel(sim.rng(['bulk', i]), owner: g.me.id, mean: 50);
   }
+  // stores for a month of the herd (a farm of 10,000 head is many farms: the game's one farm holds 56), filled
+  final f = g.me.farm;
+  final n = Provisions.needs(sim.herdOf(g.me.id), f.feedPlan, g.today);
+  f
+    ..storeKg = ((n.barley + n.alfalfa) * 30).round()
+    ..tankL = (n.water * 30).round()
+    ..barleyKg = n.barley * 30
+    ..alfalfaKg = n.alfalfa * 30
+    ..waterL = n.water * 30;
   return g;
 }
+
+/// A farm with the money to run for the stretch: the full farm's year costs about SAR 370,000 (its feed about
+/// SAR 840 a day at the standard ration, three shepherds' SAR 54,000, the water), so it is given SAR 400,000; the
+/// 10,000 head's season about SAR 14 million, given 20 million (test amounts, so that the stops measured are the
+/// farm's, not an empty purse's).
+Game Function() rich(Game Function() make, int cash) => () {
+  final g = make();
+  Sim(g.state).pay(g.me, Riyal(cash), LedgerCategory.opening);
+  return g;
+};
 
 void main(List<String> args) {
   if (args.contains('stops')) {
     for (final span in [91, 365]) {
       jump('start', start, span);
-      jump('full', full, span);
-      jump('full, standing order', full, span, standing: true);
-      jump('full, vet contract', full, span, vet: true);
-      jump('full, both', full, span, standing: true, vet: true);
+      jump('full', rich(full, 400000), span);
+      jump('full, standing order', rich(full, 400000), span, standing: true);
+      jump('full, vet contract', rich(full, 400000), span, vet: true);
+      jump('full, both', rich(full, 400000), span, standing: true, vet: true);
     }
-    jump('10,000 head, standing order', big, 91, standing: true);
-    jump('10,000 head, both', big, 91, standing: true, vet: true);
+    jump(
+      '10,000 head, standing order',
+      rich(big, 20000000),
+      91,
+      standing: true,
+    );
+    jump(
+      '10,000 head, both',
+      rich(big, 20000000),
+      91,
+      standing: true,
+      vet: true,
+    );
     return;
   }
   for (final span in [7, 91, 365]) {
