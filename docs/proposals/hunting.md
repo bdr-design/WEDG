@@ -292,162 +292,201 @@ player's, and it is real.
 
 ## 9. Trapping passage falcons (الطرح) as a second business (proposal, awaiting the owner)
 
-The owner chose «تجارة ثانية» and wrote «اصيده صيد وفيه طيور بس قيمتها عاليه جدًا»
-(docs/agents/hunting_owner_decisions.md, decision 2). Read as الطرح: the player traps wild
-passage falcons in their season and sells them at the auction. **That reading is still to be
-confirmed with him** (question 11). The facts are in research section 8, "Trapping wild passage
-falcons", sources 184–221; most of them are SPA pages read in full this time.
+**Decided by the owner (the night of 13–14 Nov 2026,
+docs/agents/owner_instructions_2026-11-14_night.md):**
+> «ايه مخيم وايام والطرح يعتمد على تجهيزاتك وحمامك وغيره والخيمه المتنقله وغيره»
+
+- **Trapping is what he meant.** The player traps wild passage falcons in their season and sells
+  them at the auction (decision 2, «تجارة ثانية»).
+- **It is a camp, for days.** His decision 7 (an outing of hours, back the same day) stands for
+  falconry outings (المقناص), not for trapping.
+- **The catch depends on the player's gear:** his pigeons, his nets and the rest, the mobile tent,
+  and so on.
+
+Everything else below is a proposal. The facts are in research section 8, "Trapping wild passage
+falcons", sources 184–223; most are SPA pages read in full.
 
 ### 9.1 What the real rules allow, in short
 
-- **The season:** 1 Oct – 30 Nov, 60 days, with the auction at Malham running alongside
-  [184][185][186].
-- **What is worth selling:** only a **passage peregrine juvenile (فرخ شاهين بحري)** trapped in
-  the Kingdom is accepted. The saker (الحر) and the peregrine قرناس are refused, and the club
-  urges trappers not to take the saker [184][185][188]. Trapping the resident mountain peregrine
-  and the lanner (الوكري) is banned [194].
-- **The paperwork:** the club's or centre's field team checks the bird and documents the
-  trapping. A trapping registration document leads to the falcon's passport, an electronic ring
-  is fitted after the sale, there are no fees, and transport and lodging to the auction are
-  paid [190][191][192][184].
-- **The licence itself (who gives it, on what terms) was not found.** The rules for hunting
-  seem to clash with how trapping is really done: birds of prey, the 20 km coastal strip, nets,
-  night and lights. So trapping appears to be governed apart from the hunting season (research,
-  "Where the rules seem to clash").
+- **The season:** 1 Oct – 30 Nov, 60 days, with the auction at Malham alongside [184][185][186].
+  In 2020, 2022 and 2024 the auction closed on 15 Nov [187][191][188].
+- **What is sold:** only a **passage peregrine juvenile (فرخ شاهين بحري)** trapped in the Kingdom.
+  The auction refuses the saker (الحر) and the peregrine قرناس, and the club urges trappers not to
+  take the saker [184][185][188]. Trapping the resident mountain peregrine and the lanner
+  (الوكري) is banned; NCW announced this in Feb 2021, "to be written into the next hunting rules"
+  [194].
+- **The paperwork:** the club's or centre's team checks the bird and documents the trapping. That
+  leads to the passport and an electronic ring after the sale. There are no fees, and transport
+  and lodging to the auction are paid [190][191][192][184].
+- **The licence itself (who gives it, on what terms) was not found.** The hunting rules seem to
+  clash with real trapping:
+  - birds of prey are never hunted [135];
+  - the 20 km coastal strip is closed to hunting [195];
+  - nets are fined 100,000 [136];
+  - night and bright lights are banned [135][136].
+
+  The text that makes trapping lawful was not found (research, "Where the rules seem to clash").
 - **The money:**
-  - Season totals of SAR 6–7 million for 40–81 birds [200][212][213].
-  - The 18 sales of 2025 read: median about 112,000; 6 of the 18 sold for 300,000 or more
-    (301–361 thousand) [185][209][211][216][217][219].
-  - The record is 650,000, twice on one night in 2020 [187][199].
-  - Most birds are taken by groups of 2–9 trappers who share the price [184][190][200].
-  - About 119 trappers were credited with the 40 birds of 2025 [213], out of «مئات الطواريح»
-    who go out [211][219].
-- **The practice:**
-  - Camps for weeks [198][204], on the north, the north-east and above all the coasts [204].
-  - Dawn to 10 a.m. and the last hour before sunset [204].
-  - A net on a pigeon's back as the main method, with the quail, النقل, المناشبية and المخدجة
-    as others [198][204].
-  - A catch can take 15 minutes or days [209][210].
-  - The dear birds are sold within days of the catch [199][187].
+  - Season totals: 7.125 million for 81 birds in 2022, about 88,000 a bird [200]; about 100,000 a
+    bird over 2020–25 and about 160,000 in 2025 (search summary [213]).
+  - The record is 650,000 [187][199].
+  - Of the 18 sales of 2025 that SPA reported, 6 were above 300,000. The news over-reports dear
+    birds; over the whole 2025 season it was at least one in seven [185][211][213].
+  - Most birds are taken by groups of 2–9 who share the price [184][190][200]. 119 trappers were
+    credited with the 40 birds of 2025 [213], out of «مئات الطواريح المشاركين» [211][219].
 
-### 9.2 What it would be in the game
+### 9.2 The gear, and what each thing changes
 
-- **Before the season:**
-  - Register with «نادي الصقور» and take a «تصريح الطرح» in the in-game phone. Generic names
-    (the owner's decision); that a separate trapping permit exists is a game choice, because the
-    real route was not found.
-  - Buy the gear: nets (شبك), lure pigeons (حمام) and a camp. Prices: game choice, none found.
-- **The trip:**
-  - The player taps a trapping ground's pin (الطرح pins at real places: الحماد، أم خنصر،
-    الدبدبة، الجبيل، الليث، القنفذة، جازان، شرورة…) and drives there in the Land Cruiser
-    (decision 1's pattern).
-  - He picks a spot, sets out the pigeon with the net at dawn, and waits. The wait passes in
-    game time.
-- **The catch:**
-  - Chance, shaped by:
-    - the place (coasts best [204]);
-    - the week (October the peak [205]);
-    - the hour (dawn best, the evening hour poor [204]);
-    - the method (pigeon first, then the others when the falcon refuses [198][204]);
-    - the wind and the light (game choice in how much each counts).
-  - Most days nothing comes. When a falcon is caught, its kind is chance: mostly a فرخ شاهين
-    بحري, sometimes a saker or a قرناس, which the auction will not take. The player releases
-    it (game choice, as the real rule for them was not found).
-- **The bird:**
-  - It goes to the falcons' room at the farm (decision 5) with a hood, and is shown by its
-    length, width in inches and weight, as the auction shows it [187][216]. Its worth is never
-    shown as a number before the sale (the views rule).
-  - The player must take it to the auction within days (game choice anchored on [199]); the
-    club's team "documents" it at the ground.
-- **The auction:**
-  - The live auction at Malham (a pin) between 1 Oct and 30 Nov.
-  - Opening bids of 30,000–150,000 and a result drawn from the real distribution: median about
-    112,000, about one bird in seven at 300,000 or more (at least 6 of the 40 birds of 2025
-    [185][211][213]; one in three among the sales SPA reported, which over-counts the dear ones),
-    a record bird at 650,000 very rarely (game choice within the real range).
-  - Partners share the price.
-- **Partners (الطواريح):**
-  - Going with companions raises the chance of a catch and divides the price, as in reality
-    (game choice: how much).
-  - A lone player is allowed, but has lower odds.
+What each item does in the field is from the sources where marked. **How much each one moves the
+odds is a game choice in every case.** No source measures it.
 
-### 9.3 Is it a business at real odds? A season's honest expected income
+| Gear (عدة الطاروح) | What it is, really | What it changes in the game (game choice) |
+|---|---|---|
+| **الحمام** (lure pigeons) | The main method: a net on a pigeon's back, thrown to the falcon [198][204]; «الحمام المساعد» draws the falcon to the prepared spot [222] | No pigeons, no trapping by the main method. More and fitter pigeons mean more tries a day. Pigeons are used up and must be bought or kept (feed) |
+| **الشبك** (nets, several kinds) | Nets «للحمام، وللطيور، وللجربوع», in case the falcon refuses pigeon [204]; used several ways by method and target [222] | Each kind of net opens another method when a falcon refuses the pigeon; with one kind only, a refusing falcon is lost |
+| **السمان** (quail) | A wild quail with the net on its foot and a feather tied to it [204] | A second lure when the pigeon fails |
+| **طير النقل** (a باشق or an eagle) | Carries a feather or meat inside a net, flown usually after 10 a.m. [198] | Opens النقل, the late-morning method, so the hours after 10 are not wasted |
+| **المناشبية** | An iron-wire net in the shade of trees, for a falcon that refuses pigeon and «المريعي» [198]; one to two days to build [207] | The method for the hardest falcon. It costs days of the camp to set up |
+| **الدربيل** (binoculars) | Watching and following birds from far off [223] | Sees a passing falcon sooner and farther, so more falcons are found a day |
+| **The mobile tent** (الخيمة المتنقلة, the owner's word) | Camps «في مواقع الرصد», moved with the passage [197][202] | Lets the camp follow the falcons to a better ground in the same season instead of staying put |
+| **The camp's supplies** (water, food, fuel) | Stocked for the whole stay so the trapper need not go to town; a month to prepare [204] | Sets how many days the camp can stay; when they run out, the camp ends or the player drives to town (days lost) |
+| **The vehicle** | Vehicles fitted for the season [197]; 4x4 trips [155][156] | Reaches remote and coastal grounds; a weak car limits the grounds |
+| **البرقع، السبوق، الوكر، الدس** | The kit for holding and carrying the falcon once caught [222] | Needed to keep a caught bird in good shape to the auction; without it the bird may be harmed (and loses value) |
+| **The tracker** (جهاز التتبع) | Fitted to a trained falcon [155]; not found in trapping | Only for the player's own trained falcon (the owner's decision 6), not for trapping |
 
-These figures are game choices anchored on the real numbers; nothing below is measured.
+**The camp also needs the farm to run:** the herd keeps being fed and watered as on every day,
+and alerts come to the in-game phone. Without a herdsman, the farm's risks while away (thirst,
+wolves at the calves) rise, so a long camp wants a herdsman first (game choice).
 
-- **Odds of selling a bird:** about 119 credited trappers for 40 birds in 2025 [213], out of
-  "hundreds" who went out. **Assume a full season at good grounds gives a lone player about a
-  1 in 3 chance of one sellable bird** (game choice).
-- **Price:** a mean of about 130,000 (between 100,000 over 2020–25 [213] and 160,000 in 2025
-  [213]; game choice).
-- **Costs for a season:** camp, fuel, pigeons and nets at about 20,000 (game choice; no real
-  figure found).
-- **Expected:** ⅓ × 130,000 − 20,000 ≈ **+23,000 a season**.
-- **The spread:**
-  - About **two seasons in three lose about 20,000**.
-  - One in three gains about 50,000–340,000.
-  - About one season in twenty sells a bird for 300,000 or more.
-  - A record bird (650,000) comes about once in a long career.
-- **So it is a lottery shaped by skill** (place, week, method), not a steady income. That is
-  true to the real trade, and it is what «فيه طيور بس قيمتها عاليه جدًا» says.
+### 9.3 The odds and a season's income, as a range (game choices on real numbers)
 
-### 9.4 What stays illegal, and how the game treats it
+A lone trapper's chance of one sold bird in a full season is about 40 birds over the number of
+trappers who go out. That is **0.08 to 0.34**: one in three only among those who succeeded
+(119), lower if «مئات» went out [213][211]. The season's mean price is 88,000 to 160,000
+[200][213]. The cost of a season (camp, fuel, pigeons, nets) is **invented**: 20,000 here, and
+in the game it follows the gear bought.
 
-Never shown as lawful, following the owner's pattern (decision 4: the button warns and does not
-act):
-- **Out of season** (before 1 Oct or after 30 Nov), or **without the permit:** the net button
-  turns into a warning and says why. Nothing is set.
-- **A resident falcon** (شاهين جبلي، وكري): it can come into the net by chance. The game makes
-  the player release it at once. It can never be kept or sold (real ban [194]; how the game
-  stages it is a game choice).
-- **A saker or a قرناس:** released. The auction refuses them [184].
-- **Selling outside the auction:** not offered. Trappers once sold at the حراج [204], but the
-  game offers only the documented channel (game choice).
-- **Shotguns, poison or injuring the bird:** not in the game.
+| A lone trapper's chance p (game choice) | Mean price | Expected, a season | A bird of 300,000+ |
+|---|---|---|---|
+| 0.08 | 88,000 | about −13,000 | about 1 season in 80 |
+| 0.20 | 100,000 | about 0 | about 1 season in 30 |
+| 0.34 | 160,000 | about +34,000 | about 1 season in 20 (1 in 15 if one bird in five is that dear) |
 
-### 9.5 Where it meets other designs
+The last column takes one bird in seven at 300,000 or more, as in 2025 [213]. These are not "close to reality": p is unknown. The table shows the range the sources allow.
 
-- **The season design** (docs/proposals/hunting_season_design.md) needs two corrections from
-  this research:
-  - It sells a falcon at the next autumn's auction **as a قرناس**, which the real auction does
-    not accept [184][188].
-  - It prices a wild-caught فرخ at 32,000, below every 2025 sale read (71,000 and up) [217].
-- **The calendar:** the trapping season (Oct–Nov) lies over the الوسم rains, the start of
-  mating, and the falconry festival if it is in November.
-- **Decision 7** says an outing takes hours and returns the same day, while real trappers camp
-  for weeks (question 12).
+**Where the gear places the player (the owner's answer, game choice):**
+- **A bare beginner sits near the bottom (p ≈ 0.08).** That is a few pigeons, one kind of net,
+  no binoculars, an inland ground, a short camp and the evening hour.
+- **A well-equipped, well-placed trapper sits near the top (p ≈ 0.34), never beyond.** That is
+  plenty of fit pigeons, every kind of net with quail and a lure bird for النقل, binoculars, the
+  mobile tent, supplies for the whole 60 days, a 4x4, a coastal or northern ground, October,
+  and dawn.
+- Each item in 9.2 moves p part of the way along that range. Place, week and hour multiply it
+  within the same cap.
+- Partners raise p and divide the price.
 
-### 9.6 Weight on the phone (estimate, not measured)
+So gear moves the player along the real range, and nothing lifts him above it. Most seasons
+still end without a bird, and the dear bird stays rare.
 
-- **The trapping scene:** the falcon (the existing model), a lure pigeon (about 1–2k triangles,
-  skinned) and the net (a few hundred triangles). About +3 draws over the drive view.
-- **The camp:** tents and a fire as static objects in the cached shadow map, about +4 draws.
-  Nothing else changes in the farm view.
+### 9.4 What it would be in the game
 
-### 9.7 Questions for the owner (recommendation first, then the line to put to him)
+1. **Before the season:** «تصريح الطرح» and registration with «نادي الصقور» in the phone (generic
+   names, the owner's decision; that a separate trapping permit exists is a game choice). Then
+   buy the gear in 9.2.
+2. **The camp:** tap a trapping ground's pin (real places: الحماد، أم خنصر، العويقيلة، رفحاء،
+   حائل، الدبدبة، الخفجي، الجبيل، السليل، شرورة، الليث، القنفذة، المجيرمة، جازان، ينبع، الوجه)
+   and drive there. Pitch the camp; it stays days, as the supplies allow.
+3. **The days:** at dawn, set the pigeon with the net. Watch with the binoculars. Change method
+   when the falcon refuses. Move the mobile tent when the passage moves. Most days nothing comes.
+4. **The catch:** its kind is chance, mostly a فرخ شاهين بحري. A resident falcon is released at
+   once (banned [194]). A saker or a قرناس is refused by the auction (question 15b).
+5. **The bird:** it goes into the hood and to the falcons' room (decision 5). It is shown by its
+   length, width in inches and weight, as the auction shows it [187][216]. Its worth is never a
+   number before the sale. Take it to the auction within days [199].
+6. **The auction:** live at Malham, 1 Oct – 30 Nov. Opening bids are 30,000–150,000 [217], and
+   the price is drawn from the real spread (game choice). Partners share.
 
-11. **Is الطرح what he meant?** *Recommended:* yes, as described, with the real odds.
-    > قصدك بالتجارة إنك تطرح الصقور المهاجرة بنفسك في موسمها (أكتوبر ونوفمبر) وتبيعها في المزاد؟ والطير الغالي نادر: من 18 بيعة في 2025 ست وصلت فوق 300 ألف، والرقم القياسي 650 ألف.
-12. **The trip's length.** *Recommended:* a camp of several days while the herdsman runs the
-    farm, because real trappers camp for weeks; the alternative is day trips under decision 7.
-    > الطواريح يخيمون أسابيع، والمقناص عندك طلعة ساعات: الطرح تبيه مخيم كم يوم والراعي يمسك العزبة، ولا طلعة يوم وترجع؟ نقترح مخيم.
-13. **Partners.** *Recommended:* allowed, sharing the price, because most real birds are
-    trapped by groups.
-    > أغلب الطرح يكون جماعة ويتقاسمون السعر: تبي اللاعب يقدر ياخذ معه طواريح ويقسم معهم؟
-14. **The odds.** *Recommended:* about one season in three brings a sellable bird, and most
-    seasons lose a little.
-    > نخلي فرصة الطير في الموسم حوالي وحدة من ثلاث، وأغلب المواسم تخسر شوي، والطير الغالي نادر؟
-15. **A resident or a saker in the net.** *Recommended:* released at once, never kept.
-    > لو طاح بالشبك شاهين جبلي أو وكري أو حر: يتطلق على طول وما ينحفظ ولا ينباع؟
+### 9.5 What stays illegal, and how the game treats it
 
-### 9.8 Not found
+It is never shown as lawful (decision 4's pattern: the button warns and does not act):
+- **Out of season, or without the permit:** the net button turns into a warning and says why.
+- **A resident falcon:** released at once, never kept or sold [194].
+- **Selling outside the auction:** not offered, though trappers once sold at the حراج [204] (game
+  choice).
+- **The night method (المخدجة):** not in the game, because night and lights are banned in the
+  hunting rules [135][136]. Whether they bind trapping is unconfirmed.
+
+### 9.6 Where the shown season design is wrong (for the design pair)
+
+The research makes these places in the design the owner saw wrong. The real rules are:
+- the trapping auction sells **only فرخ شاهين بحري**, at about **50,000 and up** (2025 sales
+  read: 71,000 and up; 2022 down to 50,000) [217][200];
+- **no saker or قرناس** is sold there [184][188];
+- **a falcon cannot be sold "next autumn as a قرناس"** there [188].
+
+The places, by file and line (the reviewer's list, from $SC/t6_review/trapping_review.md):
+- `design/ui/phone_falcon.cjs` lines 50–55, 170–173, 177–184, 189, 194, 217, 255.
+- `design/hunt/season.cjs` lines 18–24, 112, 129–146.
+- `docs/proposals/hunting_season_design.md` lines 26–32, 68–76, 120–135, 156, 169–172.
+
+What each place must say instead:
+- A wild-caught bird for sale is a فرخ شاهين بحري from the trapping auction (Oct–Nov).
+- A saker comes from the breeders' auction in August (farm-bred, about 19,000 from one British
+  breeder [158]) or from the Mongolian sakers at the October exhibition (two حر sold at 700,000
+  and 100,000 [184]).
+- The pastime's money must drop the "sell as a قرناس next autumn" line. A falcon kept past the
+  season is the player's own; where it may be sold later was not found (question 17).
+
+### 9.7 Weight on the phone (estimate, not measured)
+
+- **Trapping scene:** the falcon (existing model), a lure pigeon (about 1–2k triangles, skinned)
+  and the net (a few hundred triangles). About +3 draws over the drive view.
+- **Camp:** the tent, a fire and the supplies as static objects in the cached shadow map, about
+  +4 draws.
+- **Moving the tent:** re-placing the same objects, no new draws.
+
+### 9.8 Questions for the owner (the proxy answers tonight; recommendation first)
+
+11. ~~Is الطرح what he meant?~~ **Answered: yes.**
+12. ~~Camp or day trip?~~ **Answered: a camp, for days.**
+13. **Partners.** *Recommended:* allowed, sharing the price, since most birds are taken by groups.
+    > أغلب الطرح يكون جماعة ويتقاسمون السعر: تبي اللاعب يقدر ياخذ معه طواريح ويقسم معهم؟ نقترح نعم.
+14. **The odds and the gear.** *Recommended:* the gear moves the player along the real range,
+    from about one season in twelve (a beginner) to one in three (well equipped), never beyond.
+    > الطير في الموسم: المبتدي بعدة قليلة فرصته حوالي وحدة من 12، والمجهز زين بمكان زين حوالي وحدة من 3، وما تزيد عن كذا: توافق؟
+15a. **A mountain peregrine or a lanner in the net.** Trapping them is banned [194].
+     *Recommended:* released at once, never kept or sold.
+     > الشاهين الجبلي والوكري طرحهم ممنوع: لو طاحوا بالشبك يتطلقون على طول؟ نقترح نعم.
+15b. **A saker or a peregrine قرناس in the net.** They are not banned to trap in the sources;
+     the auction just refuses them [184][188], and the club urges trappers not to take the saker
+     [185]. *Recommended:* released too, since there is no lawful sale for them and the club asks
+     it.
+     > الحر والقرناس مو ممنوع طرحهم بالنص اللي لقيناه، بس المزاد ما يقبلهم والنادي يوعّي بعدم طرح الحر: نطلقهم بعد؟ نقترح نعم.
+16. **Where the player's own hunting falcon comes from.** Three real sources:
+    - farm-bred sakers at the breeders' auction in August (about 19,000 for one British breeder's
+      birds [158]);
+    - Mongolian sakers at the October exhibition (700,000 and 100,000 [184]);
+    - a passage فرخ شاهين at the trapping auction (71,000 and up [217]).
+
+    *Recommended:* all three, each in its real month.
+    > صقرك للمقناص من وين؟ حر مزارع من مزاد أغسطس (حوالي 19 ألف)، أو حر منغولي من معرض أكتوبر (انباع 700 ألف و100 ألف)، أو فرخ شاهين من مزاد الطرح (من 71 ألف): نخلي الثلاثة؟
+17. **Keeping a bird he trapped.** Falconers do keep passage birds [201], and a فرخ شاهين بحري
+    beauty round exists [188]. *Recommended:* yes, he may keep it for his own hunting and
+    contests instead of selling it. Where it could be sold later is not found, so it is not
+    offered.
+    > الفرخ اللي طرحته تقدر تخليه لك للمقناص والمزاين بدل ما تبيعه؟ نقترح نعم، بس بيعه بعدين ما لقينا له طريق.
+
+### 9.9 Not found
 
 - Who gives a trapping licence and on what terms.
 - A limit per trapper.
-- The rule for a saker or قرناس caught by mistake.
-- The days of waiting usual for one bird.
-- The real cost of a camp.
-- The colour, origin and size names (تام/مثلوث) of the dear birds sold.
-- What «راهي» after a size means, and how the width is measured.
-- The first days of handling after the catch.
+- The rule for a saker or قرناس caught.
+- The number of trappers who go out.
+- The usual days of waiting.
+- The cost of a camp and of each item of gear.
+- What each item changes in the odds.
+- The colour, origin and size names of the dear birds.
+- What «راهي» means, and how the width is taken.
+- The first days of handling.
+- Where a kept wild-caught falcon may be sold later.
 - The Shobrak study's yearly counts.
