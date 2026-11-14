@@ -13,3 +13,5 @@ they survive the work machine (they lived in its scratch folder, which a restart
 - `T4_round3_findings.md`: a reviewer's findings kept for a later round.
 
 Unmerged work is backed up on side branches `wip/<task>` (the owner's permission, 13 Nov).
+
+The state of every task when the work stopped on 14 Nov 2026 is in `docs/HANDOVER.md`.
