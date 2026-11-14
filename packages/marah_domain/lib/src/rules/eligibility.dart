@@ -76,7 +76,9 @@ class Eligibility {
   /// Bought in the market and still on the truck to the farm
   /// ([Balance.camelTruckDays]): the player's, but not there yet.
   static bool onTheWay(Camel c, GameDay today) =>
-      !c.homeBred && today.daysSince(c.acquiredOn) < Balance.camelTruckDays;
+      !c.homeBred &&
+      c.arrivedOn == null &&
+      today.daysSince(c.acquiredOn) < Balance.camelTruckDays;
 
   static bool isListed(WorldState w, CamelId id) =>
       w.listings.values.any((l) => l.camelId == id);

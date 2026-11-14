@@ -1,8 +1,11 @@
 import '../catalog/catalog.dart';
+import '../commands.dart' show OrderSupply;
 import '../common/ids.dart';
 import '../common/money.dart';
+import '../common/result.dart';
 import '../common/rng.dart';
 import '../events.dart';
+import '../handlers/handlers.dart' show placeOrder, treatCamel;
 import '../model/camel.dart';
 import '../model/contest.dart';
 import '../model/game_state.dart';
@@ -77,6 +80,8 @@ class UpkeepSystem implements DailySystem {
       _finish(sim, p);
       _deliver(sim, p);
       _consume(sim, p);
+      _standing(sim, p);
+      _vetContract(sim, p);
       if (sim.today.date.day == 1 && p.farm.shepherds > 0) {
         final wages = Riyal(p.farm.shepherds * Balance.shepherdMonthlyWage);
         sim.bill(p, -wages, LedgerCategory.wages);
@@ -99,19 +104,120 @@ class UpkeepSystem implements DailySystem {
   static void _finish(Sim sim, PlayerState p) {
     final f = p.farm;
     for (final b in f.building.where((b) => b.doneOn <= sim.today)) {
-      f.built[b.facility] = f.has(b.facility) + 1;
-      f
-        ..capacity += b.facility.head
-        ..tankL += b.facility.litres
-        ..storeKg += b.facility.kg;
-      sim.emit(FacilityBuilt(sim.today, owner: p.id, facility: b.facility));
+      stand(sim, p, b.facility);
     }
     f.building.removeWhere((b) => b.doneOn <= sim.today);
+  }
+
+  /// [facility] stands on the farm: its room, tank or store added (done on
+  /// its day, or now by a rush).
+  static void stand(Sim sim, PlayerState p, Facility facility) {
+    final f = p.farm;
+    f.built[facility] = f.has(facility) + 1;
+    f
+      ..capacity += facility.head
+      ..tankL += facility.litres
+      ..storeKg += facility.kg;
+    sim.emit(FacilityBuilt(sim.today, owner: p.id, facility: facility));
+  }
+
+  /// The standing orders (T15): when a store comes down to its last days
+  /// (Balance.lowStockDays) with nothing of it on its way, the supplier
+  /// sends a top-up, paid as an order is (cash, then the account to its
+  /// limit): water, the tanker that fits; feed, barley and alfalfa in the
+  /// ration's mix to the store's room. A step of the day's upkeep, so a day
+  /// played and a day jumped run the same code.
+  static void _standing(Sim sim, PlayerState p) {
+    final f = p.farm;
+    if (f.standing.isEmpty) return;
+    final n = Provisions.needs(sim.herdOf(p.id), f.feedPlan, sim.today);
+    bool low(double have, double need) =>
+        need > 0 && have / need <= Balance.lowStockDays;
+    bool onWay(bool water) =>
+        f.deliveries.any((d) => (d.supply == Supply.water) == water);
+    void send(OrderSupply o) {
+      final r = placeOrder(sim, p, o, standing: true);
+      // (a handler's result carries the day's events drained so far: put
+      // back, in their order)
+      r.events.forEach(sim.emit);
+      if (r is Err) {
+        sim.emit(
+          StandingOrderRefused(sim.today, owner: p.id, supply: o.supply),
+        );
+      }
+    }
+
+    if (f.standing.contains(StandingOrder.water) &&
+        !onWay(true) &&
+        low(f.waterL, n.water)) {
+      final large = Provisions.fits(f, Supply.water, Balance.waterLoadL);
+      final small = Provisions.fits(f, Supply.water, Balance.smallWaterLoadL);
+      if (large > 0) {
+        send(OrderSupply(p.id, Supply.water, 1));
+      } else if (small > 0) {
+        send(OrderSupply(p.id, Supply.water, 1, tanker: Tanker.small));
+      }
+    }
+    if (f.standing.contains(StandingOrder.feed) &&
+        !onWay(false) &&
+        (low(f.barleyKg, n.barley) || low(f.alfalfaKg, n.alfalfa))) {
+      final need = n.barley + n.alfalfa;
+      if (need <= 0) return;
+      final share = n.barley / need;
+      final room = f.storeKg - f.barleyKg - f.alfalfaKg;
+      var bags = ((f.storeKg * share - f.barleyKg) / Balance.barleyBagKg)
+          .floor();
+      var bales =
+          ((f.storeKg * (1 - share) - f.alfalfaKg) / Balance.alfalfaBaleKg)
+              .floor();
+      if (bags < 0) bags = 0;
+      if (bales < 0) bales = 0;
+      while (bags * Balance.barleyBagKg + bales * Balance.alfalfaBaleKg >
+              room &&
+          (bags > 0 || bales > 0)) {
+        if (bales > 0) {
+          bales--;
+        } else {
+          bags--;
+        }
+      }
+      if (bags > 0) send(OrderSupply(p.id, Supply.barley, bags));
+      if (bales > 0) send(OrderSupply(p.id, Supply.alfalfa, bales));
+    }
+  }
+
+  /// The vet's contract on the 1st (the proxy's batch 4c): ended if it was
+  /// cancelled last month, else the month's fee billed from cash (it can go
+  /// below zero, as wages do).
+  static void _vetContract(Sim sim, PlayerState p) {
+    final v = p.farm.vet;
+    if (v == null || sim.today.date.day != 1) return;
+    if (v.endsOn != null && v.endsOn! < sim.today) {
+      p.farm.vet = null;
+      sim.emit(VetContractChanged(sim.today, owner: p.id, on: false));
+      return;
+    }
+    if (v.since == sim.today) return; // (signed today: paid on signing)
+    final fee = Balance.vetContractFee(sim.herdOf(p.id).length);
+    sim.bill(p, Riyal(-fee), LedgerCategory.vetContract);
+    if (p.cash.isNegative) {
+      sim.emit(CashNegative(sim.today, owner: p.id, cash: p.cash.value));
+    }
   }
 
   static void _deliver(Sim sim, PlayerState p) {
     final f = p.farm;
     for (final d in f.deliveries.where((d) => d.arrivesOn <= sim.today)) {
+      deliverOne(sim, p, d);
+    }
+    f.deliveries.removeWhere((d) => d.arrivesOn <= sim.today);
+  }
+
+  /// [d] comes to the farm (on its day, or now by a rush): the store takes it,
+  /// the tank to its top and the rest goes back.
+  static void deliverOne(Sim sim, PlayerState p, Delivery d) {
+    final f = p.farm;
+    {
       final amount = (d.units * d.size).toDouble();
       var returned = 0;
       switch (d.supply) {
@@ -137,7 +243,6 @@ class UpkeepSystem implements DailySystem {
         ),
       );
     }
-    f.deliveries.removeWhere((d) => d.arrivesOn <= sim.today);
   }
 
   /// The day's ration and water from the stores, as far as they go; a
@@ -177,6 +282,8 @@ class UpkeepSystem implements DailySystem {
       ..alfalfaKg = q2(f.alfalfaKg - alfalfa);
     final need = n.barley + n.alfalfa;
     f.fedShare = need <= 0 ? 1 : q2((barley + alfalfa) / need);
+    final dryBefore = f.dryDays;
+    final drunk = f.waterL >= n.water ? n.water : f.waterL;
     cover(Supply.water, f.waterL >= n.water);
     if (f.waterL >= n.water) {
       warn(Supply.water, f.waterL, f.waterL - n.water, n.water);
@@ -192,6 +299,19 @@ class UpkeepSystem implements DailySystem {
         ..waterL = 0
         ..dryDays = half ? f.dryDays : f.dryDays + 1;
     }
+    // the day's account: what a rushed delivery today may make up (T15)
+    f.today = DayRecord(
+      day: sim.today,
+      waterNeed: n.water,
+      waterDrunk: drunk,
+      barleyNeed: n.barley,
+      barleyEaten: barley,
+      alfalfaNeed: n.alfalfa,
+      alfalfaEaten: alfalfa,
+      dryBefore: dryBefore,
+      fedAtDawn: f.fedShare,
+      dryAtDawn: f.dryDays,
+    );
   }
 }
 
@@ -388,6 +508,24 @@ class HealthSystem implements DailySystem {
                   illness: illness,
                 ),
               );
+              // under the vet's contract she is treated the day she falls
+              // ill, on account as the vet is (the proxy's batch 4c)
+              if (p.farm.vet != null) {
+                final r = treatCamel(sim, p, c);
+                // (a handler's result carries the day's events drained so
+                // far: put back, in their order)
+                r.events.forEach(sim.emit);
+                if (r is Err) {
+                  sim.emit(
+                    VetRefused(
+                      sim.today,
+                      owner: p.id,
+                      camel: c.id,
+                      name: c.name,
+                    ),
+                  );
+                }
+              }
             }
           case HealthStatus.sick:
             final days = sim.today.daysSince(c.sickSince!);

@@ -30,6 +30,11 @@ enum FeedPlan {
 /// alfalfa in bales, water by the tanker load (الوايت).
 enum Supply { barley, alfalfa, water }
 
+/// A standing order with the supplier: water (the tanker that fits) or feed
+/// (barley and alfalfa in the ration's mix to the store's room), sent when
+/// the store comes down to its last days.
+enum StandingOrder { water, feed }
+
 /// The water tankers a farm orders (الوايت): litres and price in Balance.
 /// The large is the supply's unit; the small tops up a tank the large one
 /// does not fit (the owner, 12 Nov 2026).
@@ -124,6 +129,88 @@ class Construction {
   );
 }
 
+/// The day's account of the herd's water and ration, kept by the day's
+/// upkeep (UpkeepSystem) so that a rushed delivery the same day can make up
+/// what the day lacked (docs/proposals/rush_and_calendar.md 2.2): what the
+/// herd needed, what it got, the dry-day count before the day, and the
+/// ration's share and the dry count the dawn's milk was reckoned with (the
+/// milk stands: Milk reads them from here, the second review's N1).
+class DayRecord {
+  DayRecord({
+    required this.day,
+    required this.waterNeed,
+    required this.waterDrunk,
+    required this.barleyNeed,
+    required this.barleyEaten,
+    required this.alfalfaNeed,
+    required this.alfalfaEaten,
+    required this.dryBefore,
+    required this.fedAtDawn,
+    required this.dryAtDawn,
+  });
+
+  final GameDay day;
+  final double waterNeed;
+  double waterDrunk;
+  final double barleyNeed;
+  double barleyEaten;
+  final double alfalfaNeed;
+  double alfalfaEaten;
+  final int dryBefore;
+  final double fedAtDawn;
+  final int dryAtDawn;
+
+  bool get waterShort => waterDrunk < waterNeed;
+  bool get feedShort => barleyEaten < barleyNeed || alfalfaEaten < alfalfaNeed;
+
+  Map<String, Object?> toJson() => {
+    'day': day.value,
+    'waterNeed': waterNeed,
+    'waterDrunk': waterDrunk,
+    'barleyNeed': barleyNeed,
+    'barleyEaten': barleyEaten,
+    'alfalfaNeed': alfalfaNeed,
+    'alfalfaEaten': alfalfaEaten,
+    'dryBefore': dryBefore,
+    'fedAtDawn': fedAtDawn,
+    'dryAtDawn': dryAtDawn,
+  };
+
+  static DayRecord fromJson(Map<String, Object?> j) => DayRecord(
+    day: GameDay(j['day']! as int),
+    waterNeed: (j['waterNeed']! as num).toDouble(),
+    waterDrunk: (j['waterDrunk']! as num).toDouble(),
+    barleyNeed: (j['barleyNeed']! as num).toDouble(),
+    barleyEaten: (j['barleyEaten']! as num).toDouble(),
+    alfalfaNeed: (j['alfalfaNeed']! as num).toDouble(),
+    alfalfaEaten: (j['alfalfaEaten']! as num).toDouble(),
+    dryBefore: j['dryBefore']! as int,
+    fedAtDawn: (j['fedAtDawn']! as num).toDouble(),
+    dryAtDawn: j['dryAtDawn']! as int,
+  );
+}
+
+/// The vet's contract (GDD 4.2: «بزيارة أو عقد»; the proxy's batch 4c): a
+/// monthly fee (Balance.vetContractFee), billed on signing for the rest of
+/// that month by days and then on each 1st, from cash only; each illness
+/// treated the day it comes at the treatment's price, on account as the vet
+/// is. Cancelled, it runs to the month's end ([endsOn]).
+class VetContract {
+  VetContract({required this.since, this.endsOn});
+  final GameDay since;
+  GameDay? endsOn;
+
+  Map<String, Object?> toJson() => {
+    'since': since.value,
+    if (endsOn != null) 'endsOn': endsOn!.value,
+  };
+
+  static VetContract fromJson(Map<String, Object?> j) => VetContract(
+    since: GameDay(j['since']! as int),
+    endsOn: j['endsOn'] == null ? null : GameDay(j['endsOn']! as int),
+  );
+}
+
 /// How much of a nursing camel's milk is left to her calf; the rest is
 /// milked and sold (the owner's decision of 13 Nov 2026).
 enum CalfShare {
@@ -157,7 +244,11 @@ class Farm {
     Set<Supply>? short,
     Map<Facility, int>? built,
     List<Construction>? building,
-  }) : deliveries = deliveries ?? [],
+    this.today,
+    Set<StandingOrder>? standing,
+    this.vet,
+  }) : standing = standing ?? {},
+       deliveries = deliveries ?? [],
        short = short ?? {},
        built = built ?? {},
        building = building ?? [];
@@ -203,6 +294,16 @@ class Farm {
   final Map<Facility, int> built;
   final List<Construction> building;
 
+  /// The day's account of water and ration (null before a day's upkeep).
+  DayRecord? today;
+
+  /// The standing orders on (the supplier's top-up when a store comes down
+  /// to its last days: UpkeepSystem).
+  final Set<StandingOrder> standing;
+
+  /// The vet's contract, or null.
+  VetContract? vet;
+
   int has(Facility f) => built[f] ?? 0;
 
   /// Built, or being built.
@@ -235,6 +336,13 @@ class Farm {
         if (has(f) > 0) f.name: has(f),
     },
     'building': [for (final b in building) b.toJson()],
+    if (today != null) 'today': today!.toJson(),
+    if (standing.isNotEmpty)
+      'standing': [
+        for (final o in StandingOrder.values)
+          if (standing.contains(o)) o.name,
+      ],
+    if (vet != null) 'vet': vet!.toJson(),
   };
 
   static Farm fromJson(Map<String, Object?> j) => Farm(
@@ -269,6 +377,16 @@ class Farm {
       for (final b in j['building']! as List<Object?>)
         Construction.fromJson(b! as Map<String, Object?>),
     ],
+    today: j['today'] == null
+        ? null
+        : DayRecord.fromJson(j['today']! as Map<String, Object?>),
+    standing: {
+      for (final o in (j['standing'] as List<Object?>?) ?? const [])
+        StandingOrder.values.byName(o! as String),
+    },
+    vet: j['vet'] == null
+        ? null
+        : VetContract.fromJson(j['vet']! as Map<String, Object?>),
   );
 }
 
@@ -305,6 +423,13 @@ enum LedgerCategory {
   /// Money without limit for the owner's own testing (TestMoney): the top-ups
   /// that keep the money at its floor while the switch is on, «فلوس تجربة».
   testMoney,
+
+  /// Money paid to have a thing finished now (its ref what was hurried:
+  /// a facility's name, a supply, a camel id; the rush, T15).
+  rush,
+
+  /// The vet's monthly contract fee (T15; the proxy's batch 4c).
+  vetContract,
 }
 
 /// One money movement. Recurring costs (feed, wages) are kept as one row per

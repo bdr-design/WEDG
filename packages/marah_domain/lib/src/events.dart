@@ -159,6 +159,39 @@ sealed class DomainEvent {
         size: j['size'] as int?,
         cost: j['cost']! as int,
         arrivesOn: GameDay(j['arrivesOn']! as int),
+        standing: (j['standing'] as bool?) ?? false,
+      ),
+      'rushed' => Rushed(
+        day,
+        owner: owner,
+        camel: camel,
+        what: j['what']! as String,
+        ref: j['ref']! as String,
+        fee: j['fee']! as int,
+      ),
+      'standingOrderChanged' => StandingOrderChanged(
+        day,
+        owner: owner,
+        kind: StandingOrder.values.byName(j['kind']! as String),
+        on: j['on']! as bool,
+      ),
+      'standingOrderRefused' => StandingOrderRefused(
+        day,
+        owner: owner,
+        supply: Supply.values.byName(j['supply']! as String),
+      ),
+      'vetContractChanged' => VetContractChanged(
+        day,
+        owner: owner,
+        on: j['on']! as bool,
+        fee: j['fee']! as int,
+        endsOn: j['endsOn'] == null ? null : GameDay(j['endsOn']! as int),
+      ),
+      'vetRefused' => VetRefused(
+        day,
+        owner: owner,
+        camel: camel,
+        name: j['name']! as String,
       ),
       'supplyDelivered' => SupplyDelivered(
         day,
@@ -721,6 +754,7 @@ final class SupplyOrdered extends DomainEvent {
     this.size,
     required this.cost,
     required this.arrivesOn,
+    this.standing = false,
   });
   final Supply supply;
   final int units;
@@ -729,6 +763,9 @@ final class SupplyOrdered extends DomainEvent {
   final int? size;
   final int cost;
   final GameDay arrivesOn;
+
+  /// Sent by the standing order (UpkeepSystem), not by the player's tap.
+  final bool standing;
   @override
   String get type => 'supplyOrdered';
   @override
@@ -738,7 +775,97 @@ final class SupplyOrdered extends DomainEvent {
     'size': size,
     'cost': cost,
     'arrivesOn': arrivesOn.value,
+    if (standing) 'standing': true,
   };
+}
+
+/// Something finished now for more (the rush, T15): [what] is 'facility',
+/// 'water', 'feed' or 'camel'; [ref] the facility's name, or the camel's
+/// id (also [camel]); [fee] what the rush cost.
+final class Rushed extends DomainEvent {
+  const Rushed(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.what,
+    required this.ref,
+    required this.fee,
+  });
+  final String what;
+  final String ref;
+  final int fee;
+  @override
+  String get type => 'rushed';
+  @override
+  Map<String, Object?> fieldsToJson() => {'what': what, 'ref': ref, 'fee': fee};
+}
+
+/// A standing order turned on or off.
+final class StandingOrderChanged extends DomainEvent {
+  const StandingOrderChanged(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.kind,
+    required this.on,
+  });
+  final StandingOrder kind;
+  final bool on;
+  @override
+  String get type => 'standingOrderChanged';
+  @override
+  Map<String, Object?> fieldsToJson() => {'kind': kind.name, 'on': on};
+}
+
+/// A standing order the supplier could not send: the money and the
+/// merchant's account did not cover it ([supply]).
+final class StandingOrderRefused extends DomainEvent {
+  const StandingOrderRefused(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.supply,
+  });
+  final Supply supply;
+  @override
+  String get type => 'standingOrderRefused';
+  @override
+  Map<String, Object?> fieldsToJson() => {'supply': supply.name};
+}
+
+/// The vet's contract signed ([fee]: this month's part), cancelled
+/// ([endsOn]: the month's end), or ended (neither).
+final class VetContractChanged extends DomainEvent {
+  const VetContractChanged(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.on,
+    this.fee = 0,
+    this.endsOn,
+  });
+  final bool on;
+  final int fee;
+  final GameDay? endsOn;
+  @override
+  String get type => 'vetContractChanged';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'on': on,
+    'fee': fee,
+    'endsOn': endsOn?.value,
+  };
+}
+
+/// Under the vet's contract a camel fell ill and could not be treated: the
+/// merchant's account is at its limit ([name]).
+final class VetRefused extends DomainEvent {
+  const VetRefused(super.day, {super.owner, super.camel, required this.name});
+  final String name;
+  @override
+  String get type => 'vetRefused';
+  @override
+  Map<String, Object?> fieldsToJson() => {'name': name};
 }
 
 final class SupplyDelivered extends DomainEvent {

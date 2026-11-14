@@ -32,6 +32,9 @@ enum MoneyKind {
 
   /// Money without limit for testing, «فلوس تجربة» (TestMoney): money in.
   testMoney,
+
+  /// Money paid to have a thing finished now (the rush, T15).
+  rush,
 }
 
 /// Why a camel or a herd was trucked: the ledger keeps the transport row's
@@ -189,7 +192,8 @@ class Money {
     LedgerCategory.water => MoneyKind.water,
     LedgerCategory.wages => MoneyKind.wages,
     LedgerCategory.construction => MoneyKind.construction,
-    LedgerCategory.vet => MoneyKind.vet,
+    LedgerCategory.vet || LedgerCategory.vetContract => MoneyKind.vet,
+    LedgerCategory.rush => MoneyKind.rush,
     LedgerCategory.studFee => MoneyKind.studFee,
     LedgerCategory.entryFee => MoneyKind.entryFee,
     LedgerCategory.tampering => MoneyKind.tampering,
@@ -373,7 +377,7 @@ class Money {
                 ? FineReason.festival
                 : FineReason.outside)
           : null,
-      facilities: kind == MoneyKind.construction
+      facilities: kind == MoneyKind.construction || kind == MoneyKind.rush
           ? [
               for (final e in rows)
                 if (Facility.values.where((f) => f.name == e.ref).firstOrNull

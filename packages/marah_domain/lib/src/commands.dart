@@ -15,8 +15,15 @@ sealed class Command {
 // ----------------------------------------------------------------- market
 
 final class BuyListing extends Command {
-  const BuyListing(super.actor, this.listing);
+  const BuyListing(super.actor, this.listing, {this.now = false, this.hour});
   final ListingId listing;
+
+  /// Bought and brought now by a rushed truck (RushTruck), priced by [hour].
+  final bool now;
+
+  /// The game's hour of the day the rush is priced by: stamped by the
+  /// engine from its own clock, never trusted from the page (RushTruck).
+  final int? hour;
 }
 
 final class Bargain extends Command {
@@ -105,12 +112,16 @@ final class OrderSupply extends Command {
     this.supply,
     this.units, {
     this.tanker = Tanker.large,
+    this.now = false,
   });
   final Supply supply;
   final int units;
 
   /// Which tanker brings water (ignored for feed).
   final Tanker tanker;
+
+  /// Brought now, on a day the herd went short (RushDelivery).
+  final bool now;
 }
 
 final class SetShepherds extends Command {
@@ -120,8 +131,56 @@ final class SetShepherds extends Command {
 
 /// Builds a facility on the farm (paid now, done in Balance.buildDays).
 final class BuildFacility extends Command {
-  const BuildFacility(super.actor, this.facility);
+  const BuildFacility(super.actor, this.facility, {this.now = false});
   final Facility facility;
+
+  /// Finished now, for more (RushBuild).
+  final bool now;
+}
+
+// ------------------------------------------------------------------ rush
+// Finishing now, for more, what money can hurry in the real world (task T15,
+// docs/proposals/rush_and_calendar.md section 2). Cash only, never on the
+// merchant's account; refused below zero.
+
+/// Finishes the earliest [facility] being built, now.
+final class RushBuild extends Command {
+  const RushBuild(super.actor, this.facility);
+  final Facility facility;
+}
+
+/// Brings the water or the feed on its way now, on a day the herd went short
+/// of it, and makes up what the day lacked (the note's 2.2).
+final class RushDelivery extends Command {
+  const RushDelivery(super.actor, this.kind);
+  final StandingOrder kind;
+}
+
+/// Brings a camel bought today now, with a second driver, priced by the part
+/// of the game's day left at [hour] (0 to 23). The hour is stamped by the
+/// engine (EngineCore) from its own clock.
+final class RushTruck extends Command {
+  const RushTruck(super.actor, this.camel, {this.hour});
+  final CamelId camel;
+  final int? hour;
+}
+
+/// Turns a standing order on or off.
+final class SetStandingOrder extends Command {
+  const SetStandingOrder(super.actor, this.kind, {required this.on});
+  final StandingOrder kind;
+  final bool on;
+}
+
+/// Signs the vet's contract (the proxy's batch 4c): billed now for the rest
+/// of the month, from cash only; every camel sick now treated.
+final class SignVetContract extends Command {
+  const SignVetContract(super.actor);
+}
+
+/// Cancels it: it runs to the month's end, nothing refunded.
+final class CancelVetContract extends Command {
+  const CancelVetContract(super.actor);
 }
 
 /// How much of the nursing camels' milk their calves keep; the rest is
