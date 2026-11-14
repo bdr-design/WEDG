@@ -390,7 +390,15 @@ def keys(f, pts):
     return pts[-1][1]
 
 
-PERCH_TB = V3((-58, 0, 80))      # the tail base when perched (the static saker_fist's pose: body pitch 66)
+PERCH_TB = V3((-58, 0, 80))
+PLANTED = ('cuff', 'perch', 'ground')
+FRAMES_FEET = {}
+FOOT_LIFT = 2.5      # mm: the foot's centre held this far above the support, so the soles' pads rest on it
+
+
+def flat_surface(x, y):
+    """The perch's padded top and the ground: flat at the feet's level."""
+    return 0.0      # the tail base when perched (the static saker_fist's pose: body pitch 66)
 
 
 class SakerClips:
@@ -407,33 +415,50 @@ class SakerClips:
         return {'pitch': pitch - 14 * crouch, 'tb': tb, 'feet': 'cuff', 'mesh': 'fold'}
 
     def wings_flap(self, ph, amp=40.0, mean=5.0):
-        """The wingbeat: ph 0..1 (0 the top of the upstroke)."""
+        """The wingbeat: ph 0..1 (0 the top of the upstroke). The arm sweeps up and down; on the upstroke the wing
+        flexes at the elbow and wrist (the hand drawn back and in, its tip trailing) and the hand turns its leading
+        edge up (supinates); on the downstroke the wing is fully spread and the hand turns its leading edge down."""
         up = mean + amp * math.cos(2 * math.pi * ph)
-        down = math.sin(2 * math.pi * ph)        # positive in the downstroke's first half
-        flick = max(0.0, -down)                   # the upstroke: the hand flexes back and in
-        return {'up': up, 'sweep': 6 * flick, 'fore': -18 * flick, 'hand': 34 * flick, 'twist': 8 * down}
+        down = math.sin(2 * math.pi * ph)        # positive in the downstroke
+        flex = max(0.0, -down) ** 0.8            # the upstroke
+        return {'up': up, 'sweep': 10 * flex, 'fore': -34 * flex, 'hand': 58 * flex, 'twist': 6 * down,
+                'hand_up': 22 * flex - 6 * max(0.0, down), 'hand_twist': 16 * down - 10 * flex}
+
+    HALF_FOLD = {'up': 26, 'sweep': 52, 'fore': -78, 'hand': 92, 'twist': 0, 'hand_up': 0, 'hand_twist': 0}
+    RAISED = {'up': 62, 'sweep': 22, 'fore': -14, 'hand': 16, 'twist': 0, 'hand_up': 8, 'hand_twist': 0}
 
     def cast_off(self, f):
-        n = 40
-        if f <= 12:
-            c = ramp(f, 4, 12)
-            p = self.perched(f, crouch=c)
-            p.update({'fold_lift': 28 * ramp(f, 7, 12), 'jess_hold': True, 'mesh': 'fold'})
+        """The lean and crouch on the fist (0-14), the wings opening, the push of the legs (15-19) with the first
+        downstroke; the feet leave at 19 and close and draw up at once; she drops below the fist in the first beats,
+        then climbs away. The folded mesh to frame 13; at 14 the spread mesh, its wings folded by the bones to the
+        point where it still reads right, then opened by them."""
+        lean = ramp(f, 3, 14)
+        if f < 14:
+            p = self.perched(f, pitch=66 - 22 * lean, crouch=lean)
+            p.update({'fold_lift': 30 * ramp(f, 9, 13.5), 'jess_hold': True, 'mesh': 'fold'})
             return p
-        # airborne from frame 14: the root moves off the cuff, accelerating forward and up
-        t = max(0.0, (f - 14) / FPS)
-        x = 0.5 * 4.6 * t * t * 1000
-        z = (0.5 * 1.2 * t * t - 0.3 * t * t * t) * 1000
-        pitch = keys(f, [(12, 52), (18, 30), (26, 18), (40, 8)])
+        # the spread mesh from frame 14: unfolding (14-18), then the beat
+        g = (f - 18) / self.beat
+        beat = self.wings_flap((g + 0.75) % 1.0, amp=46, mean=4) if f >= 18 else None
+        if f < 18:
+            k = ramp(f, 14, 18)
+            w = {kk: lerp(self.HALF_FOLD[kk], self.RAISED[kk], k) for kk in self.HALF_FOLD}
+        else:
+            k = ramp(f, 18, 21)
+            w = {kk: lerp(self.RAISED[kk], beat[kk], k) if f < 21 else beat[kk] for kk in self.RAISED}
+        # the path: still on the fist to 15, the push to 19, then away: a dip below the fist, then the climb
+        push = ramp(f, 15, 19)
+        t = max(0.0, (f - 17) / FPS)
+        x = 60 * push + 0.5 * 5.0 * t * t * 1000 + 900 * t
+        z = -10 * push - 0.5 * 2.4 * t * t * 1000 + 0.5 * 4.4 * max(0.0, t - 0.25) ** 2 * 1000
+        pitch = keys(f, [(14, 44), (17, 36), (20, 24), (28, 14), (40, 8)])
         tb = PERCH_TB + V3((10, 0, -16)) + V3((x, 0, z))
-        ph = (f - 12) / self.beat * 0.5 + 0.0
-        w = self.wings_flap(((f - 12) / self.beat) % 1.0)
-        open_k = ramp(f, 12, 17)       # from the raised, swept-back pose at the swap to the full beat
-        start = {'up': 55, 'sweep': 35, 'fore': -40, 'hand': 40, 'twist': 0}
-        w = {k: lerp(start[k], w[k], open_k) for k in w}
-        tuck = ramp(f, 22, 32)
-        return {'pitch': pitch, 'tb': tb, 'feet': 'cuff' if f < 16 else ('push', tuck), 'mesh': 'open', 'wing': w,
-                'tail_spread': lerp(1.25, 1.1, ramp(f, 14, 30)), 'jess_hold': f < 16, 'clench': tuck}
+        if f < 19:
+            feet = 'cuff'
+        else:
+            feet = ('push', ramp(f, 19, 25))
+        return {'pitch': pitch, 'tb': tb, 'feet': feet, 'mesh': 'open', 'wing': w,
+                'tail_spread': lerp(1.3, 1.08, ramp(f, 16, 32)), 'jess_hold': f < 19, 'clench': ramp(f, 19, 24)}
 
     def flight(self, f):
         ph = (f / self.beat) % 1.0
@@ -442,31 +467,116 @@ class SakerClips:
         return {'pitch': 4 + 2 * math.sin(2 * math.pi * ph), 'tb': V3((0, 0, bob)), 'feet': ('free', 1.0), 'mesh': 'open',
                 'wing': w, 'tail_spread': 1.05, 'clench': 1.0, 'air': V3((-20000, 0, 0))}
 
-    def land_cuff(self, f):
-        s = min(f / 28.0, 1.0)
-        x = -3000 * (1 - s) ** 2
-        z = 400 * (1 - s) ** 2
+    def land(self, f, surface):
+        """A glide in, the flare (body up to 55 degrees, the wings forward and beating to brake, the tail fanned and
+        dropped), the legs thrown forward, contact at frame 28, the wings folded by the bones to the half-fold, the
+        swap to the folded mesh at 39, the settle to the perched 66 degrees by 45."""
+        s_ = min(f / 28.0, 1.0)
+        x = -3000 * (1 - s_) ** 2
+        z = 400 * (1 - s_) ** 2
         pitch = keys(f, [(0, 6), (14, 14), (26, 55), (34, 62), (45, 66)])
         tb_air = V3((x, 0, z)) + PERCH_TB + V3((25, 0, -10)) * (1 - ramp(f, 26, 40))
         brake = ramp(f, 12, 18) * (1 - ramp(f, 27, 30))
         if f < 14:
-            w = {'up': 8 + 2 * math.sin(f / 3), 'sweep': -4, 'fore': -6, 'hand': 10, 'twist': 0}
+            w = {'up': 8 + 2 * math.sin(f / 3), 'sweep': -4, 'fore': -6, 'hand': 10, 'twist': 0, 'hand_twist': -4}
         else:
             b = self.wings_flap(((f - 14) / 6.0) % 1.0, amp=34, mean=14)
             b['sweep'] -= 22 * brake        # the wings brought forward to brake
-            fold = ramp(f, 29, 39)
-            folded = {'up': 22, 'sweep': 62, 'fore': -100, 'hand': 112, 'twist': 0}
-            w = {k: lerp(b[k], folded[k], fold) for k in b}
+            fold = ramp(f, 29, 38.5)
+            w = {k: lerp(b[k], self.HALF_FOLD.get(k, 0.0), fold) for k in b}
         mesh = 'open' if f < 39 else 'fold'
         reach = ramp(f, 14, 24)
-        feet = 'cuff' if f >= 28 else ('reach', reach)
+        feet = surface if f >= 28 else ('reach', reach)
         return {'pitch': pitch, 'tb': tb_air, 'feet': feet, 'mesh': mesh, 'wing': w,
-                'fold_lift': 18 * (1 - ramp(f, 39, 45)),
+                'fold_lift': 30 * (1 - ramp(f, 39, 45)),
                 'tail_spread': lerp(1.0, 1.45, brake) if f < 32 else lerp(1.45, 1.0, ramp(f, 32, 42)),
-                'tail_drop': 18 * brake, 'clench': 0.0 if f < 28 else 0.0, 'open_toes': reach * (1 - ramp(f, 27, 29))}
+                'tail_drop': 18 * brake, 'open_toes': reach * (1 - ramp(f, 27, 29))}
+
+    def land_cuff(self, f):
+        return self.land(f, 'cuff')
+
+    def land_perch(self, f):
+        return self.land(f, 'perch')
+
+    def perch_idle(self, f):
+        """Four seconds on the perch: small shifts of weight, a look to one side, then the other, a flick of the tail;
+        it loops."""
+        c = 2 * math.pi * f / 120.0
+        yaw = keys(f, [(0, 0), (18, 0), (28, 38), (48, 38), (58, 0), (72, 0), (80, -32), (96, -32), (106, 0), (120, 0)])
+        return {'pitch': 66 + 1.5 * math.sin(c), 'tb': PERCH_TB + V3((0, 0, 1.5 * math.sin(2 * c))), 'feet': 'perch',
+                'mesh': 'fold', 'head_yaw': yaw, 'head_pitch': 4 * math.sin(3 * c),
+                'tail_drop': -10 * math.exp(-((f - 90) / 2.5) ** 2), 'fold_lift': 2 * max(0.0, math.sin(c))}
+
+    def rouse(self, f):
+        """The rouse: the feathers raised and shaken through, about half a second of shaking, then smoothed."""
+        sh = ramp(f, 6, 9) * (1 - ramp(f, 22, 26))
+        osc = math.sin(2 * math.pi * f * 7.0 / FPS)
+        return {'pitch': 66 + 3 * sh, 'tb': PERCH_TB + V3((0, 0, 4 * sh)), 'feet': 'perch', 'mesh': 'fold',
+                'roll': 9 * sh * osc, 'head_yaw': 22 * sh * math.sin(2 * math.pi * f * 7.0 / FPS + 0.6),
+                'fold_lift': 10 * ramp(f, 2, 7) * (1 - ramp(f, 24, 32)) + 4 * sh * abs(osc),
+                'tail_spread': 1.0 + 0.25 * sh * abs(osc)}
+
+    def hood_off(self, f):
+        """On the fist: the falconer draws the braces and lifts the hood off (the hand is not drawn); she looks round."""
+        lift = 70 * ramp(f, 6, 16)
+        yaw = keys(f, [(0, 0), (18, 0), (23, 30), (27, -18), (30, 0)])
+        return {'pitch': 66, 'tb': PERCH_TB, 'feet': 'cuff', 'mesh': 'fold', 'hood': 1.0 if f < 17 else 0.0,
+                'hood_lift': lift, 'head_yaw': yaw, 'head_pitch': 6 * ramp(f, 16, 20), 'jess_hold': True}
+
+    def hood_on(self, f):
+        lift = 70 * (1 - ramp(f, 8, 20))
+        return {'pitch': 66, 'tb': PERCH_TB, 'feet': 'cuff', 'mesh': 'fold', 'hood': 1.0 if f >= 7 else 0.0,
+                'hood_lift': lift, 'head_pitch': -4 * ramp(f, 4, 8) * (1 - ramp(f, 18, 24)), 'jess_hold': True}
+
+    def glide(self, f):
+        c = 2 * math.pi * f / 60.0
+        w = {'up': 6 + 1.5 * math.sin(c), 'sweep': -2, 'fore': -6, 'hand': 8 + 2 * math.sin(2 * c), 'twist': 0,
+             'hand_up': 2, 'hand_twist': -4}
+        return {'pitch': 3, 'roll': 4 * math.sin(c), 'tb': V3((0, 0, 3 * math.sin(c))), 'feet': ('free', 1.0),
+                'mesh': 'open', 'wing': w, 'tail_spread': 1.0, 'clench': 1.0, 'air': V3((-15000, 0, 0))}
+
+    def stoop(self, f):
+        """From the glide into the stoop: the wings drawn in to the body, the body tipped down 55 degrees, the head
+        in line looking ahead; held."""
+        k = ramp(f, 0, 12)
+        g = self.glide(0)['wing']
+        tight = {'up': 14, 'sweep': 58, 'fore': -72, 'hand': 88, 'twist': 0, 'hand_up': 4, 'hand_twist': 0}
+        w = {kk: lerp(g.get(kk, 0.0), tight[kk], k) for kk in tight}
+        pitch = -55 * k + 1.5 * math.sin(f / 2.0) * k
+        return {'pitch': pitch, 'head_pitch': 0.8 * pitch, 'tb': V3((0, 0, 0)), 'feet': ('free', 1.0), 'mesh': 'open',
+                'wing': w, 'tail_spread': 1.0 - 0.1 * k, 'clench': 1.0, 'air': V3((-30000 * math.cos(math.radians(pitch)), 0, 30000 * math.sin(math.radians(-pitch))))}
+
+    def bind(self, f):
+        """Binding to the quarry: thrown up from the dive, the wings braking, the legs and open feet struck forward;
+        the feet close at frame 10 (on the quarry, not drawn), then heavy beats to hold."""
+        pitch = keys(f, [(0, -30), (8, 38), (14, 30), (24, 20)])
+        if f < 10:
+            w = {kk: lerp(self.RAISED[kk], self.wings_flap(0.25, amp=46)[kk], ramp(f, 2, 10)) for kk in self.RAISED}
+            w['sweep'] -= 18 * ramp(f, 3, 9)
+        else:
+            w = self.wings_flap(((f - 10) / 6.0) % 1.0, amp=50, mean=10)
+        s_ = min(f / 24.0, 1.0)
+        tb = V3((900 * (1 - (1 - s_) ** 2), 0, -150 * s_))
+        return {'pitch': pitch, 'tb': tb, 'feet': ('reach', 1.0), 'mesh': 'open', 'wing': w,
+                'tail_spread': 1.4 - 0.2 * ramp(f, 12, 24), 'tail_drop': 14 * ramp(f, 2, 8),
+                'clench': ramp(f, 9, 11), 'open_toes': ramp(f, 0, 6) * (1 - ramp(f, 9, 11))}
+
+    def mantle(self, f):
+        """Mantling on the kill (on the ground): the wings spread and drooped to hide it, the tail fanned and down,
+        the head down to it, looking up from time to time; it loops."""
+        c = 2 * math.pi * f / 60.0
+        look = keys(f, [(0, 0), (20, 0), (26, 1), (40, 1), (46, 0), (60, 0)])
+        w = {'up': -26 + 3 * math.sin(c), 'sweep': -14, 'fore': -6, 'hand': -4, 'twist': 4, 'hand_up': -12, 'hand_twist': 6}
+        return {'pitch': 22 + 2 * math.sin(c), 'tb': V3((-85, 0, 88)), 'feet': 'ground', 'mesh': 'open', 'wing': w,
+                'tail_spread': 1.5, 'tail_drop': 14, 'head_pitch': -34 + 30 * look, 'head_yaw': 20 * look * math.sin(c * 2)}
 
 
-CLIPS = {'cast_off': (41, 'cast_off', False), 'flight': (14, 'flight', True), 'land_cuff': (46, 'land_cuff', False)}
+CLIPS = {      # name: (frames, method, loops)
+    'perch_idle': (120, 'perch_idle', True), 'rouse': (36, 'rouse', False), 'hood_off': (30, 'hood_off', False),
+    'hood_on': (30, 'hood_on', False), 'cast_off': (41, 'cast_off', False), 'flight': (14, 'flight', True),
+    'glide': (60, 'glide', True), 'stoop': (40, 'stoop', False), 'bind': (24, 'bind', False),
+    'mantle': (60, 'mantle', True), 'land_cuff': (46, 'land_cuff', False), 'land_perch': (46, 'land_perch', False),
+}
 
 
 # ------------------------------------------------------------------ applying a pose
@@ -489,7 +599,7 @@ class Applier:
         self.log = []
 
     def body_matrix(self, sp):
-        R = Matrix.Rotation(math.radians(-sp['pitch']), 4, 'Y')
+        R = Matrix.Rotation(math.radians(-sp['pitch']), 4, 'Y') @ Matrix.Rotation(math.radians(sp.get('roll', 0.0)), 4, 'X')
         return Matrix.Translation(V3(sp['tb']) * MM) @ R, R
 
     def to_world(self, W, p):
@@ -542,9 +652,8 @@ class Applier:
         P.turn('tail', (0, 1, 0), sp.get('tail_drop', 0.0) - 0.15 * sp['pitch'] * (1 if sp['mesh'] == 'fold' else 0))
         P.pb['tail'].scale = (sp.get('tail_spread', 1.0), 1, 1)
         hood = sp.get('hood', 0.0)
-        P.pb['hood'].scale = (1, 1, 1) if hood >= 1.0 else ((0.001,) * 3 if hood <= 0 else (1, 1, 1))
-        if 0 < hood < 1:
-            P.pb['hood'].location = (0, 0, 0)
+        P.pb['hood'].scale = (1, 1, 1) if hood >= 1.0 else (0.001,) * 3
+        P.pb['hood'].location = (0, sp.get('hood_lift', 0.0) * MM, 0)      # the bone points up: its Y is up
         w = sp.get('wing')
         for side, s in ((1, 'L'), (-1, 'R')):
             if w:
@@ -553,6 +662,8 @@ class Applier:
                 P.turn(f'wing_up.{s}', (0, side, 0), w.get('twist', 0.0))
                 P.turn(f'wing_fore.{s}', (0, 0, side), w['fore'])
                 P.turn(f'wing_hand.{s}', (0, 0, side), w['hand'])
+                P.turn(f'wing_hand.{s}', (side, 0, 0), w.get('hand_up', 0.0))
+                P.turn(f'wing_hand.{s}', (0, side, 0), w.get('hand_twist', 0.0))
             lift = sp.get('fold_lift', 0.0)
             if lift:
                 P.turn(f'fold.{s}', (0, 0, -side), 0.6 * lift)
@@ -560,10 +671,10 @@ class Applier:
         # the legs and toes
         feet = sp['feet']
         for side, s in ((1, 'L'), (-1, 'R')):
-            if feet == 'cuff':
-                target = V3((0.0, 22.0 * side, 0.0))
+            if feet in PLANTED:
+                target = V3((0.0, 22.0 * side, FOOT_LIFT)) + V3(sp.get('foot_shift', (0, 0, 0))) * (1 if side > 0 else 0)
                 P.leg(s, target, V3((-1, 0, -0.25)))
-                self.toes_on(s, side, self.C.cuff)
+                self.toes_on(s, side, self.C.cuff if feet == 'cuff' else flat_surface)
             else:
                 mode, kf = feet
                 hang = V3(REST_FOOT) * V3((1, side, 1))
@@ -608,10 +719,11 @@ class Applier:
                 P.aim(f'jess{j + 1}.{s}', pts[j + 1])
         P.key(frame)
         # measures
-        if feet == 'cuff':
+        if feet in PLANTED:
             for s in ('L', 'R'):
                 side = 1 if s == 'L' else -1
-                self.log.append(('slide', frame, s, (P.tail_of(f'tarsus.{s}') - V3((0, 22 * side, 0))).length))
+                want = V3((0, 22 * side, FOOT_LIFT)) + V3(sp.get('foot_shift', (0, 0, 0))) * (1 if side > 0 else 0)
+                self.log.append(('slide', frame, s, (P.tail_of(f'tarsus.{s}') - want).length))
 
 
 # ------------------------------------------------------------------ build, export, sheets
@@ -652,10 +764,12 @@ def build_saker(out, sheets=False):
                 A.apply(spec_fn(0), 0)
             A.prev_root = None
         frames_mesh[name] = []
+        FRAMES_FEET[name] = []
         for f in range(n + (1 if loop else 0)):
             sp = spec_fn(f % n)
             A.apply(sp, f)
             frames_mesh[name].append(sp['mesh'])
+            FRAMES_FEET[name].append(sp['feet'] if isinstance(sp['feet'], str) else sp['feet'][0])
         log += [(name,) + e for e in A.log]
         act.use_fake_user = True
         arm.animation_data.action = None
@@ -668,7 +782,7 @@ def build_saker(out, sheets=False):
     for name in CLIPS:
         sl = [e[4] for e in log if e[0] == name and e[1] == 'slide']
         if sl:
-            print(f'{name}: foot on the cuff, distance from its place max {max(sl):.2f} mm over {len(sl) // 2} frames')
+            print(f'{name}: a planted foot\'s distance from its place, max {max(sl):.2f} mm over {len(sl) // 2} frames')
     path = os.path.join(out, 'saker_rig.glb')
     bpy.ops.object.select_all(action='DESELECT')
     for o in [arm, *meshes.values()]:
@@ -709,8 +823,8 @@ def toe_vertex_sets(o):
     return {k: np.array(v) for k, v in out.items()}
 
 
-def talon_depths(arm, meshes, frames_mesh, name, n):
-    """Per frame, how deep any toe or talon vertex goes under the cuff's surface (mm)."""
+def talon_depths(arm, meshes, frames_mesh, name, n, surface=None):
+    """Per frame, how deep any toe or talon vertex goes under the support's surface (mm)."""
     import gear
     sc = bpy.context.scene
     use_clip(arm, name)
@@ -730,7 +844,7 @@ def talon_depths(arm, meshes, frames_mesh, name, n):
         for i in sel:
             x, y, z = co[i]
             if abs(y) < 45 and -100 < x < 60:
-                dd = gear.dass_top(x, y) - z
+                dd = (surface or gear.dass_top)(x, y) - z
                 if dd > depth:
                     depth, where = dd, (round(x), round(y), round(z), [g.name for g in o.vertex_groups if any(vg.group == g.index for vg in o.data.vertices[i].groups)])
         ev.to_mesh_clear()
@@ -769,7 +883,7 @@ def strip_gif(arm, meshes, frames_mesh, name, frames, out, cam, res=(240, 180), 
 
 
 def contact_sheet(arm, meshes, frames_mesh, name, frames, out, view='side', res=(320, 240), samples=8, cam=None,
-                  with_cuff=True, label=''):
+                  with_cuff=True, label='', tag=None):
     """Renders the frames of a clip and tiles them into one JPEG with the frame numbers."""
     from PIL import Image, ImageDraw
     sc = bpy.context.scene
@@ -804,52 +918,87 @@ def contact_sheet(arm, meshes, frames_mesh, name, frames, out, view='side', res=
         x, y = (i % cols) * w, (i // cols) * h + 28
         sheet.paste(im, (x, y))
         d.text((x + 6, y + 4), f'{f}', fill=(20, 20, 20), font=f_)
-    path = os.path.join(out, f'saker_{name}{"_" + label.split()[1] if label else ""}_sheet.jpg')
+    path = os.path.join(out, f'saker_{name}_{tag or "sheet"}.jpg')
     sheet.save(path, quality=86)
     print('sheet', path)
     return path
+
+
+CUFF_CLIPS = ('hood_off', 'hood_on', 'cast_off', 'land_cuff')
+PERCH_CLIPS = ('perch_idle', 'rouse', 'land_perch')
+FLYING = ('flight', 'glide', 'stoop', 'bind')
+
+
+def planted_frames(name, n, frames_feet):
+    return [f for f in range(n) if frames_feet[name][f] in PLANTED]
+
+
+def all_sheets(arm, meshes, frames_mesh, out, q, only=None):
+    import gear
+    at = common.Atlas(dict(gear.BLOCKS))
+    gc, go = at.paint(256, gear.painters())
+    gm = common.material('gear', gc, go)
+    cuff = common.obj('dass', common.to_mesh('dass', gear.dass(0), at), gm)
+    perch = common.obj('wakr', common.to_mesh('wakr', gear.wakr(0), at), gm)
+    me = bpy.data.meshes.new('sand')
+    r = 3.0
+    me.from_pydata([(-r, -r, 0), (r, -r, 0), (r, r, 0), (-r, r, 0)], [], [(0, 1, 2, 3)])
+    sand = common.obj('sand', me, None)
+    sm = bpy.data.materials.new('sandm')
+    sm.use_nodes = True
+    sm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.62, 0.52, 0.38, 1)
+    me.materials.append(sm)
+    res = (240, 180) if q else (360, 270)
+    paths = []
+    for name, (n, fn, loop) in CLIPS.items():
+        if only and name not in only:
+            continue
+        cuff.hide_render = name not in CUFF_CLIPS
+        perch.hide_render = name not in PERCH_CLIPS
+        sand.hide_render = name != 'mantle'
+        k = 12
+        frames = sorted(set(int(round(i * (n - 1) / (k - 1))) for i in range(k)))
+        far = name in FLYING or name in ('cast_off', 'land_cuff', 'land_perch')
+        d = 1.15 if far else 0.75
+        side = lambda f, r, d=d: ((r.x + 0.1, r.y + 4, r.z + 0.2), (r.x + 0.1, r.y, r.z + 0.2), d)
+        tq = lambda f, r, d=d: ((r.x + 1.2 * d, r.y + 1.0 * d, r.z + 0.2 + 0.55 * d), (r.x + 0.08, r.y, r.z + 0.18), None)
+        if name in FLYING:
+            side = lambda f, r, d=d: ((r.x + 0.1, r.y + 4, r.z), (r.x + 0.1, r.y, r.z), d)
+            tq = lambda f, r, d=d: ((r.x + 1.3 * d, r.y - 1.1 * d, r.z + 0.6 * d), (r.x + 0.1, r.y, r.z), None)
+        paths.append(contact_sheet(arm, meshes, frames_mesh, name, frames, out, res=res, samples=6 if q else 12, cam=side,
+                                   label=f'{name}, from the side (30 frames a second): awaiting the owner\'s approval of the motion', tag='side'))
+        paths.append(contact_sheet(arm, meshes, frames_mesh, name, frames, out, res=res, samples=6 if q else 12, cam=tq,
+                                   label=f'{name}, three-quarter (30 frames a second): awaiting the owner\'s approval of the motion', tag='tq'))
+    return paths
 
 
 if __name__ == '__main__':
     OUT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else 'out')
     os.makedirs(OUT, exist_ok=True)
     arm, meshes, frames_mesh, B, clips = build_saker(OUT)
-    if len(sys.argv) > 3 and sys.argv[3] in ('sheets', 'quick'):
-        import gear
-        # the cuff, at the origin (the falconer's fist, held level)
-        at = common.Atlas(dict(gear.BLOCKS))
-        gc, go = at.paint(256, gear.painters())
-        gm = common.material('gear', gc, go)
-        common.obj('dass', common.to_mesh('dass', gear.dass(0), at), gm)
-        q = sys.argv[3] == 'quick'
-        res = (240, 180) if q else (360, 270)
-        side = lambda f, r, d=1.1: ((r.x, r.y + 4, r.z + 0.15), (r.x, r.y, r.z + 0.15), d)
-        fixed = lambda cx, cz, d: (lambda f, r: ((cx, 4, cz), (cx, 0, cz), d))
-        follow = lambda d, dz=0.2: (lambda f, r: ((r.x + 0.15, r.y + 4, r.z + dz), (r.x + 0.15, r.y, r.z + dz), d))
-        which = os.environ.get('SHEETS', 'cast_off,flight,land_cuff,feet,gif').split(',')
-        if 'cast_off' in which:
-            contact_sheet(arm, meshes, frames_mesh, 'cast_off', [0, 6, 10, 12, 14, 16, 18, 21, 24, 28, 34, 40], OUT,
-                          res=res, samples=6 if q else 16, cam=follow(1.0))
-        if 'feet' in which:
-            contact_sheet(arm, meshes, frames_mesh, 'cast_off', [0, 12], OUT, res=(480, 360), samples=6 if q else 16,
-                          cam=lambda f, r: ((0.35, 0.3, 0.08), (0.0, 0.0, 0.0), None), label='the feet on the cuff')
-        if 'flight' in which:
-            bpy.data.objects['dass'].hide_render = True
-            contact_sheet(arm, meshes, frames_mesh, 'flight', list(range(0, 14, 1)), OUT, res=res, samples=6 if q else 16,
-                          cam=lambda f, r: ((r.x + 1.6, r.y - 1.3, r.z + 0.8), (r.x + 0.15, r.y, r.z + 0.05), None))
+    mode = sys.argv[3] if len(sys.argv) > 3 else ''
+    only = os.environ.get('CLIPS_ONLY', '').split(',') if os.environ.get('CLIPS_ONLY') else None
+    if mode in ('sheets', 'quick'):
+        all_sheets(arm, meshes, frames_mesh, OUT, mode == 'quick', only)
+        if not only or 'feet' in only:
+            contact_sheet(arm, meshes, frames_mesh, 'cast_off', [0, 12], OUT, res=(480, 360), samples=12,
+                          cam=lambda f, r: ((0.35, 0.3, 0.08), (0.0, 0.0, 0.0), None), label='the feet on the cuff', tag='feet')
+        if os.environ.get('GIFS'):
             bpy.data.objects['dass'].hide_render = False
-        if 'gif' in which:
-            strip_gif(arm, meshes, frames_mesh, 'cast_off', list(range(0, 41)), OUT, cam=follow(1.0))
+            bpy.data.objects['wakr'].hide_render = True
+            bpy.data.objects['sand'].hide_render = True
+            follow = lambda f, r: ((r.x + 0.15, r.y + 4, r.z + 0.2), (r.x + 0.15, r.y, r.z + 0.2), 1.15)
+            strip_gif(arm, meshes, frames_mesh, 'cast_off', list(range(0, 41)), OUT, cam=follow)
             bpy.data.objects['dass'].hide_render = True
             strip_gif(arm, meshes, frames_mesh, 'flight', list(range(0, 14)), OUT, repeat=3,
                       cam=lambda f, r: ((r.x + 1.6, r.y - 1.3, r.z + 0.8), (r.x + 0.15, r.y, r.z + 0.05), None))
-            bpy.data.objects['dass'].hide_render = False
-        if 'land_cuff' in which:
-            contact_sheet(arm, meshes, frames_mesh, 'land_cuff', [0, 8, 14, 18, 22, 26, 28, 30, 33, 36, 39, 45], OUT,
-                          res=res, samples=6 if q else 16, cam=follow(1.0))
-    if len(sys.argv) > 3 and sys.argv[3] == 'measure':
+    if mode == 'measure':
+        import gear
         for name, (n, fn, loop) in CLIPS.items():
-            if name in ('cast_off', 'land_cuff'):
-                d = talon_depths(arm, meshes, frames_mesh, name, n)
-                on = [x for f, x in enumerate(d) if (name == 'cast_off' and f < 16) or (name == 'land_cuff' and f >= 28)]
-                print(f'{name}: deepest toe/talon vertex under the cuff surface while on it: {max(on):.1f} mm')
+            on = planted_frames(name, n, FRAMES_FEET)
+            if not on:
+                continue
+            surf = gear.dass_top if name in CUFF_CLIPS else flat_surface
+            d = talon_depths(arm, meshes, frames_mesh, name, n, surf)
+            print(f'{name}: deepest toe or talon vertex under the {"cuff" if name in CUFF_CLIPS else "surface"} '
+                  f'while standing on it: {max(d[f] for f in on):.1f} mm over {len(on)} frames')
