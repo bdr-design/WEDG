@@ -21,6 +21,7 @@ const CSS = `
   :host { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
   *, *::before, *::after { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }      /* (a long press selects nothing and calls nothing out: farm.html's top) */
   img, svg { -webkit-user-drag: none; }
+  input, textarea, [contenteditable]:not([contenteditable="false"]) { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }      /* (a text field, if one is ever added, is typed in and selected as anywhere) */
   .phone { position: absolute; inset: 0; overflow: hidden; color-scheme: light; }
   .dim { position: absolute; inset: 0; background: rgba(12, 8, 4, 0.55); display: none; pointer-events: auto; touch-action: none; }
   .dev { position: absolute; width: ${W}px; height: ${H}px; border-radius: 50px; padding: 9px; background: linear-gradient(145deg, #4a4036, #1d1813 40%, #2b241d);
@@ -1261,8 +1262,8 @@ export function createPhone({ host }) {
   const el = document.createElement('div'), root = el.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar" role="dialog" aria-label="الجوال" aria-hidden="true"><div class="dim"></div><div class="dev" tabindex="-1"><div class="scr" inert></div></div><div class="sr" role="status" aria-live="polite"></div></div>`;
   host.appendChild(el);
-  root.addEventListener('selectstart', (e) => e.preventDefault(), true);      // (it does not leave the shadow tree for the page's guard: farm.html)
-  const box =root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim'), sr = root.querySelector('.sr');
+  root.addEventListener('selectstart', (e) => { let t = e.composedPath()[0]; if (t && t.nodeType !== 1) t = t.parentElement; if (!t?.closest?.('input, textarea, [contenteditable]:not([contenteditable="false"])')) e.preventDefault(); }, true);      // (it does not leave the shadow tree for the page's guard, farm.html; a text field keeps it)
+  const box = root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim'), sr = root.querySelector('.sr');
   const st = { state: 'closed', play: false, screen: 'home', s: SMALL };
   const listeners = new Set();
   let press = null, lastDown = 0, bigAt = 0, focusBack = null, shownAt = 0;
