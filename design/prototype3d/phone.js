@@ -230,7 +230,7 @@ const CSS = `
   .row .lead.milk { background: #e6eef8; color: #2f7fcf; }
   .row .lead.sea { background: #f1f1f4; color: #55555b; }
   .row .chev { grid-row: span 2; color: #c4c4c9; } .row .chev svg { width: 16px; height: 16px; }
-  .sw { width: 46px; height: 28px; border-radius: 14px; background: #e3e3e8; position: relative; flex: none; }
+  .sw { display: block; width: 46px; height: 28px; border-radius: 14px; background: #e3e3e8; position: relative; flex: none; cursor: pointer; }
   .sw i { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .sw.on { background: var(--acc); } .sw.on i { right: auto; left: 2px; }
   .yr { background: var(--card); border-radius: 16px; padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 5px; }
@@ -696,7 +696,7 @@ const onTruck = () => (RU().trucks || []).map((t) => ({ ...t, male: t.sex === 'm
 const sinceSick = (x) => { const d = G.today - (x.sickSince ?? G.today); const f = x.sex !== 'male'; return d <= 0 ? (f ? 'مريضة من اليوم' : 'مريض من اليوم') : `${f ? 'مريضة' : 'مريض'} من ${days(d)}`; };
 const sickRow = (x) => {
   const f = x.sex !== 'male', acc = onAccount(x.quote);
-  const line = [sinceSick(x), `البيطري ${n0(x.quote)} ريال`, `${f ? 'تطيب' : 'يطيب'} بـ ${x.recoverMin} إلى ${days(x.recoverMax)}`].join(' · ');
+  const line = [sinceSick(x), `البيطري\u00a0${n0(x.quote)} ريال`, `${f ? 'تطيب' : 'يطيب'} بـ ${x.recoverMin} إلى ${days(x.recoverMax)}`].join(' · ');
   return `<div class="row r3"><span class="lead bad">${svg('heart')}</span><b>${esc(x.name)} · ${esc(x.illnessName)}</b><span class="act"><button class="btn sm ${acc ? 'pri' : ''}" data-act="treat" data-id="${esc(x.camel)}" aria-label="${f ? 'عالج' : 'عالج'} ${esc(x.name)} بـ ${n0(x.quote)} ريال" ${acc ? '' : 'disabled'}>${f ? 'عالجها' : 'عالجه'}</button></span><small>${line}</small>${acc && acc.short > 0 ? `<small class="rush">${accountLine(acc.owed)}</small>` : !acc ? `<small class="rush">${accountFullLine()}</small>` : ''}</div>`;
 };
 function vetRows() {
@@ -1494,7 +1494,7 @@ function calCardScreen() {
   const lw = lasts(w), lf = Math.min(lasts(b), lasts(a));
   const word = (n) => (n >= N ? '<span class="pos">يكفي</span>' : '<span style="color:var(--red);font-weight:700">ما يكفي</span>');
   const standW = (R.standing || []).includes('water'), standF = (R.standing || []).includes('feed');
-  const supRow = (icon, name, last, fill, after, key, can) => `<div class="row r3"><span class="lead${last < N ? ' bad' : ''}">${svg(icon)}</span><b>${name} · يكفي ${days(Math.min(last, 999))}</b>${can ? `<span class="act"><button class="btn sm ghost" data-act="calFill" data-s="${key}" aria-label="عبّ ${name}">عبّه</button></span>` : ''}<small>${fill}${word(after)}</small></div>`;
+  const supRow = (icon, name, last, fill, after, key, can) => `<div class="row r3"><span class="lead${last < N ? ' bad' : ''}">${svg(icon)}</span><b>${name} · ${last <= 0 ? (key === 'water' ? 'خلص' : 'خلص') : `يكفي ${days(Math.min(last, 999))}`}</b>${can ? `<span class="act"><button class="btn sm ghost" data-act="calFill" data-s="${key}" aria-label="عبّ ${name}">عبّه</button></span>` : ''}<small>${fill}${word(after)}</small></div>`;
   const wFill = standW ? 'الطلب الثابت شغّال: يجيك الوايت بنفسه. ' : F.tanker ? `وايت ${Math.round(F.tanker.litres / 1000)} طن يعبّي الخزان ${n0(Math.min(F.tankRoom, F.tanker.litres))} لتر والباقي يرجع، بـ ${n0(F.tanker.price)} ريال، يصير يكفي ${days(F.water)} تقريبًا: ` : 'الخزان ما يشيل وايت الحين: ';
   const fFill = standF ? 'الطلب الثابت شغّال: يجيك العلف بنفسه. ' : F.bags + F.bales > 0 ? `${[F.bags ? count(F.bags, 'bag') : '', F.bales ? count(F.bales, 'bale') : ''].filter(Boolean).join(' و')} بـ ${n0(F.feedCost)} ريال، يصير يكفي ${days(F.feed)} تقريبًا: ` : `${STORE().the} ${STORE().none} مكان الحين: `;
   const wAfter = standW ? N : F.tanker ? F.water : lw, fAfter = standF ? N : F.bags + F.bales > 0 ? F.feed : lf;
