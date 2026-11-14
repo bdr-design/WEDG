@@ -12,7 +12,7 @@ photo.
 | 4. Rig and clips | `rig.py` | `camel_rigged.blend` (idle, graze) |
 | 4b. Walk from foot physics | `walk_physics.py` | replaces `walk`, prints slip and contact checks |
 | 5. Export | `export_glb.py` | `camel_wodh_female.glb` |
-| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 625 KB), `_lod2.glb` (1.5k triangles, 512 px, 269 KB); same skeleton and clips |
+| 6. Detail levels | `lods.py` | `_lod1.glb` (8k triangles, 1K textures, 625 KB), `_lod1_4k.glb` (4k triangles, 1K textures, 468 KB: the farm's middle level since the owner's choice of 14 Nov 2026), `_lod2.glb` (1.5k triangles, 512 px, 269 KB); same skeleton, bind pose and clips. Run in the work folder with `camel_rigged.blend`, its two 2048 px maps (`camel_albedo_2048.png`, `camel_normal_2048.png`) and `camel_wodh_female.glb`; the same files come out byte for byte each run |
 | Checks | `render_tex.py`, `render_anim.py`, `feet_closeup.py`, `feet_clay.py`, `feet_walk.py`, `body_views.py`, `ortho_compare.py` | Cycles renders in desert light; close-ups of the lower legs standing, untextured and through a stride; front, rear and three-quarter views; a side view at the photo's own scale to lay over it |
 
 ## How each step works

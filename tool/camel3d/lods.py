@@ -1,7 +1,11 @@
-"""Make lighter copies of the rigged camel (same skeleton, same clips) and report sizes."""
+"""Make lighter copies of the rigged camel (same skeleton, same clips) and report sizes.
+
+lod1 (8k triangles) and lod2 (1.5k) as before; lod1_4k (4k triangles, 1K textures), the farm's middle level since
+the owner's choice of 14 Nov 2026 («النسخة الوسط الأخف الحين»), made the same way (Blender's collapse decimation from the
+40k mesh). Run in the work folder that holds camel_rigged.blend and camel_wodh_female.glb."""
 import os, bpy, json
 res = {}
-for name, tris, tex in (('lod1', 8000, 1024), ('lod2', 1500, 512)):
+for name, tris, tex in (('lod1', 8000, 1024), ('lod1_4k', 4000, 1024), ('lod2', 1500, 512)):
     bpy.ops.wm.open_mainfile(filepath=os.path.abspath('camel_rigged.blend'))
     ob = bpy.data.objects['Camel']
     full = len(ob.data.polygons)
