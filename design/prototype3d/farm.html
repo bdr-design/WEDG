@@ -254,6 +254,8 @@
 <div class="meter glass num" id="meter" dir="rtl" hidden aria-live="off"></div>
 </div>
 
+<!-- three.js r170, pinned (and in tool/proto_app/assemble.py). The herd's and the dust's shaders edit its own shader text
+     (shaderEdit): on another version, check the console for "shader edit not found". -->
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -608,11 +610,22 @@ const dustTex = canvasTex(64, 64, (g, w) => { const gr = g.createRadialGradient(
 const DUST = 90, dustOp = new THREE.InstancedBufferAttribute(new Float32Array(DUST), 1).setUsage(THREE.DynamicDrawUsage);
 const dustGeo = new THREE.BufferGeometry().copy(new THREE.Sprite().geometry); dustGeo.setAttribute('dustOpacity', dustOp);
 const dustMat = new THREE.SpriteMaterial({ map: dustTex, transparent: true, depthWrite: false });
+// A shader's text with each [from, to] put in. These edit three.js's own shaders (r170, the version the page pins: its
+// import map): another version may word them otherwise, and a .replace() that finds nothing fails silently, so each one
+// missing is said once in the console.
+const shaderMissing = new Set();
+function shaderEdit(text, edits, who) {
+  for (const [from, to] of edits) {
+    if (!text.includes(from)) { const k = who + ': ' + from.slice(0, 50); if (!shaderMissing.has(k)) { shaderMissing.add(k); console.warn('shader edit not found (three.js changed?)', k); } continue; }
+    text = text.replace(from, to);
+  }
+  return text;
+}
 dustMat.onBeforeCompile = (sh) => {
-  sh.vertexShader = sh.vertexShader.replace('void main() {', 'attribute float dustOpacity;\nvarying float vDustOpacity;\nvoid main() {\n\tvDustOpacity = dustOpacity;')
-    .replace('vec4 mvPosition = modelViewMatrix[ 3 ];', 'vec4 mvPosition = modelViewMatrix * vec4( instanceMatrix[ 3 ].xyz, 1.0 );')
-    .replace('vec2 scale = vec2( length( modelMatrix[ 0 ].xyz ), length( modelMatrix[ 1 ].xyz ) );', 'vec2 scale = vec2( length( instanceMatrix[ 0 ].xyz ), length( instanceMatrix[ 1 ].xyz ) );');
-  sh.fragmentShader = sh.fragmentShader.replace('void main() {', 'varying float vDustOpacity;\nvoid main() {').replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( diffuse, opacity * vDustOpacity );');
+  sh.vertexShader = shaderEdit(sh.vertexShader, [['void main() {', 'attribute float dustOpacity;\nvarying float vDustOpacity;\nvoid main() {\n\tvDustOpacity = dustOpacity;'],
+    ['vec4 mvPosition = modelViewMatrix[ 3 ];', 'vec4 mvPosition = modelViewMatrix * vec4( instanceMatrix[ 3 ].xyz, 1.0 );'],
+    ['vec2 scale = vec2( length( modelMatrix[ 0 ].xyz ), length( modelMatrix[ 1 ].xyz ) );', 'vec2 scale = vec2( length( instanceMatrix[ 0 ].xyz ), length( instanceMatrix[ 1 ].xyz ) );']], 'dust');
+  sh.fragmentShader = shaderEdit(sh.fragmentShader, [['void main() {', 'varying float vDustOpacity;\nvoid main() {'], ['vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( diffuse, opacity * vDustOpacity );']], 'dust');
 };
 const dustMesh = new THREE.InstancedMesh(dustGeo, dustMat, DUST);
 dustMesh.center = new THREE.Vector2(0.5, 0.5);      // (the sprite shader's anchor: three.js sets it from the object)
@@ -769,11 +782,11 @@ transformed = (boneMatX * skinVertex * skinWeight.x + boneMatY * skinVertex * sk
 function herdShader(m, U, bind, coat) {
   m.onBeforeCompile = (sh) => {
     sh.uniforms.herdBake = U.bake; sh.uniforms.herdLive = U.live; sh.uniforms.herdMode = U.mode; sh.uniforms.herdBind = { value: bind };
-    sh.vertexShader = sh.vertexShader.replace('#include <skinning_pars_vertex>', HERD_PARS + (coat ? 'attribute float herdRough;\nvarying float vHerdRough;' : ''))
-      .replace('#include <skinbase_vertex>', HERD_BASE + (coat ? '\nvHerdRough = herdRough;' : '')).replace('#include <skinnormal_vertex>', HERD_NORMAL).replace('#include <skinning_vertex>', HERD_SKIN);
+    sh.vertexShader = shaderEdit(sh.vertexShader, [['#include <skinning_pars_vertex>', HERD_PARS + (coat ? 'attribute float herdRough;\nvarying float vHerdRough;' : '')],
+      ['#include <skinbase_vertex>', HERD_BASE + (coat ? '\nvHerdRough = herdRough;' : '')], ['#include <skinnormal_vertex>', HERD_NORMAL], ['#include <skinning_vertex>', HERD_SKIN]], 'herd');
     // the coat's roughness by instance (the dark majaheem's is its own: 0.78)
-    if (coat) sh.fragmentShader = sh.fragmentShader.replace('#include <roughnessmap_pars_fragment>', '#include <roughnessmap_pars_fragment>\nvarying float vHerdRough;')
-      .replace('#include <roughnessmap_fragment>', THREE.ShaderChunk.roughnessmap_fragment.replace('= roughness;', '= vHerdRough;'));
+    if (coat) sh.fragmentShader = shaderEdit(sh.fragmentShader, [['#include <roughnessmap_pars_fragment>', '#include <roughnessmap_pars_fragment>\nvarying float vHerdRough;'],
+      ['#include <roughnessmap_fragment>', shaderEdit(THREE.ShaderChunk.roughnessmap_fragment, [['= roughness;', '= vHerdRough;']], 'herd roughness')]], 'herd');
   };
   m.customProgramCacheKey = () => 'herd' + (coat ? 1 : 0);
   return m;
@@ -1023,8 +1036,11 @@ function buildHerd(T) {
     warm() {
       const m4 = new THREE.Matrix4().makeTranslation(-24.5, 0, -13.5);
       for (const m of meshes) { m.count = 1; m.visible = true; m4.toArray(m.instanceMatrix.array, 0); m.userData.anim.set([start.idle, start.idle + 1, 0, -1]); m.instanceMatrix.needsUpdate = true; m.geometry.attributes.herdAnim.needsUpdate = true; }
+      // and the footfall dust's draw (its shader was made at the first puff, mid-play)
+      dustMesh.count = 1; dustMesh.visible = true; m4.toArray(dustMesh.instanceMatrix.array, 0); dustOp.array[0] = 0; dustMesh.instanceMatrix.needsUpdate = true; dustOp.needsUpdate = true;
       renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
       for (const m of meshes) { m.count = 0; m.visible = false; }
+      dustMesh.count = 0; dustMesh.visible = false;
     },
   };
 }
