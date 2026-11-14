@@ -152,10 +152,11 @@ class UpkeepSystem implements DailySystem {
         low(f.waterL, n.water)) {
       final large = Provisions.fits(f, Supply.water, Balance.waterLoadL);
       final small = Provisions.fits(f, Supply.water, Balance.smallWaterLoadL);
+      // as many tankers as the tank takes (a large herd drinks many a day)
       if (large > 0) {
-        send(OrderSupply(p.id, Supply.water, 1));
+        send(OrderSupply(p.id, Supply.water, large));
       } else if (small > 0) {
-        send(OrderSupply(p.id, Supply.water, 1, tanker: Tanker.small));
+        send(OrderSupply(p.id, Supply.water, small, tanker: Tanker.small));
       }
     }
     if (f.standing.contains(StandingOrder.feed) &&
