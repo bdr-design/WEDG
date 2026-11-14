@@ -1185,6 +1185,84 @@ void main() {
       );
     });
 
+    test(
+      'item 12: one who bought her knowing (his vet\'s look found it, '
+      'the same day) may not sell her declared; one told after buying may',
+      () {
+        for (final bargain in [false, true]) {
+          final g = newGame(6);
+          final l = g.state.world.listings.values.firstWhere(
+            (x) => !sim(g).isPlayer(x.sellerId),
+          );
+          final c = g.state.world.camels[l.camelId]!;
+          c.treatments.add(
+            Tampering(
+              kind: TamperKind.dye,
+              strength: 3,
+              on: g.today,
+              until: g.today + 29,
+              by: l.sellerId,
+            ),
+          );
+          // his vet looks till he finds it, then he buys the same day
+          for (var i = 0; i < 20; i++) {
+            if (c.treatments.single.knownBy.contains(g.me.id)) break;
+            if (i > 0) g.advanceDays(1);
+            g.dispatch(CheckListing(g.me.id, l.id));
+          }
+          expect(c.treatments.single.knownBy, contains(g.me.id));
+          final r = bargain
+              ? g.dispatch(Bargain(g.me.id, l.id, l.askPrice.value))
+              : g.dispatch(BuyListing(g.me.id, l.id));
+          if (!r.ok) continue;
+          expect(c.treatments.single.boughtKnowing, [g.me.id]);
+          g.advanceDays(2);
+          final v = GameView(g.state, g.me.id);
+          expect(v.cannotDeclare(c.id)?.code, ErrorCode.knewWhenBought);
+          expect(v.declareRefusal(c.id)?.code, ErrorCode.knewWhenBought);
+          expect(
+            refused(g, QuickSale(g.me.id, c.id, declared: true)).error.code,
+            ErrorCode.knewWhenBought,
+          );
+          expect(
+            refused(
+              g,
+              ListForSale(g.me.id, c.id, 50000, declared: true),
+            ).error.code,
+            ErrorCode.knewWhenBought,
+          );
+          // the silent sale stays open to him
+          expect(v.canSell(c.id), isNull);
+        }
+        // bought unknowing, then told: he may
+        final g = newGame(6);
+        final l = g.state.world.listings.values.firstWhere(
+          (x) => !sim(g).isPlayer(x.sellerId),
+        );
+        final c = g.state.world.camels[l.camelId]!;
+        c.treatments.add(
+          Tampering(
+            kind: TamperKind.dye,
+            strength: 3,
+            on: g.today,
+            until: g.today + 29,
+            by: l.sellerId,
+          ),
+        );
+        expect(g.dispatch(BuyListing(g.me.id, l.id)).ok, isTrue);
+        g.advanceDays(1);
+        TamperingSystem.foundOutside(sim(g), g.me, c, c.treatments.single);
+        expect(c.treatments.single.boughtKnowing, isEmpty);
+        expect(GameView(g.state, g.me.id).cannotDeclare(c.id), isNull);
+        // a save keeps it
+        final again = GameState.fromJson(g.state.toJson());
+        expect(
+          again.world.camels[c.id]!.treatments.single.boughtKnowing,
+          isEmpty,
+        );
+      },
+    );
+
     test('a fine larger than the money: the balance below zero, no camel '
         'bought and nothing built, feed and water still come', () {
       final g = newGame();

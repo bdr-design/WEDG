@@ -131,6 +131,11 @@ enum ErrorCode {
   /// The player's vet looked at this listing today already: the same day's
   /// looks agree (a fresh look is another day's).
   checkedToday,
+
+  /// He bought her knowing of the treatment (his vet found it, or it was
+  /// declared): the declared sale is only for one who did not know (the
+  /// owner, 14 Nov 2026, item 12).
+  knewWhenBought,
 }
 
 class DomainError {

@@ -251,13 +251,17 @@ class GameView {
   }
 
   /// Why the viewer cannot sell [id] declared when he knows of a treatment
-  /// in her: she was treated by him (ownTreatment), or null.
+  /// in her: she was treated by him (ownTreatment), or he bought her knowing
+  /// (knewWhenBought), or null.
   DomainError? declareRefusal(CamelId id) {
     final c = _w.camels[id];
     // (most camels carry none: no work for them, a herd of thousands)
     if (c == null || c.ownerId != viewer || c.treatments.isEmpty) return null;
     final e = handlers.cannotDeclare(_sim, me, c);
-    return e?.code == ErrorCode.ownTreatment ? e : null;
+    return e?.code == ErrorCode.ownTreatment ||
+            e?.code == ErrorCode.knewWhenBought
+        ? e
+        : null;
   }
 
   /// Bargaining attempts the viewer has left on a listing.

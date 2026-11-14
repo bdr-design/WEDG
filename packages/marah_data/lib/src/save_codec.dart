@@ -19,12 +19,16 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = rushVersion;
+  static const currentVersion = savedKnowingVersion;
 
   /// The version the rush and the calendar (task T15) bring: the one after
   /// the session branch's when this build is brought in (one constant, so
   /// it is renumbered in one place).
   static const rushVersion = 11;
+
+  /// The version that keeps who bought a treated camel knowing (T16, the
+  /// owner's item 12 of 14 Nov 2026), after the rush's.
+  static const savedKnowingVersion = rushVersion + 1;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
@@ -40,7 +44,16 @@ class SaveCodec {
     8: _v8ToV9,
     9: _v9ToV10,
     rushVersion - 1: _toRush,
+    savedKnowingVersion - 1: _v11ToV12,
   };
+
+  /// v11 to v12: a treatment keeps the players who bought her knowing of it
+  /// (boughtKnowing; the owner's item 12 of 14 Nov 2026). Who knew at an
+  /// earlier purchase was never kept, so a save from before holds none: its
+  /// treatments carry no boughtKnowing, and every buyer who was told after
+  /// buying keeps his declared sale, as before.
+  static Map<String, Object?> _v11ToV12(Map<String, Object?> input) =>
+      jsonDecode(jsonEncode(input)) as Map<String, Object?>;
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
   /// - the colour family مغاتير is gone (it is only the umbrella name of the

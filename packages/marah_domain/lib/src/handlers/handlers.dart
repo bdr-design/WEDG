@@ -128,6 +128,16 @@ Result _buyAt(Sim sim, PlayerState p, Listing l, Riyal price) {
       }
     }
   }
+  // bought knowing (his vet's look found it, the same day included, or it
+  // was declared): he may not sell her declared (the owner, 14 Nov 2026,
+  // item 12)
+  for (final t in c.treatments) {
+    if (t.activeOn(sim.today) &&
+        t.knownBy.contains(p.id) &&
+        !t.boughtKnowing.contains(p.id)) {
+      t.boughtKnowing.add(p.id);
+    }
+  }
   sim.world.listings.remove(l.id);
   sim.world.offers.removeWhere((_, o) => o.listingId == l.id);
   c
@@ -370,6 +380,11 @@ DomainError? cannotDeclare(Sim sim, PlayerState p, Camel c) {
   ];
   if (showing.any((t) => t.by == p.id)) {
     return const DomainError(ErrorCode.ownTreatment);
+  }
+  // the declared sale is only for one who did not know (the owner, 14 Nov
+  // 2026, item 12: «البيع المعلن بدون غرامة للي ما درى بس»)
+  if (showing.any((t) => t.boughtKnowing.contains(p.id))) {
+    return const DomainError(ErrorCode.knewWhenBought);
   }
   final told = showing.any((t) => t.knownBy.contains(p.id));
   return told ? null : const DomainError(ErrorCode.nothingToDeclare);

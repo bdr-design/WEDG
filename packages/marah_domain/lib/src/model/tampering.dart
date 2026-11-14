@@ -147,7 +147,9 @@ class Tampering {
     required this.until,
     this.by,
     List<OwnerId>? knownBy,
-  }) : knownBy = knownBy ?? [];
+    List<OwnerId>? boughtKnowing,
+  }) : knownBy = knownBy ?? [],
+       boughtKnowing = boughtKnowing ?? [];
 
   final TamperKind kind;
   final int strength;
@@ -158,6 +160,10 @@ class Tampering {
   final OwnerId? by;
   final List<OwnerId> knownBy;
 
+  /// The players who bought her knowing of it (since save v12): they may not
+  /// sell her declared (the owner, 14 Nov 2026, item 12).
+  final List<OwnerId> boughtKnowing;
+
   bool activeOn(GameDay day) => day >= on && day <= until;
 
   Map<String, Object?> toJson() => {
@@ -167,6 +173,8 @@ class Tampering {
     'until': until.value,
     if (by != null) 'by': by!.value,
     if (knownBy.isNotEmpty) 'knownBy': [for (final o in knownBy) o.value],
+    if (boughtKnowing.isNotEmpty)
+      'boughtKnowing': [for (final o in boughtKnowing) o.value],
   };
 
   static Tampering fromJson(Map<String, Object?> j) => Tampering(
@@ -177,6 +185,11 @@ class Tampering {
     by: j['by'] == null ? null : OwnerId(j['by']! as String),
     knownBy: [
       for (final o in (j['knownBy'] as List<Object?>?) ?? const <Object?>[])
+        OwnerId(o! as String),
+    ],
+    boughtKnowing: [
+      for (final o
+          in (j['boughtKnowing'] as List<Object?>?) ?? const <Object?>[])
         OwnerId(o! as String),
     ],
   );

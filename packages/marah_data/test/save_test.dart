@@ -47,6 +47,28 @@ Game sampleGame() {
   g.dispatch(Tamper(g.me.id, c.id, TamperKind.dye, 2));
   final rival = g.state.world.owners.keys.first;
   g.state.world.bans[rival] = 2031;
+  // a treated listing looked at by his vet, found, and bought knowing
+  // (since v12)
+  {
+    final l = g.state.world.listings.values.firstWhere(
+      (x) => !g.state.players.containsKey(x.sellerId),
+    );
+    final bought = g.state.world.camels[l.camelId]!;
+    bought.treatments.add(
+      Tampering(
+        kind: TamperKind.dye,
+        strength: 1,
+        on: g.today,
+        until: g.today + 29,
+        by: l.sellerId,
+        knownBy: [g.me.id],
+      ),
+    );
+    grant(g, l.askPrice.value + 10000);
+    if (!g.dispatch(BuyListing(g.me.id, l.id)).ok) {
+      throw StateError('the fixture listing was not bought');
+    }
+  }
   // the secret treatment man's message (the entry above sent it) and a
   // finding not yet told (since v9)
   g.me.untold.add(
@@ -78,6 +100,7 @@ const fixtures = {
   9: 'test/fixtures/save_v9.json',
   10: 'test/fixtures/save_v10.json',
   11: 'test/fixtures/save_v11.json',
+  12: 'test/fixtures/save_v12.json',
 };
 
 /// [data] at version [from] brought up to today's by the later steps, as
@@ -541,6 +564,27 @@ void main() {
     final f = state.players.values.single.untold.single;
     expect((f.name, f.kind, f.fine, f.knew), ('سيف', TamperKind.dye, 0, false));
     expect(checkInvariants(state), isEmpty);
+  });
+
+  test('v9 to v12: a save from before keeps no one as having bought knowing; '
+      'a purchase after it does', () {
+    final state =
+        (codec.decode(File(fixtures[9]!).readAsStringSync()) as Loaded).state;
+    for (final c in state.world.camels.values) {
+      for (final t in c.treatments) {
+        expect(t.boughtKnowing, isEmpty);
+      }
+    }
+    expect(checkInvariants(state), isEmpty);
+    // the v12 fixture holds one bought knowing
+    final v12 =
+        (codec.decode(File(fixtures[12]!).readAsStringSync()) as Loaded).state;
+    expect(
+      v12.world.camels.values.any(
+        (c) => c.treatments.any((t) => t.boughtKnowing.isNotEmpty),
+      ),
+      isTrue,
+    );
   });
 
   test('v9 holds a message from the treatment man and an untold finding', () {

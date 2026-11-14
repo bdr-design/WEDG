@@ -944,11 +944,17 @@ function sellScreen() {
     <div class="note">${her(c, 'سعرها', 'سعره')} الطبيعي بدون زيادة التجميل، فهو تحت تقديرهم. أو\u00a0${her(c, 'انتظرها', 'انتظره')} لين يروح التجميل.</div></div>`;
   }
   if (HJ.askFor && HJ.askFor.startsWith('d:')) { HJ.askFor = null; HJ.ask = Math.max(min, roundTo(c.estimateHigh, k)); }
-  const ownT = c.declareRefused === 'ownTreatment' ? G.tamperings.filter((t) => t.camel === c.id) : [];
+  // (refused: he treated her himself, or he bought her knowing: the owner's item 12, only one who did not know sells
+  // declared; the silent sale stays below)
+  const refusedBy = c.declareRefused, knew = refusedBy === 'knewWhenBought';
+  const ownT = refusedBy ? G.tamperings.filter((t) => t.camel === c.id) : [];
   const own = ownT.length ? ownT.map((t) => `${TAMPER[t.kind]} ${STRENGTH[t.strength - 1]}`) : null, ownKinds = ownT.map((t) => t.kind);
-  const ownCard = own ? alertCard(`ما تقدر ${her(c, 'تعلنها', 'تعلنه')}`, `أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}، والتجميل ممنوع برا المهرجان بعد، وإعلانه اعتراف. ${her(c, 'انتظرها', 'انتظره')} لين يروح ${ownKinds.length === 1 ? theTamper(ownKinds[0]) : 'التجميل'}، أو\u00a0${her(c, 'بيعها', 'بيعه')} ساكت ${her(c, 'ويفحصونها', 'ويفحصونه')} قبل ما يدفعون.`) : '';
+  const gone = ownKinds.length === 1 ? theTamper(ownKinds[0]) : 'التجميل';
+  const ownCard = !own ? '' : knew
+    ? alertCard(`ما تقدر ${her(c, 'تعلنها', 'تعلنه')}`, `${her(c, 'اشتريتها', 'اشتريته')} وأنت تدري، والبيع المعلن للي ما درى بس. ${her(c, 'تخليها', 'تخليه')} عندك، أو\u00a0تنتظر لين يروح ${gone}، أو\u00a0${her(c, 'تبيعها', 'تبيعه')} ساكت وتتحمل خطر الفحص.`)
+    : alertCard(`ما تقدر ${her(c, 'تعلنها', 'تعلنه')}`, `أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}، والتجميل ممنوع برا المهرجان بعد، وإعلانه اعتراف. ${her(c, 'انتظرها', 'انتظره')} لين يروح ${gone}، أو\u00a0${her(c, 'بيعها', 'بيعه')} ساكت ${her(c, 'ويفحصونها', 'ويفحصونه')} قبل ما يدفعون.`);
   return `<div class="body">${back}<div class="title" style="font-size:22px">بيع ${esc(c.name)}</div>${errCard()}
-    <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small>${own ? `<small>${her(c, 'فيها', 'فيه')} ${own.join(' و')}، أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}</small>` : what ? `<small>${what}</small>` : ''}</div>
+    <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small>${own ? `<small>${her(c, 'فيها', 'فيه')} ${own.join(' و')}، ${knew ? `${her(c, 'واشتريتها', 'واشتريته')} وأنت تدري` : `أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}`}</small>` : what ? `<small>${what}</small>` : ''}</div>
     ${ownCard}
     ${dam ? alertCard(`${cf('حوارتها', 'حوارها')} ${esc(dam.calfName)} ${cf('ترضع', 'يرضع')} منها`, `لو بعتها ${cf('تضعف بدون حليب أمها', 'يضعف بدون حليب أمه')}، خصوصًا قبل 3 شهور.`) : ''}
     <div class="sec">${her(c, 'اعرضها', 'اعرضه')} بالحراج</div>
