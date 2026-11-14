@@ -59,7 +59,10 @@ All of it goes into the design he is shown, not straight into a build.
 1. **The odds and what gear does.** Answer: accept the proposed range (a game choice inside the sourced range): a
    lone beginner with little gear catches a sellable bird in about one season in 12; a well-equipped trapper on
    good ground about one in 3; gear moves him along the range and never past it; a bird of 300,000 or more at
-   least about one season in 80 to one in 20; a season's expected result about −13,000 to +34,000 riyals. The
+   least about one season in 80 to one in 20; a season's expected result about −13,000 to +34,000 riyals.
+   (Recomputed after the answer, unrounded, from the sources' inputs: one season in 12.5 to one in 2.98; a dear
+   bird at least one season in 83 to one in 20; −12,960 to +33,760. The figures put to the proxy were rounded in
+   the player's favour; the range itself is the same one.) The
    20,000 camp cost is invented and must be marked so, in the GDD and to him. Never more generous without him: he
    said the dear birds are worth a great deal, not that they are common.
 2. **Partners.** Answer: build alone first, with the gear he named; partners (the real practice: groups who share
