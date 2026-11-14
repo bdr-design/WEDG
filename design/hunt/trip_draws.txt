@@ -17,6 +17,8 @@ trip_15_stoop: main 32 draws / 101707 triangles, shadow 1 / 1783, total 33 / 103
 trip_16_catch: main 32 draws / 101707 triangles, shadow 1 / 1783, total 33 / 103490  (the peregrine in the net (stand-in) with its pin, and the card the tap opened: a sellable bird (drawn))
 trip_17_release: main 32 draws / 101707 triangles, shadow 1 / 1783, total 33 / 103490  (a saker in the net (T11's saker) released, with the proxy's line (drawn))
 trip_18_empty_day: main 32 draws / 101707 triangles, shadow 1 / 1783, total 33 / 103490  (an empty day's evening: the camp's card, opened by the tent's pin, with the farm's warning that handed the game back (drawn))
-trip_19_off_ground: main 63 draws / 186846 triangles, shadow 15 / 9925, total 78 / 196771  (by the yard: the net's button in its warning state, and the warning card it opened (drawn); it does not act)
-trip_20_banned: main 73 draws / 117887 triangles, shadow 16 / 14581, total 89 / 132468  (by the yard with the falcon: the cast-off button warns and does not act (decision 4), and its card (drawn))
-trip_21_back: main 73 draws / 117887 triangles, shadow 16 / 14581, total 89 / 132468  (back at the farm: the trip's summary in the small phone (drawn content))
+trip_19_registration: main 32 draws / 101719 triangles, shadow 1 / 1783, total 33 / 103502  (day 8 at camp: the calendar's registration stop (مزاين حائل closes 11 October) in the small phone (drawn content))
+trip_20_off_ground: main 63 draws / 186846 triangles, shadow 15 / 9925, total 78 / 196771  (by the yard: the net's button in its warning state, and the warning card it opened (drawn); it does not act)
+trip_21_banned: main 73 draws / 117887 triangles, shadow 16 / 14581, total 89 / 132468  (by the yard with the falcon: the cast-off button warns and does not act (decision 4), and its card (drawn))
+trip_22_back: main 73 draws / 117887 triangles, shadow 16 / 14581, total 89 / 132468  (back at the farm: the trip's summary in the small phone (drawn content))
+Round 4: trip_19_registration added (a new frame, its line from the camp part's run); 19-21 renumbered 20-22.
