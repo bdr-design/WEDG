@@ -58,6 +58,16 @@ final class CatchUpProgress extends Push {
   final int total;
 }
 
+/// A stretch away (the calendar's jump, EngineCore.away): [done] of
+/// [total] game days simulated, the world now at [day]. At most a few a
+/// second.
+final class AwayProgress extends Push {
+  const AwayProgress(this.done, this.total, this.day);
+  final int done;
+  final int total;
+  final GameDay day;
+}
+
 /// Whether the latest change is safely on disk. Sent when this changes
 /// (a save fails, or saving recovers), so the UI can warn the player.
 final class SaveStatus extends Push {

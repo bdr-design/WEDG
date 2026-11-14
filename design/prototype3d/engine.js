@@ -23,7 +23,7 @@ export function startEngine(options = {}) {
   return running;
 }
 
-async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSnapshot, onNotice } = {}) {
+async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSnapshot, onNotice, onAway } = {}) {
   const token = new URLSearchParams(location.search).get('save');
   const t0 = performance.now();
   // what it costs, for the frame meter (#fps) and the tests. Sizes are characters of JSON text. The parse is the
@@ -93,6 +93,7 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
         if (!m.ok) stats.failedWrites++;
         break;
       case 'catchUp': stats.catchUp = [m.done, m.total]; break;
+      case 'away': stats.away = [m.done, m.total, m.day]; onAway?.(m); break;      // (the calendar's jump under way: a few a second)
       case 'save': if (!m.ok) onNotice?.({ kind: 'saveFailed', reason: m.error }); break;
       case 'notice': onNotice?.(m); break;
     }
@@ -117,6 +118,11 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
     bankMonth: (month) => call('bankMonth', { month }),
     /** A festival's page (المزاين), when it is opened: resolves to {ok, festival: SnapshotJson.festivalDetail or null}. */
     festival: (id) => call('festival', { festival: id }),
+    /** The calendar's jump (EngineCore.away): to game day [target], landing at [landingMinute] of the day it ends
+     *  on; resolves to {ok, error, away: {from, to, target, stop, summary}}. Progress comes to onAway. */
+    away: (target, landingMinute = 360) => call('away', { target, landingMinute }),
+    /** «وقّف هنا»: handed over at once (the worker takes it outside its queue); the jump ends at the day it is on. */
+    stopAway: () => call('stopAway'),
     /** Saves now; resolves when the save has been kept. */
     flush: () => call('flush'),
     /** After a save that could not be read: the last one that was. */

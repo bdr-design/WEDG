@@ -5,6 +5,7 @@
 /// for the save format and tools; screens should not read them directly.
 library;
 
+export 'src/away.dart';
 export 'src/catalog/catalog.dart';
 export 'src/catalog/region.dart';
 export 'src/commands.dart';

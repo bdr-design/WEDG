@@ -12,9 +12,15 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         tanker: j['tanker'] == null
             ? Tanker.large
             : Tanker.values.byName(_str(j['tanker'])),
+        now: _bool(j['now']),
       ),
       'setFeedPlan' => SetFeedPlan(me, FeedPlan.values.byName(_str(j['plan']))),
-      'buyListing' => BuyListing(me, ListingId(_str(j['listing']))),
+      'buyListing' => BuyListing(
+        me,
+        ListingId(_str(j['listing'])),
+        now: _bool(j['now']),
+        hour: j['hour'] == null ? null : _int(j['hour']),
+      ),
       'bargain' => Bargain(
         me,
         ListingId(_str(j['listing'])),
@@ -54,7 +60,25 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
       'buildFacility' => BuildFacility(
         me,
         Facility.values.byName(_str(j['facility'])),
+        now: _bool(j['now']),
       ),
+      'rushBuild' => RushBuild(me, Facility.values.byName(_str(j['facility']))),
+      'rushDelivery' => RushDelivery(
+        me,
+        StandingOrder.values.byName(_str(j['kind'])),
+      ),
+      'rushTruck' => RushTruck(
+        me,
+        CamelId(_str(j['camel'])),
+        hour: j['hour'] == null ? null : _int(j['hour']),
+      ),
+      'setStandingOrder' => SetStandingOrder(
+        me,
+        StandingOrder.values.byName(_str(j['kind'])),
+        on: _bool(j['on']),
+      ),
+      'signVetContract' => SignVetContract(me),
+      'cancelVetContract' => CancelVetContract(me),
       'setCalfShare' => SetCalfShare(
         me,
         CalfShare.values.byName(_str(j['share'])),
@@ -109,16 +133,19 @@ bool _bool(Object? v) => v == null ? false : v as bool;
 /// sealed [Command], so a new command does not compile until it is given a
 /// JSON form here and in [commandFromJson] (the round-trip test checks both).
 Map<String, Object?> commandToJson(Command c) => switch (c) {
-  OrderSupply(:final supply, :final units, :final tanker) => {
+  OrderSupply(:final supply, :final units, :final tanker, :final now) => {
     'type': 'orderSupply',
     'supply': supply.name,
     'units': units,
     if (supply == Supply.water) 'tanker': tanker.name,
+    if (now) 'now': true,
   },
   SetFeedPlan(:final plan) => {'type': 'setFeedPlan', 'plan': plan.name},
-  BuyListing(:final listing) => {
+  BuyListing(:final listing, :final now, :final hour) => {
     'type': 'buyListing',
     'listing': listing.value,
+    if (now) 'now': true,
+    'hour': ?hour,
   },
   Bargain(:final listing, :final amount) => {
     'type': 'bargain',
@@ -159,10 +186,28 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'name': name,
   },
   SetShepherds(:final count) => {'type': 'setShepherds', 'count': count},
-  BuildFacility(:final facility) => {
+  BuildFacility(:final facility, :final now) => {
     'type': 'buildFacility',
     'facility': facility.name,
+    if (now) 'now': true,
   },
+  RushBuild(:final facility) => {
+    'type': 'rushBuild',
+    'facility': facility.name,
+  },
+  RushDelivery(:final kind) => {'type': 'rushDelivery', 'kind': kind.name},
+  RushTruck(:final camel, :final hour) => {
+    'type': 'rushTruck',
+    'camel': camel.value,
+    'hour': ?hour,
+  },
+  SetStandingOrder(:final kind, :final on) => {
+    'type': 'setStandingOrder',
+    'kind': kind.name,
+    'on': on,
+  },
+  SignVetContract() => {'type': 'signVetContract'},
+  CancelVetContract() => {'type': 'cancelVetContract'},
   SetCalfShare(:final share) => {'type': 'setCalfShare', 'share': share.name},
   EnterRound(:final festival, :final round, :final camels) => {
     'type': 'enterRound',
