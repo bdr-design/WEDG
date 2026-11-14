@@ -448,6 +448,7 @@ class Presenter {
       bank: bank,
       dealer: dealer,
       findings: findings,
+      rush: rushFacts(state, viewer),
     );
   }
 

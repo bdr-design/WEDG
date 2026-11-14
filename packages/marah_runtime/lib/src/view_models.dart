@@ -976,12 +976,17 @@ class PlayerSnapshot {
     this.findings = const [],
     this.testMoney = false,
     this.testedFrom,
+    this.rush = const {},
   });
 
   /// Money without limit for the owner's testing is on (TestMoney), and the
   /// first day it was ever on (the game's mark, never cleared), or null.
   final bool testMoney;
   final GameDay? testedFrom;
+
+  /// The rush, the standing orders, the vet and the calendar's guard, as
+  /// the engine prices them (rushFacts, T15).
+  final Map<String, Object?> rush;
 
   /// Increases with every snapshot; older ones can be dropped.
   final int revision;
