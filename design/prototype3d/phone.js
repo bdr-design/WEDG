@@ -510,7 +510,7 @@ function waterScreen() {
     }
     else {
       const under = f.tankL - t.litres / 2, wait = need > 0 ? Math.ceil((have + coming - under) / need) : null;
-      line = `الخزان ما يشيله لين ينزل تحت ${n0(under)} لتر${wait ? `، بعد ${days(wait)} تقريبًا` : ''}`;
+      line = `الخزان ما يشيله لين ينزل تحت\u00a0${n0(under)} لتر${wait ? `، بعد ${days(wait)} تقريبًا` : ''}`;
     }
     const acc = t.goes ? { short: t.onAccount, owed: f.account.owed + t.onAccount } : null;
     if (t.room > 0 && acc && acc.short > 0) line = `${n0(t.price)} ريال · ${accountLine(acc.owed)}`;
@@ -749,7 +749,7 @@ function buildScreen() {
       const rb = k === 0 ? (RU().builds || []).find((y) => y.facility === x.facility) : null;
       if (!rb) { out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${nameOf(x.has + k)}</b><small>${approved}</small></div>`); continue; }
       const key = `rushBuild:${x.facility}`, can = G.cash >= rb.fee, name = nameOf(x.has + k);
-      const extra = !can ? `الاستعجال ${n0(rb.fee)} ريال، ورصيدك ${n0(G.cash)}` : HJ.sure === key ? `يخلص الحين، وتدفع ${n0(rb.fee)} ريال زيادة` : `الحين بـ ${n0(rb.fee)} ريال زيادة`;
+      const extra = !can ? `الاستعجال ${n0(rb.fee)} ريال، ورصيدك ${n0(G.cash)}` : HJ.sure === key ? `يخلص الحين، وتدفع\u00a0${n0(rb.fee)} ريال زيادة` : `الحين بـ ${n0(rb.fee)} ريال زيادة`;
       out.push(`<div class="row r3"><span class="lead">${svg(d.icon)}</span><b>${name}</b>${rushBtn(key, `data-act="rushBuild" data-f="${x.facility}"`, `استعجل ${name} بـ ${n0(rb.fee)} ريال`, can)}<small>${approved}</small><small class="rush${HJ.sure === key ? ' now' : ''}">${extra}</small></div>`);
     }
     if (made < x.most) {
@@ -1497,7 +1497,7 @@ function calCardScreen() {
   const lw = lasts(w), lf = Math.min(lasts(b), lasts(a));
   const word = (n) => (n >= N ? '<span class="pos">يكفي</span>' : '<span style="color:var(--red);font-weight:700">ما يكفي</span>');
   const standW = (R.standing || []).includes('water'), standF = (R.standing || []).includes('feed');
-  const supRow = (icon, name, last, fill, after, key, can) => `<div class="row r3"><span class="lead${last < N ? ' bad' : ''}">${svg(icon)}</span><b>${name} · ${last <= 0 ? (key === 'water' ? 'خلص' : 'خلص') : `يكفي ${days(Math.min(last, 999))}`}</b>${can ? `<span class="act"><button class="btn sm ghost" data-act="calFill" data-s="${key}" aria-label="عبّ ${name}">عبّه</button></span>` : ''}<small>${fill}${word(after)}</small></div>`;
+  const supRow = (icon, name, last, fill, after, key, can) => `<div class="row r3"><span class="lead${last < N ? ' bad' : ''}">${svg(icon)}</span><b>${name}\u00a0·\u00a0${last <= 0 ? (key === 'water' ? 'خلص' : 'خلص') : `يكفي ${days(Math.min(last, 999))}`}</b>${can ? `<span class="act"><button class="btn sm ghost" data-act="calFill" data-s="${key}" aria-label="عبّ ${name}">عبّه</button></span>` : ''}<small>${fill}${word(after)}</small></div>`;
   const wFill = standW ? 'الطلب الثابت شغّال: يجيك الوايت بنفسه. ' : F.tanker ? `وايت ${Math.round(F.tanker.litres / 1000)} طن ${F.tankRoom < F.tanker.litres ? `يعبّي الخزان ${n0(F.tankRoom)} لتر والباقي يرجع` : `يجيب ${n0(F.tanker.litres)} لتر`}، بـ ${n0(F.tanker.price)} ريال، يصير يكفي ${days(F.water)} تقريبًا: ` : 'الخزان ما يشيل وايت الحين: ';
   const fFill = standF ? 'الطلب الثابت شغّال: يجيك العلف بنفسه. ' : F.bags + F.bales > 0 ? `${[F.bags ? count(F.bags, 'bag') : '', F.bales ? count(F.bales, 'bale') : ''].filter(Boolean).join(' و')} بـ ${n0(F.feedCost)} ريال، يصير يكفي ${days(F.feed)} تقريبًا: ` : `${STORE().the} ${STORE().none} مكان الحين: `;
   const wAfter = standW ? N : F.tanker ? F.water : lw, fAfter = standF ? N : F.bags + F.bales > 0 ? F.feed : lf;

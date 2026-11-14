@@ -1,8 +1,9 @@
 # Rushing and the calendar (task T15, part A: the design, revised after review)
 
-Status: **a design awaiting the owner's approval**. While he sleeps his proxy answers for him, provisionally:
-batches 4 and 4b in `docs/agents/proxy_decisions.md`. Nothing here is built. Once this revision is reviewed, the build
-(part B) goes on the side branch and stays off his phone's build until he approves the design (batch 4, item 12).
+Status: **approved by the owner on 14 Nov 2026** («اعتمده ونزّله لما يجهز»: approve it and put it on the phone
+when ready). Built in part B (the engine, the runtime, the worker and the phone; save version 11, on T14's 10); it
+goes onto his phone once its last review is done. The design below is as he approved it; the proxy's provisional
+answers are batches 4, 4b and 4c in `docs/agents/proxy_decisions.md`.
 
 Pictures: `design/ui/phone_rush.jpg` (drawn by `phone_rush.cjs`) and `design/ui/phone_calendar.jpg` (drawn by
 `phone_calendar.cjs`). They are drawn from games the engine played (seed 4242, 1 October 2026), and from saves the
