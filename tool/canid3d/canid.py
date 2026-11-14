@@ -106,6 +106,7 @@ class Canid:
         self.S, self.P, self.d = spec, pose, det
         self.H = spec['H']
         self.parts = {}
+        self.group = 'torso'
         self.points = {}
         self.shapes = {}
         self.reach = {}
@@ -120,11 +121,12 @@ class Canid:
         S, P, H = self.S, self.P, self.H
         piv = V3((0, 0, S['pivot_z'] * H))
         q = V3((x * H, y * H, z * H)) - piv
-        q = rot_y(P.get('pitch', 0.0)) @ q
+        # the back's bend: the pitch grows along the body by [arch] degrees per H (+ arches it, - hollows it)
+        q = rot_y(P.get('pitch', 0.0) - P.get('arch', 0.0) * x) @ q
         return q + piv + V3((P.get('shift_x', 0.0) * H, 0, -P.get('drop', 0.0) * H))
 
-    def body_dir(self, v):
-        return rot_y(self.P.get('pitch', 0.0)) @ V3(v)
+    def body_dir(self, v, x=0.0):
+        return rot_y(self.P.get('pitch', 0.0) - self.P.get('arch', 0.0) * x) @ V3(v)
 
     # ---------------------------------------------------------------- build
     def build(self):
@@ -139,11 +141,13 @@ class Canid:
         return self.parts, self.points
 
     def add(self, part, pc):
+        pc.group = self.group
         self.parts.setdefault(part, []).append(pc)
 
     # ---------------------------------------------------------------- torso
     def torso(self):
         S, d, H = self.S, self.d, self.H
+        self.group = 'torso'
         # the torso's two ends closed by a last tiny section, so their caps are points, not fans
         t0, t1 = S['torso'][0], S['torso'][-1]
         ends = [(t0[0] - 0.025, (t0[1] + t0[2]) / 2 + 0.03, (t0[1] + t0[2]) / 2 - 0.03, 0.012, 0.010)]
@@ -153,8 +157,8 @@ class Canid:
         for x, top, bot, w, wl in rows:
             c = self.body_pt(x, (top + bot) / 2)
             hh = (top - bot) / 2 * H
-            u = self.body_dir((0, 0, 1))
-            v = self.body_dir((1, 0, 0)).cross(u)      # -Y: the animal's right
+            u = self.body_dir((0, 0, 1), x)
+            v = self.body_dir((1, 0, 0), x).cross(u)   # -Y: the animal's right
             # the lower half a little narrower than the upper (the keel of the chest, the belly's tuck)
             # the lower half narrows to [wl] at the bottom: the chest's keel, the belly's tuck
             secs.append(KeelSec(Sec(c, u, v, hh, hh, w * H, w * H, p=2.15), wl * H))
@@ -162,10 +166,24 @@ class Canid:
         self.add('body', piece('body', out, d.body_ring, shapes=self.shapes))
         self.points['withers'] = self.body_pt(S['withers'][0], S['withers'][1])
         self.points['hips'] = self.body_pt(S['hip'][0], S['hip'][1])
+        # a thin animal's bones under the skin: the hip bones' points and the spine's processes (the stray's
+        # condition); a well-fed one has none
+        cond = S.get('condition', 1.0)
+        if cond < 1.0:
+            k = (1.0 - cond) / 0.15
+            for sg in (1, -1):
+                c = self.body_pt(-0.32, 0.905, sg * 0.072)
+                self.add('body', blob('torso', c, (0.030 * H, 0.020 * H * k + 0.012 * H, 0.022 * H), 10, 6))
+            for i in range(9):
+                x = -0.30 + i * 0.075
+                top = float(np.interp(x, [r[0] for r in S['torso']], [r[1] for r in S['torso']]))
+                c = self.body_pt(x, top - 0.012)
+                self.add('body', blob('torso', c, (0.016 * H, 0.012 * H, 0.010 * H + 0.008 * H * k), 8, 5))
 
     # ---------------------------------------------------------------- neck, head, jaw, ears, eyes, nose
     def neck_head(self):
         S, P, d, H = self.S, self.P, self.d, self.H
+        self.group = 'neck'
         nb = self.body_pt(*S['neck_base'])
         ang = P.get('neck', S['neck_angle'])            # the neck's direction, degrees above forward
         L = S['neck_len'] * H
@@ -190,6 +208,7 @@ class Canid:
         self.neck_secs = secs
 
         # the head: its axis from the occiput to the nose, pitched [head] degrees below forward
+        self.group = 'head'
         hd = dir_xz(-hp)
         hn = dir_xz(-hp + 90)                            # the head's up
         hv = hd.cross(hn)                                # its right (-Y)
@@ -243,10 +262,12 @@ class Canid:
 
     def ears(self, o, hd, hn, hv, Lh):
         S, P, d, H = self.S, self.P, self.d, self.H
+        cupk = S.get('ear_cup', 0.30)
         et, ecz, ey = S['ear_base']
         eh, ew, eth = S['ear']                           # height, base width, thickness (H)
         back = P.get('ears_back', 0.0)                   # degrees laid back
         for side, sg in (('l', 1), ('r', -1)):
+            self.group = 'ear_' + side
             base = o + hd * (et * Lh) + hn * (ecz * H) - hv * (sg * ey * H)
             # the ear's axis: up, splayed out [ear_splay], tipped forward or laid back
             splay = math.radians(S['ear_splay'])
@@ -258,7 +279,10 @@ class Canid:
             face = (face - ax * face.dot(ax)).normalized()
             side_ax = ax.cross(face).normalized()
             secs = []
-            for f, wf, cup in ((0.0, 1.0, 0.30), (0.25, 0.92, 0.32), (0.5, 0.72, 0.30), (0.72, 0.48, 0.24), (0.9, 0.22, 0.14), (1.0, 0.04, 0.02)):
+            # the tip rounded (the last sections shrink fast but not to a point)
+            for f, wf, cup in ((-0.12, 1.0, 0.2), (0.0, 1.0, 1.0), (0.25, 0.94, 1.05), (0.5, 0.76, 1.0), (0.72, 0.54, 0.85), (0.87, 0.34, 0.6),
+                               (0.95, 0.20, 0.35), (1.0, 0.07, 0.1)):
+                cup = cup * cupk
                 c = base + ax * (f * eh * H)
                 hw = wf * ew * H / 2
                 th = eth * H * (1.2 - 0.6 * f)
@@ -269,6 +293,7 @@ class Canid:
 
     def teeth(self, o, hd, hn, hv, Lh):
         S, H = self.S, self.H
+        self.group = 'teeth'
         # the canines: upper ones from the upper lip down, lower ones from the jaw up
         ct, ccz, cy, clen, cr = S['canine']
         hinge, jd, jn, jv = self.jaw_frame
@@ -316,6 +341,7 @@ class Canid:
     def paw(self, sole, fwd, n, side, block, size, pts_name):
         S, d, H = self.S, self.d, self.H
         plen, pw, ph = size
+        self.group = 'paw_' + pts_name[-2:]
         if n is None:
             n = UP - fwd * UP.dot(fwd)
         n = n.normalized()
@@ -327,6 +353,10 @@ class Canid:
             c = sole + fwd * ((f - 0.20) * plen * H) + n * (0.5 * ph * H)
             secs.append(Sec(c, n, v, up * ph * H, dn * ph * H, w * pw * H, w * pw * H, p=2.6))
         self.add('legs', piece(block, secs, d.paw_ring, shapes=self.shapes))
+        # four toes in front (the two middle ones longest), their bulges over the pad
+        for ty, tx, tl in ((-0.33, 0.70, 0.86), (-0.11, 0.80, 1.0), (0.11, 0.80, 1.0), (0.33, 0.70, 0.86)):
+            c = sole + fwd * ((tx - 0.20) * plen * H) + v * (ty * pw * H) + n * (0.42 * ph * H)
+            self.add('legs', blob(block, c, (0.17 * plen * H * tl, 0.15 * pw * H, 0.40 * ph * H), 10, 6, fwd, n))
         self.points[pts_name] = (sole, fwd, n)
         return sole + n * (0.72 * ph * H) - fwd * (0.06 * plen * H)
 
@@ -370,6 +400,13 @@ class Canid:
         carpus = fet + m * c
         elbow, carpus, reach = ik2(shoulder, carpus, a, b, pole)
         self.reach['fore_' + side] = reach
+        self.group = 'fore_' + side
+        # the carpal pad: a small bump behind the wrist
+        back = (carpus - elbow).normalized().cross(V3((0, 1, 0)))
+        if back.dot(V3((-1, 0, 0))) < 0:
+            back = -back
+        self.add('legs', blob('foreleg', carpus + back * (0.030 * H) - (carpus - elbow).normalized() * (0.01 * H),
+                              (0.014 * H, 0.016 * H, 0.012 * H), 8, 5))
         # the upper arm: from above the shoulder joint (inside the body) to the elbow, its muscle thick
         top = shoulder + self.body_dir((0.03 * H, 0, 0.10 * H)) * 1.0
         sz_ = S['fore_sizes']
@@ -395,6 +432,18 @@ class Canid:
         hock = fet + m * c
         stifle, hock, reach = ik2(hip, hock, a, b, pole)
         self.reach['hind_' + side] = reach
+        self.group = 'hind_' + side
+        # the landmarks: the kneecap in front of the stifle, the heel bone's point behind the hock
+        tib = (hock - stifle).normalized()
+        fem = (stifle - hip).normalized()
+        front = (fem - tib).normalized()
+        self.add('legs', blob('hindleg', stifle + front * (0.035 * H), (0.024 * H, 0.030 * H, 0.026 * H), 8, 5))
+        heel = (tib + m).normalized()
+        self.add('legs', blob('hindleg', hock + heel * (0.032 * H) + tib * (-0.012 * H), (0.016 * H, 0.014 * H, 0.024 * H), 8, 5))
+        self.angles = getattr(self, 'angles', {})
+        self.angles['femur_from_vertical_' + side] = math.degrees(math.acos(max(-1, min(1, -fem.z))))
+        self.angles['stifle_' + side] = math.degrees(math.acos(max(-1, min(1, (-fem).dot(tib)))))
+        self.angles['hock_' + side] = math.degrees(math.acos(max(-1, min(1, (-tib).dot(-m)))))
         sz_ = S['hind_sizes']
         # the thigh: a broad muscle from the croup to the stifle; the gaskin to the hock (its point, the heel bone,
         # behind); the metatarsus to the paw
@@ -417,6 +466,7 @@ class Canid:
     # ---------------------------------------------------------------- tail
     def tail(self):
         S, P, d, H = self.S, self.P, self.d, self.H
+        self.group = 'tail'
         base = self.body_pt(*S['tail_base'])
         angs = P.get('tail', S['tail_hang'])            # degrees below backward, at even steps along the tail
         L = S['tail_len'] * H
@@ -443,6 +493,7 @@ class Canid:
     # ---------------------------------------------------------------- collar
     def collar(self):
         S, d, H = self.S, self.d, self.H
+        self.group = 'collar'
         f, out_mm, w_mm, th_mm = S['collar']
         secs = self.neck_secs
         i = f * (len(secs) - 1)
@@ -488,7 +539,7 @@ class Canid:
         ring_c = q + radial * (out_mm + th_mm + 9)
         self.points['collar_ring'] = ring_c
         if d.level == 0:
-            self.add('collar', torus('collar', ring_c, axis.cross(radial).normalized(), 10.0, 1.8, 14, 6))
+            self.add('collar', torus('ring', ring_c, axis.cross(radial).normalized(), 10.0, 1.8, 14, 6))
 
 
 class KeelSec:
@@ -537,3 +588,18 @@ def torus(block, c, axis, R, r, n, m):
             pc.tri(rings[j][k], rings[j1][k], rings[j1][k1], (j / n, k / m), ((j + 1) / n, k / m), ((j + 1) / n, (k + 1) / m))
             pc.tri(rings[j][k], rings[j1][k1], rings[j][k1], (j / n, k / m), ((j + 1) / n, (k + 1) / m), (j / n, (k + 1) / m))
     return pc.outward()
+
+
+def blob(block, c, r, n, m, fwd=None, up=None):
+    """A small ellipsoid (radii r along fwd, side, up; mm), closed."""
+    fwd = V3(fwd or (1, 0, 0)).normalized()
+    up = V3(up or (0, 0, 1))
+    up = (up - fwd * up.dot(fwd)).normalized()
+    side = up.cross(fwd)
+    secs = []
+    for k in range(m + 1):
+        a = -math.pi / 2 + math.pi * k / m
+        f = math.sin(a)
+        rr = max(math.cos(a), 0.06)
+        secs.append(Sec(c + fwd * (f * r[0]), up, -side, r[2] * rr, r[2] * rr, r[1] * rr, r[1] * rr))
+    return loft(block, secs[1:-1] if m > 2 else secs, n)

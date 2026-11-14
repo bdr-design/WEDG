@@ -25,6 +25,8 @@ import common  # noqa: E402
 from common import V3  # noqa: E402
 import canid  # noqa: E402
 import paint  # noqa: E402
+import skin  # noqa: E402
+import texture  # noqa: E402
 import species  # noqa: E402
 
 OUT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else 'out')
@@ -49,49 +51,64 @@ def want(shot):
     return not SHOTS or shot in SHOTS.split(',')
 
 
-def model(kind, pose, level):
-    spec, poses = species.SPECIES[kind]
-    m = canid.Canid(spec, poses[pose], canid.Detail(level))
-    m.build()
-    return m
+TARGET = {0: 5600, 1: 1300}       # the skin's triangles, close and far
+TEX = {0: 512, 1: 256}
 
 
-def build(kind, pose, level, coat_kind=None, spec=None):
-    """One file: the posed animal, its atlas painted on the standing animal of the same detail level."""
+def build(kind, pose):
+    """Both detail levels of one pose: one skin over the posed build, decimated to each level's budget, its
+    texture pair painted on the standing animal. Returns {level: (root, obj)} and the posed build."""
     fresh()
-    sp, poses = species.SPECIES[kind]
-    spec = spec or sp
-    rest = canid.Canid(spec, poses['alert'] if 'alert' in poses else species.DOG_POSES['alert'], canid.Detail(level))
+    spec, poses = species.SPECIES[kind]
+    coat = species.COAT.get(kind, kind)
+    rest = canid.Canid(spec, poses['alert'], canid.Detail(0))
     rest.build()
-    m = canid.Canid(spec, poses[pose], canid.Detail(level))
+    m = canid.Canid(spec, poses[pose], canid.Detail(0))
     m.build()
-    atl = paint.atlas()
-    size = 512 if level == 0 else 256
-    col, orm = paint.paint(coat_kind or kind, atl, size, rest)
-    if level == 0 and os.environ.get('CANID_ATLAS'):
-        from PIL import Image
-        Image.fromarray((col[::-1] * 255).astype('uint8')).save(os.path.join(OUT, f'atlas_{kind}.png'))
-    mat = common.material(kind if level == 0 else kind + '_far', col, orm)
-    rname = f'{kind}_{pose}' + ('' if level == 0 else '_lod1')
-    root = common.empty(rname)
-    pieces = [pc for k in sorted(m.parts) for pc in m.parts[k]]
-    me = common.to_mesh(rname + '_mesh', pieces, atl)
-    o = common.obj(rname + '_mesh', me, mat, root)
-    if level == 0:
+    m1 = canid.Canid(spec, poses[pose], canid.Detail(1))
+    m1.build()
+    H = m.H
+    objs, hi = skin.skin_mesh(f'{kind}_{pose}', m.parts, H, H / 220.0, [TARGET[0], TARGET[1]])
+    out = {}
+    o_, hd, hn, hv, Lh = m.head_frame
+    head_c = o_ + hd * (0.45 * Lh)
+    for level in (0, 1):
+        o = objs[TARGET[level]]
+        src = m if level == 0 else m1
+        extras = [pc for k in sorted(src.parts) for pc in src.parts[k] if getattr(pc, 'group', '') in skin.SKIN_GROUPS_EXCLUDED]
+        if level == 1:
+            extras = [pc for pc in extras if pc.block == 'collar']
+        n_skin = len(o.data.polygons)
+        blocks, first = [], n_skin
+        for pc in extras:
+            blocks.append((first, pc.block))
+            first += len(pc.T)
+        skin.add_pieces(o, extras)
+        UV = skin.unwrap(o, tuple(head_c), 0.75 * Lh)
+        col, nrm, cover = texture.bake(coat, m, rest, o, UV, n_skin, blocks, TEX[level], H)
+        if level == 0 and os.environ.get('CANID_ATLAS'):
+            from PIL import Image
+            Image.fromarray((np.clip(col[::-1], 0, 1) * 255).astype('uint8')).save(os.path.join(OUT, f'atlas_{kind}_{pose}.png'))
+            Image.fromarray((np.clip(nrm[::-1], 0, 1) * 255).astype('uint8')).save(os.path.join(OUT, f'normal_{kind}_{pose}.png'))
+        o.data.shade_smooth()
+        mat = skin.material(coat if level == 0 else coat + '_far', col, nrm)
+        o.data.materials.append(mat)
+        rname = f'{kind}_{pose}' + ('' if level == 0 else '_lod1')
+        root = common.empty(rname)
+        o.name = rname + '_mesh'
+        o.data.name = rname + '_mesh'
+        o.parent = root
         add_points(root, m.points)
-    path = os.path.join(OUT, rname + '.glb')
-    common.export(path, root)
-    t, imgs, nbytes = common.glb_report(path)
-    print(f'{rname}.glb: {sum(t.values())} triangles in {len(t)} mesh(es); textures {", ".join(f"{w}x{h}" for _, w, h in imgs)}; {nbytes / 1024:.0f} KB')
-    if level == 0:
-        for line in measures(m, o):
-            print('   ' + line)
-    return root, o, m
-
-
-POINT_NAMES = {
-    'foot_fl': 'foot_fl', 'foot_fr': 'foot_fr', 'foot_hl': 'foot_hl', 'foot_hr': 'foot_hr',
-}
+        path = os.path.join(OUT, rname + '.glb')
+        common.export(path, root)
+        t, imgs, nbytes = common.glb_report(path)
+        print(f'{rname}.glb: {sum(t.values())} triangles; textures {", ".join(f"{w}x{h}" for _, w, h in imgs)}; '
+              f'{nbytes / 1024:.0f} KB; {shells(o)} piece(s); the texture covers {cover * 100:.0f}% of its square')
+        out[level] = (root, o)
+    print(f'   the skin before decimation: {hi[0]} vertices, {hi[1]} triangles (voxel {H / 220.0:.2f} mm)')
+    for line in measures(m, out[0][1]):
+        print('   ' + line)
+    return out, m
 
 
 def add_points(root, pts):
@@ -110,39 +127,81 @@ def verts(o):
     return a.reshape(-1, 3) * 1000
 
 
-def piece_bounds(pc):
-    a = np.array([tuple(q) for q in pc.V])
-    return a.min(0), a.max(0)
+def shells(o):
+    """The number of separate closed pieces in the mesh."""
+    V, Fv = skin.mesh_arrays(o)
+    parent = np.arange(len(V))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    for a, b, c in Fv:
+        ra, rb, rc = find(a), find(b), find(c)
+        parent[rb] = ra
+        parent[find(rc)] = ra
+    return len({find(i) for i in range(len(V))})
+
+
+def section(V, Fv, axis, x):
+    """The skin's section by the plane [axis] = x (mm): its segments as an [n, 2, 3] array (each crossed triangle
+    gives one segment between its two crossed edges)."""
+    d = V[:, axis] - x
+    a, b, c = Fv[:, 0], Fv[:, 1], Fv[:, 2]
+    cr = [d[a] * d[b] < 0, d[b] * d[c] < 0, d[c] * d[a] < 0]
+    ends = [(a, b), (b, c), (c, a)]
+    segs = []
+    for e1, e2 in ((0, 1), (1, 2), (2, 0)):
+        sel = cr[e1] & cr[e2]
+        if not sel.any():
+            continue
+        pts = []
+        for e in (e1, e2):
+            u, v = ends[e][0][sel], ends[e][1][sel]
+            t = d[u] / (d[u] - d[v])
+            pts.append(V[u] + (V[v] - V[u]) * t[:, None])
+        segs.append(np.stack(pts, 1))
+    return np.concatenate(segs) if segs else np.zeros((0, 2, 3))
 
 
 def measures(m, o):
-    """The model's figures to set beside the real ones, measured on its pieces (mm)."""
-    H = m.H
+    """The model's figures to set beside the real ones, measured on the skin (mm)."""
+    H, S = m.H, m.S
+    V, Fv = skin.mesh_arrays(o)
     out = []
-    body = m.parts['body'][0]
-    bv = np.array([tuple(q) for q in body.V])
-    allv = verts(o)
     wx = m.points['withers'].x
-    near = bv[np.abs(bv[:, 0] - wx) < 40]
-    out.append(f'withers height {near[:, 2].max():.0f} mm (spec {H:.0f}); top of the head {allv[:, 2].max():.0f} mm')
+    near = V[np.abs(V[:, 0] - wx) < 25]
+    wh = near[:, 2].max()
+    out.append(f'withers height {wh:.0f} mm (spec {H:.0f}); top of the head {V[:, 2].max():.0f} mm; lowest point {V[:, 2].min():.1f} mm')
     nose = m.points['nose']
     tb = m.points['tail_base'][0]
-    out.append(f'nose to tail base {nose.x - tb.x:.0f} mm (in x); length overall {allv[:, 0].max() - allv[:, 0].min():.0f} mm; '
-               f'body (chest front to buttock) {bv[:, 0].max() - bv[:, 0].min():.0f} mm; widest {2 * bv[:, 1].max():.0f} mm')
-    tail = m.parts['body'][-1]
-    tvv = np.array([tuple(q) for q in tail.V])
-    out.append(f'tail tip lowest at {tvv[:, 2].min():.0f} mm above the ground; hocks at {m.points["hock_l"].z:.0f} mm; '
-               f'elbows at {m.points["elbow_l"].z:.0f} mm; chest bottom at {bv[:, 2].min():.0f} mm')
+    out.append(f'nose to tail base {nose.x - tb.x:.0f} mm (in x); length overall {np.ptp(V[:, 0]):.0f} mm; widest {np.ptp(V[:, 1]):.0f} mm')
     o_, hd, hn, hv, Lh = m.head_frame
-    out.append(f'head (occiput to nose) {Lh:.0f} mm; ears {m.S["ear"][0] * H:.0f} mm tall, {m.S["ear"][1] * H:.0f} mm at the base')
-    feet = [k for k in m.points if k.startswith('foot_')]
-    lows = []
-    for pc in m.parts['legs']:
-        if pc.block.endswith('paw'):
-            lo, hi = piece_bounds(pc)
-            lows.append(lo[2])
-    out.append('paws lowest point ' + ', '.join(f'{z:.0f}' for z in lows) + ' mm; legs reach ' +
-               ', '.join(f'{k} {v:.2f}' for k, v in sorted(m.reach.items())))
+    out.append(f'head (occiput to nose) {Lh:.0f} mm; muzzle (eye to nose) {1 - S["eye"][0]:.2f} of it; '
+               f'ears {S["ear"][0] * H:.0f} mm tall, their bases {2 * S["ear_base"][2] * H:.0f} mm apart (centres)')
+    band = V[(V[:, 0] > wx + 0.03 * H) & (V[:, 0] < wx + 0.12 * H) & (np.abs(V[:, 1]) < 0.05 * H)]
+    if len(band):
+        out.append(f'the neck just ahead of the withers rises {band[:, 2].max() - wh:+.0f} mm over them')
+    occ = o_
+    nk = V[(np.abs(V[:, 0] - (occ.x - 0.04 * H)) < 4) & (np.abs(V[:, 2] - occ.z) < 0.06 * H)]
+    cx = occ + hd * (0.24 * Lh)
+    ck = V[(np.abs(V[:, 0] - cx.x) < 4) & (np.abs(V[:, 2] - cx.z) < 0.05 * H)]
+    if len(nk) and len(ck):
+        out.append(f'neck width just behind the skull {np.ptp(nk[:, 1]):.0f} mm, across the cheeks {np.ptp(ck[:, 1]):.0f} mm')
+    for t in (0.62, 0.76):
+        q = occ + hd * (t * Lh)
+        mz = V[(np.abs(V[:, 0] - q.x) < 3) & (np.abs(V[:, 2] - q.z) < 0.06 * H)]
+        if len(mz):
+            out.append(f'muzzle width at {t:.2f} of the head {np.ptp(mz[:, 1]):.0f} mm')
+    lx = -0.16 * H
+    seg = section(V, Fv, 0, lx)
+    trunk = seg[seg[:, :, 2].min(1) > 0.3 * H] if len(seg) else seg
+    girth = np.linalg.norm(trunk[:, 1] - trunk[:, 0], axis=1).sum() if len(trunk) else 0
+    out.append(f'loin girth (at x = {lx:.0f} mm) {girth:.0f} mm')
+    ang = getattr(m, 'angles', {})
+    out.append('angles: ' + ', '.join(f'{k} {v:.0f}' for k, v in sorted(ang.items())))
+    out.append('legs reach ' + ', '.join(f'{k} {v:.2f}' for k, v in sorted(m.reach.items())))
     return out
 
 
@@ -231,6 +290,9 @@ def pictures(kind, pose, o, m):
         cam = hd + (fwd * 0.55 + V3((0, 1, 0)) * 0.75 + V3((0, 0, 0.15))).normalized() * 0.55
         png = st.shot(tag + '_head', cam, hd, lens=70, res=res)
         finish(png)
+    if want('top'):
+        png = st.shot(tag + '_top', (mid[0], mid[1] + 0.001, 5), mid, ortho=max(ext[0], ext[1] * 1.33) * 1.2, res=res)
+        finish(png)
     if want('front') and pose == 'alert':
         png = st.shot(tag + '_front', (mid[0] + 5, mid[1], mid[2]), mid, ortho=max(ext[1], ext[2]) * 1.5, res=(res[1], res[1]))
         finish(png)
@@ -241,8 +303,9 @@ def run_animal(kind):
     for pose in poses:
         if POSES and pose not in POSES.split(','):
             continue
-        build(kind, pose, 1)
-        root, o, m = build(kind, pose, 0)
+        out, m = build(kind, pose)
+        root, o = out[0]
+        out[1][1].hide_render = True
         if pose == 'alert' and os.environ.get('CANID_VOLUME'):
             print(f'   volume {volume_litres(o):.1f} L (at a body density near 1 kg/L, against a real mass of {MASS[kind]})')
         if RENDER:

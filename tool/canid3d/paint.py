@@ -1,36 +1,12 @@
 """The coats, painted by marks with numpy (README.md says what each mark is and where it comes from).
 
-Each texel of the atlas is first found on the standing animal (the alert pose of the close model): its place P (mm,
-the rest frame) and the outward direction N there, from the sections the piece was lofted from. The marks are then
-painted where they lie on the body (the saddle on the back, the pale belly, the dark rim of the eye), so they run on
-across pieces and seams, and the same texture fits every pose of the same animal.
+Each texel is first found on the standing animal (texture.py): its place P (mm, the rest frame: X forward, Z up, Y to
+the animal's left), the outward direction N there, the piece of the build it lies over (its block, e.g. 'foreleg')
+and its place on that piece (S along it, T around it). The marks are painted where they lie on the body, and where
+two parts of the body meet (a leg and the trunk, the head and the neck, an ear and the skull, the tail and the rump)
+the two parts' colours are blended across the join, so the skin shows no seam.
 """
-import math
-
 import numpy as np
-
-from common import Atlas
-
-BLOCKS = {
-    'body': (0.0, 0.5, 1.0, 1.0),
-    'neck': (0.0, 0.25, 0.3125, 0.5),
-    'head': (0.3125, 0.25, 0.8125, 0.5),
-    'jaw': (0.8125, 0.25, 1.0, 0.5),
-    'foreleg': (0.0, 0.125, 0.375, 0.25),
-    'hindleg': (0.375, 0.125, 0.75, 0.25),
-    'ear': (0.75, 0.125, 0.875, 0.25),
-    'forepaw': (0.875, 0.125, 1.0, 0.25),
-    'tail': (0.0, 0.0, 0.375, 0.125),
-    'hindpaw': (0.375, 0.0, 0.5, 0.125),
-    'eye': (0.5, 0.0, 0.5625, 0.0625),
-    'nose': (0.5625, 0.0, 0.625, 0.0625),
-    'teeth': (0.5, 0.0625, 0.5625, 0.125),
-    'collar': (0.625, 0.0, 0.875, 0.125),
-}
-
-
-def atlas():
-    return Atlas(BLOCKS)
 
 
 def C(*rgb):
@@ -52,10 +28,10 @@ def hash3(ix, iy, iz, seed):
     return (h - np.floor(h)).astype(np.float32)
 
 
-def noise3(P, cell, seed=0, stretch=(1.0, 1.0, 1.0)):
-    """Smooth value noise in space (-1..1): P (..., 3) in mm, [cell] mm, [stretch] the cell's length along x, y, z
-    (hairs: long along their run). The same place gives the same value on every piece."""
-    q = P / (cell * np.array(stretch, np.float32))
+def noise3(P, cell, seed=0):
+    """Smooth value noise in space (-1..1): P (..., 3) in mm, [cell] mm. The same place gives the same value in every
+    pose."""
+    q = P / cell
     i = np.floor(q)
     f = q - i
     f = f * f * (3 - 2 * f)
@@ -68,338 +44,238 @@ def noise3(P, cell, seed=0, stretch=(1.0, 1.0, 1.0)):
     return (out - 0.5) * 2
 
 
-class Surface:
-    """Where a block's texels lie on the standing animal."""
+# the hair's run, as the noise's stretch along x, y, z: back along the trunk and head, down the legs and the tail
+RUN_TRUNK = np.array([4.5, 1.0, 1.4], np.float32)
+RUN_DOWN = np.array([1.0, 1.0, 4.5], np.float32)
 
-    def __init__(self, shape):
-        self.g = shape.grid(96)                         # [sections, angles, 3]
-        self.s = np.array(shape.s)
-        self.c = np.array([tuple(sec.c) for sec in shape.secs])
-        self.shape = shape
+LEG_BLOCKS = ('foreleg', 'hindleg', 'forepaw', 'hindpaw')
+HEAD_BLOCKS = ('head', 'jaw', 'nose', 'eye')
 
-    def at(self, S, T):
-        ns, nt = self.g.shape[0], self.g.shape[1] - 1
-        i = np.clip(np.searchsorted(self.s, S, side='right') - 1, 0, ns - 2)
-        f = np.clip((S - self.s[i]) / np.maximum(self.s[i + 1] - self.s[i], 1e-9), 0, 1)
-        tt = np.clip(T, 0, 1) * nt
-        j = np.clip(np.floor(tt).astype(int), 0, nt - 1)
-        g = tt - j
-        a = self.g[i, j] * (1 - g[..., None]) + self.g[i, j + 1] * g[..., None]
-        b = self.g[i + 1, j] * (1 - g[..., None]) + self.g[i + 1, j + 1] * g[..., None]
-        P = a * (1 - f[..., None]) + b * f[..., None]
-        c = self.c[i] * (1 - f[..., None]) + self.c[i + 1] * f[..., None]
-        N = P - c
-        N = N / np.maximum(np.linalg.norm(N, axis=-1, keepdims=True), 1e-9)
-        return P.astype(np.float32), N.astype(np.float32)
+PALETTES = {
+    # the Arabian wolf: 'a mixture of black and slightly buffy grey' (Pocock); greyish beige; legs paler and tawny
+    'wolf': dict(ground=C(0.55, 0.50, 0.43), tawny=C(0.66, 0.53, 0.39), pale=C(0.82, 0.78, 0.70), dark=C(0.14, 0.12, 0.10),
+                 grizzle=0.78, saddle=0.85, bar=0.35, legline=0.40, iris=C(0.80, 0.60, 0.20), tailtip=True, gland=True,
+                 white_feet=False, dust=0.0, tailwhite=False),
+    # the guard dog: sandy, white chest, belly, feet and tail tip (one of the pariah type's colours)
+    'dog': dict(ground=C(0.80, 0.63, 0.42), tawny=C(0.78, 0.61, 0.40), pale=C(0.92, 0.90, 0.85), dark=C(0.55, 0.40, 0.25),
+                grizzle=0.10, saddle=0.35, bar=0.0, legline=0.0, iris=C(0.36, 0.20, 0.08), tailtip=False, gland=False,
+                white_feet=True, dust=0.0, tailwhite=True),
+    # the stray: dull ginger-tan, a darker mottled back, off-white below, dusty
+    'stray': dict(ground=C(0.60, 0.46, 0.33), tawny=C(0.58, 0.45, 0.32), pale=C(0.76, 0.70, 0.60), dark=C(0.30, 0.22, 0.15),
+                  grizzle=0.25, saddle=0.75, bar=0.0, legline=0.0, iris=C(0.36, 0.20, 0.08), tailtip=False, gland=False,
+                  white_feet=False, dust=0.35, tailwhite=False),
+}
+PALETTES['wolf_winter'] = PALETTES['wolf']
 
 
-# ------------------------------------------------------------------ the coats
 class Coat:
-    """One animal's colours and marks. [rest]: the standing animal (canid.Canid, alert pose, close model)."""
+    """One animal's coat. [rest]: the standing animal (canid.Canid, alert pose)."""
 
-    def __init__(self, kind, rest):
-        self.kind, self.rest = kind, rest
+    def __init__(self, kind, rest, mouth_open=False):
+        self.kind = kind
+        self.mouth_open = mouth_open
+        self.pal = PALETTES[kind]
+        self.rest = rest
         self.H = rest.H
         o, hd, hn, hv, Lh = rest.head_frame
         self.hf = (np.array(tuple(o)), np.array(tuple(hd)), np.array(tuple(hn)), np.array(tuple(hv)), Lh)
-        self.eyes = [np.array(tuple(rest.points['eye_l'])), np.array(tuple(rest.points['eye_r']))]
+        self.eyes = []
         self.er = rest.S['eye'][3] * self.H
+        for sg, side in ((1, 'l'), (-1, 'r')):
+            c = np.array(tuple(rest.points['eye_' + side]))
+            out = np.radians(rest.S['eye_out'])
+            look = self.hf[1] * np.cos(out) - self.hf[3] * (sg * np.sin(out))
+            self.eyes.append((c, look / np.linalg.norm(look)))
+        self.ears = [np.array(tuple(rest.points['ear_' + s])) for s in ('l', 'r')]
+        torso = rest.S['torso']
+        self.tx = np.array([r[0] for r in torso])
+        self.tbot = np.array([r[2] for r in torso])
 
     def head_coords(self, P):
         o, hd, hn, hv, Lh = self.hf
         d = P - o
         return d @ hd / Lh, d @ hn / self.H, -(d @ hv) / self.H
 
-    def __call__(self, block, P, N, S, T):
-        f = getattr(self, 'kind_' + self.kind)
-        return f(block, P, N, S, T)
+    # ---------------------------------------------------------------- the parts' colours
+    def trunk(self, P, N):
+        """The trunk and the neck: the ground colour, the grizzled saddle, the pale underside graded into the flank."""
+        H, pal = self.H, self.pal
+        x, z = P[..., 0] / H, P[..., 2] / H
+        up = N[..., 2]
+        col = np.broadcast_to(pal['ground'], P.shape).copy()
+        # the lower flanks a little tawny, the underside pale, graded softly (no line)
+        col = mix(col, pal['tawny'], 0.30 * sstep(0.25, -0.35, up))
+        col = mix(col, pal['pale'], sstep(-0.15, -0.85, up) ** 1.3)
+        # the throat and chest pale
+        fwd = N[..., 0]
+        throat = sstep(-0.1, 0.65, fwd - up * 0.6) * sstep(0.95, 0.70, z + 0.2 * up) * sstep(0.36, 0.52, x)
+        col = mix(col, pal['pale'], 0.85 * throat)
+        # the saddle: black-tipped guard hairs, in streaks along the hair, thickest on the back and over the shoulders;
+        # its edge soft
+        sad = sstep(0.05, 0.85, up) * sstep(-0.70, -0.42, x)
+        n1 = noise3(P / RUN_TRUNK, 1.1, 11)
+        n2 = noise3(P, 6.0, 12)
+        streak = sstep(-0.1, 0.6, n1 + 0.35 * n2)
+        dens = pal['grizzle'] * (0.18 + 0.82 * sad)
+        col = mix(col, pal['dark'], streak * dens * pal['saddle'])
+        col = mix(col, pal['dark'], 0.25 * pal['saddle'] * sstep(0.90, 0.99, up) * sstep(-0.6, -0.3, x))
+        if pal['bar']:
+            # the dark bar over the shoulder, down and forward from the withers (the V over the shoulders)
+            d = np.abs((x - 0.40) * 0.85 + (z - 0.86) * 0.52)
+            bar = sstep(0.06, 0.015, d) * sstep(0.66, 0.80, z) * sstep(0.1, 0.6, np.abs(N[..., 1]))
+            col = mix(col, pal['dark'], pal['bar'] * bar * (0.5 + 0.5 * streak))
+        if pal['dust']:
+            col = mix(col, C(0.66, 0.58, 0.47), pal['dust'] * 0.7 * sstep(-0.2, -0.7, up))
+            mott = noise3(P, 40.0, 5)
+            col = mix(col, pal['dark'], 0.30 * sstep(0.1, 0.5, mott) * sstep(-0.1, 0.5, up))
+        return col
 
-    # shared pieces of a coat
-    def fur(self, P, block, base, seed=1, amount=0.06):
-        """Fine hair: streaks along the hair's run (back along the body and head, down the legs), lighter and darker."""
-        st = (4.0, 1.0, 1.0) if block in ('body', 'neck', 'head', 'jaw') else (1.0, 1.0, 4.0)
-        n1 = noise3(P, 2.2, seed, st)
-        n2 = noise3(P, 9.0, seed + 7)
-        return base * (1 + amount * n1[..., None] + 0.04 * n2[..., None])
+    def leg(self, P, N, hind):
+        H, pal = self.H, self.pal
+        z = P[..., 2] / H
+        inner = sstep(0.05, -0.55, N[..., 1] * np.sign(P[..., 1] + 1e-6))     # the inner side faces the midline
+        col = mix(pal['tawny'], pal['pale'], inner * 0.85)
+        col = mix(col, mix(pal['tawny'], pal['pale'], 0.45), sstep(0.30, 0.10, z) * 0.6)       # paler toward the feet
+        if pal['legline'] and not hind:
+            # the faint dark line down the front of the foreleg
+            front = sstep(0.55, 0.92, N[..., 0]) * sstep(0.15, 0.21, z) * sstep(0.44, 0.36, z)
+            col = mix(col, pal['dark'], pal['legline'] * front)
+        if pal['white_feet']:
+            col = mix(col, pal['pale'], sstep(0.17, 0.11, z))
+        if pal['dust']:
+            col = mix(col, C(0.62, 0.55, 0.44), pal['dust'] * 1.2 * sstep(0.30, 0.06, z))
+        return col
 
-    def eye_rim(self, P, col, rim, width=1.06):
-        """The dark-lined lids round the eye: an almond, longer along the head than up it, its front corner a little
-        lower than its back."""
+    def toes(self, col, S, N):
+        up = N[..., 2]
+        col = mix(col, C(0.07, 0.06, 0.06), sstep(0.88, 0.96, S) * sstep(0.6, -0.2, up))     # the claws
+        col = mix(col, C(0.11, 0.10, 0.10), sstep(-0.50, -0.80, up))                          # the pads below
+        return col
+
+    def head(self, P, N, block):
+        H, pal = self.H, self.pal
+        a, b, c = self.head_coords(P)
+        col = np.broadcast_to(pal['ground'], P.shape).copy()
+        n1 = noise3(P / np.array([3.0, 1.2, 1.2], np.float32), 0.9, 21)
+        col = mix(col, pal['dark'], pal['grizzle'] * 0.5 * sstep(0.0, 0.6, n1) * sstep(0.55, 0.25, a) * sstep(-0.01, 0.04, b))
+        col = mix(col, pal['tawny'], sstep(0.42, 0.62, a) * 0.65)                    # the bridge of the muzzle
+        col = mix(col, pal['pale'], sstep(-0.005, -0.040, b + 0.12 * (a - 0.5)))      # pale lips, chin, cheeks
+        if self.kind.startswith('wolf'):
+            # a pale mark over each eye; a short dark line from the eye's front corner
+            for e, look in self.eyes:
+                q = e + self.hf[2] * (0.030 * H) - self.hf[1] * (0.01 * self.hf[4])
+                col = mix(col, pal['pale'], 0.7 * sstep(0.024 * H, 0.010 * H, np.linalg.norm(P - q, axis=-1)))
+                q = e + self.hf[1] * (0.06 * self.hf[4]) - self.hf[2] * (0.010 * H)
+                col = mix(col, pal['dark'], 0.40 * sstep(0.015 * H, 0.005 * H, np.linalg.norm(P - q, axis=-1)))
+        else:
+            col = mix(col, col * 0.85, sstep(0.75, 0.95, a))                         # the muzzle's end darker
+        col = self.eye(P, col)
+        return self.nose_mouth(P, N, a, col, block)
+
+    def eye(self, P, col):
+        """The eye on the skin: an almond (longer along the head, its front corner lower, set obliquely), the iris,
+        the pupil, the dark-lined lids."""
         o, hd, hn, hv, Lh = self.hf
-        for e in self.eyes:
+        for e, look in self.eyes:
             q = P - e
             a = q @ hd
-            b = q @ hn + 0.18 * a
-            d = np.sqrt(a * a + (b / 0.70) ** 2)
-            col = mix(col, rim, sstep(self.er * (width + 0.12), self.er * width, d))
+            b = q @ hn + 0.22 * a
+            d = np.sqrt(a * a + (b / 0.62) ** 2) / self.er
+            front = sstep(-0.6, -0.2, (q @ look) / self.er)
+            iris = sstep(1.0, 0.86, d) * front
+            col = mix(col, self.pal['iris'], iris)
+            col = mix(col, C(0.03, 0.03, 0.03), sstep(0.42, 0.34, d) * iris)                     # the pupil
+            col = mix(col, C(0.05, 0.045, 0.04), sstep(1.25, 1.08, d) * sstep(0.88, 1.0, d) * front)   # the lids' rim
         return col
 
-    def iris(self, S, iris, pupil):
-        col = np.broadcast_to(C(0.12, 0.08, 0.05), S.shape + (3,)).copy()
-        col = mix(col, iris, sstep(0.52, 0.6, S))
-        col = mix(col, pupil, sstep(0.84, 0.88, S))
-        return col
-
-    def done(self, col, rough, block):
-        occ = np.ones(col.shape[:2], np.float32)
-        return col, np.broadcast_to(np.float32(rough), col.shape[:2]).copy(), occ
-
-    # ---------------------------------------------------------------- the Arabian wolf
-    def kind_wolf(self, block, P, N, S, T):
-        H = self.H
-        x, y, z = P[..., 0] / H, P[..., 1] / H, P[..., 2] / H
-        buff = C(0.62, 0.57, 0.49)          # 'a mixture of black and slightly buffy grey' (Pocock)
-        tawny = C(0.71, 0.56, 0.40)
-        cream = C(0.87, 0.83, 0.75)
-        dark = C(0.17, 0.15, 0.13)
+    def nose_mouth(self, P, N, a, col, block):
         black = C(0.05, 0.045, 0.04)
-        speck = sstep(0.15, 0.45, noise3(P, 1.8, 11, (2.5, 1, 1)))
-        if block == 'eye':
-            return self.done(self.iris(S, C(0.80, 0.60, 0.20), black), 0.08, block)
-        if block == 'nose':
-            col = np.broadcast_to(black, S.shape + (3,)).copy() * (1 + 0.15 * noise3(P, 1.2, 3)[..., None])
-            return self.done(col, 0.4, block)
-        if block == 'teeth':
-            return self.done(np.broadcast_to(C(0.88, 0.85, 0.76), S.shape + (3,)).copy(), 0.35, block)
-        if block in ('body', 'neck', 'tail'):
-            up = N[..., 2]
-            col = np.broadcast_to(buff, S.shape + (3,)).copy()
-            # the flanks and the thighs' outer side washed tawny
-            col = mix(col, tawny, 0.25 * sstep(0.2, -0.3, up))
-            # pale below: the belly, the inner thighs, the chest and throat
-            col = mix(col, cream, sstep(-0.35, -0.80, up))
-            if block in ('neck', 'body'):
-                fwd = N[..., 0]
-                throat = sstep(0.0, 0.6, fwd - up * 0.7) * sstep(0.90, 0.70, z + 0.25 * up) * sstep(0.40, 0.52, x)
-                col = mix(col, cream, 0.9 * throat)
-            # the saddle: black-tipped guard hairs thickest along the back and over the shoulders
-            sad = sstep(0.25, 0.85, up)
-            if block == 'body':
-                sad = sad * sstep(-0.62, -0.40, x)
-            dens = 0.16 + 0.55 * sad
-            col = mix(col, dark, speck * dens)
-            col = mix(col, dark, 0.35 * sstep(0.93, 0.99, up))           # the darker line down the spine
-            if block == 'body':
-                # the dark bar over the shoulder, down and forward from the withers
-                d = np.abs((x - 0.40) * 0.85 + (z - 0.86) * 0.52)
-                bar = sstep(0.045, 0.01, d) * sstep(0.70, 0.80, z) * sstep(0.2, 0.6, np.abs(N[..., 1]))
-                col = mix(col, dark, 0.35 * bar)
-            if block == 'tail':
-                s = S
-                col = mix(col, buff * 0.95, 0.0)
-                col = mix(col, cream * 0.95, 0.5 * sstep(0.2, 0.6, -self.tail_up(P, N)))
-                gland = sstep(0.06, 0.02, np.abs(s - 0.22)) * sstep(-0.2, 0.5, self.tail_up(P, N))
-                col = mix(col, dark, 0.75 * gland)
-                col = mix(col, black, sstep(0.80, 0.90, s))
-            col = self.fur(P, block, col)
-            return self.done(col, 0.85, block)
-        if block in ('foreleg', 'hindleg'):
-            inner = sstep(0.05, -0.5, N[..., 1])              # the left leg's inner side faces -Y
-            col = mix(tawny, cream, inner)
-            col = mix(col, cream * 0.97, sstep(0.30, 0.12, z) * 0.6)  # paler toward the feet
-            if block == 'hindleg':
-                col = mix(col, buff, sstep(0.5, 0.75, z) * (1 - inner))
-                col = mix(col, dark, speck * 0.18 * sstep(0.45, 0.7, z) * (1 - inner))
-            else:
-                col = mix(col, buff, sstep(0.48, 0.65, z) * (1 - inner))
-                # the dark line down the front of the foreleg (as in grey wolves; faint)
-                front = sstep(0.55, 0.9, N[..., 0]) * sstep(0.16, 0.22, z) * sstep(0.44, 0.36, z)
-                col = mix(col, dark, 0.42 * front)
-            col = self.fur(P, block, col)
-            return self.done(col, 0.85, block)
-        if block in ('forepaw', 'hindpaw'):
-            col = np.broadcast_to(mix(tawny, cream, 0.45), S.shape + (3,)).copy()
-            col = self.toes(col, S, T, N, black)
-            return self.done(col, 0.8, block)
-        if block in ('head', 'jaw'):
-            a, b, c = self.head_coords(P)
-            col = np.broadcast_to(buff, S.shape + (3,)).copy()
-            col = mix(col, dark, speck * 0.32 * sstep(0.55, 0.3, a))                 # grizzled crown and brow
-            col = mix(col, tawny, sstep(0.45, 0.62, a) * 0.7)                        # muzzle's top tawny
-            col = mix(col, tawny * 1.03, sstep(0.0, 0.5, np.abs(c) / 0.09) * sstep(0.08, 0.25, a) * sstep(0.04, -0.01, b) * 0.6)
-            # pale cheeks, lips and chin; the throat
-            pale = sstep(-0.012, -0.035, b + 0.15 * (a - 0.5))
-            col = mix(col, cream, pale)
-            # a pale mark over the eye
-            for e in self.eyes:
-                q = e + self.hf[2] * (0.03 * H) - self.hf[1] * (0.01 * self.hf[4])
-                col = mix(col, cream, 0.8 * sstep(0.022 * H, 0.010 * H, np.linalg.norm(P - q, axis=-1)))
-            col = self.eye_rim(P, col, black)
-            # a dark line from the eye's front corner toward the muzzle
-            for e in self.eyes:
-                q = e + self.hf[1] * (0.05 * self.hf[4]) - self.hf[2] * (0.008 * H)
-                col = mix(col, dark, 0.45 * sstep(0.014 * H, 0.005 * H, np.linalg.norm(P - q, axis=-1)))
-            col = self.lips(block, P, N, a, b, col, black)
-            col = self.fur(P, block, col, amount=0.05)
-            return self.done(col, 0.82, block)
-        if block == 'ear':
-            col = self.ear_paint(P, N, tawny * 0.98, cream, dark)
-            return self.done(col, 0.85, block)
-        if block == 'collar':
-            return self.done(np.broadcast_to(C(0.2, 0.12, 0.07), S.shape + (3,)).copy(), 0.6, block)
-        raise KeyError(block)
-
-    def tail_up(self, P, N):
-        """How far the tail's surface faces its own top (the side over the tail when it is raised: back and up from
-        the hanging tail)."""
-        return N[..., 2] * 0.5 - N[..., 0] * 0.866
-
-    def toes(self, col, S, T, N, claw):
-        # four toes: dark seams between them on the front half, black claws at the tip
-        up = N[..., 2]
-        fr = S
-        seam = np.zeros_like(S)
-        for k in (-1, 0, 1):
-            seam = np.maximum(seam, sstep(0.10, 0.02, np.abs(N[..., 1] - k * 0.42)) * sstep(0.45, 0.65, fr))
-        col = mix(col, col * 0.55, seam * sstep(-0.3, 0.3, up))
-        col = mix(col, claw, sstep(0.86, 0.93, fr) * sstep(0.5, -0.1, up))
-        col = mix(col, C(0.10, 0.09, 0.09), sstep(-0.55, -0.8, up))           # the pads below
-        return col
-
-    def lips(self, block, P, N, a, b, col, black):
-        if block == 'head':
-            under = sstep(-0.35, -0.75, N[..., 2] * 0.8 + 0.2 * N[..., 0])
-            mouth = under * sstep(0.44, 0.54, a)
-            col = mix(col, black, sstep(0.0, 0.3, mouth) * sstep(0.6, 0.3, mouth))
-            col = mix(col, C(0.42, 0.22, 0.22), sstep(0.5, 0.85, mouth))      # the roof of the mouth
+        o, hd, hn, hv, Lh = self.hf
+        nose = np.array(tuple(self.rest.points['nose']))
+        nr = self.rest.S['nose'][2] * self.H
+        col = mix(col, black * 1.2, sstep(nr * 1.6, nr * 1.3, np.linalg.norm(P - nose, axis=-1)))
+        for sg in (1, -1):                                   # the nostrils: two dark commas on the pad's front
+            q = nose - hv * (sg * nr * 0.45) - hn * (nr * 0.1) - hd * (nr * 0.2)
+            col = mix(col, C(0.0, 0.0, 0.0), sstep(nr * 0.38, nr * 0.22, np.linalg.norm(P - q, axis=-1)))
+        hinge, jd, jn, jv = self.rest.jaw_frame
+        jn = np.array(tuple(jn))
+        if block == 'jaw':
+            top = N @ jn
+            col = mix(col, black, sstep(0.30, 0.50, top) * sstep(0.80, 0.62, top) * sstep(0.40, 0.50, a))
+            if self.mouth_open:
+                col = mix(col, C(0.55, 0.28, 0.30), sstep(0.70, 0.90, top))          # the tongue and gums
         else:
-            hinge, jd, jn, jv = self.rest.jaw_frame
-            jn = np.array(tuple(jn))
-            top = (N @ jn)
-            col = mix(col, black, sstep(0.25, 0.5, top) * sstep(0.85, 0.6, top) * sstep(0.40, 0.50, a))
-            col = mix(col, C(0.55, 0.28, 0.30), sstep(0.7, 0.9, top))         # the tongue and gums
+            under = sstep(-0.45, -0.80, N[..., 2] * 0.85 + 0.15 * N[..., 0])
+            mouth = under * sstep(0.42, 0.52, a)
+            col = mix(col, black, sstep(0.05, 0.25, mouth) * sstep(0.55, 0.35, mouth))   # the lips' thin dark line
+            if self.mouth_open:
+                col = mix(col, C(0.42, 0.22, 0.22), sstep(0.55, 0.9, mouth))         # the roof of the mouth
         return col
 
-    def ear_paint(self, P, N, back, inner, edge):
+    def ear(self, P, N):
+        pal = self.pal
         fwd = N[..., 0]
-        col = mix(back, inner, sstep(-0.1, 0.35, fwd))
-        e = sstep(0.55, 0.85, np.abs(N[..., 1]) + 0.2 * np.abs(N[..., 2]))
-        col = mix(col, edge, 0.55 * e * sstep(0.2, -0.2, fwd))
-        return self.fur(P, 'ear', col, amount=0.05)
+        col = mix(pal['tawny'] * 0.96, pal['pale'], sstep(-0.05, 0.40, fwd))           # pale fur inside
+        e = sstep(0.60, 0.88, np.abs(N[..., 1]) + 0.2 * np.abs(N[..., 2]))
+        return mix(col, pal['dark'], 0.5 * e * sstep(0.2, -0.2, fwd))                    # the dark edge behind
 
-    # ---------------------------------------------------------------- the guard dog and the stray
-    def kind_wolf_winter(self, block, P, N, S, T):
-        return self.kind_wolf(block, P, N, S, T)
-
-    def kind_dog(self, block, P, N, S, T):
-        return self.dog(block, P, N, S, T, stray=False)
-
-    def kind_stray(self, block, P, N, S, T):
-        return self.dog(block, P, N, S, T, stray=True)
-
-    def dog(self, block, P, N, S, T, stray):
-        H = self.H
-        x, y, z = P[..., 0] / H, P[..., 1] / H, P[..., 2] / H
-        if stray:
-            base = C(0.60, 0.46, 0.33)        # a dull ginger-tan
-            back = C(0.36, 0.27, 0.19)
-            white = C(0.78, 0.72, 0.62)       # off-white, dusty
-        else:
-            base = C(0.80, 0.63, 0.42)        # sandy (one of the pariah type's colours)
-            back = C(0.68, 0.51, 0.33)
-            white = C(0.92, 0.90, 0.85)
-        black = C(0.05, 0.045, 0.04)
-        if block == 'eye':
-            return self.done(self.iris(S, C(0.36, 0.20, 0.08), black), 0.08, block)
-        if block == 'nose':
-            return self.done(np.broadcast_to(black, S.shape + (3,)).copy(), 0.4, block)
-        if block == 'teeth':
-            return self.done(np.broadcast_to(C(0.88, 0.85, 0.76), S.shape + (3,)).copy(), 0.35, block)
-        if block == 'collar':
-            # leather, darker at its edges; the steel ring (the small torus) is in the same block
-            col = np.broadcast_to(C(0.24, 0.14, 0.08), S.shape + (3,)).copy()
-            col = mix(col, C(0.12, 0.07, 0.04), sstep(0.35, 0.48, np.abs(T - 0.5)) * 0.5)
-            return self.done(col, 0.6, block)
-        mott = noise3(P, 40.0, 5)
-        if block in ('body', 'neck', 'tail'):
-            up = N[..., 2]
-            col = mix(base, back, sstep(0.45, 0.9, up) * (0.9 if stray else 0.6))
-            if stray:
-                col = mix(col, back, 0.35 * sstep(0.1, 0.5, mott))
-            col = mix(col, white, sstep(-0.45, -0.8, up) * (0.6 if stray else 1.0))
-            if block == 'neck':
-                fwd = N[..., 0]
-                col = mix(col, white, sstep(0.1, 0.6, fwd - up * 0.5) * sstep(1.1, 0.9, z) * (0.7 if stray else 1.0))
-            if block == 'body':
-                col = mix(col, white, sstep(0.45, 0.55, x) * sstep(0.1, 0.6, N[..., 0]) * sstep(0.85, 0.65, z) * (0.7 if stray else 1.0))
-                if stray:
-                    col = self.lean(P, N, x, z, col)
-            if block == 'tail':
-                col = mix(col, white, sstep(0.80, 0.88, S) * (0.0 if stray else 1.0))
-            col = self.fur(P, block, col, amount=0.07 if stray else 0.05)
-            if stray:
-                col = mix(col, C(0.66, 0.58, 0.47), 0.25 * sstep(0.62, 0.45, z) * sstep(-0.4, 0.2, -up))   # dust on the belly
-            return self.done(col, 0.88 if stray else 0.82, block)
-        if block in ('foreleg', 'hindleg'):
-            inner = sstep(0.05, -0.5, N[..., 1])
-            col = mix(base, white, inner * (0.5 if stray else 0.8))
-            if not stray:
-                col = mix(col, white, sstep(0.16, 0.10, z))                         # white socks
-            else:
-                col = mix(col, C(0.62, 0.55, 0.44), 0.45 * sstep(0.28, 0.08, z))    # dust and dirt up the legs
-            col = self.fur(P, block, col)
-            return self.done(col, 0.85, block)
-        if block in ('forepaw', 'hindpaw'):
-            col = np.broadcast_to(white if not stray else C(0.55, 0.48, 0.38), S.shape + (3,)).copy()
-            col = self.toes(col, S, T, N, black)
-            return self.done(col, 0.8, block)
-        if block in ('head', 'jaw'):
-            a, b, c = self.head_coords(P)
-            col = mix(base, back, sstep(0.03, 0.08, b) * sstep(0.6, 0.3, a) * 0.5)
-            col = mix(col, base * 0.82, sstep(0.75, 0.95, a))                      # the muzzle's end darker
-            col = mix(col, white, sstep(-0.02, -0.045, b + 0.1 * (a - 0.5)) * (0.5 if stray else 0.8))
-            col = self.eye_rim(P, col, black, 1.04)
-            col = self.lips(block, P, N, a, b, col, black)
-            col = self.fur(P, block, col, amount=0.05)
-            return self.done(col, 0.82, block)
-        if block == 'ear':
-            col = self.ear_paint(P, N, back * 1.05, mix(base, white, 0.6)[None, None] * np.ones(S.shape + (1,), np.float32), back * 0.7)
-            return self.done(col, 0.85, block)
-        raise KeyError(block)
-
-    def lean(self, P, N, x, z, col):
-        """A thin dog: the ribs showing as shallow grooves on the chest's sides, the hip bones and the spine marked."""
-        H = self.H
-        side = np.abs(N[..., 1])
-        # ribs: grooves slanting back and down, about 22 mm apart, over the chest behind the shoulder
-        r = (x * H - (z - 0.75) * H * 0.35) / (0.040 * H)
-        groove = (0.5 + 0.5 * np.cos(2 * np.pi * r)) ** 2 * 0.6
-        zone = sstep(-0.05, 0.05, x) * sstep(0.30, 0.20, x) * sstep(0.58, 0.66, z) * sstep(0.90, 0.82, z) * sstep(0.4, 0.8, side)
-        col = mix(col, col * 0.75, groove * zone * (0.6 + 0.4 * noise3(P, 30.0, 9)))
-        col = mix(col, col * 1.12, (1 - groove) * zone * 0.5)
-        # the hip bone (its point under the skin) light, a hollow under it
-        hp = np.array([-0.30 * H, 0.0, 0.90 * H], np.float32)
-        d = np.linalg.norm((P - hp) * np.array([1, 0, 1], np.float32), axis=-1) / H
-        col = mix(col, col * 1.15, sstep(0.05, 0.02, d) * sstep(0.4, 0.7, side))
-        col = mix(col, col * 0.78, sstep(0.10, 0.06, d) * sstep(0.04, 0.07, d) * sstep(0.4, 0.7, side) * sstep(0.91, 0.86, z))
-        # the hollow of the flank before the thigh
-        fl = sstep(-0.06, -0.14, x) * sstep(-0.28, -0.20, x) * sstep(0.65, 0.72, z) * sstep(0.88, 0.80, z) * sstep(0.5, 0.8, side)
-        col = mix(col, col * 0.82, fl)
+    def tail(self, P, N, S):
+        pal = self.pal
+        up = N[..., 2] * 0.5 - N[..., 0] * 0.866          # the tail's top when it hangs (back and up)
+        col = self.trunk(P, N)
+        col = mix(col, pal['pale'] * 0.96, 0.5 * sstep(0.2, 0.6, -up))
+        if pal['gland']:
+            col = mix(col, pal['dark'], 0.7 * sstep(0.07, 0.02, np.abs(S - 0.22)) * sstep(-0.2, 0.5, up))
+        if pal['tailtip']:
+            col = mix(col, C(0.05, 0.045, 0.04), sstep(0.80, 0.90, S))
+        if pal['tailwhite']:
+            col = mix(col, pal['pale'], sstep(0.80, 0.88, S))
         return col
 
+    # ---------------------------------------------------------------- one colour per texel
+    def __call__(self, P, N, S, T, block, group):
+        """The colour of texels (arrays) lying over one kind of piece ([block]) of one [group]."""
+        H = self.H
+        x, z = P[..., 0] / H, P[..., 2] / H
+        if block == 'collar':
+            col = np.broadcast_to(C(0.24, 0.14, 0.08), P.shape).copy()
+            return mix(col, C(0.12, 0.07, 0.04), sstep(0.35, 0.48, np.abs(T - 0.5)) * 0.5)
+        if block == 'ring':
+            return np.broadcast_to(C(0.55, 0.55, 0.57), P.shape).copy()
+        if block == 'teeth':
+            return np.broadcast_to(C(0.88, 0.85, 0.76), P.shape).copy()
+        trunk = self.trunk(P, N)
+        if block == 'body':
+            col = trunk
+        elif block == 'neck':
+            a, b, c = self.head_coords(P)
+            col = mix(trunk, self.head(P, N, 'head'), sstep(-0.05, 0.15, a))
+        elif block in LEG_BLOCKS:
+            bot = np.interp(x, self.tx, self.tbot)
+            col = mix(trunk, self.leg(P, N, block.startswith('hind')), sstep(bot - 0.02, bot - 0.16, z))
+            if block.endswith('paw'):
+                col = self.toes(col, S, N)
+        elif block in HEAD_BLOCKS:
+            a, b, c = self.head_coords(P)
+            col = mix(trunk, self.head(P, N, block), sstep(-0.12, 0.10, a))
+        elif block == 'ear':
+            base = self.ears[0] if group.endswith('_l') else self.ears[1]
+            h = (P - base) @ self.hf[2] / (self.rest.S['ear'][0] * H)
+            col = mix(self.head(P, N, 'head'), self.ear(P, N), sstep(-0.05, 0.25, h))
+        elif block == 'tail':
+            col = mix(trunk, self.tail(P, N, S), sstep(0.0, 0.15, S))
+        else:
+            col = trunk
+        # the hair's grain: lighter and darker streaks along its run
+        run = RUN_DOWN if block in LEG_BLOCKS or block == 'tail' else RUN_TRUNK
+        n1 = noise3(P / run, 1.1, 1)
+        n2 = noise3(P, 8.0, 7)
+        return col * (1 + 0.05 * n1[..., None] + 0.035 * n2[..., None])
 
-def paint(kind, atl, size, rest):
-    """The atlas for [kind] ('wolf', 'dog', 'stray'), [size] px: (colour, roughness/occlusion)."""
-    coat = Coat(kind, rest)
-    surf = {b: Surface(sh) for b, sh in rest.shapes.items()}
-
-    def painter_for(block):
-        def f(S, T):
-            P, N = surf[block].at(S, T)
-            col, rough, occ = coat(block, P, N, S, T)
-            return col, rough, occ
-        return f
-
-    def flat(block):
-        def f(S, T):
-            P = np.zeros(S.shape + (3,), np.float32)
-            N = np.zeros(S.shape + (3,), np.float32)
-            N[..., 2] = 1
-            return coat(block, P, N, S, T)
-        return f
-
-    painters = {b: painter_for(b) for b in surf}
-    for b in ('teeth', 'collar'):
-        if b not in painters:
-            painters[b] = flat(b)
-    return atl.paint(size, painters)
+    def height(self, P, block):
+        """The fur's relief (mm) for the normal map: fine streaks along the hair's run and a coarser lie of the coat."""
+        if block in ('collar', 'ring', 'teeth'):
+            return np.zeros(P.shape[:-1], np.float32)
+        run = RUN_DOWN if block in LEG_BLOCKS or block == 'tail' else RUN_TRUNK
+        q = P / run
+        return 0.30 * noise3(q, 0.9, 31) + 0.22 * noise3(q, 2.2, 32) + 0.6 * noise3(P, 14.0, 33)
