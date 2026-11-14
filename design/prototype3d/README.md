@@ -111,7 +111,8 @@ in the code, and the numbers are in
   the opened meter, «فلوس بلا حد», turned on by two taps within 3 s, off by
   one. The engine keeps the money at 10,000,000 or more (TestMoney in
   `marah_domain`, ledger rows «فلوس تجربة», the game marked for good; GDD 13).
-  **A release build must not carry the meter**, and with it this switch.
+  **A release build must drop the meter and the `setTestMoney` command** (the
+  engine's JSON command in `tool/proto_engine`, and `SetTestMoney` itself).
 - **Draw calls:** the yard's fixed objects are merged, and footprints are
   instanced.
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)
@@ -143,3 +144,14 @@ Each page loads its models as `lod0.json`, `lod1.json` and `lod2.json`. Each
 file holds `{"glb": "<base64>"}` from `assets_src/camels/*.glb`, because
 artifacts do not serve `.glb`. The ground is `sand.jpg`, a 1024 px copy of
 the owner's Najd terrain tile.
+
+## Known gaps (for the owner)
+
+- **Lines on older iPhones:** a paragraph's last line of one word is avoided
+  with `text-wrap: pretty`, which iOS reads from iOS 26; on an older iOS only
+  the no-break spaces hold (a number with its word, a preposition with the
+  word after it), and a last line of one word can still happen.
+- **Red and amber to a red-green colour-blind eye:** the phone's red
+  (#d42f25) and amber (#a3660e), darkened for contrast on 14 Nov, are nearly
+  the same to a deuteranope (ΔE 2.3). Where they mean something the words
+  say it too (a warning's text, «يخلص», «خلص»).
