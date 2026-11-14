@@ -121,9 +121,15 @@ Object.assign(PIN_ICONS, {
   tent: '<path d="M2 19h20M4 19l8-14 8 14"/><path d="M9 19l3-5 3 5"/>',
   room: '<path d="M3 20h18M5 20V9l7-5 7 5v11"/><path d="M9 20v-6h6v6"/>',
 });
-const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');      // (a part alone, to redraw it: map, room, trip, camp)
+const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
+// RESTRIP=1: no game page; the strips and the board are remade from the frames already drawn (their top 956 x 440)      // (a part alone, to redraw it: map, room, trip, camp)
 
 (async () => {
+  if (process.env.RESTRIP) {
+    const bb = await chromium.launch();
+    const raw = fs.readdirSync(OUT).filter((f) => /^trip_\d\d_.*\.jpg$/.test(f)).sort().map((f) => { const png = path.join(OUT, f.replace(/\.jpg$/, '.png')); execFileSync('convert', [path.join(OUT, f), '-crop', '956x440+0+0', '+repage', png]); return png; });
+    await makeStrips(bb, raw); await makeBoard(bb); for (const f of raw) fs.unlinkSync(f); await bb.close(); return;
+  }
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 956, height: 440 }, deviceScaleFactor: DSF });
   p.on('pageerror', (e) => console.log('pageerror', e.message));
@@ -245,17 +251,19 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');      // (a p
     await p.evaluate(() => window.__play.debug.toggleView());
     await p.waitForTimeout(3000);
     const carBtn = (ic, id, label) => p.evaluate(([ic, id, label]) => { document.querySelectorAll('.pl-car .added').forEach((e) => e.remove()); const row = document.querySelector('.pl-car'); const bt = document.createElement('button'); bt.className = 'pl-ib added'; bt.id = id; bt.setAttribute('aria-label', label); bt.innerHTML = ic; row.insertBefore(bt, row.querySelector('[data-c="more"]')); }, [ic, id, label]);
-    const CAMP = (falcon) => at(70, 196, SV.tent) + (falcon ? `<div style="left:300px;top:220px;width:60px;height:140px">${img('saker_hooded_perch', 0, 0, 48)}</div>` : at(300, 300, SV.cage) + at(250, 330, SV.nets)) + at(200, 318, SV.supplies) + pin(180, 200, 'tent');
+    const CAMP = (falcon) => at(70, 196, SV.tent) + (falcon ? `<div style="left:300px;top:205px;width:60px;height:140px">${img('saker_hooded_perch', 0, 0, 44)}</div>` : at(300, 262, SV.cage) + at(318, 300, SV.nets)) + at(36, 278, SV.supplies) + pin(180, 200, 'tent');
     if (ONLY.includes('trip')) {
       await p.evaluate(() => { const d = window.__play.debug; if (d.state.view !== 3) d.toggleView(); });
       await p.waitForTimeout(3000);
       await carBtn(FALCON_ICON, 'falconBtn', 'الصقر');
       await draw(CAMP(true));
       await shot('trip_07_camp_falcon', 'the falcon trip\'s camp, parked: the tent, the hooded saker on its perch (T11), the supplies and the tent\'s pin drawn; the falcon\'s button in the car\'s row');
+      // (in the car: the card docks below the car's row, and the pedals and the steering pad step aside while it is open: a proposal)
+      await p.evaluate(() => { const st = document.createElement('style'); st.id = 'incar'; st.textContent = 'body.playing .pop { top: 96px !important; } .pl-pedals, .pl-steer { visibility: hidden; }'; document.head.appendChild(st); });
       await open({ key: 'camp', name: 'المخيم · اليوم الثالث', icon: 'tent', c: { sub: 'طرف النفود · رحلة مقناص', stats: [['الأيام', '3', ''], ['المؤونة', 'يومين', '', 'warn'], ['العزبة تكفي', '6', 'أيام']],
         html: '<div class="note">الصبح والعصر تطلع بالصقر، والليل تنام. تقدر تفك المخيم وترجع أي وقت.</div>', actions: [{ label: 'نام لين الفجر', primary: true }, { label: 'فك المخيم وارجع' }] } });
       await shot('trip_08_camp_card', 'the camp\'s card, opened by the tent\'s pin: the day, the supplies, the farm\'s days, sleep to dawn or break camp (drawn content)');
-      await close(); await draw('');
+      await close(); await draw(''); await p.evaluate(() => document.getElementById('incar')?.remove());
       await p.evaluate(() => { document.querySelectorAll('.pl-car .added').forEach((e) => e.remove()); window.__play.debug.exit(); });
       await p.waitForFunction(() => window.__play.debug.state.mode === 'walk', null, { timeout: 120000 });
       await p.waitForTimeout(1500); await stepAway();
@@ -336,7 +344,7 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');      // (a p
   }
   await p.close();
   await makeStrips(b, files);
-  await makeBoard(b, files);
+  await makeBoard(b);
   for (const f of files) fs.unlinkSync(f);
   await b.close();
   if (!process.env.ONLY) fs.writeFileSync(path.join(OUT, 'trip_draws.txt'), counts.join('\n') + '\n');
@@ -351,7 +359,7 @@ const CAP = {
   trip_05_room_card: 'بطاقة غرفة الصقور بضغطة دبوسها: الصقور والدعو والمقيض. مرسوم: المحتوى. سعرها وسعتها اختيار لعب.',
   trip_06_drive: 'السواقة للأرض من ورا. كله حقيقي: وهي تمشي يبقى القير بس فوق. نفس السواقة للمقناص وللطرح.',
   trip_07_camp_falcon: 'مخيم رحلة المقناص. مرسوم: الخيمة والمؤونة (بدائل)، والصقر المبرقع على وكره (صورة مجسم الطيور، ينتظر موافقة المالك)، ودبوس الخيمة، وزر الصقر جنب أزرار السيارة.',
-  trip_08_camp_card: 'بطاقة المخيم بضغطة دبوس الخيمة: اليوم والمؤونة وأيام العزبة، «نام لين الفجر» أو «فك المخيم وارجع» أي وقت. مرسوم.',
+  trip_08_camp_card: 'بطاقة المخيم بضغطة دبوس الخيمة: اليوم والمؤونة وأيام العزبة، «نام لين الفجر» أو «فك المخيم وارجع» أي وقت. بالسيارة تنزل البطاقة تحت أزرارها، والدواسات تختفي وهي مفتوحة (اقتراح). مرسوم.',
   trip_09_fist: 'الصبح، من عيونك: الصقر المبرقع (صورة المجسم، ينتظر الموافقة) على دس مرسوم، وزر «شيل البرقع وأرسله» على الطرف.',
   trip_10_flight: 'أرسلته: الصقر طاير والكروان قام (صور المجسمات، تنتظر الموافقة)، وزر الملواح يرجعه. النتيجة من الصقر والأرض والحظ.',
   trip_11_result: 'نزل على الكروان (الصقر صورة المجسم، والكروان المصيود بديل) ودبوس عليه؛ تضغطه فتطلع البطاقة (قرار المالك 3). الصيد ما ينباع.',
@@ -374,7 +382,7 @@ async function makeStrips(b, files) {
     await pg.setContent(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@500;700&display=swap"><style>
       body { margin: 0; width: 956px; background: #2a2119; direction: rtl; font-family: "IBM Plex Sans Arabic", sans-serif; } img { display: block; width: 956px; height: 440px; }
       p { margin: 0; padding: 7px 12px 9px; color: #f6f1e7; font-size: 13px; line-height: 1.45; } b { background: #e8b46c; color: #1b130a; border-radius: 5px; padding: 0 6px; margin-left: 6px; }</style>
-      <img src="data:image/png;base64,${fs.readFileSync(f).toString('base64')}"><p><b>${i + 1} · تصميم</b>${CAP[path.basename(f, '.png')] || ''}</p>`, { waitUntil: 'networkidle' });
+      <img src="data:image/png;base64,${fs.readFileSync(f).toString('base64')}"><p><b>${+path.basename(f).split('_')[1]} · تصميم</b>${CAP[path.basename(f, '.png')] || ''}</p>`, { waitUntil: 'networkidle' });
     await pg.evaluate(() => document.fonts.ready);
     const png = f.replace(/\.png$/, '_s.png');
     await pg.screenshot({ path: png, fullPage: true, timeout: 600000 });
@@ -382,14 +390,11 @@ async function makeStrips(b, files) {
   }
   await pg.close();
 }
-async function makeBoard(b, files) {
+async function makeBoard(b) {
   const board = await b.newPage({ viewport: { width: 1500, height: 900 } });
-  const cells = files.map((f, i) => `<figure><img src="data:image/png;base64,${fs.readFileSync(f).toString('base64')}"><figcaption><b>${i + 1}</b> ${CAP[path.basename(f, '.png')] || ''}</figcaption></figure>`).join('');
-  await board.setContent(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@500;700&display=swap"><style>
-    body { margin: 0; padding: 14px; background: #2a2119; direction: rtl; font-family: "IBM Plex Sans Arabic", sans-serif; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 1500px; box-sizing: border-box; }
-    figure { margin: 0; } img { width: 100%; display: block; border-radius: 6px; } figcaption { color: #f6f1e7; font-size: 13.5px; line-height: 1.5; padding: 6px 2px 0; }
-    figcaption b { display: inline-block; min-width: 22px; text-align: center; background: #e8b46c; color: #1b130a; border-radius: 6px; margin-left: 4px; }</style>${cells}`, { waitUntil: 'networkidle' });
-  await board.evaluate(() => document.fonts.ready);
+  const frames = fs.readdirSync(OUT).filter((f) => /^trip_\d\d_.*\.jpg$/.test(f)).sort();
+  const cells = frames.map((f) => `<img src="data:image/jpeg;base64,${fs.readFileSync(path.join(OUT, f)).toString('base64')}">`).join('');
+  await board.setContent(`<!doctype html><meta charset="utf-8"><style>body { margin: 0; padding: 12px; background: #2a2119; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 1500px; box-sizing: border-box; } img { width: 100%; display: block; border-radius: 6px; }</style>${cells}`);
   await board.screenshot({ path: path.join(OUT, 'trip_board.png'), fullPage: true, timeout: 600000 });
   execFileSync('convert', [path.join(OUT, 'trip_board.png'), '-quality', '85', path.join(OUT, 'trip_board.jpg')]); fs.unlinkSync(path.join(OUT, 'trip_board.png'));
   await board.close();

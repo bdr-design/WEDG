@@ -175,7 +175,20 @@ lost falcon with the tracker's button and card (decision 6: mostly found, someti
 ## What it costs to draw (estimates; T11's birds measured)
 
 **Each frame's base** is counted from the WebGL calls in `design/hunt/trip_draws.txt` (SwiftShader
-at 956x440: the counts are the phone's, the times are not). TRIP_TABLE
+at 956x440: the counts are the phone's, the times are not).
+
+| Scene | Base, measured (main + shadow) | With the new things (estimate) |
+|---|---|---|
+| The map, a ground's card | 79–116 draws / 124–155k | pins only: +0 |
+| The farm with the falcons' room | 116 / 154k | room and perches: +3 draws, about +3.4k: 119 / 158k |
+| Behind the parked car at a camp | 71 / 143k | tent, cage or perch, supplies (static), the hooded saker on its perch: about +7 draws, +11k (+8k shadow): 78 / 162k |
+| The driver's seat | 37 / 159k (round 1; this run's reading agrees) | the hooded saker on its cabin perch: +4 +4 shadow, +8.2k (+8.2k): 45 / 175k |
+| On foot in the open, the falcon on the glove | 56 / 225k | hooded saker and cuff: +4 +4 shadow, +7.6k (+7.6k): 64 / 240k |
+| On foot in the open, a flight or the trapping | 33 / 103k | far saker and stone-curlew, or a pigeon and a far peregrine: about +4 draws, under 6k: 37 / 109k; the peregrine close in the net with the net: about +5, +8k: 38 / 119k |
+| On foot by the yard | 78–115 / 197–258k (the herd moves) | the hooded saker on the glove: up to 123 / 273k |
+
+All under the ADR's 200 draws and 400k triangles. Each line in the file is the heaviest of the last
+five frames before its shot, so a view that had just changed can still read as the one before.
 
 **New things and their estimates** (none is built):
 

@@ -3,7 +3,7 @@
 // a second business by trapping (الطرح), the trapping research (docs/proposals/hunting.md section 9, research section
 // 8 "Trapping wild passage falcons", sources 184-223) and the proxy's provisional answers (docs/agents/
 // proxy_decisions.md, batch 3: marked "proxy" below; his to overturn). Two apps, «نادي الصقور» and «تصريح الصيد» (his
-// generic names), fifteen views at the owner's screen (956 x 440, the phone enlarged), in the phone's own CSS and pieces:
+// generic names), sixteen views at the owner's screen (956 x 440, the phone enlarged), in the phone's own CSS and pieces:
 //   1 home          the home screen: the six apps, المزاين and المحادثات (being built), and the two new ones: ten
 //   2 auctions      the auctions told apart: the trapping auction (1 Oct - 30 Nov, only the passage peregrine of the
 //                   year, where the player SELLS his trapped bird or buys one), the falcons exhibition (1-10 Oct,
@@ -22,9 +22,9 @@
 //   9 fest, 10 fest_end   مهرجان الصقور (the 2025 dates as an interim choice), الملواح's classes, المزاين's classes
 //                   (the peregrine قرناس class dropped in 2024 [188]: شاهين بحري فرخ), the rules
 //  11 race_result, 12 beauty_result   the sample falcon: 12th of 31 in the race; out of the prizes in المزاين
-//  13 permit, 14 permit_end   the hunting permit and the trapping permit: seasons, where each is banned, what is
+//  13 permit, 14 permit_mid, 15 permit_end   the hunting permit and the trapping permit (top, middle, end): seasons, where each is banned, what is
 //                   released, the fines in words
-//  15 fine          a violation told after (the fine after; the button warned before: the owner's decision 4)
+//  16 fine          a violation told after (the fine after; the button warned before: the owner's decision 4)
 // No hunting or trapping engine exists, so no figure here is the game's own. REAL figures (research section 8; all of
 // it search-result text or pages read on spa.gov.sa, no regulation text): the hunting season 1 Sep - 31 Jan, autumn to
 // 30 Nov, winter from 1 Dec [127][128][167]; by day only [135] (one source); the trapping season and the trapping
@@ -95,7 +95,8 @@ const CSS = `
   .it .pr { grid-row: span 3; text-align: end; } .it .pr .price { font: 700 15px/1.1 "Alexandria", sans-serif; display: block; } .it .pr small { display: block; }
   .it.big { grid-template-columns: 84px 1fr; } .it.big .ph { width: 84px; height: 84px; grid-row: span 4; }
   .sbar .clk { font-size: 0; } .sbar .clk::after { content: "9:41"; font-size: 14px; }
-  .it .ph img { height: 100%; width: auto; }
+  .it .ph img { height: 56px; width: auto; display: block; } .it.big .ph img { height: 82px; }
+  .it.two { grid-template-columns: 58px 1fr; }
   .apps .app .ic.new { box-shadow: 0 0 0 2px #e8b46c, 0 3px 8px rgba(70,50,20,.14); }
 `;
 // the saker's picture: task T11's render (awaiting the owner's approval), cut out by design/hunt/cut_bird.py; the
@@ -164,8 +165,8 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
     const auctions = `<div class="body">${nav()}<div class="title">نادي الصقور</div>${seg(0)}
       <div class="open"><span class="tag">مفتوح الحين</span><b>مزاد الطرح</b><small>ملهم · من 1 أكتوبر لين 30 نوفمبر، كل ليلة</small><small>فروخ الشاهين البحري المطروحة بالمملكة بس</small><small>تبيع فيه طيرك اللي طرحته، أو تشتري</small></div>
       <div class="sec">وصقرك له ثلاث طرق، كل وحدة بشهرها</div>
-      <div class="group">${row('gavel', 'مزاد الطرح', 'فرخ شاهين بحري · من حوالي 50,000', 'الحين')}${row('star', 'معرض الصقور', 'حر مستورد · انباع فيه حر بـ 700,000 وحر بـ 100,000', 'لين 10 أكتوبر')}${row('falcon', 'مزاد صقور المزارع', 'ملهم · حر فرخ إنتاج مزارع، حوالي 19,000', 'أغسطس')}</div>
-      <div class="note">مزاد الطرح ما يقبل الحر ولا القرناس.</div></div>`;
+      <div class="group">${row('gavel', 'مزاد الطرح', 'فرخ شاهين بحري · من حوالي 50,000', 'الحين')}${row('star', 'معرض الصقور', 'حر مستورد، وأسعاره عالية', 'لين 10 أكتوبر')}${row('falcon', 'مزاد صقور المزارع', 'ملهم · حر فرخ إنتاج مزارع', 'أغسطس')}</div>
+      <div class="tank"><small>مزاد الطرح ما يقبل الحر ولا القرناس</small><div class="kind"><span>حرين بمعرض 2026</span><span class="d">700,000 و100,000 ريال</span></div><div class="kind"><span>حر المزارع</span><span class="d">حوالي 19,000 ريال</span></div></div></div>`;
 
     // ------------------------------------------------ 3 the trapping auction tonight: what the bidders see
     const lot = (name, line, bid, left) => `<div class="it">${pp}<b>${name}</b><small>${line}</small><span class="pr"><span class="price num">${bid}</span><small>الافتتاح</small></span><small>${left}</small></div>`;
@@ -214,8 +215,8 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
     const mine = `<div class="body">${nav()}<div class="title">نادي الصقور</div>${seg(1)}
       <div class="note" style="margin-top:-4px">بغرفة الصقور · صقرين من 4</div>
       <div class="lst">
-        <div class="it">${pp}<b>سهيل · شاهين بحري فرخ</b><small>طرحته أنت بالخفجي 20 أكتوبر، وخليته لك</small><small>جوازه باسمك · الطلعات: صاد حبارى مرة</small></div>
-        <div class="it">${ph}<b>غيث · حر فرخ</b><small>اشتريته من مزاد المزارع بأغسطس</small><small>جوازه باسمك · الملواح: 18.906 · المزاين: ما جا بالمراكز</small></div></div>
+        <div class="it two">${pp}<b>سهيل · شاهين بحري فرخ</b><small>طرحته أنت بالخفجي 20 أكتوبر، وخليته لك</small><small>جوازه باسمك · الطلعات: صاد حبارى مرة</small></div>
+        <div class="it two">${ph}<b>غيث · حر فرخ</b><small>اشتريته من مزاد المزارع بأغسطس</small><small>جوازه باسمك · الملواح 18.906 ثانية</small></div></div>
       <div class="group">${row2('rule', 'الطير اللي تخليه لك ما ينعرض للبيع بعدين', 'ما لقينا له طريق نظامي')}</div>
       <button class="btn pri" style="width:100%">ادعهم اليوم</button></div>`;
 
@@ -282,7 +283,7 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
       <div class="note">وقفتك الدورية وانت ترسل الصقر جنب العزب. تصريحك باقي، بس المرة الجاية بعيد عن المزارع والقرى.</div>
       <div class="group">${row2('rule', 'الصيد بالنهار بس، وبعيد عن المزارع والقرى', 'والصقر ما ينرسل إلا والسيارة واقفة')}</div></div>`;
 
-    return { home: homeHtml, auctions, tonight, trap, sell, hammer, mine, train, fest, fest_end: fest, race_result, beauty_result, permit, permit_end: permit, fine };
+    return { home: homeHtml, auctions, tonight, trap, sell, hammer, mine, train, fest, fest_end: fest, race_result, beauty_result, permit, permit_mid: permit, permit_end: permit, fine };
   }, [SAKER, PERE]);
 
 
@@ -303,6 +304,7 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
       const st = document.createElement('style'); st.textContent = css; scr.appendChild(st);
     }, [html, CSS, k]);
     if (k.endsWith('_end')) await p.evaluate(() => { const bd = R().querySelector('.body'); bd.scrollTop = bd.scrollHeight; });
+    if (k.endsWith('_mid')) await p.evaluate(() => { const bd = R().querySelector('.body'); bd.scrollTop = (bd.scrollHeight - bd.clientHeight) / 2; });
     await p.waitForTimeout(400);
     const file = path.join(OUT, `mock_falcon_${i}_${k}.png`);
     const box = await p.evaluate(() => { const r = R().querySelector('.dev').getBoundingClientRect(); return { x: r.x, width: r.width }; });
