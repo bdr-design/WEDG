@@ -226,7 +226,7 @@ const CSS = `
   .lnk[disabled] { color: #a5a5ab; cursor: default; }
   .row .act .btn.sm { height: 34px; padding-inline: 12px; font-size: 12.5px; }
   .row .lead.bad { background: #fde6e4; color: var(--red); }
-  .row .lead.fest { background: #fbefd2; color: #a8730c; }
+  .row .lead.fest { background: #fbefd2; color: #8f620a; }
   .row .lead.milk { background: #e6eef8; color: #2f7fcf; }
   .row .lead.sea { background: #f1f1f4; color: #55555b; }
   .row .chev { grid-row: span 2; color: #c4c4c9; } .row .chev svg { width: 16px; height: 16px; }
@@ -251,14 +251,14 @@ const CSS = `
   .key i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; }
   .cal { background: var(--card); border-radius: 16px; padding: 10px 10px 8px; display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; text-align: center; }
   .cal .wd { font-size: 10.5px; font-weight: 600; color: var(--ink2); }
-  .cal .d { height: 30px; display: grid; place-items: center; font: 600 13px/1 "Alexandria", sans-serif; border-radius: 9px; position: relative; color: var(--ink); }
+  .cal .d { height: 30px; display: grid; place-items: center; font: 600 13px/1 "Marah Figures", "Alexandria", sans-serif; font-variant-numeric: tabular-nums; border-radius: 9px; position: relative; color: var(--ink); }
   .cal .d.past { color: #c4c4c9; cursor: default; }
   .cal .d.fest { background: #fbefd2; color: #7a530a; }
   .cal .d.sel { background: var(--acc); color: #fff; }
   .cal .d.brd::after { content: ""; position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 2px; background: #57b88a; }
   .cal .d.sel::after { background: #fff; }
   .span { background: var(--card); border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
-  .span b { font: 700 15px/1.3 "Alexandria", sans-serif; }
+  .span b { font: 700 15px/1.3 "Marah Figures", "Alexandria", sans-serif; font-variant-numeric: tabular-nums; }
   .span small { font-size: 12px; color: var(--ink2); }
   .stops { font-size: 12px; line-height: 1.55; background: var(--card); border-radius: 16px; padding: 10px 12px; color: var(--ink); }
   .calnav { display: flex; justify-content: space-between; align-items: center; }
@@ -1544,12 +1544,12 @@ function calGoingScreen() {
   const pct = Math.round(done / Math.max(1, total) * 100);
   if (P && P.saving) return `<div class="body"><div class="nav"></div><div class="title">يمشي الوقت</div>
     <div class="tank"><small>وصل</small><div class="v"><b class="fit">${G ? ddAt(day) : ''}</b></div>
-      <div class="bar"><i style="width:100%;background:linear-gradient(90deg,#0b8a5c,#3fb487)"></i></div>
+      <div class="bar"><i style="width:100%;background:linear-gradient(90deg,var(--acc),#3fb487)"></i></div>
       <div class="ln">يحفظ اللعبة…</div></div>
     <div class="note">خلصت الأيام، ويحفظ قبل ما يرجع لك.</div></div>`;
   return `<div class="body"><div class="nav"></div><div class="title">يمشي الوقت</div>
     <div class="tank"><small>وصل</small><div class="v"><b class="fit">${G ? ddAt(day) : ''}</b></div>
-      <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,#0b8a5c,#3fb487)"></i></div>
+      <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,var(--acc),#3fb487)"></i></div>
       <div class="ln">${days(done)} من ${days(total)}${t != null && G ? ` · لين ${dShortAt(t)}` : ''}</div></div>
     <button class="btn ghost wide" data-act="calStop">${svg('stop')}وقّف هنا</button>
     <div class="note">الأيام تنحسب يوم يوم، ويوقف بنفسه لو صار شي يبيك. ولو حلالك كبير ممكن ياخذ ثواني.</div></div>`;
