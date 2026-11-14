@@ -1877,6 +1877,16 @@ if (meter) {
     cpu.game.fill(0); cpu.draw.fill(0); cpu.n = 0; cpu.sg = 0; cpu.sd = 0; meter.shown = 0;
   });
   meter.el.addEventListener('click', () => { if (performance.now() - lineAt < 1500) return; meter.el.classList.toggle('open'); meter.shown = 0; });      // (drawn again on the next frame, and measured then)
+  // money without limit for the owner's testing (GDD 13; the engine's TestMoney): its line in the open meter. Off, a
+  // first tap arms it and a second within 3 s turns it on (never on by one stray tap); on, one tap turns it off
+  meter.el.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('[data-money]') || !window.marahEngine?.snapshot) return;
+    lineAt = performance.now();
+    const on = window.marahEngine.snapshot.testMoney;
+    if (!on && lineAt - moneyArm > 3000) { moneyArm = lineAt; moneyLine(); setTimeout(moneyLine, 3100); return; }
+    moneyArm = 0;
+    window.marahEngine.dispatch({ type: 'setTestMoney', on: !on }).catch((err) => console.warn('meter:', err)).finally(() => { moneyLine(); meter.shown = 0; });
+  });
   measureHud();      // (shown now: the pins kept below it from the start, not only after a card or a turn, the review)
 }
 // the meter's details closed when a card opens: open, they covered the card's header and its close button
@@ -1922,8 +1932,25 @@ function meterFrame(now) {
 }
 // the meter's text, once a second; the pins measured again only when its box changed size (a read of its size a
 // second, no more)
+let moneyArm = 0;
+const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+// the money switch's words: closed, a mark while it is on; open, its line, and the game's mark once it was ever on
+function moneyText() {
+  const S = window.marahEngine?.snapshot;
+  if (!S) return '';
+  if (!meter.el.classList.contains('open')) return S.testMoney ? ' · <span class="bad">فلوس تجربة</span>' : '';
+  const [y, m, d] = (S.testedFrom || '').split('-').map(Number);
+  return `<br><u data-money>${moneyWords(S)}</u>${S.testedFrom ? ` · لعبة فيها فلوس تجربة من ${d} ${MONTHS_AR[m - 1]} ${y}` : ''}`;
+}
+const moneyWords = (S) => `فلوس بلا حد: ${S.testMoney ? '<span class="bad">شغّالة</span>' : performance.now() - moneyArm < 3000 ? 'اضغط مرة ثانية للتشغيل' : 'طافية'}`;
+// its line written again at once on a tap, and as the arming runs out (the meter's own text is written once a second,
+// and not at all over a frame longer than a second)
+function moneyLine() {
+  const u = meter.el.querySelector('[data-money]'), S = window.marahEngine?.snapshot;
+  if (u && S) u.innerHTML = moneyWords(S);
+}
 function meterText(html) {
-  meter.el.innerHTML = html;
+  meter.el.innerHTML = html + moneyText();
   const size = meter.el.offsetWidth + 'x' + meter.el.offsetHeight;
   if (size !== meter.size) { meter.size = size; measureHud(); }
 }
