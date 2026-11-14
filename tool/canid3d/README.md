@@ -72,7 +72,8 @@ The pictures are in `design/canids/` (JPEG):
 - **Standing:** the front view, the view from above, and the forepaws close from three-quarter front with a raking light (`*_alert_paws.jpg`).
 - `canids_far_15m.jpg`: the far models (standing) from the game's camera at 15 m in the game's light, as the phone
   shows them, with a ×4 enlargement.
-- `dog_head_1m5_game_camera.jpg`: the guard dog near the game's camera (40° field of view, 956 × 440, looking 28° down), the nearest the game brings it.
+- `firstperson_dog_1_0m.jpg`, `firstperson_dog_1_5m.jpg`, `firstperson_stray_2_0m.jpg`, `firstperson_wolf_3_0m.jpg`: first person, the player's eyes (the game on foot: eye height 1.66 m, 40° vertical field of view, 956 × 440 drawn at 2x), the camera that far from the head along the ground, in front of it and to its left.
+- `*_alert_head_1m.jpg`: each head at 1 m.
 - `canids_scale.jpg`: all of them beside the player's figure and a calf a few days old.
 - `wolf_night_20m.jpg`, `wolf_night_46m.jpg`, `wolf_day_46m.jpg`: the wolf where the game will show it (below).
 - `wolf_summer_winter.jpg`: the coats compared (question 2).
@@ -157,7 +158,7 @@ Sources:
 | Weight (for the record) | about 20 kg on average (one source 25 kg); females possibly as little as 10 kg | en.wikipedia, citing Lopez 2004 *(opened by the reviewer)*; Saudipedia, mawdoo3 *(search)*; a forum post *(search, weak)* | the skin's volume 27.8 L. Less the summer coat's depth (about 1.5 cm over about 0.6 m² of skin, about 9 L), that is about 19 L, so about 19 kg at a body's density: inside the range |
 | Length | 114 cm, not saying what it measures; head and body not found for this subspecies | Saudipedia *(search)* | nose to tail base 996 mm; overall, nose to tail as it hangs, 1,158 mm |
 | Tail | "reaches its hocks" | Saudipedia *(search)* | 390 mm (0.60 H), about 40 mm across at the root, fullest at mid-length; its tip about level with the hocks (the side picture) |
-| Skull length | about 200.8 mm (cranial length) | animal database pages citing older literature *(search, weak)* | head, occiput to nose, 227 mm (with the skin, nose and fur); the muzzle (eye to nose) 0.52 of it, 80 mm wide at its base and about 64 mm at its middle; 127 mm wide at the eyes (the eyes 65 mm apart: 1.95 times, the reviewer's head-front photograph about 2.1), 138 mm across the cheeks; a stop, the forehead rising about 20 mm behind the eyes |
+| Skull length | about 200.8 mm (cranial length) | animal database pages citing older literature *(search, weak)* | head, occiput to nose, 227 mm (with the skin, nose and fur); the muzzle (eye to nose) 0.52 of it, 80 mm wide at its base and about 64 mm at its middle; 127 mm wide at the eyes, measured in the upright plane across the body (square to its length) through the eyes' centres; the reviewer measures 117 mm in its eye section and 141 mm 20 mm behind it (the eyes 65 mm apart: about 1.8–2.2 times, the reviewer's head-front photograph about 2.1); 138 mm across the cheeks; a stop, the forehead rising about 20 mm behind the eyes |
 | Ears | "proportionally larger" than other wolves'; no length found | en.wikipedia, citing Mills 1945 *(opened by the reviewer)* | 107 mm tall, 69 mm at the base, their bases' centres 104 mm apart on the skull's corners *(a game choice)* |
 | Chest depth, leg lengths, paw size | not found | – | chest bottom 328 mm, elbows 299 mm, hocks 145 mm; forepaw 73 × 53 mm *(game choices, from canid proportions)* |
 
@@ -314,7 +315,7 @@ python build.py OUT                         # every GLB, with triangles, sizes a
 python build.py OUT wolf quick              # quick pictures of one animal (wolf, dog, stray)
 python build.py OUT wolf,dog,stray render   # the full picture set
 python build.py OUT wolf_winter             # the winter coat (only for the comparison)
-python build.py OUT scale,night,winter,far render
+python build.py OUT scale,night,winter,far,firstperson render
 CANID_VOLUME=1 ...                          # also the standing model's volume
 ```
 
@@ -378,16 +379,21 @@ animation texture beyond it, as ADR 0005 plans for the camels: 32 bones × about
 - **Not modelled:** the fused pads (under the foot), teeth in the closed mouth, and the inside of the mouth beyond a
   painted tongue and gums.
 
-## The face: what is modelled and what is painted (round 5)
+## The face: what is modelled and what is painted (rounds 5 and 6)
 
 - **Modelled:**
   - each eye: a ball (about 140 triangles) set into an almond socket cut in the skin, its front just proud of the
     face, and the lids, a thin dark almond rim along the opening (about 130 triangles): about 540 for both eyes;
   - the mouth: a shallow groove cut along each side of the upper lip's edge, and the upper lip dropped a little over
     the lower jaw;
-  - the ears' cup (since round 2), the toes and their clefts (rounded since this round), the nose pad, the cheeks.
+  - the eye's opening: the wolf's an almond about 2.0 × 1.2 times the ball's radius; the dogs' a longer, lower,
+    oblique almond (front corner lower, 12°), about 18 × 10 mm: a look judgement, no source gives a dog's eye opening;
+  - the nose pad: wider than tall, its front nearly flat and bevelled down toward the lip, the two nostrils cut into
+    it as small commas;
+  - the ears' cup (since round 2), the toes and their clefts (rounded since round 5), the cheeks.
 - **Painted:**
-  - on the eyeball: the iris (the wolf's amber, the dogs' dark brown) round a round black pupil, the rest of the ball
+  - on the eyeball: the iris (the wolf's amber, the dogs' brown with a lighter ring round the pupil) round a round
+    black pupil, the rest of the ball
     dark, and a small catch-light: the material is one and rough (one draw per animal), so the eye cannot really
     shine and the catch-light is painted;
   - the lip line (about 2–3 mm wide with soft edges) in the groove; the lower lip's dark edge only near the corner;

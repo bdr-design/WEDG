@@ -8,6 +8,7 @@
     python build.py OUT night render          # the wolf at night at the distance the game shows it
     python build.py OUT winter render         # the wolf's winter coat beside the summer one (a question for the owner)
     python build.py OUT far render            # the far models from the game's camera at 15 m
+    python build.py OUT firstperson render    # the player's eyes on foot: the dog at 1 and 1.5 m, the stray at 2, the wolf at 3
 
 Blender is the `bpy` module (the project's blendenv). Nothing is downloaded: every shape and colour is made here.
 CANID_POSES=alert,stalk limits the poses built; CANID_SHOTS=side,head limits the pictures.
@@ -334,6 +335,12 @@ def pictures(kind, pose, o, m):
         finish(png)
     if want('top') and pose == 'alert':
         png = st.shot(tag + '_top', (mid[0], mid[1] + 0.001, 5), mid, ortho=max(ext[0], ext[1] * 1.33) * 1.2, res=res)
+        finish(png)
+    if want('head1m') and pose == 'alert':
+        # the head at 1 m (front left, a little above), the distance the reviewer judges the faces at
+        hd_ = V3(m.points['head'][0]) * 0.001
+        cam = hd_ + V3((0.62, 0.62, 0.48)).normalized() * 1.0
+        png = st.shot(tag + '_head_1m', cam, hd_, lens=50, res=res)
         finish(png)
     if want('paws') and pose == 'alert':
         # the forepaws from three-quarter front, low, with a raking light from the side

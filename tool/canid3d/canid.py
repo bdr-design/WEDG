@@ -243,20 +243,33 @@ class Canid:
         nt, ncz, nr = S['nose']
         nc = o + hd * (nt * Lh) + hn * (ncz * H)
         nsecs = []
-        for f, r in ((-1.0, 0.55), (-0.5, 0.9), (0.0, 1.0), (0.5, 0.85), (0.9, 0.45), (1.0, 0.08)):
-            nsecs.append(Sec(nc + hd * (f * nr * H * 0.8), hn, hv, r * nr * H * 0.85, r * nr * H * 0.9, r * nr * H, r * nr * H, p=2.4))
+        # the pad: wider than tall, its front nearly flat and bevelled down toward the lip (not a ball)
+        for f, r in ((-1.0, 0.60), (-0.5, 0.92), (0.0, 1.0), (0.45, 0.97), (0.8, 0.85), (1.0, 0.55)):
+            nsecs.append(Sec(nc + hd * (f * nr * H * 0.7) - hn * (max(f, 0) * 0.18 * nr * H), hn, hv,
+                             r * nr * H * 0.72, r * nr * H * 0.80, r * nr * H * 1.05, r * nr * H * 1.05, p=3.0))
+        # the nostrils: two commas cut into the pad's front, a little below its middle and out to the sides
+        tip = nc + hd * (nr * H * 0.7)
+        self.face = dict(nostrils=[])
+        for sg in (1, -1):
+            c = tip - hd * (0.15 * nr * H) - hn * (0.12 * nr * H) - hv * (sg * 0.42 * nr * H)
+            out = (hd * 0.8 - hv * (sg * 0.6)).normalized()
+            side = hn.cross(out).normalized()
+            self.face['nostrils'].append(dict(c=tuple(c - out * (0.3 * nr * H)), out=tuple(out),
+                                              axes=(tuple(out), tuple(side), tuple(hn)),
+                                              r=(0.30 * nr * H, 0.17 * nr * H, 0.26 * nr * H)))
         self.add('head', piece('nose', nsecs, 12 if d.level == 0 else 6, shapes=self.shapes))
         self.points['nose'] = nc + hd * (nr * H * 0.8)
 
         # eyes: their places and looks; the socket, the ball and the lids are made on the skin (skin.carve)
         et, ecz, ey, er = S['eye']
-        self.face = dict(eyes=[], lips=[])
+        self.face.update(eyes=[], lips=[])
         for side, sg in (('l', 1), ('r', -1)):
             c = o + hd * (et * Lh) + hn * (ecz * H) - hv * (sg * ey * H)
             look = (hd * math.cos(math.radians(S['eye_out'])) - hv * (sg * math.sin(math.radians(S['eye_out'])))).normalized()
             self.points['eye_' + side] = c
             out = (-hv * (sg * 0.85) + hd * 0.45 + hn * 0.15).normalized()
-            self.face['eyes'].append(dict(c=tuple(c), out=tuple(out), up=tuple(hn), r=0.9 * er * H, look=tuple(look)))
+            self.face['eyes'].append(dict(c=tuple(c), out=tuple(out), up=tuple(hn), r=0.9 * er * H, look=tuple(look),
+                                          fwd=tuple(hd), shape=S.get('eye_shape', (1.02, 0.62, 0.0))))
         # the mouth's groove: along the upper lip's edge on each side, from the corner to under the nose
         rows = S['head']
         ta = [r_[0] for r_ in rows]

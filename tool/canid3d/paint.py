@@ -300,6 +300,8 @@ class Coat:
             iris = sstep(0.62, 0.70, S)
             col = mix(col, self.pal['iris'] * 0.75, iris)
             col = mix(col, self.pal['iris'], sstep(0.74, 0.84, S))
+            if self.eye_open > 0.6:
+                col = mix(col, np.clip(self.pal['iris'] * 1.8, 0, 1), sstep(0.80, 0.87, S))    # the lighter ring round the pupil
             col = mix(col, C(0.02, 0.02, 0.02), sstep(0.90, 0.93, S))
             col = mix(col, C(0.95, 0.95, 0.92), sstep(0.975, 0.99, T))
             return col

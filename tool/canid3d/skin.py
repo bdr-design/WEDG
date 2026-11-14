@@ -229,13 +229,27 @@ def carve(F, lo, vox, H, face):
         up = up - out * (up @ out)
         up /= np.linalg.norm(up)
         across = np.cross(up, out)
+        if np.array(e['fwd']) @ across < 0:
+            across = -across                            # (across points to the eye's front corner)
+        wa, wu, tilt = e.get('shape', (1.02, 0.62, 0.0))
+        t = math.radians(tilt)                          # oblique: the front corner lower
+        across, up = across * math.cos(t) - up * math.sin(t), up * math.cos(t) + across * math.sin(t)
         sl, Q = crop(F, lo, vox, ball, 2.5 * r)
         q = Q - ball
-        rad = np.array([1.02 * r, 0.62 * r, 0.80 * r])  # the opening: long across, low, shallower than the ball
+        rad = np.array([wa * r, wu * r, 0.80 * r])      # the opening: long across, low, shallower than the ball
         k3 = np.stack([q @ across / rad[0], q @ up / rad[1], q @ out / rad[2]], -1)
         d = (np.linalg.norm(k3, axis=-1) - 1.0) * rad.min()
         F[sl] = -smin(-F[sl], d, 0.25 * r)
-        eyes.append(dict(ball=ball, r=r, out=out, up=up, across=across, look=np.array(e['look'])))
+        eyes.append(dict(ball=ball, r=r, out=out, up=up, across=across, look=np.array(e['look']), shape=(wa, wu)))
+    for n in face.get('nostrils', []):
+        c = to_surface(F, lo, vox, np.array(n['c']), np.array(n['out']), 0.05 * H)
+        ax = [np.array(a) for a in n['axes']]
+        rr = np.array(n['r'])
+        sl, Q = crop(F, lo, vox, c, 3 * rr.max())
+        q = Q - c
+        k3 = np.stack([q @ ax[i] / rr[i] for i in range(3)], -1)
+        d = (np.linalg.norm(k3, axis=-1) - 1.0) * rr.min()
+        F[sl] = -smin(-F[sl], d, 0.6 * rr.min())
     for path in face.get('lips', []):
         pts = np.array([to_surface(F, lo, vox, a, d, 0.10 * H) for a, d in path])
         rg = 0.0042 * H
@@ -276,7 +290,8 @@ def eye_pieces(eyes, n=10):
         m = 16
         for j in range(m):
             ph = 2 * math.pi * j / m
-            ring.append(c + o_ * (0.74 * r) + ac * (math.cos(ph) * 0.80 * r) + up * (math.sin(ph) * 0.50 * r))
+            wa, wu = e['shape']
+            ring.append(c + o_ * (0.74 * r) + ac * (math.cos(ph) * 0.78 * wa * r) + up * (math.sin(ph) * 0.80 * wu * r))
         lid = Piece('lid')
         rr = 0.13 * r
         rings = []
