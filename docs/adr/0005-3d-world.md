@@ -685,7 +685,10 @@ phone is the open question. The open frame meter has two lines for it:
 «رسم القطيع» (a touch goes to the next variant and keeps it; also `?herd=0/1/2`)
 and «قطيع تجربة» (the yard filled to 40 head with copies of the player's
 camels, in the 3D view only, standing in all six pens; a tap passes through
-them, the pens' counts leave them out, and the closed meter says «تجربة 40»). Either change starts the meter's figures again;
+them, the pens' counts leave them out, and the closed meter says «تجربة 40», in amber). With it on, the camera
+button's near view is one fixed view of the big pen, so the phone test's map
+shots are the same view in each variant. The steps are in
+`docs/phone_tests/herd_draw_test.md`. Either change starts the meter's figures again;
 the closed meter names the variant.
 - مزج إطارين (0): as built.
 - أقرب إطار (1): the nearest baked frame only (16 texels a vertex; the pose
