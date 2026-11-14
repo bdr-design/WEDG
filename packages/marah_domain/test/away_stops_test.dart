@@ -4,6 +4,7 @@
 // summary's milk, a caller's lines).
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/src/handlers/handlers.dart' as handlers;
+import 'package:marah_domain/src/rules/account.dart';
 import 'package:marah_domain/src/rules/eligibility.dart';
 import 'package:marah_domain/src/rules/milk.dart';
 import 'package:marah_domain/src/sim.dart';
@@ -160,6 +161,39 @@ void main() {
       g.me.onAccount = 1 << 20;
       final s = legs(g, g.today + 60);
       expect(of(s, AwayStopKind.account), isNotEmpty);
+    });
+
+    test('the account: reaching its limit by an order that went through', () {
+      final g = newGame();
+      final f = g.me.farm;
+      g.dispatch(SetStandingOrder(g.me.id, StandingOrder.water, on: true));
+      Sim(g.state)
+          .pay(g.me, Riyal(-g.me.cash.value - 1000), LedgerCategory.fine);
+      final n = Provisions.needs(
+        g.state.world.aliveOwnedBy(g.me.id),
+        f.feedPlan,
+        g.today,
+      );
+      f
+        ..waterL =
+            n.water *
+            3.5 // the order goes tomorrow
+        ..calfShare = CalfShare.all; // (no milk money to pay the merchant back)
+      final limit = Account.limit(
+        g.state.world.aliveOwnedBy(g.me.id),
+        g.me,
+        g.today,
+      );
+      g.me.onAccount = limit - Balance.smallWaterLoadPrice.round();
+      final run = AwayRun(g, AwayPlan(g.today + 10));
+      final events = <DomainEvent>[];
+      while (!run.done) {
+        run.step();
+      }
+      events.addAll(g.state.inboxOf(g.me.id));
+      expect(run.stop!.kind, AwayStopKind.account);
+      expect(events.whereType<StandingOrderRefused>(), isEmpty);
+      expect(g.me.onAccount, greaterThanOrEqualTo(limit));
     });
 
     test('an offer: on the day it comes', () {
@@ -365,6 +399,32 @@ void main() {
         }
       },
     );
+
+    test('a short day that was no dry day: no thirst given back', () {
+      final g = newGame();
+      final f = g.me.farm;
+      // the next dawn finds 60% of the day's water: short, but half or more
+      // holds the dry count at 0
+      final n = Provisions.needs(
+        g.state.world.aliveOwnedBy(g.me.id),
+        f.feedPlan,
+        g.today + 1,
+      );
+      f.waterL = n.water * 0.6;
+      g.advanceDays(1);
+      expect(f.short.contains(Supply.water), isTrue);
+      expect(f.dryDays, 0);
+      final before = {
+        for (final c in g.state.world.aliveOwnedBy(g.me.id)) c.id: c.condition,
+      };
+      g.dispatch(
+        OrderSupply(g.me.id, Supply.water, 1, tanker: Tanker.small, now: true),
+      );
+      expect(f.short.contains(Supply.water), isFalse);
+      for (final c in g.state.world.aliveOwnedBy(g.me.id)) {
+        expect(c.condition, before[c.id]);
+      }
+    });
 
     test('the milk view stands after a feed rush', () {
       final g = newGame();
