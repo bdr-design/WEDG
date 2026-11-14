@@ -10,6 +10,7 @@ import '../catalog/falconry.dart';
 import '../common/ids.dart';
 import '../common/result.dart';
 import '../common/time.dart';
+import '../events.dart';
 import '../game.dart';
 import '../handlers/falconry.dart';
 import '../model/falconry.dart';
@@ -229,6 +230,7 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
         'open': quarryAt(null, today)?.label,
       },
     },
+    'news': falconNews(state, viewer, today),
     'lots': [
       for (final r in FalconRoute.values)
         for (final l in FalconMarket.lots(state.world.seed, r, today))
@@ -280,3 +282,56 @@ Map<String, Object?> _falcon(Falcon f, GameDay today, {bool tracked = false}) =>
       if (f.caredOn != null && f.dauDays > 0)
         'stepsBackOn': (f.caredOn! + HuntBalance.stepBackDays).value,
     };
+
+/// How long the phone is told of what became of his birds and lots, days.
+const falconNewsDays = 30;
+
+/// What became of his birds and lots in the last [falconNewsDays] days, the
+/// newest first, as his inbox holds it (the engine's own events, told after
+/// they happened: a bird sold at the hammer with its price, one set free at
+/// the auction's close, a lost falcon found or gone, one that stepped back
+/// without الدعو, a lot that went to another bidder at its price). Each has
+/// a key that stays the same, for the phone to mark it read. Nothing hidden:
+/// a price is told only once the hammer has fallen.
+List<Map<String, Object?>> falconNews(
+  GameState state,
+  OwnerId viewer,
+  GameDay today,
+) {
+  final out = <Map<String, Object?>>[];
+  final box = state.inboxOf(viewer);
+  for (var i = box.length - 1; i >= 0; i--) {
+    final e = box[i];
+    if (today.daysSince(e.day) > falconNewsDays) break;
+    switch (e) {
+      case FalconFate(:final falcon, :final name, :final fate, :final price)
+          when const {
+            Fate.sold,
+            Fate.freedAtClose,
+            Fate.found,
+            Fate.gone,
+            Fate.steppedBack,
+          }.contains(fate):
+        out.add({
+          'key': '${e.day.value}:$falcon:${fate.name}',
+          'kind': fate.name,
+          'day': e.day.value,
+          'falcon': falcon,
+          'name': name,
+          'price': ?price,
+        });
+      case FalconLotLost(:final lot, :final route, :final price):
+        out.add({
+          'key': '${e.day.value}:$lot:lotLost',
+          'kind': 'lotLost',
+          'day': e.day.value,
+          'lot': lot,
+          'route': route.name,
+          'price': price,
+        });
+      default:
+        break;
+    }
+  }
+  return out;
+}
