@@ -28,6 +28,7 @@ flutter:
   assets:
     - assets/web/
     - assets/web/phone/
+    - assets/web/fonts/
     - assets/web/three/build/
     - assets/web/three/examples/jsm/controls/
     - assets/web/three/examples/jsm/geometries/

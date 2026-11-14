@@ -12,8 +12,11 @@ is `apps/marah`.
   is not committed, and compiles the rules engine for its worker (it needs
   `dart`). It includes the terrain, the models in
   `design/prototype3d/models/` and three.js r170, with the import map
-  rewritten from the CDN to the local copy. Only the web fonts come from the
-  network.
+  rewritten from the CDN to the local copy. The web fonts are bundled too
+  (`FONTS` in `assemble.py`: the Arabic and Latin files Google Fonts serves,
+  each pinned by its checksum, with its licence in `fonts/`); if one cannot be
+  fetched or does not match, the page keeps its Google Fonts stylesheet and
+  the faces come from the network, as before.
 - **The game's save:** the page's rules engine (`design/prototype3d/engine.js`,
   in a Web Worker) keeps its save as files in the app's Documents folder
   through the same server (`GET /save`, `PUT` and `DELETE /save/KEY`, the
@@ -45,5 +48,6 @@ Locally (Linux works for everything but the iOS build):
 
 ```
 python3 tool/proto_app/assemble.py      # THREE_DIR=<unpacked three@0.170.0> skips the npm download
+                                        # FONT_DIR=<folder of the font files> skips their download
 cd tool/proto_app && flutter test
 ```
