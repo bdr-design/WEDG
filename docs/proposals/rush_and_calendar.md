@@ -140,9 +140,13 @@ So a rush of water or feed is offered **only on a day the herd went short**, and
   - At dawn the fee is the full half of the trucking (نجمة from Hail, trucking SAR 1,069: SAR 535). At 18:00 it is
     SAR 135; the floor is a fifth of that half (SAR 105).
   - The curve and the floor are game choices.
-  - The domain has no clock, so the command carries the game hour the phone showed (`Rush(actor, camel, hour)`). The
-    handler accepts this hour or the one before, so a price shown is the price paid. The phone redraws the price
-    when the game's hour changes (about every 8.6 real minutes), not per frame.
+  - The domain has no clock, so the command carries the game hour (`RushTruck(actor, camel, hour)`), and **EngineCore
+    stamps or checks it from its own clock** (the second review's N2): a command's hour is accepted if it is this
+    hour or the one before (the price shown is the price paid), refused with `priceChanged` otherwise (a stale
+    confirm after the day turned too), and stamped when it has none. The page is never trusted for it. The phone
+    shows the price by the hour the snapshot brings (the worker adds the game's minute), carried on by the wall
+    clock, never per frame.
+  - **A purchase clears `arrivedOn`** (N8): a camel bought again later arrives as the truck brings her.
 - **The row says** «توصل الحين بـ 535 ريال زيادة». At buying time, under «اشترها» on the listing: «أو اشترها وتوصل
   الحين بـ …».
 
@@ -314,8 +318,13 @@ the engine and nothing to a frame, and writes nothing over the game.
 - **What he can set before leaving:**
   - the standing order (yes, batch 4, item 6): set in الوايت and العلف. When a store comes down to its last 3 days the
     supplier sends a top-up, paid as an order (cash, then the account);
-  - the vet's contract (yes, item 7): in العزبة. SAR 1,000 a month and SAR 20 a head (a game choice, told to him), and
-    each illness treated the day it comes at the vet's own price, on account as the vet is;
+  - the vet's contract (yes, item 7; billing by the proxy's batch 4c): in العزبة. SAR 1,000 a month and SAR 20 a head
+    (a game choice, told to him), **billed on signing for the rest of that month by days, then on each 1st;
+    cancelling takes effect at the month's end with nothing refunded; the fee from cash only** (signing is refused
+    with the line that says why when the cash does not cover it: a retainer is no treatment); **signing treats every
+    camel sick at that moment**, each at the treatment's price, on account as the vet's treatment may be; under the
+    contract each later illness is treated the day it comes, on account as the vet is. The 1st's fee is billed like
+    wages (it may take the cash below zero, which stops a jump);
   - shepherds, the ration and the calf's share: already in the engine.
 - **What falls due on the way:** the breeding season and who can be bred (by `Eligibility.femaleCanBreed`,
   `eligibility.dart:25-55`); the festivals in the stretch and his entries; his round's day; the milk's money a day;
@@ -402,9 +411,10 @@ design.
 - **The row:** the camel and her illness («الفريدة · إسهال الحيران»); since when; the vet's price today; how long she
   takes to recover, from the illness's days (half to all of `recoverDays`: «تطيب بـ 3 إلى 6 أيام»); and «عالجها». One
   tap, as an order, since it is a necessity and not irreversible harm.
-- **The price:** `Treat` draws it from the illness's range with the day's keyed randomness (`handlers.dart:518-520`).
-  The snapshot carries today's quote, worked out with the same key, so the phone shows the exact price the vet will
-  ask today. A quote is no hidden value: a vet names his price.
+- **The price:** `Treat` draws it from the illness's range with randomness **keyed by the illness's first day**
+  (`sickSince`), not by today (the second review's N5): the price holds while she is sick, so a player cannot wait
+  for a cheaper day. The snapshot carries the quote worked out with the same key, so the phone shows the exact price
+  the vet will ask. A quote is no hidden value: a vet names his price.
 - **Money:** from cash, else on the merchant's account to its limit (the owner's decisions 9 and 10), with the
   account's line under the row as العلف has it. Past the limit: «حساب التاجر وصل حده…».
 - **Untreated:** the row says plainly what waiting does («لو تركتها بعد 10 أيام ممكن تموت»).
@@ -449,3 +459,37 @@ Batches 4 and 4b in `docs/agents/proxy_decisions.md`:
 - الطلب الثابت: المورّد يرسل علف أو وايت لما يقرب المخزون يخلص (3 أيام)، ويندفع مثل أي طلب **(اختيار لعب)**.
 - عقد البيطري: 1,000 ريال بالشهر و20 للراس، ويعالج اللي يمرض بيومه بسعر العلاج **(اختيار لعب)**.
 - سونار الحمل: من اليوم 15 بعد التلقيح، بـ 300 ريال **(واقعي الفحص، والسعر اختيار لعب)**.
+
+## 10. Part B: built on wt/t15 (not on the owner's phone build until he approves the design)
+
+The rules above as built, with the measurements (the commits' messages carry the details):
+
+- **Domain:** `Camel.arrivedOn`; `Farm.today` (DayRecord: the day's water and ration, needed and got, the dry count
+  before, the dawn's ration share and dry count, which the milk reads); `RushBuild`, `RushDelivery`, `RushTruck`,
+  `BuildFacility/OrderSupply/BuyListing(now: true)`; `SetStandingOrder`, `SignVetContract`, `CancelVetContract`;
+  the standing orders and the contract as steps of `UpkeepSystem` and `HealthSystem` (one code path for a day played
+  and a day jumped); `AwayRun` (the stops after each day, the summary counted as it runs); `rushFacts` (what the
+  snapshot carries for the phone).
+- **Runtime and worker:** `EngineCore.away(target, landingMinute, extra)`, `stopAway()` outside the queue (the worker
+  takes `stopAway` beside `stored`), the landing in the clock's microseconds, one save then marked good; the truck's
+  hour stamped from the engine's clock.
+- **Save:** `SaveCodec.rushVersion` (the session branch's next version, one constant); the step only marks the
+  version (the new state is optional), tested on a save written by the session branch's own build with a camel on
+  the truck.
+- **Tests** (written first): the rush (21), a jumped stretch equals the same days played (300 days by the clock or
+  in legs: world, players and inboxes equal; on the VM; and an AwayRun against advanced days on the VM and in
+  JavaScript), the landing and the next catch-up running nothing, six tellings after a 06:00 landing on his round's
+  day, «وقّف هنا» within a day, openPrevious cannot undo a jump, the truck's stale hour refused, the migration, a
+  300-head herd kept watered by the standing orders.
+- **A year away, measured** (`tool/proto_engine/bin/away_cost.dart`, the standing orders and the contract on, the
+  player going on after each stop): 56 head 204 ms on the VM, 471 ms in JavaScript; **10,000 head 3.7 s on the VM,
+  12.8 s in JavaScript** (the slowest day 66 ms / 730 ms), 10 legs (registrations and the breeding season), 9,969
+  of 10,000 alive at the end. On a mid-range phone, two to three times slower: about **25 to 40 s** for a year at
+  10,000 head (an estimate), the progress view and «وقّف هنا» working throughout; the game's own farm (56 head) well
+  under 2 s.
+- **Found while measuring:** a standing water order sent one tanker however large the herd (10,000 head went dry);
+  it now sends what the tank takes. The account's limit walked the whole herd for every treatment; it is now worked
+  out only when the cash does not cover one (a year at 10,000 head: 12.8 s to 3.7 s on the VM).
+- **Owed:** the early pregnancy scan (the phone has no breeding screen to hold it); the stop on the pens outgrown is
+  built (`crowded`), with the card's warning.
+
