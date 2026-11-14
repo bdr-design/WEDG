@@ -57,7 +57,7 @@ const CSS = `
   .nav .back { display: flex; align-items: center; gap: 2px; color: var(--acc); font-size: 14px; font-weight: 500; }
   .nav .back svg { width: 18px; height: 18px; stroke-width: 2.2; }
   .nav .end { margin-inline-start: auto; color: var(--acc); }
-  .title { font: 700 27px/1.1 "Alexandria", sans-serif; letter-spacing: -.01em; }
+  .title { font: 700 27px/1.1 "Alexandria", sans-serif; }      /* (no tracking: letter-spacing pulls Arabic's joined letters apart, the audit) */
   .group { background: var(--card); border-radius: 16px; overflow: hidden; }
   .row { display: grid; grid-template-columns: 36px 1fr auto; column-gap: 11px; align-items: center; padding: 9px 12px; min-height: 52px; position: relative; }
   .row + .row::before { content: ""; position: absolute; top: 0; inset-inline: 59px 0; height: .5px; background: var(--line); }
@@ -98,7 +98,7 @@ const CSS = `
   .tank { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
   .tank small { font-size: 12px; color: var(--ink2); font-weight: 500; }
   .tank .v { font: 700 30px/1.1 "Alexandria", sans-serif; letter-spacing: -.01em; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; }
-  .tank .v span { font-size: 14px; font-weight: 600; color: var(--ink2); }
+  .tank .v span { font-size: 14px; font-weight: 600; color: var(--ink2); letter-spacing: normal; }      /* (the figure's tracking kept off its Arabic unit) */
   .tank .ln { font-size: 12px; font-weight: 500; }
   .bar { height: 8px; border-radius: 4px; background: #e8eef3; overflow: hidden; margin-block: 4px 2px; white-space: nowrap; }
   .bar i { display: inline-block; vertical-align: top; height: 100%; background: linear-gradient(90deg, #2f7fcf, #5aa8ea); }
@@ -142,7 +142,7 @@ const CSS = `
   .balance { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
   .balance small { font-size: 12px; color: var(--ink2); font-weight: 500; }
   .balance .v { font: 700 30px/1.1 "Alexandria", sans-serif; margin-top: 2px; letter-spacing: -.01em; white-space: nowrap; }
-  .balance .v span { font-size: 15px; font-weight: 600; color: var(--ink2); margin-inline-start: 4px; }
+  .balance .v span { font-size: 15px; font-weight: 600; color: var(--ink2); margin-inline-start: 4px; letter-spacing: normal; }
   .balance .ln { font-size: 12px; font-weight: 500; }
   .balance .v.bad { color: var(--red); }      /* (a balance under zero: what the player owes, «عليك») */
   .row .amt { grid-row: span 2; font: 600 14px/1 "Alexandria", sans-serif; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
