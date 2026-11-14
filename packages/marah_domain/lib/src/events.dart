@@ -49,6 +49,18 @@ sealed class DomainEvent {
         amount: j['amount']! as int,
         shepherds: j['shepherds']! as int,
       ),
+      'testMoneySet' => TestMoneySet(
+        day,
+        owner: owner,
+        camel: camel,
+        on: j['on']! as bool,
+      ),
+      'testMoneyAdded' => TestMoneyAdded(
+        day,
+        owner: owner,
+        camel: camel,
+        amount: j['amount']! as int,
+      ),
       'cashNegative' => CashNegative(
         day,
         owner: owner,
@@ -431,6 +443,31 @@ final class WagesPaid extends DomainEvent {
     'amount': amount,
     'shepherds': shepherds,
   };
+}
+
+/// Money without limit for testing turned on or off (TestMoney).
+final class TestMoneySet extends DomainEvent {
+  const TestMoneySet(super.day, {super.owner, super.camel, required this.on});
+  final bool on;
+  @override
+  String get type => 'testMoneySet';
+  @override
+  Map<String, Object?> fieldsToJson() => {'on': on};
+}
+
+/// The money topped up for testing (TestMoney): [amount] riyals in.
+final class TestMoneyAdded extends DomainEvent {
+  const TestMoneyAdded(
+    super.day, {
+    super.owner,
+    super.camel,
+    required this.amount,
+  });
+  final int amount;
+  @override
+  String get type => 'testMoneyAdded';
+  @override
+  Map<String, Object?> fieldsToJson() => {'amount': amount};
 }
 
 final class CashNegative extends DomainEvent {

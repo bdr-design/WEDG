@@ -15,6 +15,7 @@ import 'rules/balance.dart';
 import 'rules/genetics.dart';
 import 'rules/names.dart';
 import 'rules/provisions.dart';
+import 'rules/test_money.dart';
 import 'rules/valuation.dart';
 import 'sim.dart';
 import 'systems/systems.dart';
@@ -197,10 +198,35 @@ class Game {
   /// Applies a command. Returns the events it caused or why it was refused.
   Result dispatch(Command command) {
     final sim = Sim(state);
-    final result = handlers.handle(sim, command);
+    // money without limit for testing (TestMoney): the money at its floor
+    // before the order, and an order that costs more topped up by what it
+    // lacks and tried once more (every refusal for money comes before the
+    // handler changes anything)
+    final p = state.players[command.actor];
+    if (p != null && command is! SetTestMoney) TestMoney.topUp(sim, p);
+    var result = handlers.handle(sim, command);
+    if (p != null && p.testMoney && result is Err) {
+      final need = _moneyNeeded(result.error);
+      if (need != null) {
+        final first = result.events;
+        TestMoney.topUp(sim, p, need: need);
+        final again = handlers.handle(sim, command);
+        final events = [...first, ...again.events];
+        result = again is Err ? Err(again.error, events) : Ok(events);
+      }
+    }
     state.record(result.events);
     return result;
   }
+
+  /// What a refusal for money says the order needs beyond the floor, or null
+  /// for a refusal of another kind.
+  static int? _moneyNeeded(DomainError e) => switch (e.code) {
+    ErrorCode.insufficientFunds ||
+    ErrorCode.accountFull => (e.params['needed'] as int?) ?? 0,
+    ErrorCode.inDebt => (e.params['debt'] as int?) ?? 0,
+    _ => null,
+  };
 
   /// Simulates whole days until [day]. Returns everything that happened.
   List<DomainEvent> advanceTo(GameDay day) {
@@ -212,6 +238,10 @@ class Game {
       state.world.day = state.world.day + 1;
       for (final system in dailyPipeline) {
         system.run(sim);
+      }
+      // (money without limit for testing: the day's costs made good)
+      for (final p in state.players.values) {
+        TestMoney.topUp(sim, p);
       }
       final events = sim.drain();
       state.record(events);

@@ -530,15 +530,16 @@ class GameView {
   );
 
   /// The money in and out today (the ledger's entries of the day, the
-  /// opening balance not among them, and today's milk, which the ledger
-  /// keeps as one row a month).
+  /// opening balance and money for testing (TestMoney) not among them, and
+  /// today's milk, which the ledger keeps as one row a month).
   Riyal get todayNet => Riyal(
     me.ledger
             .where(
               (e) =>
                   e.day == today &&
                   e.category != LedgerCategory.opening &&
-                  e.category != LedgerCategory.milk,
+                  e.category != LedgerCategory.milk &&
+                  e.category != LedgerCategory.testMoney,
             )
             .fold(0, (n, e) => n + e.amount.value) +
         milkIncomeToday,

@@ -974,7 +974,14 @@ class PlayerSnapshot {
     this.dealerName = Balance.dealerName,
     this.dealer = const [],
     this.findings = const [],
+    this.testMoney = false,
+    this.testedFrom,
   });
+
+  /// Money without limit for the owner's testing is on (TestMoney), and the
+  /// first day it was ever on (the game's mark, never cleared), or null.
+  final bool testMoney;
+  final GameDay? testedFrom;
 
   /// Increases with every snapshot; older ones can be dropped.
   final int revision;

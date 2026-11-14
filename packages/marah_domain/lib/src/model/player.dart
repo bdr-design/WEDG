@@ -301,6 +301,10 @@ enum LedgerCategory {
   /// A fine for a treatment found by a buyer's or the broker's examination
   /// before paying (its ref the camel; the owner's decision 12).
   fineAtSale,
+
+  /// Money without limit for the owner's own testing (TestMoney): the top-ups
+  /// that keep the money at its floor while the switch is on, «فلوس تجربة».
+  testMoney,
 }
 
 /// One money movement. Recurring costs (feed, wages) are kept as one row per
@@ -442,6 +446,8 @@ class PlayerState {
     this.onAccount = 0,
     List<DealerMessage>? dealer,
     List<Finding>? untold,
+    this.testMoney = false,
+    this.testedFrom,
   }) : ledger = ledger ?? [],
        reputation = reputation ?? {},
        dealer = dealer ?? [],
@@ -473,6 +479,14 @@ class PlayerState {
   /// Treatments found outside a festival and a sale, not yet told.
   final List<Finding> untold;
 
+  /// Money without limit for the owner's testing is on (TestMoney): the
+  /// money is topped up to its floor before every order and after every day.
+  bool testMoney;
+
+  /// The first day it was ever on: the mark of a tested game, never cleared,
+  /// so results from it are not taken for an honest game's.
+  GameDay? testedFrom;
+
   double reputationIn(ColorCategory c) =>
       reputation[c] ?? Balance.startingReputation;
 
@@ -487,6 +501,9 @@ class PlayerState {
     'onAccount': onAccount,
     'dealer': [for (final m in dealer) m.toJson()],
     'untold': [for (final f in untold) f.toJson()],
+    // (written only when set: a game that never used it is saved as before)
+    if (testMoney) 'testMoney': true,
+    if (testedFrom != null) 'testedFrom': testedFrom!.value,
   };
 
   static PlayerState fromJson(Map<String, Object?> j) => PlayerState(
@@ -512,5 +529,9 @@ class PlayerState {
       for (final f in j['untold']! as List<Object?>)
         Finding.fromJson(f! as Map<String, Object?>),
     ],
+    testMoney: j['testMoney'] == true,
+    testedFrom: j['testedFrom'] == null
+        ? null
+        : GameDay(j['testedFrom']! as int),
   );
 }

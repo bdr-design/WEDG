@@ -29,6 +29,9 @@ enum MoneyKind {
 
   /// A fine for a treatment found (GDD 7.1).
   fine,
+
+  /// Money without limit for testing, «فلوس تجربة» (TestMoney): money in.
+  testMoney,
 }
 
 /// Why a camel or a herd was trucked: the ledger keeps the transport row's
@@ -174,6 +177,7 @@ class Money {
     LedgerCategory.entryFee => MoneyKind.entryFee,
     LedgerCategory.tampering => MoneyKind.tampering,
     LedgerCategory.fine || LedgerCategory.fineAtSale => MoneyKind.fine,
+    LedgerCategory.testMoney => MoneyKind.testMoney,
   };
 
   /// The opening balance (every opening row: one in a game).
@@ -280,7 +284,11 @@ class Money {
     // going back: checkInvariants)
     for (final e in p.ledger.reversed) {
       if (e.day < today) break;
-      if (e.day != today || e.category == LedgerCategory.milk) continue;
+      if (e.day != today ||
+          e.category == LedgerCategory.milk ||
+          e.category == LedgerCategory.testMoney) {
+        continue; // (money for testing is no day's income: TestMoney)
+      }
       final k = kindOf(e.category);
       if (k != null) sums[k] = (sums[k] ?? 0) + e.amount.value;
     }

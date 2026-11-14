@@ -16,6 +16,7 @@ import '../rules/balance.dart';
 import '../rules/contest_rules.dart';
 import '../rules/eligibility.dart';
 import '../rules/provisions.dart';
+import '../rules/test_money.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
 import '../systems/systems.dart';
@@ -49,6 +50,7 @@ Result handle(Sim sim, Command cmd) {
     CheckListing() => _checkListing(sim, p, cmd),
     ReadMessages() => _readMessages(sim, p),
     MarkFindingsTold() => _findingsTold(sim, p, cmd),
+    SetTestMoney() => _testMoney(sim, p, cmd),
   };
 }
 
@@ -738,6 +740,17 @@ Result _findingsTold(Sim sim, PlayerState p, MarkFindingsTold cmd) {
   if (cmd.count < 1) return _err(sim, ErrorCode.invalidAmount);
   p.untold.removeRange(0, n);
   sim.emit(FindingsTold(sim.today, owner: p.id, count: n));
+  return _ok(sim);
+}
+
+/// Money without limit for testing on or off (TestMoney); on, the money is
+/// brought to its floor at once. The first day it is on marks the game.
+Result _testMoney(Sim sim, PlayerState p, SetTestMoney cmd) {
+  if (p.testMoney == cmd.on) return _ok(sim);
+  p.testMoney = cmd.on;
+  if (cmd.on) p.testedFrom ??= sim.today;
+  sim.emit(TestMoneySet(sim.today, owner: p.id, on: cmd.on));
+  TestMoney.topUp(sim, p);
   return _ok(sim);
 }
 

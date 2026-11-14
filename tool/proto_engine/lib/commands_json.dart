@@ -80,6 +80,8 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
       ),
       'readMessages' => ReadMessages(me),
       'markFindingsTold' => MarkFindingsTold(me, _int(j['count'])),
+      // (sent only by the test meter, #fps: TestMoney)
+      'setTestMoney' => SetTestMoney(me, on: _bool(j['on'])),
       _ => null,
     };
   } on Object {
@@ -189,4 +191,5 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'type': 'markFindingsTold',
     'count': count,
   },
+  SetTestMoney(:final on) => {'type': 'setTestMoney', 'on': on},
 };

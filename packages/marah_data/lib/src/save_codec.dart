@@ -19,7 +19,7 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 9;
+  static const currentVersion = 10;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
@@ -33,6 +33,7 @@ class SaveCodec {
     6: _v6ToV7,
     7: _v7ToV8,
     8: _v8ToV9,
+    9: _v9ToV10,
   };
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
@@ -447,6 +448,14 @@ class SaveCodec {
     }
     return data;
   }
+
+  /// v9 to v10 (money without limit for the owner's testing, 14 Nov 2026:
+  /// TestMoney): a player may now carry `testMoney` and `testedFrom`, and
+  /// ledger rows of the kind `testMoney`, all optional; nothing in a v9 save
+  /// changes. The version moves so that an older app meets a save of a
+  /// tested game as one too new for it, not as a corrupt one (its ledger kind
+  /// is unknown there).
+  static Map<String, Object?> _v9ToV10(Map<String, Object?> input) => input;
 
   String encode(GameState state, {DateTime? savedAt}) => jsonEncode({
     'format': format,

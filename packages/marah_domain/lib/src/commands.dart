@@ -182,3 +182,10 @@ final class MarkFindingsTold extends Command {
   const MarkFindingsTold(super.actor, this.count);
   final int count;
 }
+
+/// Money without limit for the owner's testing turned on or off (TestMoney):
+/// sent only by the prototype's test meter, never by a screen of the game.
+final class SetTestMoney extends Command {
+  const SetTestMoney(super.actor, {required this.on});
+  final bool on;
+}
