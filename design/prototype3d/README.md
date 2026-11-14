@@ -106,15 +106,16 @@ in the code, and the numbers are in
 - **Frame meter (`#fps`):** opened, it also has «رسم القطيع» (the herd's
   drawing variant: two baked frames blended, the nearest frame, or every camel
   on the CPU; also `?herd=0/1/2`) and «قطيع تجربة» (a test herd of 40 in the 3D
-  view).
+  view, standing in all six pens; a tap passes through it, the pens' counts
+  leave it out, and the closed meter says «تجربة 40» while it is on).
 - **Money without limit (`#fps` only, for the owner's testing):** a line in
   the opened meter, «فلوس بلا حد», turned on by two taps within 3 s, off by
   one. The engine keeps the money at 10,000,000 or more (TestMoney in
   `marah_domain`, ledger rows «فلوس تجربة», the game marked for good; GDD 13).
   **A release build must drop the meter and the `setTestMoney` command** (the
   engine's JSON command in `tool/proto_engine`, and `SetTestMoney` itself).
-- **Draw calls:** the yard's fixed objects are merged, and footprints are
-  instanced.
+- **Draw calls:** the yard's fixed objects are merged, and footprints and
+  the dust the camels' feet raise are instanced (one draw each).
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)
   and a 2048 px satellite image.
 - **The player's SUV:** ours, built by code from the owner's photos (`tool/vehicle3d/suv_model`, made into game files by

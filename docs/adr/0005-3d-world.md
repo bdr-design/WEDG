@@ -660,12 +660,32 @@ camels' poses pinned (fading ones included): 0.02-0.06% of the camels' pixels
 differ (single edge pixels) in near, eye-height and pen views; at the map view
 10%, where camels under the pens' shade are now shaded.
 
+**The footfall dust in one draw (14 Nov).** Each puff of dust a footfall
+raises was a Sprite of its own (a pool of 90): with every camel near walking,
+up to 90 draws in a frame, which still put the near views over 200 (the
+review measured 214). The puffs are now one instanced draw of three.js's own
+sprite quad, material and shader (the place and size from the instance
+matrix, the opacity by instance); they grow, rise and fade as before, and,
+being one colour, look the same in any order. With every camel walking,
+everything built and 40 camels, worst frame (main / shadow):
+
+| View | Before | Now |
+|---|---|---|
+| Near view of the pens | 113 (85 / 28, 90 puffs) | 94 (66 / 28) |
+| Over the pens | 146 (119 / 27, 90 puffs) | 99 (72 / 27) |
+
+30 puffs pinned at fixed places and ages, the page's own frame run with no
+time passing: the picture is the same to the pixel. The dust's update writes
+typed arrays only (10-200 us a frame here, at 90 puffs; the sprites' own cost
+was in three.js's draw, 90 objects sorted and drawn).
+
 **On the owner's phone: three ways of drawing the herd.** The baked tier
 reads 32 texels a vertex (16 for the old skinning), so its GPU cost on a
 phone is the open question. The open frame meter has two lines for it:
 «رسم القطيع» (a touch goes to the next variant and keeps it; also `?herd=0/1/2`)
 and «قطيع تجربة» (the yard filled to 40 head with copies of the player's
-camels, in the 3D view only). Either change starts the meter's figures again;
+camels, in the 3D view only, standing in all six pens; a tap passes through
+them, the pens' counts leave them out, and the closed meter says «تجربة 40»). Either change starts the meter's figures again;
 the closed meter names the variant.
 - مزج إطارين (0): as built.
 - أقرب إطار (1): the nearest baked frame only (16 texels a vertex; the pose
