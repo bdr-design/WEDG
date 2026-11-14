@@ -77,6 +77,7 @@ const fixtures = {
   8: 'test/fixtures/save_v8.json',
   9: 'test/fixtures/save_v9.json',
   10: 'test/fixtures/save_v10.json',
+  11: 'test/fixtures/save_v11.json',
 };
 
 /// [data] at version [from] brought up to today's by the later steps, as
@@ -548,6 +549,48 @@ void main() {
     final me = state.players.values.single;
     expect(me.dealer.single.read, isFalse);
     expect(me.untold.single.kind, TamperKind.dye);
+  });
+
+  group('to the rush (T15)', () {
+    test('a save of the session branch with a camel on the truck', () {
+      final r = codec.decode(
+        File('test/fixtures/save_v9_truck.json').readAsStringSync(),
+      );
+      expect(r, isA<Loaded>(), reason: '$r');
+      final state = (r as Loaded).state;
+      expect(checkInvariants(state), isEmpty);
+      final me = state.players.values.single;
+      final mine = state.world.aliveOwnedBy(me.id).toList();
+      final truck = mine.where((c) => c.acquiredOn == state.world.day).single;
+      expect(truck.arrivedOn, isNull);
+      expect(GameView(state, me.id).camel(truck.id)!.onTheWay, isTrue);
+      expect(me.farm.standing, isEmpty);
+      expect(me.farm.vet, isNull);
+      // nothing lost: every camel, the ledger, the deliveries, the building
+      final before = jsonDecode(
+        File('test/fixtures/save_v9_truck.json').readAsStringSync(),
+      ) as Map<String, Object?>;
+      final data = before['data']! as Map<String, Object?>;
+      final p0 =
+          (data['players']! as List<Object?>).single! as Map<String, Object?>;
+      expect(me.ledger, hasLength((p0['ledger']! as List<Object?>).length));
+      expect(me.farm.deliveries, hasLength(1));
+      expect(me.farm.building, hasLength(1));
+      expect(me.cash.value, p0['cash']);
+      // played a week after: she arrives the next day, the pen stands
+      final g = Game(state)..advanceDays(7);
+      expect(checkInvariants(g.state), isEmpty);
+      expect(GameView(g.state, me.id).camel(truck.id)!.onTheWay, isFalse);
+      expect(g.me.farm.has(Facility.pen), 1);
+      expect(g.me.farm.today, isNotNull);
+    });
+
+    test('the v9 fixture brought up and played a week', () {
+      final state =
+          (codec.decode(File(fixtures[9]!).readAsStringSync()) as Loaded).state;
+      final g = Game(state)..advanceDays(7);
+      expect(checkInvariants(g.state), isEmpty);
+    });
   });
 
   group('v7 to v8: the Saudi rounds', () {
