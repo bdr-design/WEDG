@@ -45,9 +45,10 @@ const LAUNCH = { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-u
   ok(l && /طافية/.test(l.t), 'after 3 s unarmed again');
   await tapEl('#meter [data-money]'); l = await line();
   await tapEl('#meter [data-money]');
+  await tapEl('#meter [data-money]');      // (a quick third tap, within the second after it turned on: ignored)
   await p.waitForFunction(() => /شغّالة/.test(document.querySelector('#meter [data-money]')?.textContent || ''), null, { timeout: 120000 }).catch(() => {});
   let s = await S();
-  ok(s.on && s.cash >= 10000000 && !!s.from, `two taps: on, the money ${s.cash} (was ${cash0}), marked from ${s.from}`);
+  ok(s.on && s.cash >= 10000000 && !!s.from, `two taps (and a quick third, ignored): on, the money ${s.cash} (was ${cash0}), marked from ${s.from}`);
   ok(await p.evaluate(() => document.getElementById('meter').classList.contains('open')), 'the meter stayed open (a tap on its line does not close it)');
   if (SHOTS) await p.screenshot({ path: path.join(SHOTS, 'meter_on.png'), clip: await p.evaluate(() => { const r = document.getElementById('meter').getBoundingClientRect(); return { x: r.x - 4, y: r.y - 4, width: r.width + 8, height: r.height + 8 }; }), timeout: 600000 });
   // an order the start's money could not pay: the dearest camel on the market

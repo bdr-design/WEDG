@@ -1891,9 +1891,10 @@ if (meter) {
   meter.el.addEventListener('pointerdown', (e) => {
     if (!e.target.closest('[data-money]') || !window.marahEngine?.snapshot) return;
     lineAt = performance.now();
+    if (lineAt - moneySet < 1000) return;      // (a quick third tap right after it turned on does not turn it off again: the review)
     const on = window.marahEngine.snapshot.testMoney;
     if (!on && lineAt - moneyArm > 3000) { moneyArm = lineAt; moneyLine(); setTimeout(moneyLine, 3100); return; }
-    moneyArm = 0;
+    moneyArm = 0; moneySet = lineAt;
     window.marahEngine.dispatch({ type: 'setTestMoney', on: !on }).catch((err) => console.warn('meter:', err)).finally(() => { moneyLine(); meter.shown = 0; });
   });
   measureHud();      // (shown now: the pins kept below it from the start, not only after a card or a turn, the review)
@@ -1941,7 +1942,7 @@ function meterFrame(now) {
 }
 // the meter's text, once a second; the pins measured again only when its box changed size (a read of its size a
 // second, no more)
-let moneyArm = 0;
+let moneyArm = 0, moneySet = -1e9;
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 // the money switch's words: closed, a mark while it is on; open, its line, and the game's mark once it was ever on
 function moneyText() {
