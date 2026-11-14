@@ -5,14 +5,13 @@ The page as the app serves it: farm.html as index.html, with a doctype, a charse
 and a viewport (the claude.ai artifact skeleton adds these when it publishes), its
 scripts, the phone's pictures, the terrain and the models next to it, and three.js
 r170 bundled (the import map rewritten from the CDN to the local copy), the web fonts
-bundled (FONTS below: the page's Google Fonts stylesheet replaced by the same faces in
-fonts/, each file pinned by its checksum, its licence beside it); and the rules engine compiled for its worker
+bundled (FONTS below: the page's Google Fonts stylesheet replaced by the same faces, read
+from tool/proto_app/fonts/ where they are committed with their licences, each checked
+against its checksum: a missing or changed file fails the build); and the rules engine compiled for its worker
 (tool/proto_engine/build_worker.py, which needs `dart` on the PATH). Run from anywhere; THREE_DIR may name an unpacked
-`three@0.170.0` npm package, otherwise it is fetched with `npm pack`. FONT_DIR may name a
-folder that already holds the font files (checked by their checksums); missing ones are
-fetched from fonts.gstatic.com. If any face cannot be had, the page keeps its Google Fonts
-stylesheet (the faces come from the network, as before) and the build says so: a build
-never ships without its faces.
+`three@0.170.0` npm package, otherwise it is fetched with `npm pack`. The fonts need no
+network: `assemble.py --fetch-fonts` refreshes tool/proto_app/fonts/ when FONTS changes
+(from FONT_DIR if it holds the files, else from fonts.gstatic.com, checked by checksum).
 """
 import hashlib
 import urllib.request
@@ -68,33 +67,42 @@ def three_package():
     return tmp / 'package'
 
 
-def bundle_fonts():
-    """The faces into OUT/fonts/ with their licences; the @font-face rules and preloads for the page, or None (then
-    the page keeps its Google Fonts stylesheet) when a file cannot be had or does not match its checksum."""
+def fetch_fonts():
+    """Refreshes tool/proto_app/fonts/ (not part of a build): each file of FONTS from FONT_DIR if it holds it, else from
+    fonts.gstatic.com, kept only if it matches its checksum. Run when FONTS is updated: `assemble.py --fetch-fonts`."""
     have = Path(os.environ['FONT_DIR']) if os.environ.get('FONT_DIR') else None
+    for family, weights, subset, rel, sha in FONTS:
+        name = rel.split('/')[-1]
+        data = (have / name).read_bytes() if have and (have / name).is_file() else None
+        if data is None or hashlib.sha256(data).hexdigest() != sha:
+            with urllib.request.urlopen(GSTATIC + rel, timeout=30) as r:
+                data = r.read()
+        if hashlib.sha256(data).hexdigest() != sha:
+            sys.exit(f'font {name} from fonts.gstatic.com does not match its checksum: update FONTS')
+        (APP / 'fonts' / name).write_bytes(data)
+    print(f'fonts refreshed in {APP / "fonts"}')
+
+
+def bundle_fonts():
+    """The faces into OUT/fonts/ with their licences, from tool/proto_app/fonts/ (committed: the build needs no
+    network for them), each checked against its checksum: a missing or changed file fails the build. Returns the
+    @font-face rules and preloads that take the place of the page's Google Fonts stylesheet."""
     out = OUT / 'fonts'
     out.mkdir(parents=True, exist_ok=True)
     rules, preload, done = [], [], set()
     for family, weights, subset, rel, sha in FONTS:
         name = rel.split('/')[-1]
         if name not in done:
-            data = None
-            if have and (have / name).is_file():
-                data = (have / name).read_bytes()
-            if data is None or hashlib.sha256(data).hexdigest() != sha:
-                try:
-                    with urllib.request.urlopen(GSTATIC + rel, timeout=30) as r:
-                        data = r.read()
-                except OSError as e:
-                    print(f'WARNING: font {name} not fetched ({e}): the page keeps the Google Fonts stylesheet')
-                    return None
+            src = APP / 'fonts' / name
+            if not src.is_file():
+                sys.exit(f'font {name} is missing from {APP / "fonts"} (assemble.py --fetch-fonts fetches it)')
+            data = src.read_bytes()
             if hashlib.sha256(data).hexdigest() != sha:
-                print(f'WARNING: font {name} does not match its checksum: the page keeps the Google Fonts stylesheet')
-                return None
+                sys.exit(f'font {name} does not match its checksum in FONTS')
             (out / name).write_bytes(data)
             done.add(name)
         # (block, not swap: the file is beside the page, in within a frame or two, and a frame of a fallback face is not
-        # drawn first; a broken file shows the fallback after 3 s)
+        # drawn first)
         rules.append(f"@font-face {{ font-family: '{family}'; font-style: normal; font-weight: {weights}; font-display: block; "
                      f"src: url(fonts/{name}) format('woff2'); unicode-range: {RANGES[subset]}; }}")
         if (family, subset) in PRELOAD:
@@ -137,10 +145,9 @@ def main():
         sys.exit(f'farm.html does not import three.js from {CDN}: update THREE_VERSION')
     page = page.replace(CDN + 'build/three.module.js', './three/build/three.module.js').replace(CDN + 'examples/jsm/', './three/examples/jsm/')
     faces = bundle_fonts()
-    if faces:
-        if not GOOGLE_LINK.search(page):
-            sys.exit('farm.html does not link the Google Fonts stylesheet as assemble.py expects: update GOOGLE_LINK')
-        page = GOOGLE_LINK.sub(lambda m: faces, page, count=1)
+    if not GOOGLE_LINK.search(page):
+        sys.exit('farm.html does not link the Google Fonts stylesheet as assemble.py expects: update GOOGLE_LINK')
+    page = GOOGLE_LINK.sub(lambda m: faces, page, count=1)
     head = ('<!doctype html>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">\n')
     (OUT / 'index.html').write_text(head + page, encoding='utf-8')
@@ -160,4 +167,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    fetch_fonts() if '--fetch-fonts' in sys.argv else main()
