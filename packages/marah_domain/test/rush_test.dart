@@ -480,6 +480,83 @@ void main() {
     });
   });
 
+  group('treat all', () {
+    /// [n] of a big herd sick, each falling ill a day apart (the oldest
+    /// first by day), the vet's quote of each.
+    (Game, List<Camel>) sickHerd(int n) {
+      final g = newGame();
+      final sim = Sim(g.state), gen = WorldGen(sim);
+      for (var i = 0; i < n; i++) {
+        gen.makeCamel(sim.rng(['ta', i]), owner: g.me.id, mean: 50);
+      }
+      g.me.farm.capacity = n + 10;
+      final sick = g.state.world.aliveOwnedBy(g.me.id).take(n).toList();
+      for (var i = 0; i < n; i++) {
+        // the newest first in the herd's own order: the treatment must sort
+        sick[i]
+          ..health = HealthStatus.sick
+          ..illness = Illness.mange
+          ..sickSince = g.today - i;
+      }
+      return (g, sick);
+    }
+
+    test('the oldest illness first; the total is the quotes\' sum and what is charged', () {
+      final (g, sick) = sickHerd(6);
+      give(g, 1000000);
+      final sim = Sim(g.state);
+      final quotes = {
+        for (final c in sick) c.id: handlers.vetQuote(sim, c).value,
+      };
+      final total = quotes.values.fold(0, (a, b) => a + b);
+      expect(rushFacts(g.state, g.me.id)['treatAll'], total);
+      final cash = g.me.cash.value;
+      final r = g.dispatch(TreatAll(g.me.id));
+      expect(r.ok, isTrue);
+      final treated = r.events.whereType<Treated>().toList();
+      // the oldest illness first: sickSince ascending
+      final order = [
+        for (final t in treated)
+          g.state.world.camels[t.camel!]!.sickSince!.value,
+      ];
+      expect(order, [...order]..sort());
+      expect(order.length, 6);
+      expect(cash - g.me.cash.value, total);
+      expect([for (final t in treated) t.cost].fold(0, (a, b) => a + b), total);
+    });
+
+    test('stops at the first refusal at the account\'s limit', () {
+      final (g, sick) = sickHerd(6);
+      // no cash; the account takes about two treatments more
+      Sim(g.state).pay(g.me, Riyal(-g.me.cash.value), LedgerCategory.fine);
+      final limit = handlers.accountLimit(Sim(g.state), g.me);
+      final oldest = [...sick]
+        ..sort((a, b) => a.sickSince!.value - b.sickSince!.value);
+      // the third dear (pneumonia: 600 to 1,800), the fourth cheap (a calf's
+      // diarrhoea: 150 to 400): room after the first two for the fourth but
+      // not the third, so going on past the refusal would treat the fourth
+      oldest[2].illness = Illness.pneumonia;
+      oldest[3].illness = Illness.calfDiarrhea;
+      final q = [
+        for (final c in oldest) handlers.vetQuote(Sim(g.state), c).value,
+      ];
+      expect(q[2], greaterThan(450));
+      expect(q[3], lessThanOrEqualTo(450));
+      g.me.onAccount = limit - q[0] - q[1] - 450;
+      final r = g.dispatch(TreatAll(g.me.id));
+      expect(r.ok, isTrue);
+      final treated = r.events
+          .whereType<Treated>()
+          .map((e) => e.camel)
+          .toList();
+      expect(treated, [oldest[0].id, oldest[1].id]);
+      expect(oldest[2].health, HealthStatus.sick);
+      expect(oldest.last.health, HealthStatus.sick);
+      expect(g.me.onAccount, limit - 450);
+      expect(oldest[3].health, HealthStatus.sick);
+    });
+  });
+
   test('an AwayRun to a day equals the days advanced (VM and JavaScript)', () {
     Game scripted() {
       final g = newGame();
