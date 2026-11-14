@@ -101,14 +101,14 @@
   bind trapping is unconfirmed), and the fines in words.
 
 **The odds and the money** (`season_money.jpg`, the proxy's range; game choices on real numbers):
-- **Chance of a sellable bird in a season alone:** 0.08 to 0.34. That is 40 birds in 2025 [213] over
+- **Chance of a sellable bird in a season alone:** 0.08 to 0.336 (40/119). That is 40 birds in 2025 [213] over
   119 trappers [213], or over «مئات» [211]. Shown as about one season in 13 (1/0.08 = 12.5, rounded
-  against the player) to one in 3.
+  against the player) to one in 3 (1/0.336 = 2.98).
 - **Mean price:** 88,000 [200] to 160,000 [213].
 - **The season's cost:** 20,000, **invented**.
-- **Expected per season:** about −13,000 to about +34,000. That is 0.08 × 88,000 − 20,000 and
-  0.34 × 160,000 − 20,000, rounded against the player.
-- **A bird of 300,000 or more:** one season in about 83 to 20. That is 1 ÷ (p × 6/40): at least 6 of
+- **Expected per season:** about −13,000 to +33,760. That is 0.08 × 88,000 − 20,000 = −12,960
+  (rounded against the player) and 0.336 × 160,000 − 20,000 = +33,760.
+- **A bird of 300,000 or more:** one season in about 83 to 20. That is 1 ÷ (p × 6/40) = 83.3 and 19.8: at least 6 of
   the 40 birds of 2025 were that dear [213][185], a floor.
 - **Partners** raise the chance and divide the price (the next step: proxy).
 - Most seasons end with nothing. No single expected figure appears anywhere.

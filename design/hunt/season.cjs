@@ -22,12 +22,12 @@
 //   breeders' auction in August [158], the exhibition's imported sakers 1-10 Oct [157][184], the trapping auction
 //   1 Oct - 30 Nov where the player sells or buys [184].
 //   Money, round 2 (no single "expected profit" anywhere: the range only):
-//   - trapping, a season alone: chance 0.08 to 0.34 (40 birds in 2025 over 119 trappers [213], or «مئات» [211]: the
-//     proxy's range, a game choice inside the sources), shown as about one season in 13 (1/0.08 = 12.5, rounded against
-//     the player) to one in 3 (1/0.34 = 2.9); mean price 88,000 [200] to 160,000 [213]; the season's cost 20,000
-//     INVENTED; expected about -13,000 (0.08 x 88,000 - 20,000 = -12,960) to about +34,000 (0.34 x 160,000 - 20,000 =
-//     +34,400), rounded against the player; a bird of 300,000 or more: one season in about 83 (1 / (0.08 x 6/40) =
-//     83.3) to 20 (1 / (0.34 x 6/40) = 19.6), at least 6 of the 40 birds of 2025 that dear [213][185] (a floor);
+//   - trapping, a season alone: chance 0.08 to 0.336 (40 birds in 2025 over 119 trappers [213], or «مئات» [211]: the
+//     proxy's range, a game choice inside the sources; 0.336 = 40/119), shown as about one season in 13 (1/0.08 = 12.5,
+//     rounded against the player) to one in 3 (1/0.336 = 2.98); mean price 88,000 [200] to 160,000 [213]; the season's cost 20,000
+//     INVENTED; expected about -13,000 (0.08 x 88,000 - 20,000 = -12,960) to about +33,760 (0.336 x 160,000 - 20,000), the
+//     first rounded against the player, the second exact; a bird of 300,000 or more: one season in about 83 (1 / (0.08 x 6/40) =
+//     83.3) to 20 (1 / (0.336 x 6/40) = 19.8), at least 6 of the 40 birds of 2025 that dear [213][185] (a floor);
 //     partners raise the chance and divide the price, groups of 2 to 9 [184][190][200] (the next step: proxy item 2);
 //     the gear's 8,600 is the phone's game-choice prices;
 //   - falconry: a farm-bred saker about 19,000 [158] or a peregrine of the year from about 50,000 [200]; game choices:
@@ -143,13 +143,13 @@ const money = () => {
   <p class="s">الأرقام بين [ ] من البحث (نصوص نتايج بحث وصفحات وكالة الأنباء، ما لقينا نص نظام الطرح)، و«الوكيل» جواب مؤقت لين يرد المالك، والباقي اختيار لعب. ما فيه رقم «ربح متوقع» واحد: المدى بس.</p>
   <h2>موسم طرح واحد، لحالك</h2>
   <table><tr><th></th><th>مبتدي عدته قليلة</th><th>عدته كاملة وأرضه زينة</th><th>من وين الرقم</th></tr>
-  ${r('حظه بطير ينباع بالموسم', 'حوالي موسم من 13', 'حوالي موسم من 3', '40 طير بموسم 2025 على 119 طاروح [213]، أو «مئات» [211]: المدى 0.08 لين 0.34، والعدة تحركك داخله وما تطلعك فوقه (الوكيل، اختيار لعب)')}
+  ${r('حظه بطير ينباع بالموسم', 'حوالي موسم من 13', 'حوالي موسم من 3', '40 طير بموسم 2025 على 119 طاروح [213]، أو «مئات» [211]: المدى 0.08 لين 0.336، والعدة تحركك داخله وما تطلعك فوقه (الوكيل، اختيار لعب)')}
   ${r('سعر الطير بالمتوسط', '88,000', '160,000', '2022: 7.125 مليون على 81 طير [200]؛ 2025 حوالي 160,000 [213]')}
   ${r('مصروف الموسم: المخيم والبنزين والحمام والشبك', '20,000', '20,000', 'مخترع: ما لقينا له رقم، وباللعبة يتبع العدة')}
   ${r('العدة تشتريها مرة', '0', '8,600', 'اختيار لعب: أسعار عدة الطاروح بالجوال')}
   ${r('اللي يصير أغلب المواسم', 'ما ينطرح طير', 'ما ينطرح طير', 'وتخسر مصروف المخيم')}
-  ${r('المتوقع بالموسم (حظ × سعر − مصروف)', '<span class="neg">حوالي −13,000</span>', '<span class="pos">حوالي +34,000</span>', '0.08 × 88,000 − 20,000 و0.34 × 160,000 − 20,000، مقرّب ضد اللاعب')}
-  ${r('طير بـ 300,000 وفوق', 'موسم من 83 تقريبًا', 'موسم من 20 تقريبًا', 'على الأقل 6 من 40 طير بموسم 2025 [213][185]: 1 ÷ (0.08 × 6/40) و1 ÷ (0.34 × 6/40) = 83.3 و19.6، مقرّب لأقرب رقم')}
+  ${r('المتوقع بالموسم (حظ × سعر − مصروف)', '<span class="neg">حوالي −13,000</span>', '<span class="pos">حوالي +33,760</span>', '0.08 × 88,000 − 20,000 = −12,960 (مقرّب ضد اللاعب) و0.336 × 160,000 − 20,000 = +33,760')}
+  ${r('طير بـ 300,000 وفوق', 'موسم من 83 تقريبًا', 'موسم من 20 تقريبًا', 'على الأقل 6 من 40 طير بموسم 2025 [213][185]: 1 ÷ (0.08 × 6/40) و1 ÷ (0.336 × 6/40) = 83.3 و19.8، مقرّب لأقرب رقم')}
   ${r('مع شركاء (الخطوة الجاية)', '', '', 'يزيد الحظ ويتقسم السعر: أغلب الطيور طرحها ربع من 2 لين 9 [184][190][200] (الوكيل: لحالك أول)', 'tot')}
   </table>
   <h2>المقناص بصقرك (هواية تصرف عليها)</h2>
