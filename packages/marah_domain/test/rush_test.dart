@@ -455,6 +455,32 @@ void main() {
     });
   });
 
+  test('an AwayRun to a day equals the days advanced (VM and JavaScript)', () {
+    Game scripted() {
+      final g = newGame();
+      final me = g.me.id;
+      g.dispatch(SetStandingOrder(me, StandingOrder.water, on: true));
+      g.dispatch(SetStandingOrder(me, StandingOrder.feed, on: true));
+      g.dispatch(SignVetContract(me));
+      g.dispatch(BuildFacility(me, Facility.pen));
+      return g;
+    }
+
+    final a = scripted()..advanceDays(200);
+    final b = scripted();
+    final target = b.today + 200;
+    final kinds = <AwayStopKind>[];
+    while (b.today < target) {
+      final run = AwayRun(b, AwayPlan(target));
+      while (!run.done) {
+        run.step();
+      }
+      kinds.add(run.stop!.kind);
+    }
+    expect(kinds.last, AwayStopKind.target);
+    expect(b.state.toJson(), a.state.toJson());
+  });
+
   test('the new state survives the save', () {
     final g = shortDay();
     final me = g.me.id;
