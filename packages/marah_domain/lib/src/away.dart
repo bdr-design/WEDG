@@ -66,7 +66,14 @@ enum AwayStopKind {
 /// Where a stretch stopped: the kind, the day, and what it is about (a
 /// camel, a festival, a supply), with a name to say.
 class AwayStop {
-  const AwayStop(this.kind, this.day, {this.subject, this.name, this.extra});
+  const AwayStop(
+    this.kind,
+    this.day, {
+    this.subject,
+    this.name,
+    this.extra,
+    this.also = const [],
+  });
   final AwayStopKind kind;
   final GameDay day;
   final String? subject;
@@ -75,12 +82,17 @@ class AwayStop {
   /// A caller's own reason, for [AwayStopKind.extra].
   final String? extra;
 
+  /// The other stops the same day gave (told with this one: a fine found the
+  /// day an illness came, the money a round's trip took below zero).
+  final List<AwayStopKind> also;
+
   Map<String, Object?> toJson() => {
     'kind': kind.name,
     'day': day.value,
     'subject': subject,
     'name': name,
     'extra': extra,
+    if (also.isNotEmpty) 'also': [for (final k in also) k.name],
   };
 }
 
@@ -346,23 +358,25 @@ class AwayRun {
     for (final c in plan.counters) {
       c(game, events, summary);
     }
+    // the stop told: his round's day before all, else the first read; the
+    // day's others carried with it
+    final main =
+        found.where((x) => x.kind == AwayStopKind.round).firstOrNull ??
+        found.firstOrNull;
     AwayStop? first;
-    final round = found.where((x) => x.kind == AwayStopKind.round).firstOrNull;
-    if (round != null) {
-      // with what else the day gave (the money below zero, a store low...)
-      final also = {
+    if (main != null) {
+      final also = <AwayStopKind>[
         for (final x in found)
-          if (x.kind != AwayStopKind.round) x.kind.name,
-      };
+          if (x.kind != main.kind) x.kind,
+      ];
       first = AwayStop(
-        AwayStopKind.round,
+        main.kind,
         today,
-        subject: round.subject,
-        name: round.name,
-        extra: also.isEmpty ? null : also.join(','),
+        subject: main.subject,
+        name: main.name,
+        extra: main.extra,
+        also: also.toSet().toList(),
       );
-    } else if (found.isNotEmpty) {
-      first = found.first;
     } else if (today >= plan.target) {
       first = AwayStop(AwayStopKind.target, today);
     }

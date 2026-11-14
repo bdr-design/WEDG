@@ -1567,7 +1567,7 @@ function stopWords(stop) {
     case 'account': return { title: 'حساب التاجر وصل حده', line: accountFullLine(), act: 'البنك', go: 'bank' };
     case 'fine': return { title: `انكشف تجميل ${nm ? `بـ${nm}` : 'بحلالك'}`, line: 'وانكتبت عليك الغرامة. التفاصيل بالحراج.', act: 'الحراج', go: 'haraj' };
     case 'offer': return { title: `جاك سوم على ${nm}`, line: `السوم ينتهي بعد ${days(G.haraj.offerDays ?? 3)}: اقبله أو ارفضه من إعلاناتي.`, act: 'إعلاناتي', go: 'haraj', tab: 'mine' };
-    case 'round': return { title: `اليوم شوطك بـ${shortFest(stop.name || '')}`, line: `وقف الساعة 6 الصبح قبل أول مرحلة الساعة 7، وتجيك المراحل وحدة وحدة مثل أي يوم.${/money/.test(stop.extra || '') ? ' ونقل حلالك للمهرجان نزّل رصيدك تحت الصفر: ما تقدر تشتري حلال ولا تبني لين تسدد.' : ''}`, act: 'شوف يوم الشوط', go: 'mazayen' };
+    case 'round': return { title: `اليوم شوطك بـ${shortFest(stop.name || '')}`, line: `وقف الساعة 6 الصبح قبل أول مرحلة الساعة 7، وتجيك المراحل وحدة وحدة مثل أي يوم.${(stop.also || []).includes('money') ? ' ونقل حلالك للمهرجان نزّل رصيدك تحت الصفر: ما تقدر تشتري حلال ولا تبني لين تسدد.' : ''}`, act: 'شوف يوم الشوط', go: 'mazayen' };
     case 'registration': return { title: `باقي 3 أيام ويقفل تسجيل ${esc(stop.name || '')}`, line: 'وعندك حلال يقدر يدخله. وبعد القفل تسجيل متأخر برسوم لين 72 ساعة قبل الشوط.', act: 'شوف المزاين', go: 'mazayen' };
     case 'breeding': return { title: 'بدا وقت الضراب', line: 'وعندك ناقة تنلقح.', act: null, go: null };
     case 'crowded': return { title: 'ضاقت الشبوك على حلالك', line: 'ابنِ شبك من العزبة.', act: 'العزبة', go: 'build' };
@@ -1581,7 +1581,11 @@ function calStopScreen() {
   if (!G || !R) return `<div class="body">${back}<div class="title">التقويم</div>${waiting()}</div>`;
   const s = R.stop, w = stopWords(s), left = R.target - R.to, sure = HJ.sure === 'calGo';
   const blocked = RU().awayBlock;
+  // what else the same day gave, said with it (the engine carries them: AwayStop.also)
+  const ALSO = { illness: 'مرض شي من حلالك', death: 'مات شي من حلالك', supply: 'قرب العلف أو الماء يخلص', money: 'نزل رصيدك تحت الصفر', account: 'حساب التاجر وصل حده', fine: 'انكشف تجميل بحلالك', offer: 'جاك سوم', registration: 'قرب يقفل تسجيل مهرجان', breeding: 'بدا وقت الضراب', crowded: 'ضاقت الشبوك' };
+  const also = (s.also || []).filter((k) => ALSO[k] && !(s.kind === 'round' && k === 'money')).map((k) => ALSO[k]);
   return `<div class="body">${back}<div class="title">وقف التقويم</div>
+    ${also.length ? `<div class="note" style="order:2">وصار بنفس اليوم: ${also.join('، ')}.</div>` : ''}
     <div class="${s.kind === 'round' || s.kind === 'breeding' || s.kind === 'cancelled' ? 'msgc good' : 'warn'}"><span class="lead">${svg(s.kind === 'round' ? 'cup' : 'alert')}</span><b>${w.title}</b><small>وقف ${ddAt(R.to)}${left > 0 ? `، وباقي ${days(left)} لين ${dShortAt(R.target)}` : ''}. ${w.line}</small></div>
     ${w.act ? `<button class="btn pri wide" data-go="${w.go}"${w.tab ? ` data-tab="${w.tab}"` : ''}>${w.act}</button>` : ''}
     ${left > 0 ? `<button class="btn ${blocked ? '' : sure ? 'sure' : 'ghost'} wide" data-act="calGo" data-again="1" ${blocked ? 'disabled' : ''}>${sure ? 'اضغط مرة ثانية ويكمل' : `كمّل لين ${ddAt(R.target)}`}</button>` : ''}
