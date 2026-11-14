@@ -90,6 +90,7 @@ class Coat:
         torso = rest.S['torso']
         self.tx = np.array([r[0] for r in torso])
         self.tbot = np.array([r[2] for r in torso])
+        self.ttop = np.array([r[1] for r in torso])
 
     def head_coords(self, P):
         o, hd, hn, hv, Lh = self.hf
@@ -105,7 +106,12 @@ class Coat:
         col = np.broadcast_to(pal['ground'], P.shape).copy()
         # the lower flanks a little tawny, the underside pale, graded softly (no line)
         col = mix(col, pal['tawny'], 0.30 * sstep(0.25, -0.35, up))
-        col = mix(col, pal['pale'], sstep(-0.15, -0.85, up) ** 1.3)
+        # (only on the trunk's lower part: a bulge's underside higher up, at the shoulder or the thigh, keeps the
+        # ground colour)
+        zt = np.interp(x, self.tx, self.ttop)
+        zb = np.interp(x, self.tx, self.tbot)
+        low = sstep(0.50, 0.22, (z - zb) / np.maximum(zt - zb, 1e-3))
+        col = mix(col, pal['pale'], (sstep(-0.15, -0.85, up) ** 1.3) * low)
         # the throat and chest pale
         fwd = N[..., 0]
         throat = sstep(-0.1, 0.65, fwd - up * 0.6) * sstep(0.95, 0.70, z + 0.2 * up) * sstep(0.36, 0.52, x)
@@ -170,7 +176,18 @@ class Coat:
         else:
             col = mix(col, col * 0.85, sstep(0.75, 0.95, a))                         # the muzzle's end darker
         col = self.eye(P, col)
+        col = self.lip_line(P, a, b, c, col)
         return self.nose_mouth(P, N, a, col, block)
+
+    def lip_line(self, P, a, b, c, col):
+        """The black edge of the lips along the mouth, from under the nose back to the corner of the mouth (below the
+        eye's front), where the upper lip meets the lower: painted on the skin by place."""
+        rows = self.rest.S['head']
+        ta = np.array([r[0] for r in rows])
+        lip = np.array([r[1] - r[3] for r in rows])          # the upper head's lower edge (H)
+        bl = np.interp(a, ta, lip) + 0.004
+        on = sstep(0.0045, 0.0015, np.abs(b - bl)) * sstep(0.44, 0.52, a) * sstep(1.0, 0.95, a)
+        return mix(col, C(0.05, 0.045, 0.04), on)
 
     def eye(self, P, col):
         """The eye on the skin: an almond (longer along the head, its front corner lower, set obliquely), the iris,
@@ -182,10 +199,11 @@ class Coat:
             b = q @ hn + 0.22 * a
             d = np.sqrt(a * a + (b / 0.62) ** 2) / self.er
             front = sstep(-0.6, -0.2, (q @ look) / self.er)
-            iris = sstep(1.0, 0.86, d) * front
-            col = mix(col, self.pal['iris'], iris)
-            col = mix(col, C(0.03, 0.03, 0.03), sstep(0.42, 0.34, d) * iris)                     # the pupil
-            col = mix(col, C(0.05, 0.045, 0.04), sstep(1.25, 1.08, d) * sstep(0.88, 1.0, d) * front)   # the lids' rim
+            iris = sstep(0.86, 0.70, d) * front
+            col = mix(col, C(0.06, 0.05, 0.045), sstep(1.10, 0.95, d) * front)                   # the lids' dark rim
+            col = mix(col, self.pal['iris'] * 0.9, iris)
+            col = mix(col, C(0.03, 0.03, 0.03), sstep(0.42, 0.30, d) * iris)                     # the pupil
+            col = mix(col, self.pal['iris'] * 0.6, sstep(0.55, 0.85, d) * iris * 0.6)            # the iris's darker rim
         return col
 
     def nose_mouth(self, P, N, a, col, block):
@@ -201,7 +219,10 @@ class Coat:
         jn = np.array(tuple(jn))
         if block == 'jaw':
             top = N @ jn
-            col = mix(col, black, sstep(0.30, 0.50, top) * sstep(0.80, 0.62, top) * sstep(0.40, 0.50, a))
+            if self.mouth_open:
+                col = mix(col, black, sstep(0.30, 0.50, top) * sstep(0.80, 0.62, top) * sstep(0.40, 0.50, a))
+            else:
+                col = mix(col, black, sstep(0.25, 0.50, top) * sstep(0.40, 0.50, a))      # shut: the lower lip's edge
             if self.mouth_open:
                 col = mix(col, C(0.55, 0.28, 0.30), sstep(0.70, 0.90, top))          # the tongue and gums
         else:
@@ -261,7 +282,7 @@ class Coat:
         elif block == 'ear':
             base = self.ears[0] if group.endswith('_l') else self.ears[1]
             h = (P - base) @ self.hf[2] / (self.rest.S['ear'][0] * H)
-            col = mix(self.head(P, N, 'head'), self.ear(P, N), sstep(-0.05, 0.25, h))
+            col = mix(self.head(P, N, 'head'), self.ear(P, N), sstep(0.10, 0.30, h))
         elif block == 'tail':
             col = mix(trunk, self.tail(P, N, S), sstep(0.0, 0.15, S))
         else:

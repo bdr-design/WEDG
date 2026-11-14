@@ -75,7 +75,6 @@ def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
     assert len(pp) == len(pr) and all(len(a.V) == len(b.V) for a, b in zip(pp, pr))
     Vp, T, owner, PUV = flatten(pp)
     Vr = flatten(pr)[0]
-    VNr = skin.vertex_normals(Vr, T)
     bvh = BVHTree.FromPolygons([tuple(v) for v in Vp], [tuple(int(i) for i in t) for t in T])
     skin_tex = f < n_skin_faces
     idx = np.zeros(len(f), np.int64)
@@ -88,7 +87,11 @@ def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
     tw = np.clip(tw, 0, 1)
     tw /= tw.sum(1, keepdims=True)
     Pr = (Vr[T[idx]] * tw[..., None]).sum(1)
-    Nr = (VNr[T[idx]] * tw[..., None]).sum(1)
+    # the skin's own outward direction, turned from the pose back to the standing animal by the nearest piece
+    # triangle's turn (the pieces' normals would point into the hollows where the skin bridges two pieces)
+    Fr = tri_frames(Vr, T)[idx]
+    Fp = tri_frames(Vp, T)[idx]
+    Nr = np.einsum('nji,nj->ni', Fr, np.einsum('nij,nj->ni', Fp, N))
     Nr /= np.maximum(np.linalg.norm(Nr, axis=1, keepdims=True), 1e-12)
     ST = (PUV[idx] * tw[..., None]).sum(1)
     blocks = np.array([pp[o].block for o in owner[idx]], dtype=object)
@@ -103,6 +106,9 @@ def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
         Nr[sel] = N[sel]
         ST[sel] = 0.5
     coat = paint.Coat(kind, rest, mouth_open=posed.P.get('jaw', 0.0) > 5)
+    import os
+    if os.environ.get('CANID_DEBUG'):
+        np.savez(os.environ['CANID_DEBUG'], P=P, Pr=Pr, Nr=Nr, blocks=blocks.astype(str), groups=groups.astype(str), ST=ST)
     col = np.zeros((len(f), 3), np.float32)
     hgt_grad = np.zeros((len(f), 3), np.float64)
     keys = sorted(set(zip(blocks, groups)))
@@ -123,8 +129,6 @@ def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
     # the normal map: the fur's relief turned from the standing animal into the pose (by the nearest piece
     # triangle's turn), then into the skin face's tangent frame
     g = hgt_grad - Nr * (hgt_grad * Nr).sum(1, keepdims=True)
-    Fr = tri_frames(Vr, T)[idx]
-    Fp = tri_frames(Vp, T)[idx]
     gl = np.einsum('nij,nj->ni', Fr, g)                 # into the rest triangle's axes
     gp = np.einsum('nji,nj->ni', Fp, gl)                # out of the posed triangle's axes
     gp[~skin_tex] = 0

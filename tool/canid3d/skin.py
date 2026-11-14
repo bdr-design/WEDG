@@ -134,6 +134,21 @@ def surface(F, origin, vox, blur=0.9):
     F = ndimage.gaussian_filter(F, blur)
     verts, faces, _, _ = measure.marching_cubes(F, 0.0, spacing=(vox, vox, vox))
     verts = verts + origin
+    # drop the small shells: hollows left inside the body where pieces meet (never seen)
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+    n = len(verts)
+    e = np.vstack([faces[:, [0, 1]], faces[:, [1, 2]]])
+    k, lab = connected_components(coo_matrix((np.ones(len(e)), (e[:, 0], e[:, 1])), shape=(n, n)), directed=False)
+    if k > 1:
+        fl = lab[faces[:, 0]]
+        cnt = np.bincount(fl, minlength=k)
+        keep = cnt[fl] >= 0.02 * len(faces)
+        faces = faces[keep]
+        used = np.unique(faces)
+        remap = np.full(n, -1, np.int64)
+        remap[used] = np.arange(len(used))
+        verts, faces = verts[used], remap[faces]
     return verts, faces
 
 

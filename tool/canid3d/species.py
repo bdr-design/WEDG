@@ -119,8 +119,8 @@ WOLF_POSES = {
     'run': dict(drop=0.05, pitch=-4, arch=10, neck=22, head=22, ears_back=55, tail=[12, 16, 20, 24, 28],
                 legs=dict(fore_r=dict(x=0.28, meta=38, root=(0.0, 0.0)),
                           fore_l=dict(x=0.80, z=0.20, meta=60, paw=8, root=(0.05, 0.02)),
-                          hind_l=dict(x=-0.95, z=0.20, meta=-34, paw=-110, pole=(1, 0, -0.2), root=(-0.03, 0.0)),
-                          hind_r=dict(x=-0.86, z=0.10, meta=-28, paw=-100, pole=(1, 0, -0.2), root=(-0.02, 0.0)))),
+                          hind_l=dict(x=-0.95, z=0.20, meta=-53, paw=-117, pole=(1, 0, -0.2), root=(-0.03, 0.0)),
+                          hind_r=dict(x=-0.86, z=0.10, meta=-46, paw=-108, pole=(1, 0, -0.2), root=(-0.02, 0.0)))),
 }
 
 # ------------------------------------------------------------------ the guard dog (the local pariah type), a male
@@ -202,7 +202,7 @@ DOG['fore_sizes'] = {k: (w * 1.10, f * 1.08, b * 1.08) for k, (w, f, b) in DOG['
 DOG['hind_sizes'] = {k: (w * 1.10, f * 1.08, b * 1.08) for k, (w, f, b) in DOG['hind_sizes'].items()}
 DOG['shoulder'] = (0.46, 0.640, 0.078)
 DOG['hip'] = (-0.36, 0.700, 0.070)
-DOG['stance'] = dict(fore=dict(x=0.33, y=0.080, meta=15.0), hind=dict(x=-0.47, y=0.074, meta=10.0))
+DOG['stance'] = dict(fore=dict(x=0.33, y=0.080, meta=15.0), hind=dict(x=-0.44, y=0.074, meta=10.0))
 
 DOG_POSES = {
     'alert': dict(neck=55, head=8),

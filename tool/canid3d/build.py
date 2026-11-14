@@ -7,6 +7,7 @@
     python build.py OUT scale render          # all of them beside the player's figure and a calf a few days old
     python build.py OUT night render          # the wolf at night at the distance the game shows it
     python build.py OUT winter render         # the wolf's winter coat beside the summer one (a question for the owner)
+    python build.py OUT far render            # the far models from the game's camera at 15 m
 
 Blender is the `bpy` module (the project's blendenv). Nothing is downloaded: every shape and colour is made here.
 CANID_POSES=alert,stalk limits the poses built; CANID_SHOTS=side,head limits the pictures.
@@ -171,8 +172,8 @@ def measures(m, o):
     V, Fv = skin.mesh_arrays(o)
     out = []
     wx = m.points['withers'].x
-    near = V[np.abs(V[:, 0] - wx) < 25]
-    wh = near[:, 2].max()
+    tv = np.array([tuple(q) for q in m.parts['body'][0].V])        # the torso piece: the withers on the trunk itself
+    wh = tv[np.abs(tv[:, 0] - wx) < 25][:, 2].max()
     out.append(f'withers height {wh:.0f} mm (spec {H:.0f}); top of the head {V[:, 2].max():.0f} mm; lowest point {V[:, 2].min():.1f} mm')
     nose = m.points['nose']
     tb = m.points['tail_base'][0]

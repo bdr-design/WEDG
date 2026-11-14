@@ -106,18 +106,20 @@ male; a female is smaller by an unknown amount. That makes the sex a game choice
 ### Dimensions
 
 Sources:
-- **(search)** marks a figure known only from a search summary. **No page could be opened from this machine:**
+- **(search)** marks a figure known only from a search summary. **No page could be opened from my tools:**
   en.wikipedia.org was refused and I tried no other host after it, as the brief asks.
+- **(opened by the reviewer)** marks a figure the reviewer read in the page's text (it could fetch en.wikipedia's
+  and ar.wikipedia's raw text), with the citation the page gives.
 - **The model column** is measured on the file by `build.py` (the measures it prints).
 
 | What | Real | Source | Model |
 |---|---|---|---|
-| Shoulder (withers) height | 64–66 cm on average; 70 cm in one Arabic source | en.wikipedia 'Arabian wolf' *(search)*; Saudipedia الذئب العربي *(search)* | 650 mm |
-| Weight (for the record) | about 18–20 kg on average (one source 25 kg); females possibly as little as 10 kg | en.wikipedia, Saudipedia, mawdoo3 *(search)*; a forum post *(search, weak)* | volume 27.8 L. Less the summer coat's depth (about 1.5 cm over about 0.6 m² of skin, about 9 L), that is about 19 L, so about 19 kg at a body's density: inside the range |
+| Shoulder (withers) height | 64–66 cm on average; 70 cm in one Arabic source | en.wikipedia 'Arabian wolf', citing the UK Wolf Conservation Trust's leaflet *(opened by the reviewer)*; Saudipedia الذئب العربي *(search)* | 650 mm |
+| Weight (for the record) | about 20 kg on average (one source 25 kg); females possibly as little as 10 kg | en.wikipedia, citing Lopez 2004 *(opened by the reviewer)*; Saudipedia, mawdoo3 *(search)*; a forum post *(search, weak)* | volume 27.8 L. Less the summer coat's depth (about 1.5 cm over about 0.6 m² of skin, about 9 L), that is about 19 L, so about 19 kg at a body's density: inside the range |
 | Length | 114 cm, not saying what it measures; head and body not found for this subspecies | Saudipedia *(search)* | nose to tail base 992 mm; overall, nose to tail as it hangs, 1,124 mm |
 | Tail | "reaches its hocks" | Saudipedia *(search)* | 390 mm; its tip 194 mm above the ground against the hocks' 145 mm |
 | Skull length | about 200.8 mm (cranial length) | animal database pages citing older literature *(search, weak)* | head, occiput to nose, 227 mm (with the skin, nose and fur) |
-| Ears | "proportionally larger" than other wolves'; no length found | en.wikipedia *(search)* | 109 mm tall, 68 mm at the base *(a game choice)* |
+| Ears | "proportionally larger" than other wolves'; no length found | en.wikipedia, citing Mills 1945 *(opened by the reviewer)* | 109 mm tall, 68 mm at the base *(a game choice)* |
 | Chest depth, leg lengths, paw size | not found | – | chest bottom 328 mm, elbows 299 mm, hocks 145 mm; forepaw 73 × 53 mm *(game choices, from canid proportions)* |
 
 The model's own proportions are game choices from general canid anatomy:
@@ -136,7 +138,7 @@ pattern, not confirmed for *arabs*.
 | Mark | Where | From |
 |---|---|---|
 | Buffy grey ground, grizzled with black-tipped guard hairs | everywhere above | Pocock *(search)* |
-| The guard hairs thickest along the back and over the shoulders: a darker saddle, and a darker line down the spine | back | as in grey wolves; the longer back hair of the summer coat *(search)* |
+| The guard hairs thickest along the back and over the shoulders: a darker saddle, and a darker line down the spine | back | as in grey wolves; the back's hair stays long in the summer coat (Harrington & Paquet 1982, via ar.wikipedia *(opened by the reviewer)*) |
 | A faint dark bar over the shoulder, down and forward from the withers | shoulder | as in grey wolves |
 | A light tawny wash on the lower flanks; tawny legs, pale inside | flanks, legs | as in grey wolves |
 | Pale cream belly, inner thighs, chest and throat | below | as in grey wolves |
@@ -149,9 +151,12 @@ pattern, not confirmed for *arabs*.
 | Black claws | paws | – |
 
 **The fused middle toe pads** (the third and fourth toes' pads, occasionally joined behind; told in the tracks;
-en.wikipedia *(search)*; other pages say the two middle toes are fused):
-- The paws are not modelled toe by toe. At tens of metres the toes are under a pixel.
-- The toes are painted as seams on the paw's front half, with dark pads below. The fused pads are not painted.
+en.wikipedia citing Ferguson & Menache 2002 *(opened by the reviewer)*; ar.wikipedia, citing Macdonald 1992, says the two
+middle toes are fused):
+- Each paw is part of the skin: four toe bulges in front (the middle two longest), the dark claw tips painted, the
+  dark pads below; on the forelegs the carpal pad, a small bump behind the wrist.
+- The fused pads are under the foot, so they would show only in a print in the sand or a paw turned up: they are not
+  modelled or painted (a track decal could carry them later).
 
 ## The guard dog
 

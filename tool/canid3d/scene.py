@@ -239,3 +239,44 @@ def winter(B):
     yg = res[1] / 2 + cz * 1000 * pxmm
     vruler(png, pxmm, 14, yg, 1000)
     B.finish(png)
+
+
+def far(B):
+    """The far models (wolf, guard dog, stray, standing) from the game's camera at 15 m in the game's afternoon light,
+    956 x 440 as the phone shows it, with a x4 enlargement of them beside it."""
+    out = B.OUT
+    need(out, ['wolf_alert_lod1.glb', 'dog_alert_lod1.glb', 'stray_alert_lod1.glb'])
+    B.fresh()
+    for i, f in enumerate(('wolf_alert_lod1.glb', 'dog_alert_lod1.glb', 'stray_alert_lod1.glb')):
+        r = load(os.path.join(out, f))
+        place(r, (0.0, (i - 1) * 1.1, 0.0), 0)
+    st = common.Studio(out, samples=16 if B.QUICK else 64, ground_col=(0.62, 0.50, 0.36), ground_size=400.0)
+    night_light(st, moon=False)
+    dist = 15.0
+    off = V3((30, 28, 21)).normalized() * dist
+    target = V3((0.0, 0.0, 0.35))
+    st.cam_d.sensor_fit = 'VERTICAL'
+    st.cam_d.angle_y = math.radians(40)
+    st.cam.location = target + off
+    common.look(st.cam, target)
+    st.cam_d.type = 'PERSP'
+    st.sc.render.resolution_x, st.sc.render.resolution_y = (956, 440)
+    st.sc.render.resolution_percentage = 100
+    png = os.path.join(out, 'canids_far_15m.png')
+    st.sc.render.filepath = png
+    bpy.ops.render.render(write_still=True)
+    from PIL import Image, ImageDraw
+    from bpy_extras.object_utils import world_to_camera_view
+    im = Image.open(png).convert('RGB')
+    cw = world_to_camera_view(st.sc, st.cam, target)
+    cx, cy = cw.x * 956, (1 - cw.y) * 440
+    box = (int(cx - 70), int(cy - 45), int(cx + 70), int(cy + 45))
+    crop = im.crop(box).resize((560, 360), Image.NEAREST)
+    canvas = Image.new('RGB', (956 + 560 + 12, 440), (20, 20, 20))
+    canvas.paste(im, (0, 0))
+    canvas.paste(crop, (956 + 12, 40))
+    dr = ImageDraw.Draw(canvas)
+    dr.rectangle(box, outline=(200, 60, 60), width=1)
+    dr.text((956 + 12, 410), 'x4 of the red box (15 m): the far models', fill=(220, 220, 220), font=common.font(16))
+    canvas.save(png)
+    B.finish(png)
