@@ -260,26 +260,25 @@ class Presenter {
           ),
       ],
       facilities: [
-        // (the falcons' room is the hunting season's: its pin's data are in
-        // falconFacts, and the phone's farm page has no row for it yet)
+        // (the falcons' room among them: its row in the phone's farm page,
+        // T18 part B; its pin's data are in falconFacts)
         for (final f in Facility.values)
-          if (f != Facility.falconRoom)
-            FacilitySummary(
-              facility: f,
-              price: f.price,
-              has: me.farm.has(f),
-              most: f.most,
-              building: me.farm.building.where((b) => b.facility == f).length,
-              doneOn: me.farm.building
-                  .where((b) => b.facility == f)
-                  .map((b) => b.doneOn)
-                  .firstOrNull,
-              cannot: v.cannotBuild(f)?.code,
-              doneOns: [
-                for (final b in me.farm.building)
-                  if (b.facility == f) b.doneOn,
-              ],
-            ),
+          FacilitySummary(
+            facility: f,
+            price: f.price,
+            has: me.farm.has(f),
+            most: f.most,
+            building: me.farm.building.where((b) => b.facility == f).length,
+            doneOn: me.farm.building
+                .where((b) => b.facility == f)
+                .map((b) => b.doneOn)
+                .firstOrNull,
+            cannot: v.cannotBuild(f)?.code,
+            doneOns: [
+              for (final b in me.farm.building)
+                if (b.facility == f) b.doneOn,
+            ],
+          ),
       ],
       milk: MilkSummary(
         camels: [
