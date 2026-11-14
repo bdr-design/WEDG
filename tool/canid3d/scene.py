@@ -280,3 +280,31 @@ def far(B):
     dr.text((956 + 12, 410), 'x4 of the red box (15 m): the far models', fill=(220, 220, 220), font=common.font(16))
     canvas.save(png)
     B.finish(png)
+
+
+def near(B):
+    """The guard dog's head 1.5 m from the game's camera (40 degrees vertical field of view, 956 x 440, looking 28
+    degrees down), in the game's afternoon light: the nearest the game brings it, beside the player."""
+    out = B.OUT
+    need(out, ['dog_alert.glb'])
+    B.fresh()
+    r = load(os.path.join(out, 'dog_alert.glb'))
+    place(r, (0.0, 0.0, 0.0), 0)
+    st = common.Studio(out, samples=16 if B.QUICK else 64, ground_col=(0.62, 0.50, 0.36), ground_size=400.0)
+    night_light(st, moon=False)
+    bpy.context.view_layer.update()
+    head = [o for o in bpy.data.objects if o.name.startswith('head')]
+    target = head[0].matrix_world.translation.copy() if head else V3((0.35, 0, 0.6))
+    off = V3((30, 28, 21)).normalized() * 1.5
+    st.cam_d.sensor_fit = 'VERTICAL'
+    st.cam_d.angle_y = math.radians(40)
+    st.cam.location = target + off
+    common.look(st.cam, target)
+    st.cam_d.type = 'PERSP'
+    st.cam_d.clip_start = 0.05
+    st.sc.render.resolution_x, st.sc.render.resolution_y = (956, 440)
+    st.sc.render.resolution_percentage = 100
+    png = os.path.join(out, 'dog_head_1m5_game_camera.png')
+    st.sc.render.filepath = png
+    bpy.ops.render.render(write_still=True)
+    B.finish(png)
