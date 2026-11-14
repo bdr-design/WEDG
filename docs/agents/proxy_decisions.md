@@ -32,9 +32,31 @@ listed under "Waiting for the owner".
 6. **The declared sale's two ways.** Answer: both, a listing at his price and a sale to the broker now. Condition:
    a declared listing can carry no premium from the treatment (buyers value her at her natural look).
 
+## Batch 2: the birds of the hunt (task T11)
+
+1. **The rig before he has seen the birds.** Answer: hold the rig and the clips until he approves the look; put the
+   models and pictures on the session branch marked "awaiting the owner's approval"; give the freed slot to the
+   wolf and the dogs (task T12), which his words «ابي تدخل الحيوانات الان وتعرضها علي» also cover. Why: a design is
+   shown before it is adopted; a change he asks for in a body's shape would cost part of a rig again.
+2. **The saker's age.** Answer: keep the first-year bird (فرخ) as the player's first falcon; add the adult (قرناس)
+   later as a second texture on the same mesh. Why: the approved start is buying a falcon at the August auction,
+   where a farm-bred saker of the year is the real bird (about 19,000 riyals). Recorded plainly: by the trapping
+   research the bird the player traps and sells is a peregrine, not this saker.
+3. **Which falcon next.** Answer: the peregrine of the year (الشاهين البحري فرخ), started only after he approves the
+   saker's look. Why: he chose falcons as a second business, trapped by the player, and the research says the
+   trapping auction sells only this bird. The gyr (الجير) is later, not dropped: it is a real مزاين class. His
+   reading of the business itself is still to be confirmed when the trapping design is shown.
+4. **The falcon's texture size.** Not decided (realism against memory with no measurement from his phone). Kept at
+   512 px, as built, following his own answer for the rifle: «خلها لين نجرب».
+5. **The two partly-closed gaps (the bill's base, the houbara's crest).** Answer: if the reviewer says they would
+   show at the game's viewing distance, close them before he sees the birds; if they are gaps that do not mislead,
+   show the birds with the gaps written beside the pictures in plain words.
+
 ## Waiting for the owner
 
 - Batch 1, item 1's alternative reading of decision 13 (above).
 - Batch 1, item 3: choosing the five offspring himself (needs a design).
 - Batch 1, item 4: الحراج's four new views (design/ui/phone_haraj_vet.jpg on branch wip/t10).
 - Batch 1, item 5: whether a buyer who knew may sell declared.
+- Batch 2: the birds' look (his eye: design/birds on the session branch once the reviewer confirms); the 1024 px
+  texture for the falcon on the fist, after he tries 512 on his phone.
