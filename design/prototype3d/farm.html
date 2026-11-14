@@ -1790,7 +1790,7 @@ Promise.all(['lod0.json', 'lod1.json', 'lod2.json'].map(loadLod)).then((T) => {
   // the game's rules engine, in its worker (docs/plan-gameplay.md, G2), started once the yard is up so it never competes
   // with the loading; the phone's الوايت and العلف and its home screen show the game from it and send it the player's
   // orders (G3). Without its file (not built) the yard goes on without it.
-  import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => { phone.setGame(snap); setGame(snap); } })).then((e) => { window.marahEngine = e; phone.setEngine(e); if (e.snapshot) { phone.setGame(e.snapshot); setGame(e.snapshot); } }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); });      // (imported here, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
+  import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => { phone.setGame(snap); setGame(snap); }, onAway: (m) => phone.onAway(m) })).then((e) => { window.marahEngine = e; phone.setEngine(e); if (e.snapshot) { phone.setGame(e.snapshot); setGame(e.snapshot); } }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); });      // (imported here, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
 }).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
 
 // ------------------------------------------------------------ vehicles built from the owner's photos

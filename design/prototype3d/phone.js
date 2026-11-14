@@ -216,6 +216,54 @@ const CSS = `
   .msg.them { align-self: flex-start; background: #e9e9eb; border-end-start-radius: 5px; }
   .msg.me { align-self: flex-end; background: var(--acc); color: #fff; border-end-end-radius: 5px; }
   .row .act .btn.pr { padding-inline: 10px; font-size: 12.5px; }
+  /* ---------- the rush and التقويم (task T15: design/ui/phone_rush.jpg, phone_calendar.jpg, awaiting the owner's approval) ---------- */
+  .row.r3 { grid-template-columns: 36px 1fr auto; }
+  .row.r2 { grid-template-columns: 36px 1fr; }
+  .row small.rush { grid-column: 2; }
+  .row small.now, .note.now { color: var(--acc); font-weight: 700; }
+  .lnk { grid-column: 2; justify-self: start; color: var(--acc); font: 700 11.5px/1.35 "IBM Plex Sans Arabic", sans-serif; padding: 2px 0; text-align: start; }
+  .lnk.sure { color: var(--red); }
+  .lnk[disabled] { color: #a5a5ab; cursor: default; }
+  .row .act .btn.sm { height: 34px; padding-inline: 12px; font-size: 12.5px; }
+  .row .lead.bad { background: #fde6e4; color: var(--red); }
+  .row .lead.fest { background: #fbefd2; color: #a8730c; }
+  .row .lead.milk { background: #e6eef8; color: #2f7fcf; }
+  .row .lead.sea { background: #f1f1f4; color: #55555b; }
+  .row .chev { grid-row: span 2; color: #c4c4c9; } .row .chev svg { width: 16px; height: 16px; }
+  .sw { width: 46px; height: 28px; border-radius: 14px; background: #e3e3e8; position: relative; flex: none; }
+  .sw i { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .sw.on { background: var(--acc); } .sw.on i { right: auto; left: 2px; }
+  .yr { background: var(--card); border-radius: 16px; padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .yr .m { display: grid; grid-template-columns: 50px 1fr; align-items: center; column-gap: 8px; height: 17px; }
+  .yr .m > span { font-size: 11px; font-weight: 600; color: var(--ink2); }
+  .yr .m > span.now { color: var(--ink); font-weight: 700; }
+  .yr .t { position: relative; height: 12px; border-radius: 3px; background: #ececf0; overflow: hidden; }
+  .yr .t i { position: absolute; top: 0; bottom: 0; }
+  .yr .t i.past { background: #f7f7f9; }
+  .yr .t i.brd { top: auto; height: 3px; background: #57b88a; }
+  .yr .t i.reg { background: #f6e3b8; }
+  .yr .t i.fest { background: #d9a033; top: 2px; bottom: 2px; border-radius: 2px; }
+  .yr .t i.me { width: 6px; height: 6px; top: 3px; border-radius: 3px; background: var(--red); margin-right: -3px; }
+  .yr .t i.milk { background: #2f7fcf; }
+  .yr .t i.today { width: 2px; background: var(--ink); margin-right: -1px; top: -1px; bottom: -1px; }
+  .key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--ink2); padding-inline: 4px; margin-top: -4px; }
+  .key span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .key i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; }
+  .cal { background: var(--card); border-radius: 16px; padding: 10px 10px 8px; display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; text-align: center; }
+  .cal .wd { font-size: 10.5px; font-weight: 600; color: var(--ink2); }
+  .cal .d { height: 30px; display: grid; place-items: center; font: 600 13px/1 "Alexandria", sans-serif; border-radius: 9px; position: relative; color: var(--ink); }
+  .cal .d.past { color: #c4c4c9; cursor: default; }
+  .cal .d.fest { background: #fbefd2; color: #7a530a; }
+  .cal .d.sel { background: var(--acc); color: #fff; }
+  .cal .d.brd::after { content: ""; position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 2px; background: #57b88a; }
+  .cal .d.sel::after { background: #fff; }
+  .span { background: var(--card); border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .span b { font: 700 15px/1.3 "Alexandria", sans-serif; }
+  .span small { font-size: 12px; color: var(--ink2); }
+  .stops { font-size: 12px; line-height: 1.55; background: var(--card); border-radius: 16px; padding: 10px 12px; color: var(--ink); }
+  .calnav { display: flex; justify-content: space-between; align-items: center; }
+  .calnav button { color: var(--acc); font-weight: 700; font-size: 13px; padding: 4px 6px; }
+  .calnav button[disabled] { color: #c4c4c9; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }      /* (what is said after an order, for a screen reader: outside the screen the redraws replace) */
 `;
 
@@ -253,6 +301,14 @@ const I = {
     star: '<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8z"/>',
     chev: '<path d="M15 6l-6 6 6 6"/>',
     bank: '<path d="M3.5 9.5 12 4l8.5 5.5"/><path d="M5.5 10v7.5M10 10v7.5M14 10v7.5M18.5 10v7.5"/><path d="M3.5 20h17"/>',
+    // the rush and التقويم (T15)
+    cal: '<rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/><path d="M8 14h2M14 14h2M8 17h2"/>',
+    fast: '<path d="M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4"/><circle cx="12" cy="12" r="4.5"/>',
+    heart: '<path d="M12 19.5s-7-4.3-7-9.5a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.2-7 9.5-7 9.5z"/>',
+    sun: '<circle cx="12" cy="12" r="3.8"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
+    flag: '<path d="M5.5 21V4M5.5 4.5h11l-2 3.5 2 3.5h-11"/>',
+    stop: '<rect x="7" y="7" width="10" height="10" rx="2"/>',
+    repeat: '<path d="M4 9.5a6 6 0 0 1 10.5-4l2 2M20 14.5a6 6 0 0 1-10.5 4l-2-2"/><path d="M16.5 3.5v4h-4M7.5 20.5v-4h4"/>',
   };
 const svg = (k) => `<svg class="i" viewBox="0 0 24 24">${I[k]}</svg>`;
 // the status bar: the time is the player's own clock (kept to the minute while the phone is out)
@@ -260,7 +316,7 @@ const clockText = () => { const d = new Date(); return `${d.getHours() % 12 || 1
 const sbar = () => `<div class="sbar"><span class="clk">${clockText()}</span><span class="r"><svg width="16" height="11" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35"/></svg><span class="bat"></span></span></div>`;
 // the top bar: رجوع goes home, or to the screen [to] (الحراج's pages, one inside another)
 const nav = (end = '', to = '') => `<div class="nav"><button class="back"${to ? ` data-go="${to}"` : ''}>${svg('back')}رجوع</button>${end ? `<span class="end">${end}</span>` : ''}</div>`;
-const APP_GO = { water: 'water', feed: 'feed', milk: 'milk', build: 'build', haraj: 'haraj', bank: 'bank', cup: 'mazayen', talk: 'chats' };      // the apps that open a screen
+const APP_GO = { water: 'water', feed: 'feed', milk: 'milk', build: 'build', haraj: 'haraj', bank: 'bank', cup: 'mazayen', talk: 'chats', cal: 'cal' };      // the apps that open a screen
 const badgeSaid = (extra, k) => { const m = extra.match(/class="bd">(\d+)</); return !m ? '' : k === 'haraj' ? `، ${count(Number(m[1]), 'bid')}` : k === 'cup' ? `، ${count(Number(m[1]), 'news')}` : k === 'talk' ? `، ${count(Number(m[1]), 'message')}` : k === 'water' ? '، الماء يخلص' : m[1] === '1' ? '، صنف يخلص' : '، الشعير والبرسيم يخلصون'; };
 const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${APP_GO[k]}" role="button" tabindex="0" aria-label="${n}${badgeSaid(extra, k)}"` : ''}>${extra}<span class="ic">${svg(k)}</span><span>${n}</span></div>`;      // (named by the app and its badge)
 
@@ -298,6 +354,7 @@ const NOUN = {
   fest: ['مهرجان واحد', 'مهرجانين', 'مهرجانات', 'مهرجان'],
   edition: ['دورة وحدة', 'دورتين', 'دورات', 'دورة'],
   bull: ['فحل واحد', 'فحلين', 'فحول', 'فحل'],
+  rush: ['استعجال واحد', 'استعجالين', 'استعجالات', 'استعجال'],   // (البنك: what was hurried, T15)
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const days = (n) => count(n, 'day');
@@ -382,6 +439,19 @@ function refusal(r, command) {
   const unit = water ? 'tanker' : command.supply === 'barley' ? 'bag' : 'bale';
   if (code === 'inDebt') return debtLine();
   if (code === 'accountFull') return accountFullLine();
+  // the rush (T15): cash only; a stale hour; a day the herd was not short
+  if (code === 'priceChanged') return 'السعر تغيّر مع الوقت: شوفه مرة ثانية.';
+  if (code === 'notShortToday') return p.supply === 'water' ? 'حلالك شرب كفايته اليوم: الطلبة العادية توصل قبل شربه بكرة.' : 'حلالك شبع اليوم: الطلبة العادية توصل قبل علفته بكرة.';
+  if (code === 'nothingToRush') return 'ما فيه شي بالطريق تستعجله.';
+  if (code === 'contractState') return 'العقد تغيّر: شوفه مرة ثانية.';
+  if (/^rush|^setStanding|Vet/.test(command.type || '') || command.now) {
+    if (code === 'insufficientFunds') return `رصيدك ما يكفي: تبي ${n0(p.needed ?? 0)} ريال من رصيدك.`;
+    return 'جرّب مرة ثانية.';
+  }
+  if (command.type === 'treat') {
+    if (code === 'notSick') return 'ما عادت مريضة.';
+    return 'جرّب مرة ثانية.';
+  }
   if (command.type === 'buyListing' || command.type === 'bargain') {
     if (code === 'insufficientFunds') return `رصيدك ما يكفي: تبي ${n0(p.needed ?? 0)} ريال مع النقل.`;
     if (code === 'farmFull') return 'عزبتك مليانة: ابنِ شبك من العزبة.';
@@ -446,8 +516,18 @@ function waterScreen() {
     if (t.room > 0 && acc && acc.short > 0) line = `${n0(t.price)} ريال · ${accountLine(acc.owed)}`;
     else if (t.room > 0 && !acc) line = `${n0(t.price)} ريال · ${accountFullLine()}`;
     const can = t.room > 0 && acc != null;
-    return `<div class="row"><span class="lead">${svg('water')}</span><b>${name}</b><span class="act"><button class="btn ${can ? 'pri' : ''}" data-act="tanker" data-t="${t.tanker}" aria-label="اطلب ${name}" ${can ? '' : 'disabled'}>اطلب</button></span><small>${line}</small></div>`;
+    // a short day: the tanker can come now and the herd drinks today (the rush at ordering, cash only)
+    const nowFee = (RU().tankerNow || {})[t.tanker];
+    const now = can && nowFee != null && G.cash >= t.price + nowFee ? nowLink(`tankerNow:${t.tanker}`, `data-act="tankerNow" data-t="${t.tanker}" aria-label="اطلب ${name} يوصل الحين بـ ${n0(t.price + nowFee)} ريال"`, `أو يوصل الحين ويشربون اليوم بـ ${n0(t.price + nowFee)} ريال`, `اضغط مرة ثانية ويوصل الحين بـ ${n0(t.price + nowFee)} ريال`) : '';
+    return `<div class="row"><span class="lead">${svg('water')}</span><b>${name}</b><span class="act"><button class="btn ${can ? 'pri' : ''}" data-act="tanker" data-t="${t.tanker}" aria-label="اطلب ${name}" ${can ? '' : 'disabled'}>اطلب</button></span><small>${line}</small>${now}</div>`;
   };
+  // on its way: rushed only on a day the herd went short (it then drinks today); else the ordinary one is in time
+  const rw = RU().rushWater;
+  const wayRow = !coming ? '' : rw != null
+    ? `<div class="sec">بالطريق</div><div class="group way"><div class="row r3"><span class="lead">${svg('truck')}</span><b>${n0(coming)} لتر</b>${rushBtn('rushWater', 'data-act="rushWater"', `استعجل الوايت بـ ${n0(rw)} ريال`, G.cash >= rw)}<small>${G.cash >= rw ? (HJ.sure === 'rushWater' ? `يوصل الحين ويشربون، وتدفع ${n0(rw)} ريال زيادة` : `يوصل بكرة · الحين بـ ${n0(rw)} ريال زيادة`) : `الاستعجال ${n0(rw)} ريال، ورصيدك ${n0(G.cash)}`}</small></div></div>
+      <div class="note">حلالك ما شرب كفايته اليوم. لو استعجلته يوصل الحين ويشربون، وما ينحسب اليوم عطش.${coming > f.tankL - have ? ' ويعبّي الخزان والباقي يرجع.' : ''}</div>`
+    : `<div class="sec">بالطريق</div><div class="group way"><div class="row"><span class="lead">${svg('truck')}</span><b>${n0(coming)} لتر</b><small>الطلبة العادية توصل قبل شرب حلالك بكرة</small></div></div>
+      ${coming > f.tankL - have ? '<div class="note">يعبّي الخزان، والباقي يرجع.</div>' : ''}`;
   const bar = `<div class="bar${f.dryDays > 0 ? ' low' : ''}"><i style="width:${pct(have).toFixed(1)}%"></i>${coming ? `<i class="in" style="width:${(pct(have + coming) - pct(have)).toFixed(1)}%"></i>` : ''}</div>`;
   return `<div class="body">${nav()}<div class="title">الوايت</div>${errCard()}${warn}
     <div class="tank"><small>خزان العزبة · ${n0(f.tankL)} لتر</small><div class="v"><b class="fit">${n0(have)}</b><span>لتر</span></div>
@@ -455,7 +535,8 @@ function waterScreen() {
       <div class="ln">${lasts ? `يكفي ${days(lasts)} · ` : ''}يشربون ${n0(need)} لتر باليوم</div></div>
     <div class="sec">اطلب وايت</div>
     <div class="group">${f.tankers.map(row).join('')}</div>
-    <div class="note">${coming ? `بالطريق: ${n0(coming)} لتر، يوصل بكرة${coming > f.tankL - have ? ' ويعبّي الخزان، والباقي يرجع' : ''}.` : 'بالطريق: ما فيه وايت.'}</div></div>`;
+    ${coming ? wayRow : '<div class="note">بالطريق: ما فيه وايت.</div>'}
+    ${standingRow('water', 'يجيك وايت بنفسه', 'لما يبقى بالخزان 3 أيام، الوايت اللي يدخله، وتدفعه مثل أي طلب (على الحساب لو رصيدك ما كفى)')}</div>`;
 }
 
 // a feed's need over [weeks], less what is in store and on its way, in whole units
@@ -525,13 +606,24 @@ function feedScreen() {
     <div class="seg" role="group" aria-label="العليقة">${R.map((r) => `<span data-act="plan" data-p="${r.plan}" role="button" tabindex="0" aria-pressed="${r.plan === f.feedPlan}" ${r.plan === f.feedPlan ? 'class="on"' : ''}>${plans[r.plan]}</span>`).join('')}</div>
     <div class="cmp">${R.map((r) => `<span><b>${n0(r.costPerDay)} ريال</b>باليوم<br>حالة لين ${r.conditionTarget}</span>`).join('')}</div>
     <div class="note">${plans[cur.plan]} ${cur.asFedKg.toFixed(1)} كجم علف للراس الكبير باليوم (${cur.dryMatterKg} كجم مادة جافة)، <span class="ltr">${Math.round(cur.barleyShare * 100)}%</span> منها شعير. الحالة توصل لين حدها مع رعاية زينة.</div>`;
-  const way = ordered ? `<div class="sec">بالطريق</div><div class="group way">${[[b, 'شعير', 'bag'], [a, 'برسيم', 'bale']].filter(([x]) => x.onTheWayAmount).map(([x, nm, k]) => `<div class="row"><span class="lead">${svg('truck')}</span><b>${nm} · ${count(x.onTheWay, k)}</b><small>${n0(x.onTheWayAmount)} كجم · ${n0(x.onTheWay * x.unitPrice)} ريال · يوصل بكرة</small></div>`).join('')}</div>` : '';
+  // on its way: rushed (one trip for all of it) only on a day the herd went short of feed; else the ordinary delivery
+  // comes before the herd eats tomorrow
+  const rf = RU().rushFeed;
+  const wayRows = [[b, 'شعير', 'bag'], [a, 'برسيم', 'bale']].filter(([x]) => x.onTheWayAmount).map(([x, nm, k]) => `<div class="row"><span class="lead">${svg('truck')}</span><b>${nm} · ${count(x.onTheWay, k)}</b><small>${n0(x.onTheWayAmount)} كجم · ${n0(x.onTheWay * x.unitPrice)} ريال · ${rf != null ? 'يوصل بكرة' : 'يوصل قبل علفة حلالك بكرة'}</small></div>`).join('');
+  const rushRow = rf == null ? '' : `<div class="row r3"><span class="lead">${svg('fast')}</span><b>استعجل العلف</b>${rushBtn('rushFeed', 'data-act="rushFeed"', `استعجل العلف بـ ${n0(rf)} ريال`, G.cash >= rf)}<small>${G.cash >= rf ? (HJ.sure === 'rushFeed' ? `يوصل الحين ويشبعون، وتدفع ${n0(rf)} ريال زيادة` : `يوصل الحين كله بـ ${n0(rf)} ريال زيادة`) : `الاستعجال ${n0(rf)} ريال، ورصيدك ${n0(G.cash)}`}</small></div>`;
+  const way = ordered ? `<div class="sec">بالطريق</div><div class="group way">${wayRows}${rushRow}</div>${rf != null ? '<div class="note">حلالك ما شبع اليوم. لو استعجلته يوصل الحين ويشبعون، وما تنزل حالتهم اليوم.</div>' : ''}` : '';
   let order;
   if (usedKg > room) order = `<div class="order"><span><small>${ST.the} ${ST.holds} ${n0(Math.max(0, room))} كجم بعد</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn" disabled>اطلب</button></div>`;
-  else if (total > 0) order = `<div class="order"><span><small>المجموع · يوصل بكرة ${ST.to}</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>${acc.short > 0 ? `<div class="note">${accountLine(acc.owed)}.</div>` : ''}`;
+  else if (total > 0) {
+    // a short day: ordered and brought now (one trip; half the order again, at most the cap), the herd fed today
+    const R = RU(), fee = R.feedShort ? Math.min(R.feedCap ?? 300, Math.round(total * (R.feedShare ?? 0.5))) : null;
+    const now = fee != null && G.cash >= fee ? nowLink('feedNow', `data-act="feedNow" aria-label="اطلبها توصل الحين بـ ${n0(fee)} ريال زيادة"`, `أو اطلبها توصل الحين بـ ${n0(fee)} ريال زيادة: يشبعون اليوم`, `اضغط مرة ثانية وتوصل الحين بـ ${n0(fee)} ريال زيادة`) : '';
+    order = `<div class="order"><span><small>المجموع · يوصل بكرة ${ST.to}</small><span class="t num">${n0(total)} <small>ريال</small></span></span><button class="btn pri" data-act="feed">اطلب</button></div>${now}${acc.short > 0 ? `<div class="note">${accountLine(acc.owed)}.</div>` : ''}`;
+  }
   else order = `<div class="note">${suggest(b) + suggest(a) > 0 || ordered ? 'زد الكمية ويطلع لك المجموع وزر الطلب.' : `${ST.the} ${ST.lasts} أكثر من 3 أسابيع.`}</div>`;
   return `<div class="body">${nav()}<div class="title">العلف</div>${errCard()}${warn}
-    ${store}${ration}${way}${heading(ordered)}${rows(canUp)}${order}</div>`;
+    ${store}${ration}${way}${heading(ordered)}${rows(canUp)}${order}
+    ${standingRow('feed', 'يجيك العلف بنفسه', 'لما يبقى بالمخزن 3 أيام، شعير وبرسيم على قد العليقة لين يمتلي، وتدفعه مثل أي طلب (على الحساب لو رصيدك ما كفى)')}</div>`;
 }
 
 // days from today to an engine date ('YYYY-MM-DD')
@@ -583,6 +675,49 @@ function milkScreen() {
 }
 
 // العزبة (approved 13 Nov 2026: design/ui/phone_start_build.jpg): what the farm has, and the facilities it can build
+// ---------------------------------------------------------------- the rush (T15: design/ui/phone_rush.jpg, awaiting
+// the owner's approval). What money can hurry finishes now for more, from cash only, asked twice (it cannot be
+// undone): a facility being built, a camel on the truck, and water or feed only on a day the herd went short (the
+// rushed delivery makes good today's loss; on other days the ordinary delivery is in time and the row says so). The
+// engine prices it (the snapshot's rush), except the truck's, which falls with the game's hour (its shares given).
+const RU = () => (G && G.rush) || {};
+// the game's hour by the engine's clock (sent with each snapshot) carried on by the wall clock: 7 game minutes a real
+// minute. The engine checks it again (this hour or the one before; a stale one is refused and the row drawn again)
+const gameHour = () => { if (!G || G.minute == null) return 0; const m = G.minute + (Date.now() - (G.minuteAt || Date.now())) * 7 / 60000; return Math.max(0, Math.min(23, Math.floor(m / 60))); };
+const truckFee = (trucking, hour = gameHour()) => { const R = RU(); return Math.round(trucking * (R.truckShare ?? 0.5) * Math.max(R.truckFloor ?? 0.2, (24 - hour) / 24) / 5) * 5; };
+// a rush's button on a row: «استعجل», then red «أكّد» for its second tap
+const rushBtn = (key, attrs, label, can) => { const sure = HJ.sure === key; return `<span class="act"><button class="btn sm ${!can ? '' : sure ? 'sure' : 'ghost'}" ${attrs} aria-label="${sure ? 'أكّد ' : ''}${label}" ${can ? '' : 'disabled'}>${sure ? 'أكّد' : 'استعجل'}</button></span>`; };
+// the rush at ordering: a line under the row's own («أو ابنه الحين بـ …»), asked twice too (where it sits is the
+// owner's eye: drawn here as the design has it)
+const nowLink = (key, attrs, text, sureText) => { const sure = HJ.sure === key; return `<button class="lnk${sure ? ' sure' : ''}" ${attrs}>${sure ? sureText : text}</button>`; };
+// a camel on the truck by the day's purchase (the yard leaves camels on the truck out)
+const onTruck = () => (RU().trucks || []).map((t) => ({ ...t, male: t.sex === 'male' }));
+// the vet's quote for a sick camel, and the contract (T15: design/ui/phone_calendar.jpg's العزبة)
+const sinceSick = (x) => { const d = G.today - (x.sickSince ?? G.today); const f = x.sex !== 'male'; return d <= 0 ? (f ? 'مريضة من اليوم' : 'مريض من اليوم') : `${f ? 'مريضة' : 'مريض'} من ${days(d)}`; };
+const sickRow = (x) => {
+  const f = x.sex !== 'male', acc = onAccount(x.quote);
+  const line = [sinceSick(x), `البيطري ${n0(x.quote)} ريال`, `${f ? 'تطيب' : 'يطيب'} بـ ${x.recoverMin} إلى ${days(x.recoverMax)}`].join(' · ');
+  return `<div class="row r3"><span class="lead bad">${svg('heart')}</span><b>${esc(x.name)} · ${esc(x.illnessName)}</b><span class="act"><button class="btn sm ${acc ? 'pri' : ''}" data-act="treat" data-id="${esc(x.camel)}" aria-label="${f ? 'عالج' : 'عالج'} ${esc(x.name)} بـ ${n0(x.quote)} ريال" ${acc ? '' : 'disabled'}>${f ? 'عالجها' : 'عالجه'}</button></span><small>${line}</small>${acc && acc.short > 0 ? `<small class="rush">${accountLine(acc.owed)}</small>` : !acc ? `<small class="rush">${accountFullLine()}</small>` : ''}</div>`;
+};
+function vetRows() {
+  const v = RU().vet;
+  if (!v) return '';
+  if (v.on) {
+    const ends = v.endsOn != null;
+    return `<div class="row r3"><span class="lead">${svg('heart')}</span><b>عقد البيطري</b>${ends ? '' : rushLike('vetCancel', 'data-act="vetCancel"', 'ألغه', 'ألغ عقد البيطري', true)}<small>${ends ? `ينتهي ${dShortAt(v.endsOn)}، وما يرجع شي من رسومه` : `عندك عقد: ${n0(v.monthly)} ريال بالشهر، ويعالج اللي يمرض بيومه`}</small></div>`;
+  }
+  const can = G.cash >= v.part;
+  return `<div class="row r3"><span class="lead">${svg('heart')}</span><b>عقد البيطري</b>${rushLike('vetSign', 'data-act="vetSign"', 'اتعاقد', 'اتعاقد مع البيطري', can)}<small>${n0(v.monthly)} ريال بالشهر (1,000 و20 للراس)، ويعالج اللي يمرض بيومه بسعر العلاج</small><small class="rush">${can ? `هالشهر ${n0(v.part)} ريال من رصيدك` : `يبي ${n0(v.part)} ريال من رصيدك، ورصيدك ما يكفي`}</small></div>`;
+}
+// a two-tap button with its own word (the contract)
+const rushLike = (key, attrs, word, label, can) => { const sure = HJ.sure === key; return `<span class="act"><button class="btn sm ${!can ? '' : sure ? 'sure' : 'ghost'}" ${attrs} aria-label="${sure ? 'أكّد ' : ''}${label}" ${can ? '' : 'disabled'}>${sure ? 'أكّد' : word}</button></span>`; };
+const dShortAt = (day) => { const d = new Date(Date.parse(G.date + 'T00:00:00Z') + (day - G.today) * 864e5); return `${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`; };
+// a standing order's switch (الوايت, العلف): one tap, it can be turned off again
+const standingRow = (kind, title, line) => {
+  const on = (RU().standing || []).includes(kind);
+  return `<div class="sec">طلب ثابت</div><div class="group"><div class="row r3"><span class="lead">${svg('repeat')}</span><b>${title}</b><span class="act"><span class="sw${on ? ' on' : ''}" data-act="standing" data-k="${kind}" role="switch" tabindex="0" aria-checked="${on}" aria-label="${title}"><i></i></span></span><small>${line}</small></div></div>`;
+};
+
 const FAC = {
   pen: { icon: 'pen', what: 'يشيل 10 روس زيادة' },
   tank: { name: 'خزان 30 طن', icon: 'tank', what: 'يشيل وايت 19 طن' },
@@ -609,23 +744,39 @@ function buildScreen() {
     const out = [];
     for (let k = 0; k < x.building; k++) {      // (each one being built, by its own name: «شبك ثالث … ينبني» named the next pen, the review)
       const soon = daysTo(x.doneOns?.[k] ?? x.doneOn);      // (each its own day: three days from its own order)
-      out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${nameOf(x.has + k)}</b><small>ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}</small></div>`);
+      const approved = `ينبني، يخلص ${soon <= 1 ? 'بكرة' : `بعد ${days(soon)}`}`;
+      // the earliest of its kind can be hurried (the engine's price), its approved line kept and the rush after it
+      const rb = k === 0 ? (RU().builds || []).find((y) => y.facility === x.facility) : null;
+      if (!rb) { out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${nameOf(x.has + k)}</b><small>${approved}</small></div>`); continue; }
+      const key = `rushBuild:${x.facility}`, can = G.cash >= rb.fee, name = nameOf(x.has + k);
+      const extra = !can ? `الاستعجال ${n0(rb.fee)} ريال، ورصيدك ${n0(G.cash)}` : HJ.sure === key ? `يخلص الحين، وتدفع ${n0(rb.fee)} ريال زيادة` : `الحين بـ ${n0(rb.fee)} ريال زيادة`;
+      out.push(`<div class="row r3"><span class="lead">${svg(d.icon)}</span><b>${name}</b>${rushBtn(key, `data-act="rushBuild" data-f="${x.facility}"`, `استعجل ${name} بـ ${n0(rb.fee)} ريال`, can)}<small>${approved}</small><small class="rush${HJ.sure === key ? ' now' : ''}">${extra}</small></div>`);
     }
     if (made < x.most) {
       const debt = x.cannot === 'inDebt', poor = debt || x.cannot === 'insufficientFunds', name = nameOf(made);
       const line = [d.what, `${n0(x.price)} ريال`, debt ? `عليك دين ${n0(-G.cash)} ريال` : poor ? 'رصيدك ما يكفي' : ''].filter(Boolean).join(' · ');
-      out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${name}</b><span class="act"><button class="btn ${poor ? '' : 'pri'}" data-act="build" data-f="${x.facility}" aria-label="ابنِ ${name}" ${poor ? 'disabled' : ''}>ابنه</button></span><small>${line}</small></div>`);
+      // at ordering: built now for more, where the money covers it
+      const fee = (RU().buildNow || {})[x.facility], all = x.price + (fee ?? 0);
+      const now = !poor && fee != null && G.cash >= all ? nowLink(`buildNow:${x.facility}`, `data-act="buildNow" data-f="${x.facility}" aria-label="ابنِ ${name} الحين بـ ${n0(all)} ريال"`, `أو ابنه الحين بـ ${n0(all)} ريال`, `اضغط مرة ثانية ويخلص الحين بـ ${n0(all)} ريال`) : '';
+      out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${name}</b><span class="act"><button class="btn ${poor ? '' : 'pri'}" data-act="build" data-f="${x.facility}" aria-label="ابنِ ${name}" ${poor ? 'disabled' : ''}>ابنه</button></span><small>${line}</small>${now}</div>`);
     } else if (!x.building) {
       out.push(`<div class="row"><span class="lead">${svg(d.icon)}</span><b>${x.facility === 'pen' ? 'الشبوك' : d.name}</b><small>${x.facility === 'pen' ? 'بنيت الشبوك كلها' : 'مبني'}</small></div>`);
     }
     return out.join('');
   };
+  // the sick, with the vet's price (the phone's first treatment: T15), and the vet's contract
+  const sick = RU().sick || [];
+  const vet = sick.length ? `<div class="sec">يبي علاج</div><div class="group">${sick.map(sickRow).join('')}</div>
+    <div class="note">${sick.length === 1 ? `لو ${sick[0].sex !== 'male' ? 'تركتها' : 'تركته'} بعد ${days(sick[0].graceDays)} ممكن ${sick[0].sex !== 'male' ? 'تموت' : 'يموت'}.` : `لو تركتهم بعد ${days(sick[0].graceDays)} ممكن يموتون.`}</div>` : '';
+  const building = (RU().builds || []).length > 0;
   return `<div class="body">${nav()}<div class="title">العزبة</div>${errCard()}
-    ${have}
+    ${vet}${have}
     <div class="sec">ابنِ ووسّع</div>
     <div class="group">${f.facilities.map(row).join('')}</div>
     ${G.cash < 0 ? `<div class="note">${debtLine()}</div>` : ''}
-    <div class="note">اللي تبنيه يخلص بعد 3 أيام ويطلع مكانه في العزبة.</div></div>`;
+    <div class="note">اللي تبنيه يخلص بعد 3 أيام ويطلع مكانه في العزبة.${building ? ' ولو استعجلته يخلص الحين: تدفع نص سعره لو باقي له 3 أيام، وأقل كل ما قرب يخلص.' : ' ولو تبيه الحين تدفع نص سعره زيادة.'}</div>
+    <div class="sec">البيطري</div><div class="group">${vetRows()}</div>
+    <div class="note">الاستعجال من رصيدك بس، ما ينكتب على حساب التاجر: الحساب للعلف والماء والبيطري.</div></div>`;
 }
 
 // ---------------------------------------------------------------- الحراج (approved 13 Nov 2026: design/ui/phone_haraj.jpg)
@@ -673,7 +824,13 @@ const tabs = () => {
 function harajScreen() {
   if (!G) return `<div class="body">${nav()}<div class="title">الحراج</div>${waiting()}</div>`;
   const mine = HJ.tab === 'mine';
-  return `<div class="body">${nav()}<div class="title">الحراج</div>${tabs()}${msgCard()}${errCard()}${mine ? myListings() : marketList()}</div>${mine ? '' : `<button class="sell" data-go="pick">${svg('plus')}اعرض حلالك للبيع</button>`}`;
+  // a camel bought today, on the truck: brought now by a second driver, for less as the day goes
+  const trucks = onTruck().map((t) => {
+    const fee = truckFee(t.trucking), key = `rushTruck:${t.camel}`, can = G.cash >= fee, f = !t.male;
+    return `<div class="row r3"><span class="lead">${svg('truck')}</span><b>${esc(t.name)} على اللوري</b>${rushBtn(key, `data-act="rushTruck" data-id="${esc(t.camel)}"`, `استعجل ${esc(t.name)} بـ ${n0(fee)} ريال`, can)}<small>${can ? (HJ.sure === key ? `${f ? 'توصل' : 'يوصل'} الحين، وتدفع ${n0(fee)} ريال زيادة` : `${f ? 'توصل' : 'يوصل'} الحين بسواق ثاني، بـ ${n0(fee)} ريال زيادة`) : `الاستعجال ${n0(fee)} ريال، ورصيدك ${n0(G.cash)}`}</small></div>`;
+  }).join('');
+  const truck = trucks ? `<div class="group way">${trucks}</div><div class="note">كل ما مضى من اليوم يرخص الاستعجال، لأن الباقي على وصولها أقل.</div>` : '';
+  return `<div class="body">${nav()}<div class="title">الحراج</div>${tabs()}${msgCard()}${errCard()}${mine ? '' : truck}${mine ? myListings() : marketList()}</div>${mine ? '' : `<button class="sell" data-go="pick">${svg('plus')}اعرض حلالك للبيع</button>`}`;
 }
 function marketList() {
   const list = G.market.slice().sort((a, b) => a.askPrice - b.askPrice || (a.id < b.id ? -1 : 1));
@@ -717,6 +874,7 @@ function listingScreen() {
       <div class="kind"><span>${her(c, 'نقلها', 'نقله')} لعزبتك</span><span class="d">${n0(l.transport)} ريال</span></div>
       <div class="kind"><span><b>المجموع</b></span><span class="d"><b>${n0(total)} ريال</b></span></div></div>
     <button class="btn ${canBuy ? 'pri' : ''} wide" data-act="buy" ${canBuy ? '' : 'disabled'}>${her(c, 'اشترها', 'اشتره')} بـ ${n0(l.askPrice)}</button>
+    ${canBuy && G.cash >= total + truckFee(l.transport) ? nowLink(`buyNow:${l.id}`, `data-act="buyNow" style="align-self:center" aria-label="${her(c, 'اشترها وتوصل', 'اشتره ويوصل')} الحين بـ ${n0(total + truckFee(l.transport))} ريال مع النقل"`, `أو ${her(c, 'اشترها وتوصل', 'اشتره ويوصل')} الحين بـ ${n0(total + truckFee(l.transport))} ريال مع النقل`, `اضغط مرة ثانية ${her(c, 'وتوصل', 'ويوصل')} الحين بـ ${n0(total + truckFee(l.transport))} ريال`) : ''}
     ${why ? `<div class="note">${why}</div>` : ''}
     <div class="sec">${her(c, 'سوم عليها', 'سوم عليه')}</div>
     ${bidRow}
@@ -819,6 +977,8 @@ const KIND = {
   wages: { name: 'رواتب الرعاة', icon: 'user', line: () => 'تنخصم أول الشهر' },
   construction: { name: 'البناء', icon: 'build', line: (l) => (l.facilities?.length === l.count ? l.facilities.map(FAC_NAME).join('، ') : count(l.count, 'build')) },
   vet: { name: 'البيطري', icon: 'user', line: (l) => count(l.count, 'treat') },
+  // the rush (T15): what was hurried, by the facility's name, the supply or the camel
+  rush: { name: 'الاستعجال', icon: 'build', line: (l) => (l.facilities?.length === l.count ? l.facilities.map((f) => `${FAC_NAME(f)}، خلص بيومه`).join('، ') : one(l) && l.name ? `${esc(l.name)}، وصل بيومه` : count(l.count, 'rush')) },
   studFee: { name: 'أجرة الفحل', icon: 'camel', line: (l) => count(l.count, 'mating') },
   // the festivals (GDD 7): a late entry's fee by its festival
   entryFee: { name: 'رسوم التسجيل المتأخر', icon: 'camel', line: (l) => (one(l) && l.name ? esc(l.name) : count(l.count, 'entry')) },
@@ -1221,6 +1381,229 @@ const herdWord = () => {
   return G.herd.total === 2 && m.length === 1 && m[0].calfName ? (m[0].calfSex === 'female' ? 'ناقة وحوارتها' : 'ناقة وحوارها') : unitWord(G.herd.total, 'head');
 };
 
+// ---------------------------------------------------------------- التقويم (T15: design/ui/phone_calendar.jpg, awaiting the
+// owner's approval). Optional: the year at a glance from the engine's own calendar, and the game moved forward to a
+// day the player picks (EngineCore.away): the card first (will the stores last, what falls due, what stops it), the
+// jump under way with «وقّف هنا», the early stop with what to do, and what happened. Forward only. CAL: the screen's own
+// state (the day picked, the month shown, the jump's progress and its result).
+const CAL = { day: null, month: null, progress: null, result: null, running: false, from: null };
+const BREED = [11, 12, 1, 2, 3, 4];
+const dateAt = (day) => new Date(Date.parse(G.date + 'T00:00:00Z') + (day - G.today) * 864e5);
+const dayAt = (iso) => G.today + Math.round((Date.parse(iso + 'T00:00:00Z') - Date.parse(G.date + 'T00:00:00Z')) / 864e5);
+const ddAt = (day) => { const d = dateAt(day); return `${WEEKDAY[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`; };
+const spanAt = (a, z) => { const x = dateAt(a), y = dateAt(z); if (a === z) return dShortAt(a); return x.getUTCMonth() === y.getUTCMonth() ? `من ${x.getUTCDate()} لين ${dShortAt(z)}` : `من ${dShortAt(a)} لين ${dShortAt(z)}`; };
+const inDaysAt = (day) => { const n = day - G.today; return n <= 0 ? 'اليوم' : n === 1 ? 'بكرة' : `بعد ${days(n)}`; };
+const shortFest = (name) => (/الكبير/.test(name) ? 'الكبير' : name.replace(/^(مهرجان )?مزاين /, ''));
+// the year's dated things: the engine's festivals, the breeding season, the seasons, the herd's own
+function calItems() {
+  const items = [], end = G.today + 365, y = dateAt(G.today).getUTCFullYear();
+  for (const f of G.festivals.filter((x) => !x.done && x.startsOn <= end)) {
+    if (f.closesOn > G.today) items.push({ day: f.closesOn, icon: 'flag', cls: 'fest', b: `تسجيل ${esc(f.name)} يقفل`, s: `${ddAt(f.closesOn)} · وبعده متأخر لين 72 ساعة قبل الشوط` });
+    if (f.startsOn > G.today) items.push({ day: f.startsOn, icon: 'cup', cls: 'fest', b: esc(f.name), s: `${spanAt(f.startsOn, f.endsOn)} · ${inDaysAt(f.startsOn)}` });
+  }
+  for (let k = 0; k < 2; k++) {
+    const bs = dayAt(`${y + k}-11-01`);
+    if (bs > G.today && bs <= end) items.push({ day: bs, icon: 'heart', cls: '', b: 'يبدأ وقت الضراب', s: `${ddAt(bs)} لين آخر أبريل` });
+    for (const [m, d, nm] of SEASONS) {
+      const day = dayAt(`${y + k}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+      if (day > G.today && day <= end) items.push({ day, icon: 'sun', cls: 'sea', b: nm, s: `يبدأ ${ddAt(day)}` });
+    }
+  }
+  for (const c of G.yard) if (c.pregnant && c.dueOn != null && c.dueOn > G.today) items.push({ day: c.dueOn, icon: 'heart', cls: 'bad', b: `${esc(c.name)} تولد`, s: `متوقع ${ddAt(c.dueOn)} · ${inDaysAt(c.dueOn)}` });
+  for (const m of G.farm.milk.camels) { const e = G.today + (365 - m.days); if (e > G.today) items.push({ day: e, icon: 'milk', cls: 'milk', b: `حليب ${esc(m.name)} يخلص`, s: `${ddAt(e)} · ${m.calfName ? `يكمل ${esc(m.calfName)} سنة` : 'تكمل سنة من ولادتها'}` }); }
+  for (const l of G.myListings) if (l.expiresOn > G.today) items.push({ day: l.expiresOn, icon: 'haraj', cls: '', b: `إعلان ${esc(l.camel.name)} ينتهي`, s: ddAt(l.expiresOn) });
+  return items.sort((a, b) => a.day - b.day);
+}
+const calRow = (x) => `<div class="row r3" data-go="calDay" data-day="${x.day}" role="button" tabindex="0" aria-label="${x.b.replace(/<[^>]+>/g, '')}، ${x.s.replace(/<[^>]+>/g, '')}"><span class="lead ${x.cls}">${svg(x.icon)}</span><b>${x.b}</b><span class="chev">${svg('chev')}</span><small>${x.s}</small></div>`;
+function calScreen() {
+  if (!G) return `<div class="body">${nav()}<div class="title">التقويم</div>${waiting()}</div>`;
+  const items = calItems(), d0 = dateAt(G.today), months = [];
+  for (let k = 0; k < 12; k++) {
+    const ym = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + k, 1));
+    const first = dayAt(ym.toISOString().slice(0, 10)), len = new Date(Date.UTC(ym.getUTCFullYear(), ym.getUTCMonth() + 1, 0)).getUTCDate(), last = first + len - 1;
+    const pos = (day) => ((day - first) / len) * 100, w = (a, z) => ((z - a + 1) / len) * 100, clip = (a, z) => [Math.max(a, first), Math.min(z, last)];
+    const segs = [];
+    if (G.today > first) { const [a, z] = clip(first, G.today - 1); segs.push(`<i class="past" style="right:${pos(a)}%;width:${w(a, z)}%"></i>`); }
+    if (BREED.includes(ym.getUTCMonth() + 1)) segs.push('<i class="brd" style="right:0;width:100%"></i>');
+    for (const f of G.festivals.filter((x) => !x.done)) { const [a, z] = clip(f.opensOn, f.closesOn); if (a <= z) segs.push(`<i class="reg" style="right:${pos(a)}%;width:${w(a, z)}%"></i>`); }
+    for (const f of G.festivals.filter((x) => !x.done)) { const [a, z] = clip(f.startsOn, f.endsOn); if (a <= z) segs.push(`<i class="fest" style="right:${pos(a)}%;width:${w(a, z)}%"></i>`); }
+    for (const x of items) if ((x.cls === 'bad' || x.cls === 'milk') && x.day >= first && x.day <= last) segs.push(`<i class="me${x.cls === 'milk' ? ' milk' : ''}" style="right:${pos(x.day) + 50 / len}%"></i>`);
+    if (G.today >= first && G.today <= last) segs.push(`<i class="today" style="right:${pos(G.today) + 50 / len}%"></i>`);
+    months.push(`<div class="m"><span${G.today >= first && G.today <= last ? ' class="now"' : ''}>${MONTH[ym.getUTCMonth()]}${ym.getUTCMonth() === 0 || k === 0 ? ` ${ym.getUTCFullYear()}` : ''}</span><div class="t">${segs.join('')}</div></div>`);
+  }
+  const key = `<div class="key"><span><i style="background:#57b88a;height:3px"></i>الضراب</span><span><i style="background:#f6e3b8"></i>التسجيل</span><span><i style="background:#d9a033"></i>المزاين</span><span><i style="background:var(--red);width:8px;border-radius:4px"></i>ولادة</span><span><i style="background:#2f7fcf;width:8px;border-radius:4px"></i>يخلص الحليب</span></div>`;
+  const pickToday = `<button class="btn ghost wide" data-go="calDay" data-day="${G.today + 1}">اختار يوم</button>`;
+  return `<div class="body">${nav()}<div class="title">التقويم</div>
+    <div class="note" style="margin-top:-4px">اليوم ${ddAt(G.today)} · ${season(d0)}${G.breedingSeason ? ' · وقت الضراب' : ''}</div>
+    <div class="yr" aria-hidden="true">${months.join('')}</div>${key}
+    ${pickToday}
+    <div class="sec">اللي جاي</div>
+    <div class="group">${items.slice(0, 24).map(calRow).join('')}</div>
+    <div class="note">اختار أي يوم أو أي شي جاي، وتمشي له. التقويم يمشي لقدام بس، واللي يمضي ما يرجع.</div></div>`;
+}
+function calDayScreen() {
+  const back = nav('', 'cal');
+  if (!G) return `<div class="body">${back}<div class="title">التقويم</div>${waiting()}</div>`;
+  const d0 = dateAt(G.today);
+  if (CAL.month == null) { const pd = CAL.day != null ? dateAt(CAL.day) : d0; CAL.month = (pd.getUTCFullYear() - d0.getUTCFullYear()) * 12 + pd.getUTCMonth() - d0.getUTCMonth(); }
+  const ym = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + CAL.month, 1));
+  const first = dayAt(ym.toISOString().slice(0, 10)), len = new Date(Date.UTC(ym.getUTCFullYear(), ym.getUTCMonth() + 1, 0)).getUTCDate();
+  const cells = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'].map((x) => `<span class="wd" aria-hidden="true">${x}</span>`);
+  for (let k = 0; k < ym.getUTCDay(); k++) cells.push('<span></span>');
+  const fests = G.festivals.filter((x) => !x.done);
+  for (let k = 0; k < len; k++) {
+    const day = first + k, ok = day > G.today && day <= G.today + 365;
+    const fest = fests.some((f) => day >= f.startsOn && day <= f.endsOn), brd = BREED.includes(ym.getUTCMonth() + 1);
+    const cls = `d${day === CAL.day ? ' sel' : !ok ? ' past' : fest ? ' fest' : ''}${brd ? ' brd' : ''}`;
+    cells.push(ok ? `<button class="${cls}" data-act="calPick" data-day="${day}" aria-label="${ddAt(day)}" aria-pressed="${day === CAL.day}">${k + 1}</button>` : `<span class="${cls}" aria-hidden="true">${k + 1}</span>`);
+  }
+  const t = CAL.day;
+  const on = t == null ? [] : calItems().filter((x) => x.day === t);
+  const inFest = t == null ? [] : fests.filter((f) => t >= f.startsOn && t <= f.endsOn);
+  const details = t == null ? '<div class="note">اختار اليوم اللي تبي تمشي له.</div>' : `<div class="span"><b>${ddAt(t)}</b><small>${season(dateAt(t))} · ${inDaysAt(t)}</small></div>
+    ${on.length || inFest.length ? `<div class="group">${[...on.map((x) => `<div class="row r2"><span class="lead ${x.cls}">${svg(x.icon)}</span><b>${x.b}</b><small>${x.s}</small></div>`), ...inFest.filter((f) => !on.some((x) => x.day === f.startsOn && x.icon === 'cup')).map((f) => `<div class="row r2"><span class="lead fest">${svg('cup')}</span><b>${esc(f.name)}</b><small>${spanAt(f.startsOn, f.endsOn)}</small></div>`)].join('')}</div>` : ''}
+    <button class="btn pri wide" data-go="calCard">امشِ لين ${ddAt(t)}</button>
+    <div class="note">قبلها يوريك وش تحتاج للأيام هذي.</div>`;
+  return `<div class="body">${back}<div class="title">${MONTH[ym.getUTCMonth()]} ${ym.getUTCFullYear()}</div>
+    <div class="calnav"><button data-act="calMonth" data-d="-1" aria-label="الشهر اللي قبل" ${CAL.month > 0 ? '' : 'disabled'}>${svg('back')}</button><button data-act="calMonth" data-d="1" aria-label="الشهر اللي بعد" ${CAL.month < 12 ? '' : 'disabled'}>${svg('chev')}</button></div>
+    <div class="cal">${cells.join('')}</div>${details}</div>`;
+}
+// the orders that fill the tank and the feed store before leaving (the card's «عبّه»)
+function calFill() {
+  const f = G.farm, b = sup('barley'), a = sup('alfalfa'), w = sup('water');
+  const tanker = f.tankers.filter((t) => t.room > 0).sort((x, y) => y.litres - x.litres)[0] || null;
+  const room = storeRoom(f, b, a), share = b.need + a.need > 0 ? b.need / (b.need + a.need) : 0.3;
+  let bags = Math.max(0, Math.floor((f.storeKg * share - b.amount - b.onTheWayAmount) / b.unitSize));
+  let bales = Math.max(0, Math.floor((f.storeKg * (1 - share) - a.amount - a.onTheWayAmount) / a.unitSize));
+  while (bags * b.unitSize + bales * a.unitSize > room && (bags > 0 || bales > 0)) { if (bales > 0) bales--; else bags--; }
+  const litresIn = tanker ? Math.min(f.tankL, w.amount + w.onTheWayAmount + tanker.litres) : w.amount + w.onTheWayAmount;
+  return {
+    tanker, bags, bales, feedCost: bags * b.unitPrice + bales * a.unitPrice,
+    water: w.need > 0 ? Math.floor(litresIn / w.need) : 999,
+    feed: Math.min(b.need > 0 ? Math.floor((b.amount + b.onTheWayAmount + bags * b.unitSize) / b.need) : 999, a.need > 0 ? Math.floor((a.amount + a.onTheWayAmount + bales * a.unitSize) / a.need) : 999),
+    tankRoom: Math.max(0, f.tankL - w.amount - w.onTheWayAmount),
+  };
+}
+const STOPS_TEXT = 'مرض شي من حلالك، أو مات من مرض أو عطش · قرب العلف أو الماء يخلص (باقي 3 أيام) · نزل رصيدك تحت الصفر، أو وصل حساب التاجر حده · انكتبت عليك غرامة · جاك سوم على إعلان · جا يوم شوطك · باقي 3 أيام على قفل تسجيل مهرجان تقدر تدخله · بدا وقت الضراب وعندك ناقة تنلقح · ضاقت الشبوك على حلالك';
+function calCardScreen() {
+  const back = nav('', 'calDay');
+  if (!G || CAL.day == null) return `<div class="body">${back}<div class="title">قبل ما تمشي</div>${waiting()}</div>`;
+  const t = CAL.day, N = t - G.today, R = RU(), F = calFill();
+  const w = sup('water'), b = sup('barley'), a = sup('alfalfa');
+  const lasts = (x) => (x.need > 0 ? Math.floor((x.amount + x.onTheWayAmount) / x.need) : 999);
+  const lw = lasts(w), lf = Math.min(lasts(b), lasts(a));
+  const word = (n) => (n >= N ? '<span class="pos">يكفي</span>' : '<span style="color:var(--red);font-weight:700">ما يكفي</span>');
+  const standW = (R.standing || []).includes('water'), standF = (R.standing || []).includes('feed');
+  const supRow = (icon, name, last, fill, after, key, can) => `<div class="row r3"><span class="lead${last < N ? ' bad' : ''}">${svg(icon)}</span><b>${name} · يكفي ${days(Math.min(last, 999))}</b>${can ? `<span class="act"><button class="btn sm ghost" data-act="calFill" data-s="${key}" aria-label="عبّ ${name}">عبّه</button></span>` : ''}<small>${fill}${word(after)}</small></div>`;
+  const wFill = standW ? 'الطلب الثابت شغّال: يجيك الوايت بنفسه. ' : F.tanker ? `وايت ${Math.round(F.tanker.litres / 1000)} طن يعبّي الخزان ${n0(Math.min(F.tankRoom, F.tanker.litres))} لتر والباقي يرجع، بـ ${n0(F.tanker.price)} ريال، يصير يكفي ${days(F.water)} تقريبًا: ` : 'الخزان ما يشيل وايت الحين: ';
+  const fFill = standF ? 'الطلب الثابت شغّال: يجيك العلف بنفسه. ' : F.bags + F.bales > 0 ? `${[F.bags ? count(F.bags, 'bag') : '', F.bales ? count(F.bales, 'bale') : ''].filter(Boolean).join(' و')} بـ ${n0(F.feedCost)} ريال، يصير يكفي ${days(F.feed)} تقريبًا: ` : `${STORE().the} ${STORE().none} مكان الحين: `;
+  const wAfter = standW ? N : F.tanker ? F.water : lw, fAfter = standF ? N : F.bags + F.bales > 0 ? F.feed : lf;
+  const stopAt = Math.min(wAfter, fAfter) - 3;
+  // what falls due on the way (the engine's dates)
+  const due = [];
+  const bs = calItems().find((x) => x.b === 'يبدأ وقت الضراب' && x.day <= t);
+  if (bs) { const females = G.yard.filter((c) => c.sex === 'female' && !c.pregnant && c.ageDays >= 1209 && c.health === 'healthy').length; due.push(`<div class="row r2"><span class="lead">${svg('heart')}</span><b>وقت الضراب يبدأ ${dShortAt(bs.day)}</b><small>${females ? `عندك ${count(females, 'camel')} تقدر تنلقح` : 'ما عندك ناقة تنلقح للحين'}</small></div>`); }
+  const between = G.festivals.filter((f) => !f.done && f.startsOn > G.today && f.startsOn <= t);
+  const mine = between.filter((f) => (f.myEntries || []).length);
+  if (between.length) due.push(`<div class="row r2"><span class="lead fest">${svg('cup')}</span><b>${count(between.length, 'fest')}</b><small>${between.map((f) => shortFest(f.name)).join('، ')} · ${mine.length ? `مسجّل بـ ${mine.map((f) => shortFest(f.name)).join('، ')}، ويوقف يوم شوطك` : 'ما سجلت بشي'}</small></div>`);
+  const calvings = G.yard.filter((c) => c.pregnant && c.dueOn != null && c.dueOn > G.today && c.dueOn <= t);
+  if (calvings.length) due.push(`<div class="row r2"><span class="lead bad">${svg('heart')}</span><b>${calvings.map((c) => esc(c.name)).join('، ')} ${calvings.length > 1 ? 'يولدن' : 'تولد'}</b><small>${calvings.map((c) => ddAt(c.dueOn)).join('، ')}${R.crowdedSoon ? ' · الشبوك ما تشيل زيادة: ابنِ شبك قبل' : ''}</small></div>`);
+  const milkDay = G.farm.milk.sold * G.farm.milk.price, wages = G.farm.monthlyWages;
+  due.push(`<div class="row r2"><span class="lead milk">${svg('milk')}</span><b>${milkDay > 0 ? `الحليب يدخلك ${n0(milkDay)} ريال باليوم` : 'ما فيه حليب ينباع'}</b><small>${wages ? `والرواتب ${n0(wages)} ريال أول كل شهر` : 'وما عليك رواتب: ما عندك رعاة'}</small></div>`);
+  // the guard: a sick camel waits for her treatment (unless a contract); his round being told today
+  const block = R.awayBlock, sick = R.sick || [];
+  const guard = block === 'sick' ? `${alertCard(sick.length === 1 ? `${esc(sick[0].name)} ${sick[0].sex !== 'male' ? 'مريضة' : 'مريض'}` : `${count(sick.length, 'head')} مريضة`, `${sick.length === 1 && sick[0].sex === 'male' ? 'عالجه' : 'عالجها'} أول، وبعدها تمشي. أو اتعاقد مع البيطري ويعالج اللي يمرض وأنت بعيد.`)}<div class="group">${sick.map(sickRow).join('')}</div>`
+    : block === 'round' ? alertCard('شوطك اليوم ما خلص', 'تمشي بعد ما تخلص مراحله.') : '';
+  const goKey = 'calGo', sure = HJ.sure === goKey, can = !block;
+  return `<div class="body">${back}<div class="title">قبل ما تمشي</div>${errCard()}
+    <div class="span"><b>لين ${ddAt(t)}</b><small>${days(N)} · من ${ddAt(G.today)}</small></div>
+    ${guard}
+    <div class="sec">يكفي ${days(N)}؟</div>
+    <div class="group">
+      ${supRow('water', 'الماء', lw, wFill, wAfter, 'water', !standW && !!F.tanker)}
+      ${supRow('feed', 'العلف', lf, fFill, fAfter, 'feed', !standF && F.bags + F.bales > 0)}</div>
+    ${stopAt < N ? `<div class="note">حتى لو عبّيت، ما يكفي الأيام كلها: يوقف التقويم حوالي ${dShortAt(G.today + Math.max(1, stopAt))} عشان تطلب، وبعدها تكمل.</div>` : ''}
+    <div class="sec">اللي يجي بالطريق</div>
+    <div class="group">${due.join('')}</div>
+    <div class="sec">تقدر تجهّز قبل</div>
+    <div class="group">
+      <div class="row r3"><span class="lead">${svg('repeat')}</span><b>طلب ثابت للماء والعلف</b><span class="act"><span class="sw${standW && standF ? ' on' : ''}" data-act="standingBoth" role="switch" tabindex="0" aria-checked="${standW && standF}" aria-label="طلب ثابت للماء والعلف"><i></i></span></span><small>لما يبقى 3 أيام يجيك الطلب بنفسه، وتدفعه مثل أي طلب</small></div>
+      ${vetRows()}</div>
+    <div class="sec">يوقف ويرجع لك لو</div>
+    <div class="stops">${STOPS_TEXT}</div>
+    <div class="note">وكل شي ثاني يمشي بنفسه: الحليب ينباع، والرواتب تنخصم، والولادات تصير، وتلقاها كلها بالآخر.</div>
+    <button class="btn ${!can ? '' : sure ? 'sure' : 'pri'} wide" data-act="calGo" ${can ? '' : 'disabled'}>${sure ? 'اضغط مرة ثانية ويمشي' : `امشِ لين ${ddAt(t)}`}</button>
+    <div class="note">التقويم يمشي لقدام بس: الأيام اللي تمضي ما ترجع. وتقدر توقفه بنص الطريق.</div></div>`;
+}
+function calGoingScreen() {
+  const P = CAL.progress, t = CAL.day, from = CAL.from ?? (G ? G.today : 0);
+  const day = P ? P.day : from, done = P ? P.done : 0, total = P ? P.total : Math.max(1, (t ?? from) - from);
+  const pct = Math.round(done / Math.max(1, total) * 100);
+  return `<div class="body"><div class="nav"></div><div class="title">يمشي الوقت</div>
+    <div class="tank"><small>وصل</small><div class="v"><b class="fit">${G ? ddAt(day) : ''}</b></div>
+      <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,#0b8a5c,#3fb487)"></i></div>
+      <div class="ln">${days(done)} من ${days(total)}${t != null && G ? ` · لين ${dShortAt(t)}` : ''}</div></div>
+    <button class="btn ghost wide" data-act="calStop">${svg('stop')}وقّف هنا</button>
+    <div class="note">الأيام تنحسب يوم يوم، ويوقف بنفسه لو صار شي يبيك. ولو حلالك كبير ممكن ياخذ ثواني.</div></div>`;
+}
+const SUP_AR = { barley: 'الشعير', alfalfa: 'البرسيم', water: 'الماء' };
+function stopWords(stop) {
+  const c = stop.subject ? (G.yard.find((x) => x.id === stop.subject) || null) : null;
+  const f = !c || c.sex !== 'male', nm = esc(stop.name || (c && c.name) || '');
+  switch (stop.kind) {
+    case 'illness': return { title: `${nm} ${f ? 'مرضت' : 'مرض'}`, line: `${f ? 'عالجها' : 'عالجه'} اليوم: لو ${f ? 'تركتها' : 'تركته'} بعد 10 أيام ممكن ${f ? 'تموت' : 'يموت'}.`, act: f ? 'عالجها' : 'عالجه', go: 'build' };
+    case 'death': return { title: `${f ? 'ماتت' : 'مات'} ${nm}`, line: 'شوف وش يحتاج حلالك قبل ما تكمل.', act: 'العزبة', go: 'build' };
+    case 'supply': { const x = sup(stop.subject); const l = x && x.need > 0 ? Math.floor(x.amount / x.need) : 0; const nmS = SUP_AR[stop.subject] || 'العلف';
+      return { title: x && (x.short || l <= 0) ? `${nmS} خلص` : `${nmS} يخلص ${l <= 1 ? 'بكرة' : `بعد ${days(l)}`}`, line: 'اطلب اليوم يوصل بكرة، وبعدها كمّل.', act: stop.subject === 'water' ? 'اطلب وايت' : 'اطلب علف', go: stop.subject === 'water' ? 'water' : 'feed' }; }
+    case 'money': return { title: `رصيدك صار تحت الصفر`, line: debtLine(), act: 'البنك', go: 'bank' };
+    case 'account': return { title: 'حساب التاجر وصل حده', line: accountFullLine(), act: 'البنك', go: 'bank' };
+    case 'fine': return { title: `انكشف تجميل ${nm ? `بـ${nm}` : 'بحلالك'}`, line: 'وانكتبت عليك الغرامة. التفاصيل بالحراج.', act: 'الحراج', go: 'haraj' };
+    case 'offer': return { title: `جاك سوم على ${nm}`, line: `السوم ينتهي بعد ${days(G.haraj.offerDays ?? 3)}: اقبله أو ارفضه من إعلاناتي.`, act: 'إعلاناتي', go: 'haraj', tab: 'mine' };
+    case 'round': return { title: `اليوم شوطك بـ${shortFest(stop.name || '')}`, line: 'وقف الساعة 6 الصبح قبل أول مرحلة الساعة 7، وتجيك المراحل وحدة وحدة مثل أي يوم.', act: 'شوف يوم الشوط', go: 'mazayen' };
+    case 'registration': return { title: `باقي 3 أيام ويقفل تسجيل ${esc(stop.name || '')}`, line: 'وعندك حلال يقدر يدخله. وبعد القفل تسجيل متأخر برسوم لين 72 ساعة قبل الشوط.', act: 'شوف المزاين', go: 'mazayen' };
+    case 'breeding': return { title: 'بدا وقت الضراب', line: 'وعندك ناقة تنلقح.', act: null, go: null };
+    case 'crowded': return { title: 'ضاقت الشبوك على حلالك', line: 'ابنِ شبك من العزبة.', act: 'العزبة', go: 'build' };
+    case 'cancelled': return { title: 'وقّفته', line: '', act: null, go: null };
+    default: return { title: 'وقف التقويم', line: '', act: null, go: null };
+  }
+}
+function calStopScreen() {
+  const back = nav();
+  const R = CAL.result;
+  if (!G || !R) return `<div class="body">${back}<div class="title">التقويم</div>${waiting()}</div>`;
+  const s = R.stop, w = stopWords(s), left = R.target - R.to, sure = HJ.sure === 'calGo';
+  const blocked = RU().awayBlock;
+  return `<div class="body">${back}<div class="title">وقف التقويم</div>
+    <div class="${s.kind === 'round' || s.kind === 'breeding' || s.kind === 'cancelled' ? 'msgc good' : 'warn'}"><span class="lead">${svg(s.kind === 'round' ? 'cup' : 'alert')}</span><b>${w.title}</b><small>وقف ${ddAt(R.to)}${left > 0 ? `، وباقي ${days(left)} لين ${dShortAt(R.target)}` : ''}. ${w.line}</small></div>
+    ${w.act ? `<button class="btn pri wide" data-go="${w.go}"${w.tab ? ` data-tab="${w.tab}"` : ''}>${w.act}</button>` : ''}
+    ${left > 0 ? `<button class="btn ${blocked ? '' : sure ? 'sure' : 'ghost'} wide" data-act="calGo" data-again="1" ${blocked ? 'disabled' : ''}>${sure ? 'اضغط مرة ثانية ويكمل' : `كمّل لين ${ddAt(R.target)}`}</button>` : ''}
+    ${blocked === 'round' && s.kind === 'round' ? '<div class="note">ما يكمّل إلا بعد ما يخلص الشوط، عشان ما يفوتك شي منه.</div>' : blocked === 'sick' ? '<div class="note">يكمّل بعد ما تعالج اللي مرض.</div>' : ''}
+    <div class="group"><div class="row r3" data-go="calSum" role="button" tabindex="0"><span class="lead sea">${svg('flag')}</span><b>اللي صار لين هنا</b><span class="chev">${svg('chev')}</span><small>${days(R.to - R.from)}، من ${dShortAt(R.from)}</small></div></div></div>`;
+}
+const SPENT = { feed: 'العلف', water: 'الوايت', wages: 'الرواتب', vet: 'البيطري', vetContract: 'عقد البيطري', transport: 'النقل' };
+function calSumScreen() {
+  const back = nav('', CAL.result && CAL.result.stop.kind !== 'target' ? 'calStop' : '');
+  const R = CAL.result;
+  if (!G || !R) return `<div class="body">${back}<div class="title">اللي صار</div>${waiting()}</div>`;
+  const m = R.summary, rows = [];
+  rows.push(`<div class="row r2"><span class="lead milk">${svg('milk')}</span><b>${m.milk ? `الحليب دخلك ${n0(m.milk)} ريال` : 'ما دخل حليب'}</b><small>${m.milk ? 'ينباع كل يوم' : 'ما فيه ناقة مرضع'}</small></div>`);
+  const spent = Object.entries(m.spent || {}).filter(([k]) => SPENT[k]).sort((x, y) => y[1] - x[1]);
+  if (spent.length) rows.push(`<div class="row r2"><span class="lead">${svg('bank')}</span><b>صرفت ${n0(spent.reduce((n, [, v]) => n + v, 0))} ريال</b><small>${spent.slice(0, 3).map(([k, v]) => `${SPENT[k]} ${n0(v)}`).join('، ')}</small></div>`);
+  if (m.delivered) rows.push(`<div class="row r2"><span class="lead">${svg('truck')}</span><b>وصلت ${count(m.delivered, 'order')}</b><small>${m.standingOrders ? `منها ${count(m.standingOrders, 'order')} بالطلب الثابت` : 'العلف والوايت'}</small></div>`);
+  const ill = m.fellIll || [], died = Object.values(m.deaths || {}).reduce((n, v) => n + v, 0);
+  rows.push(`<div class="row r2"><span class="lead ${ill.length || died ? 'bad' : ''}">${svg('heart')}</span><b>${ill.length ? `مرض ${count(ill.length, 'head')}` : 'ما مرض شي'}</b><small>${[m.treated ? `تعالج ${count(m.treated, 'head')}` : '', died ? `مات ${count(died, 'head')}${(m.diedOfIllnessOrThirst || []).length ? `: ${m.diedOfIllnessOrThirst.map(esc).join('، ')}` : ''}` : 'وما مات شي'].filter(Boolean).join(' · ')}</small></div>`);
+  if ((m.born || []).length) rows.push(`<div class="row r2"><span class="lead">${svg('heart')}</span><b>ولد ${count(m.born.length, 'head')}</b><small>${m.born.map(esc).join('، ')}</small></div>`);
+  if ((m.built || []).length) rows.push(`<div class="row r2"><span class="lead">${svg('build')}</span><b>خلص البناء</b><small>${m.built.map(FAC_NAME).join('، ')}</small></div>`);
+  if ((m.registrationsOpened || []).length) rows.push(`<div class="row r2"><span class="lead fest">${svg('cup')}</span><b>انفتح تسجيل ${count(m.registrationsOpened.length, 'fest')}</b><small>${m.registrationsOpened.map(shortFest).join('، ')}</small></div>`);
+  if (m.offers) rows.push(`<div class="row r2"><span class="lead">${svg('haraj')}</span><b>جاك ${count(m.offers, 'bid')}</b><small>شوفها بإعلاناتي</small></div>`);
+  if (m.listingsExpired) rows.push(`<div class="row r2"><span class="lead">${svg('haraj')}</span><b>انتهى ${count(m.listingsExpired, 'order')}</b><small>إعلاناتك اللي ما انباعت</small></div>`);
+  if (R.stop.kind !== 'target' && R.stop.kind !== 'cancelled') rows.push(`<div class="row r2"><span class="lead bad">${svg('alert')}</span><b>${stopWords(R.stop).title}</b><small>هذا اللي وقّف التقويم</small></div>`);
+  return `<div class="body">${back}<div class="title">اللي صار</div>
+    <div class="span"><b>${days(R.to - R.from)}</b><small>من ${ddAt(R.from)} لين ${ddAt(R.to)}</small></div>
+    <div class="group">${rows.join('')}</div>
+    <div class="note">والتفاصيل بالبنك والعزبة.</div></div>`;
+}
+
 const S = {
     // home: the date, the balance and the herd (its word: the start's nursing camel and her calf as they are, else the
     // head by the counting rule), and the apps that work on the game (the owner, 13 Nov: the others, and
@@ -1239,6 +1622,7 @@ const S = {
         ${app('bank', 'البنك')}
         ${app('cup', 'المزاين', badge(mzBadge()))}
         ${app('talk', 'المحادثات', badge(G ? G.dealer.unread : 0))}
+        ${app('cal', 'التقويم')}
       </div></div></div>`,
     water: waterScreen,
     feed: feedScreen,
@@ -1258,6 +1642,12 @@ const S = {
     chats: chatsScreen,
     chat: chatScreen,
     strength: strengthScreen,
+    cal: calScreen,
+    calDay: calDayScreen,
+    calCard: calCardScreen,
+    calGoing: calGoingScreen,
+    calStop: calStopScreen,
+    calSum: calSumScreen,
   };
 
 // A screen's words kept together where a line must not break: a number with the word after it («20,000 | ريال»),
@@ -1293,7 +1683,7 @@ export function createPhone({ host }) {
     st.screen = v; scr.classList.toggle('home', v === 'home');
     // (المزاين's and the chat's screens, as their design: a number kept with the word before it too, «لين | 100,000»)
     // («بـ 64»: the prefix never left at a line's end either)
-    let html = keepTogether(S[v](), MZ_SCREENS.has(v));
+    let html = keepTogether(S[v](), MZ_SCREENS.has(v) || v.startsWith('cal'));      // (and التقويم's, as its design)
     if (same && html === drawn) return false;      // (a redraw that would draw the same: left as it is)
     drawn = html;
     scr.innerHTML = `<span class="pill"></span>${sbar()}${html}<div class="hb"></div>`;      // (a number kept on the line of the word after it: «20,000 | ريال» split across lines otherwise)
@@ -1440,6 +1830,10 @@ export function createPhone({ host }) {
       loadFest();
     }
     if (to === 'enter') MZ.sel = null;
+    // التقويم: a day picked from the year's rows; a stop's button to الحراج's listings
+    if (to === 'calDay' && t.dataset.day) { CAL.day = Number(t.dataset.day); CAL.month = null; }
+    if (to === 'cal' && st.screen === 'home') { CAL.month = null; }
+    if (to === 'haraj' && t.dataset.tab) HJ.tab = t.dataset.tab;
     if (to === 'strength' && t.dataset.k) CH.kind = t.dataset.k;
     // the treatment man's messages read as his chat opens
     if (to === 'chat' && G && G.dealer.unread && engine) engine.dispatch({ type: 'readMessages' }).catch((err) => console.warn('phone:', err));
@@ -1516,6 +1910,24 @@ export function createPhone({ host }) {
     if (again) again.scrollTop = top;
     return true;
   }
+  // التقويم's jump (T15): the engine runs it (EngineCore.away); its progress redraws the screen under way a few times a
+  // second at most; at its end the stop or the summary
+  const AWAY_NO = { notAhead: 'اختار يوم بعد اليوم.', tooFar: 'التقويم يمشي سنة بالكثير.', sick: 'عندك حلال مريض: عالجه أول، أو اتعاقد مع البيطري.', round: 'شوطك اليوم ما خلص: تمشي بعد ما تخلص مراحله.' };
+  async function runAway(target) {
+    let r = null;
+    try { r = await engine.away(target); } catch (err) { console.warn('phone:', err); }
+    CAL.running = false; CAL.progress = null;
+    if (!r || !r.ok) {
+      ERR = r && r.error ? (AWAY_NO[r.error.params?.reason] || 'ما مشى التقويم، جرّب مرة ثانية.') : 'ما مشى التقويم، جرّب مرة ثانية.';
+      if (live()) show('calCard');
+      sr.textContent = ERR;
+      return;
+    }
+    CAL.result = r.away;
+    const end = r.away.stop.kind === 'target' || r.away.stop.kind === 'cancelled' ? 'calSum' : 'calStop';
+    sr.textContent = end === 'calSum' ? `وصل ${ddAt(r.away.to)}` : `وقف التقويم: ${stopWords(r.away.stop).title}`.replace(/<[^>]+>/g, '');
+    if (live()) show(end);
+  }
   // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen);
   // a refusal is said on the screen, and what was not taken stays in the order
   let engine = null, busy = false, sureAt = 0, sureTimer = 0, orderAt = 0, orderKey = '';
@@ -1525,10 +1937,14 @@ export function createPhone({ host }) {
     // an order's second tap on the same button within DOUBLE_TAP of its answer (by the tap's own time, not when it is
     // handled) is dropped before anything is cleared: «سوم» tapped twice used two tries, and the dropped tap wiped the
     // seller's answer (the reviews). Other buttons, and the steppers, are not held back
-    const LOCAL = kind === 'step' || kind === 'tab' || kind === 'bidStep' || kind === 'askStep' || kind === 'mzsel';
+    const LOCAL = kind === 'step' || kind === 'tab' || kind === 'bidStep' || kind === 'askStep' || kind === 'mzsel' || kind === 'calPick' || kind === 'calMonth';
+    // «وقّف هنا»: at once, whatever is under way (the engine takes it outside its queue)
+    if (kind === 'calStop') { if (engine && engine.stopAway) engine.stopAway().catch((err) => console.warn('phone:', err)); sr.textContent = 'يوقف'; return; }
     // what cannot be undone is asked twice: a sale, taking a listing down, withdrawing an entry, registering (it costs
     // the trucking), a treatment (illegal, and money)
-    const twice = { quick: `quick:${HJ.camel}`, accept: `accept:${t.dataset.o}`, unlist: `unlist:${t.dataset.id}`, withdraw: `withdraw:${t.dataset.id}`, enter: `enter:${t.dataset.id}`, tamper: `tamper:${t.dataset.k}:${t.dataset.p}` }[kind];
+    const twice = { quick: `quick:${HJ.camel}`, accept: `accept:${t.dataset.o}`, unlist: `unlist:${t.dataset.id}`, withdraw: `withdraw:${t.dataset.id}`, enter: `enter:${t.dataset.id}`, tamper: `tamper:${t.dataset.k}:${t.dataset.p}`,
+      // the rush and التقويم (T15): money spent now, a contract, days that will not come back
+      rushBuild: `rushBuild:${t.dataset.f}`, buildNow: `buildNow:${t.dataset.f}`, rushWater: 'rushWater', rushFeed: 'rushFeed', tankerNow: `tankerNow:${t.dataset.t}`, feedNow: 'feedNow', rushTruck: `rushTruck:${t.dataset.id}`, buyNow: `buyNow:${HJ.listing}`, vetSign: 'vetSign', vetCancel: 'vetCancel', calGo: 'calGo' }[kind];
     if (!LOCAL && (twice == null || HJ.sure === twice) && keyOf(t) === orderKey && at - orderAt < DOUBLE_TAP) return;
     // الحراج: a sale asked twice (the first tap readies it: HJ.sure); any other tap stands it down. [next]: the screen
     // to go to once the order is done (a camel bought or sold goes back to the market's list)
@@ -1560,6 +1976,8 @@ export function createPhone({ host }) {
     }
     if (kind === 'tab') { HJ.tab = t.dataset.p; done(); return; }
     if (kind === 'mzsel') { MZ.sel = t.dataset.id; done(); return; }
+    if (kind === 'calPick') { CAL.day = Number(t.dataset.day); done(); return; }
+    if (kind === 'calMonth') { CAL.month = Math.max(0, Math.min(12, (CAL.month ?? 0) + Number(t.dataset.d))); done(); return; }
     if (kind === 'bidStep') { const l = listingOf(HJ.listing); if (l) HJ.bid += Number(t.dataset.d) * stepOf(l.askPrice); done(); return; }
     if (kind === 'askStep') { const c = myCamel(HJ.camel); if (c) HJ.ask += Number(t.dataset.d) * stepOf(c.estimateHigh); done(); return; }
     if (twice != null && !ready) {      // (the first tap of a sale: it asks again, and says so)
@@ -1576,6 +1994,44 @@ export function createPhone({ host }) {
       else if (kind === 'share' && t.dataset.p !== G.farm.milk.calfShare) await send({ type: 'setCalfShare', share: t.dataset.p });
       else if (kind === 'build') await send({ type: 'buildFacility', facility: t.dataset.f });
       else if (kind === 'tanker') await send({ type: 'orderSupply', supply: 'water', units: 1, tanker: t.dataset.t });
+      // the rush (T15)
+      else if (kind === 'rushBuild') await send({ type: 'rushBuild', facility: t.dataset.f });
+      else if (kind === 'buildNow') await send({ type: 'buildFacility', facility: t.dataset.f, now: true });
+      else if (kind === 'rushWater') await send({ type: 'rushDelivery', kind: 'water' });
+      else if (kind === 'rushFeed') await send({ type: 'rushDelivery', kind: 'feed' });
+      else if (kind === 'tankerNow') await send({ type: 'orderSupply', supply: 'water', units: 1, tanker: t.dataset.t, now: true });
+      else if (kind === 'feedNow') {
+        const b = sup('barley'), a = sup('alfalfa');
+        let nb = ORD.barley, na = ORD.alfalfa;
+        if (!onAccount(nb * b.unitPrice + na * a.unitPrice)) { ERR = accountFullLine(); return; }
+        if (nb > 0 && await send({ type: 'orderSupply', supply: 'barley', units: nb })) nb = 0;
+        if (!ERR && na > 0 && await send({ type: 'orderSupply', supply: 'alfalfa', units: na })) na = 0;
+        if (!ERR) await send({ type: 'rushDelivery', kind: 'feed' });
+        ORD.barley = nb; ORD.alfalfa = na;
+      }
+      else if (kind === 'rushTruck') {
+        const c = onTruck().find((x) => x.camel === t.dataset.id);
+        if (await send({ type: 'rushTruck', camel: t.dataset.id, hour: gameHour() }) && c) HJ.msg = { good: true, title: `${esc(c.name)} ${c.male ? 'وصل' : 'وصلت'} عزبتك`, line: `بسواق ثاني، ${c.male ? 'وتقدر تبيعه' : 'وتقدر تبيعها'} من اليوم.` };
+      }
+      else if (kind === 'buyNow') await buy('now');
+      else if (kind === 'standing') { const k = t.dataset.k; await send({ type: 'setStandingOrder', kind: k, on: !(RU().standing || []).includes(k) }); }
+      else if (kind === 'standingBoth') { const both = ['water', 'feed'].every((k) => (RU().standing || []).includes(k)); for (const k of ['water', 'feed']) if (!ERR) await send({ type: 'setStandingOrder', kind: k, on: !both }); }
+      else if (kind === 'vetSign') await send({ type: 'signVetContract' });
+      else if (kind === 'vetCancel') await send({ type: 'cancelVetContract' });
+      else if (kind === 'treat') { const x = (RU().sick || []).find((y) => y.camel === t.dataset.id); if (await send({ type: 'treat', camel: t.dataset.id }) && x) HJ.said = `عالجت ${x.name}`; }
+      else if (kind === 'calFill') {
+        const F = calFill();
+        if (t.dataset.s === 'water' && F.tanker) await send({ type: 'orderSupply', supply: 'water', units: 1, tanker: F.tanker.tanker });
+        if (t.dataset.s === 'feed') {
+          if (F.bags > 0) await send({ type: 'orderSupply', supply: 'barley', units: F.bags });
+          if (!ERR && F.bales > 0) await send({ type: 'orderSupply', supply: 'alfalfa', units: F.bales });
+        }
+      }
+      else if (kind === 'calGo') {
+        // the jump: not held in this queue (its progress comes as it goes, and «وقّف هنا» must answer meanwhile)
+        const target = t.dataset.again && CAL.result ? CAL.result.target : CAL.day;
+        if (target != null && engine.away) { CAL.day = target; CAL.from = G.today; CAL.progress = null; CAL.running = true; next = 'calGoing'; runAway(target); }
+      }
       else if (kind === 'buy' || kind === 'bid') await buy(kind);
       else if (kind === 'list' || kind === 'quick') await sell(kind);
       else if (kind === 'accept' || kind === 'decline') await answer(kind, t.dataset.o);
@@ -1630,11 +2086,13 @@ export function createPhone({ host }) {
     async function buy(how) {
       const l = listingOf(HJ.listing);
       if (!l) return;
-      const command = how === 'buy' ? { type: 'buyListing', listing: l.id } : { type: 'bargain', listing: l.id, amount: HJ.bid };
+      const command = how === 'buy' ? { type: 'buyListing', listing: l.id } : how === 'now' ? { type: 'buyListing', listing: l.id, now: true, hour: gameHour() } : { type: 'bargain', listing: l.id, amount: HJ.bid };
       const r = await engine.dispatch(command), c = l.camel;
       const bought = r.ok && (r.events || []).find((e) => e.type === 'camelBought');
       if (bought) {
-        HJ.msg = { good: true, title: `اشتريت ${esc(c.name)} بـ ${n0(bought.price)} ريال`, line: `${her(c, 'توصل', 'يوصل')} عزبتك بكرة، والنقل ${n0(l.transport)} ريال.` };
+        HJ.msg = how === 'now'
+          ? { good: true, title: `اشتريت ${esc(c.name)} بـ ${n0(bought.price)} ريال`, line: `${her(c, 'وصلت', 'وصل')} عزبتك الحين بسواق ثاني، والنقل والاستعجال انخصموا.` }
+          : { good: true, title: `اشتريت ${esc(c.name)} بـ ${n0(bought.price)} ريال`, line: `${her(c, 'توصل', 'يوصل')} عزبتك بكرة، والنقل ${n0(l.transport)} ريال.` };
         HJ.bid = null; next = 'haraj';
       } else if (r.error?.code === 'bargainCountered' || r.error?.code === 'bargainRejected') {
         // the answer as the engine gave it: each uses a try; a counter lowers the price (the next try halves the gap
@@ -1747,6 +2205,8 @@ export function createPhone({ host }) {
       if (st.screen === 'bank') redrawBank(); else redraw();
     },      // (the word after an order, and a sale readied, are for their day)
     setEngine: (e) => { engine = e; },
+    /** التقويم's jump under way (engine.js onAway: {done, total, day}, a few a second): the screen under way redrawn. */
+    onAway: (m) => { CAL.progress = m; if (live() && st.screen === 'calGoing') redraw(); },
     get state() { return st.state; }, get big() { return st.state === 'big'; },
   };
 }
