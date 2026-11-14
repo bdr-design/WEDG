@@ -40,6 +40,15 @@ class Piece:
             s += self.V[a].dot(self.V[b].cross(self.V[c]))
         return s / 6.0
 
+    def wound_consistently(self):
+        """Whether the piece is closed and every triangle is wound the same way as its neighbours: each edge used
+        once in each direction. With a positive volume that means every face looks out of the piece."""
+        seen = {}
+        for a, b, c in self.T:
+            for e in ((a, b), (b, c), (c, a)):
+                seen[e] = seen.get(e, 0) + 1
+        return all(seen.get((j, i), 0) == k == 1 for (i, j), k in seen.items())
+
     def outward(self):
         """Every piece is closed: wind its triangles so the volume is positive (normals out)."""
         if self.volume() < 0:
@@ -105,7 +114,10 @@ def loft(block, secs, n, s=None, caps=(True, True), t0=0.0, s_range=(0.0, 1.0)):
         c = pc.vert(sum((pc.V[i] for i in ring), V3()) / n)
         for k in range(n):
             k1 = (k + 1) % n
-            pc.tri(c, ring[k1], ring[k], (s[end], (k + 0.5) / n), (s[end], (k + 1) / n), (s[end], k / n))
+            if end == 0:
+                pc.tri(c, ring[k1], ring[k], (s[end], (k + 0.5) / n), (s[end], (k + 1) / n), (s[end], k / n))
+            else:      # the far cap faces the other way round the ring, so both caps face out with the tube
+                pc.tri(c, ring[k], ring[k1], (s[end], (k + 0.5) / n), (s[end], k / n), (s[end], (k + 1) / n))
     return pc.outward()
 
 
@@ -331,10 +343,17 @@ def seg_dist(X, Y, p0, p1):
 
 
 # ------------------------------------------------------------------ meshes, materials, files
+class WindingError(Exception):
+    pass
+
+
 def to_mesh(name, pieces, atlas):
-    """Pieces joined into one Blender mesh (metres), its texture places in the atlas, every face smooth."""
+    """Pieces joined into one Blender mesh (metres), its texture places in the atlas, every face smooth. Each piece
+    is checked first: closed, wound consistently, positive volume (so drawn one-sided, nothing shows through)."""
     verts, faces, uvs = [], [], []
     for pc in pieces:
+        if not pc.wound_consistently() or pc.volume() <= 0:
+            raise WindingError(f'{name}: a {pc.block} piece is open or has faces wound inward')
         base = len(verts)
         verts.extend((q.x * 0.001, q.y * 0.001, q.z * 0.001) for q in pc.V)
         for (a, b, c), (ua, ub, uc) in zip(pc.T, pc.UV):

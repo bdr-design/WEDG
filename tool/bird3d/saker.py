@@ -34,7 +34,7 @@ SPEC = {
     'name': 'saker',
     'beak': {'length': 21, 'droop': 14, 'droop_pow': 2.0, 'h0': 12.0, 'low': 0.72, 'w0': 7.4, 'h_pow': 0.85,
              'w_pow': 1.0, 'h_tip': 0.7, 'w_tip': 0.5, 'cere': 7, 'lower': (13, 6.5, 6.4), 'sink': 7, 'tooth': 0.62},
-    'eye': {'d': 263, 'up': 5.0, 'r': 8.2, 'out': 0.80, 'fwd': 22, 'ring': 2.8, 'brow': (24, 2.4, 5.5)},
+    'eye': {'d': 263, 'up': 5.0, 'r': 8.2, 'out': 0.80, 'fwd': 22, 'ring': 2.8, 'brow': (24, 3.0, 4.6)},
     'fold': [      # tip to wrist: (x, z_top, z_bottom, y_mid, half_thickness, bend); the tips 70 mm short of the tail's
         (-135, 16, 9, 10, 1.6, 0.5),
         (-95, 20, 4, 15, 2.6, 1.5),
@@ -65,7 +65,7 @@ SPEC = {
     ],
     'wrist_y': 215,
     'tail_root': 20, 'tail_up': 3,
-    'leg': {'knee': (95, -28, 20), 'tibia': 110, 'tarsus': 57, 'shank_r': (30, 24, 17, 13, 9.5),
+    'leg': {'knee': (95, -20, 20), 'tibia': 116, 'tarsus': 57, 'shank_r': (34, 27, 18, 13, 9.5),
             'tarsus_r': (6.6, 5.6, 6.2), 'jess_at': 0.5, 'trouser': 0.38},
     'toes': [      # (heading deg, length, radius, (claw length, claw arc deg), curl)
         (0, 52, 4.6, (21, 125), 0),      # the middle toe
@@ -81,14 +81,15 @@ POSES = {
                'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 1, 'fluff': 1.05, 'wings': 'fold'},
     # hooded on the fist (الدس): the same bird, her jesses held in the falconer's fist
     'fist': {'origin': (-58, 80), 'spine': [(0, 66), (160, 66), (200, 86), (238, 40), (262, 0), (300, 0)],
-             'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 1, 'fluff': 1.05, 'wings': 'fold', 'held': True},
+             'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 1, 'fluff': 1.05, 'wings': 'fold', 'held': True,
+             'grip_r': 55.0, 'grip_x': 5.0},
     # unhooded and alert: taller, sleeked, the neck stretched, the head a little raised
     'alert': {'origin': (-54, 78), 'spine': [(0, 65), (160, 65), (196, 88), (236, 48), (262, 6), (300, 6)],
               'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 0, 'fluff': 0.97, 'neck_stretch': 12, 'wings': 'fold'},
     # cast off: level, wings spread, tail a little fanned, the legs drawn up
     'flight': {'origin': (0, 0), 'spine': [(0, 0), (170, 0), (215, 6), (262, 0), (300, 0)], 'wings': 'open',
-               'wing_dihedral': 7, 'tail_spread': 1.22, 'tucked': True, 'tuck_ankle': (35, -40, 15),
-               'tuck_foot': (-22, -18, 11), 'foot': (0, 0, 0)},
+               'wing_dihedral': 7, 'tail_spread': 1.22, 'tucked': True, 'tuck_ankle': (48, -30, 14),
+               'tuck_foot': (10, -3, 9), 'foot': (0, 0, 0)},
 }
 
 

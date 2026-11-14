@@ -208,7 +208,7 @@ def eyes(body, spec, det):
             above = (u - look_dir * u.dot(look_dir)).normalized()
             for i in range(m):
                 f = i / (m - 1)
-                q = centre + above * (r * 0.95) + look_dir * (r * 0.05) + t * (length * (f - 0.45))
+                q = centre + above * (r * 0.96) + look_dir * (r * 0.34) + t * (length * (f - 0.45))
                 k = math.sin(math.pi * (0.08 + 0.84 * f))
                 secs.append(Sec(q, above, look_dir.cross(above) * side, height * k + 0.3, height * k + 0.3, width * k + 0.3, p=2.0))
             pc = loft('body', secs, 8 if det.level == 0 else 5, caps=(True, True))
@@ -414,15 +414,24 @@ def foot_parts(foot, toes, heading, side, det, pose):
     rot = Matrix.Rotation(heading, 3, 'Z')
     for (hd, length, r, claw, curl) in toes:
         a = math.radians(hd * side if abs(hd) != 180 else hd)
+        if tucked:
+            # in flight the feet are drawn back under the tail coverts, the toes closed together, pointing back
+            a = math.radians(180 + 0.25 * hd * side) if abs(hd) != 180 else 0.0
         d = rot @ V3((math.cos(a), math.sin(a), 0))
+        grip = pose.get('grip_r')      # a rounded support (the fist): its radius along X, its top at x = grip_x
         n = det.toe_stations
         pts, rad = [], []
-        bend = math.radians(pose.get('toe_curl', curl) if not tucked else 150)
+        bend = math.radians(pose.get('toe_curl', curl) if not tucked else 110)
         for i in range(n):
             f = i / (n - 1)
             # the toe lies on the surface and bends down over its last joint
             ang = bend * smoothstep(0.55, 1.0, f) if tucked else 0.0
-            pts.append(foot + d * (length * f - 2.0) + V3((0, 0, r * 0.9)))      # from just behind the foot's middle
+            q = foot + d * (length * f - 2.0) + V3((0, 0, r * 0.9))      # from just behind the foot's middle
+            if grip and not tucked:
+                # the toe follows the support's curve down: it grips the fist rather than overhangs it
+                gx = min(abs(q.x - pose.get('grip_x', 0.0)), grip * 0.97)
+                q = q - V3((0, 0, grip - math.sqrt(grip * grip - gx * gx)))
+            pts.append(q)
             knuckle = 1.0 + 0.22 * math.sin(f * math.pi * 3) ** 2 if det.level == 0 else 1.0
             rad.append(r * (1.1 - 0.35 * f) * knuckle)
         if tucked:

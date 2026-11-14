@@ -94,12 +94,12 @@ HOUBARA_SPEC = {
         (640, 142, 104, -2, 2.0, 1),
     ],
     'fingers': [   # the slotted primaries: (y0, x0, y1, x1, half width, z at the tip)
-        (570, 150, 712, 146, 17.0, -1),
-        (570, 138, 708, 124, 17.0, -2),
-        (568, 126, 700, 104, 16.5, -2),
-        (564, 114, 690, 86, 16.0, -1),
-        (558, 102, 676, 70, 15.5, 0),
-        (552, 90, 658, 56, 15.0, 1),
+        (560, 150, 708, 146, 21.0, -1),
+        (560, 138, 704, 126, 21.0, -2),
+        (558, 126, 696, 106, 20.5, -2),
+        (554, 114, 686, 88, 20.0, -1),
+        (548, 102, 672, 72, 19.5, 0),
+        (542, 90, 654, 58, 19.0, 1),
     ],
     'tail': [(0, 26, 18, 0), (45, 38, 15, 0), (95, 46, 12, 0), (135, 48, 10, 0), (155, 45, 8.5, 0), (166, 36, 7, 0),
              (172, 20, 5.5, 0), (175, 6, 3.5, 0)],
@@ -127,12 +127,12 @@ def houbara_extras(body, det, pose):
     c, t, u, v = body.frame_at(447)
     au, ad, b = body.size_at(447)
     out = []
-    plan = [(0.0, 0.0, 52), (-0.6, 4.0, 46), (0.6, 4.0, 46), (-1.2, 8.0, 38), (1.2, 8.0, 38), (-1.7, 12.0, 30), (1.7, 12.0, 30)]
+    plan = [(0.0, 0.0, 60), (-0.6, 3.0, 54), (0.6, 3.0, 54), (-1.2, 6.0, 46), (1.2, 6.0, 46), (-1.7, 9.0, 38), (1.7, 9.0, 38)]
     if det.level != 0:
         plan = plan[:1]
     for side, back, L in plan:
         base = c + u * (au - 1.5) + v * side * 4.0 - t * back
-        lift = 6.0 - 2.0 * abs(side)
+        lift = 7.5 - 2.0 * abs(side)
         pts = smooth_path([base + t * 3, base - t * (L * 0.3) + u * lift + v * side * 3,
                            base - t * (L * 0.7) + u * (lift - 0.5) + v * side * 6, base - t * L + u * (lift - 3) + v * side * 8], 6 if det.level == 0 else 3)
         secs = []
@@ -141,7 +141,7 @@ def houbara_extras(body, det, pose):
             a, bb = pts[max(i - 1, 0)], pts[min(i + 1, len(pts) - 1)]
             tt = (bb - a).normalized()
             uu, vv = bird.frame(tt, u)
-            w = 2.2 * math.sin(math.pi * min(0.15 + f * 1.1, 1.0)) + 0.5
+            w = 3.0 * math.sin(math.pi * min(0.15 + f * 1.1, 1.0)) + 0.5
             secs.append(Sec(q, uu, vv, 0.9, 0.7, w, p=2.0))
         out.append(loft('crest', secs, 6 if det.level == 0 else 4, caps=(True, True)))
     return out

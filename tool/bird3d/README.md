@@ -1,5 +1,8 @@
 # The birds of the hunt, built by code
 
+**Status: awaiting the owner's approval of the look.** The rig and clips wait for it (the proxy's answer, batch 2
+of `docs/agents/proxy_decisions.md`). The known gaps are listed beside the pictures, in `design/birds/README.md`.
+
 The owner asked on 13 Nov 2026 for the hunt's animals to be made now and shown to him («ابي تدخل الحيوانات الان
 وتعرضها علي كذالك موسم القنيص»). Falconry comes first in the hunting design (`docs/proposals/gdd_hunting_section.md`,
 `docs/proposals/hunting.md`, `docs/research-realism.md` section 8). These scripts build its birds and the falconer's
@@ -27,20 +30,21 @@ end).
 | `assets_src/birds/saker_hooded.glb` | perched, hooded, jessed, the swivel ready for the leash | 5,352 body + 724 hood + 560 jesses = 6,636 | 3 |
 | `saker_fist.glb` | the same bird hooded on the fist, her jesses running into the falconer's grip | 5,352 + 724 + 400 = 6,476 | 3 |
 | `saker_alert.glb` | perched, unhooded, alert | 5,896 + 560 jesses = 6,456 | 2 |
-| `saker_flight.glb` | cast off: wings spread, feet drawn up under the tail, jesses trailing | 6,232 + 400 = 6,632 | 2 |
+| `saker_flight.glb` | cast off: wings spread, feet drawn back under the tail coverts with the toes closed, jesses trailing | 6,232 + 400 = 6,632 | 2 |
 | `saker_*_lod1.glb` | the far model of each pose: no jesses, brow, tooth or eye ring (under a pixel at tens of metres) | 1,334 (hooded, with the hood) / 1,204 / 1,300 | 1–2 |
 | `houbara_alert.glb`, `houbara_flight.glb` | | 5,428 / 6,484 | 1 |
 | `houbara_*_lod1.glb` | | 1,084 / 1,468 | 1 |
 | `curlew_alert.glb`, `curlew_flight.glb` | | 5,084 / 5,420 | 1 |
 | `curlew_*_lod1.glb` | | 1,120 / 1,216 | 1 |
 | `wakr.glb` | the perch and the leash | 1,228 + 168 = 1,396 | 2 |
-| `dass.glb` | the cuff | 944 | 1 |
+| `dass.glb` | the cuff, its front rounded closed over the fist | 944 | 1 |
 | `wakr_lod1.glb`, `dass_lod1.glb` | | 436 / 160 | 2 / 1 |
 
 Each bird file has one material, one-sided, and one texture pair: colour plus occlusion/roughness. The pair is 512 px
 for the close model and 256 px for the far one. That is 2.67 MiB uncompressed with mipmaps (0.67 MiB far), counted as
 ADR 0005 counts it, and about a quarter of that compressed. The gear has its own 256 px pair (128 px far). Every piece
-is a closed surface, the texture coordinates stay inside their blocks, and the same code writes the same GLB files
+is a closed surface, wound outward (the build refuses a piece that is open or has a face wound inward, so nothing shows
+through when drawn one-sided as the game draws it), the texture coordinates stay inside their blocks, and the same code writes the same GLB files
 byte for byte. The exporter's triangle order is settled after writing, as in `tool/weapon3d/akm.py`. I checked this
 by building twice and comparing checksums: all 19 files were identical.
 
@@ -202,8 +206,8 @@ source read here).
 | الدس | the cuff over the falconer's hand and wrist, to carry the falcon and keep the talons off (المنقلة is the word in the Emirates and Qatar) | a quilted, padded cloth cuff over the wrist and the fist (not a fingered glove), its bound edge closed round the wrist over the sleeve's end | SPA *(search)*; ar.wikipedia's caption 'منقلة (قفاز)' of Carl Raswan falconing in al-Jawf *(opened)*; the reviewer's description |
 
 The falcon is carried on the **left** hand (Arab News 2019 *(search)*). In `birds_scale.jpg` the figure's left fist is
-1.19 m above the ground and the falcon's feet are at 1.24 m. On the fist (`saker_fist.glb`) her jesses run down
-over the fist's front into the falconer's grip; the leash is not shown there.
+1.19 m above the ground and the falcon's feet are at 1.24 m. On the fist (`saker_fist.glb`) her toes follow the cuff's curve
+and her jesses run down over the fist's front into the falconer's grip; the leash is not shown there.
 
 The figure's forearm is turned level and its hand bone shortened for that picture only, so the fingers stay inside
 the cuff. The fingers cannot curl yet (tool/char3d's known gap).
@@ -326,16 +330,20 @@ pictures to `design/birds/`.
 - **No page could be opened from this machine.** Everything is from the text of the reviewer's fetched Wikipedia pages
   or from search summaries, marked as such.
 
-## Questions for the owner (my recommendation first)
+## Questions for the owner
 
-1. Is this look approved, before the rig? I recommend yes, then the rig, with a folded and a spread wing mesh swapped
-   at take-off and landing.
-2. Should the falcon be the first-year bird (فرخ, built) or an adult (قرناس)? I recommend keeping the فرخ, the
-   player's first falcon being most often a passage bird of the year, and adding the adult as a second texture on the
-   same mesh.
-3. Which falcon comes next? I recommend the الجير بيور, one of only two classes judged in the مزاين, then الشاهين.
-4. A 1024 px texture for the falcon on the fist? I recommend no: 512 px holds at one or two metres, and 1024 would
-   cost 10.7 MiB uncompressed.
+The proxy answered these provisionally (batch 2 of `docs/agents/proxy_decisions.md`); they stand until the owner
+says otherwise.
+
+1. **Is the look approved?** Waits for the owner. Until then: no rig and no clips; the models and pictures are on
+   the session branch marked as awaiting his approval. My recommendation for the rig, when it comes: a folded and a
+   spread wing mesh swapped at take-off and landing.
+2. **The saker's age.** Answered provisionally: the first-year bird (فرخ) as the player's first falcon (a farm-bred
+   saker of the year at the August auction); the adult (قرناس) later as a second texture on the same mesh.
+3. **Which falcon next.** Answered provisionally: the peregrine of the year (الشاهين البحري فرخ), because the
+   trapping research found the trapping auction sells only that bird; started only after he approves the saker. The
+   gyr (الجير) later, as a real مزاين class. (My recommendation had been the الجير بيور first.)
+4. **512 or 1024 px for the falcon on the fist.** Not decided: 512 px stays until he tries it on his phone.
 
 ## Not done yet
 
