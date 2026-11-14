@@ -9,11 +9,12 @@
 //                (Balance.tamperPriceShare) and a declared sale pays for her own look only
 //   4 own        for one who treated her himself the engine refuses the declared sale (ownTreatment), and the page
 //                says why
-// Drawn in the phone's own CSS and pieces from a game the engine played (seed 4242, 1 October 2026: tool/proto_engine/
-// bin/vet_design_save.dart): a seller's treated listing the player's vet looked at until he found it, a treated camel
-// bought unchecked and found the next day by the daily look (he did not know: told, not fined, and the engine prices
-// her declared sale), and نورة treated by her owner (the engine's refusal, ownTreatment); and a look at a clean listing
-// made in the page (nothing found). Every figure is the engine's.
+// Drawn in the phone's own CSS and pieces from a game on seed 4242 (tool/proto_engine/bin/vet_design_save.dart):
+// played forward till the market's own treated listings (its 3%) were on offer and the player's vet found a seller's
+// treatment; one state staged: a second treated listing bought unchecked and its finding by the daily look called
+// directly (its chance is years of play), so he is told, not fined, and the engine prices her declared sale; نورة
+// treated by her owner and the engine's refusal (ownTreatment); and a look at a clean listing made in the page.
+// Every figure shown is the engine's own.
 // To draw: `dart run bin/vet_design_save.dart <save.json>` in tool/proto_engine; build and serve the prototype
 // (THREE_DIR=<three@0.170.0 package> python3 tool/proto_app/assemble.py; serve tool/proto_app/assets/web on PORT,
 // default 8765) and run `SAVE=<save.json> NODE_PATH=$(npm root -g) node design/ui/phone_haraj_vet.cjs` from the

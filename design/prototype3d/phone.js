@@ -1073,7 +1073,7 @@ function enterScreen() {
   return `<div class="body">${back}<div class="title">سجّل ناقة</div>${errCard()}
     <div class="note" style="margin-top:-4px">${esc(F.name)} · كل ناقة وشوطها من لونها وعمرها</div>
     <div class="lst flat">${rows.map(item).join('')}</div>
-    ${more > 0 ? `<div class="note">وعندك ${count(more, 'head')} غيرها، والقائمة تبدأ بالأزين.</div>` : ''}
+    ${more > 0 && rows.length ? `<div class="note">وعندك ${count(more, 'head')} غيرها، والقائمة تبدأ بالأزين.</div>` : ''}
     ${c ? `<div class="tank"><small>اللي تدفعه عن ${esc(c.name)}</small>
       <div class="kind"><span>التسجيل</span><span class="d">${late ? `${n0(x.fee)} ريال تأخير` : `ببلاش لين ${dShort(F.closesOn)}، وبعده ${n0(x.lateFee)} ريال لين ${dShort(r.lastEntryDay)}`}</span></div>
       <div class="kind"><span>${head > 1 ? 'نقلهم' : her(c, 'نقلها', 'نقله')} لـ${REGION[F.region]} و${head > 1 ? 'رجعتهم' : her(c, 'رجعتها', 'رجعته')}</span><span class="d">${x.trip ? `${n0(x.trip)} ريال يوم الشوط` : 'مع حلالك الرايح'}</span></div></div>

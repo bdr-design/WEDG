@@ -1,21 +1,25 @@
-// A save for design/ui/phone_haraj_vet.cjs (part B of T10, a design awaiting the owner): the two states of الحراج's vet
-// check and declared sale that one sitting of the real page does not reach (the market's 3% of treated listings, the
-// vet's 60% a look), played into a new game on seed 4242 by the engine's own commands, so every figure on the views is
-// the engine's:
-//  - two of the cheapest listings carry a treatment put on by their sellers, as the market's 3% does (Balance
-//    .marketTamperChance); on the first the player's vet looks (CheckListing, SAR 500 each) until he finds it;
-//  - the second the player buys unchecked (BuyListing), the next day the daily look finds it (TamperingSystem
-//    .foundOutside): he did not know, so he is told and not fined, and may sell her declared (decision 15);
-//  - نورة treated by her owner (Tamper): the engine refuses her a declared sale (ownTreatment).
+// A save for design/ui/phone_haraj_vet.cjs (part B of T10, a design awaiting the owner), a new game on seed 4242:
+//  - played: the days go by (66 on this seed, the farm's stores filled so the herd lives through them unattended) till
+//    the market's own treated listings (its 3%) are two on offer, and the player's vet looks at the first
+//    (CheckListing, SAR 500, a look a day) till he finds the seller's treatment;
+//  - staged: the second treated listing bought unchecked (with money granted for it), and its finding by the daily look
+//    called directly (TamperingSystem.foundOutside: its chance, 0.04% a day a level, is years of play): he did not
+//    know, so he is told and not fined, and may sell her declared (decision 15);
+//  - played: his eldest camel (نورة, the start's she-camel) treated by her owner (Tamper), and the engine's refusal
+//    of her declared sale (ownTreatment).
+// One state is staged (the finding outside the ring called directly); every figure shown is the engine's own.
 // Run `dart run bin/vet_design_save.dart <out.json>` in tool/proto_engine; the page opens it from localStorage.
 import 'dart:io';
 
 import 'package:marah_data/marah_data.dart';
 import 'package:marah_domain/marah_domain.dart';
 // ignore: implementation_imports
+import 'package:marah_domain/src/model/market.dart';
+// ignore: implementation_imports
 import 'package:marah_domain/src/sim.dart';
 // ignore: implementation_imports
 import 'package:marah_domain/src/systems/systems.dart';
+import 'package:marah_domain/testing.dart';
 
 void main(List<String> args) {
   final now = DateTime.now().toUtc();
@@ -28,47 +32,58 @@ void main(List<String> args) {
     startedAt: now,
   );
   final w = g.state.world, me = g.me.id;
-  final list = w.listings.values.toList()
-    ..sort((a, b) => a.askPrice.value.compareTo(b.askPrice.value));
-  // the market's treated listings: a light dye and a light botox, the sellers'
-  for (final (l, k) in [
-    (list[0], TamperKind.dye),
-    (list[1], TamperKind.botox),
-  ]) {
-    w.camels[l.camelId]!.treatments.add(
-      Tampering(
-        kind: k,
-        strength: 1,
-        on: g.today - 10,
-        until: g.today - 10 + (k.lastsDays - 1),
-        by: l.sellerId,
-      ),
-    );
+  // played: the market's own treated listings (its 3%, Balance.marketTamperChance), day by day till two are on
+  // offer at once; the vet looks at the first, a look a day, till he finds it
+  List<Listing> treated() => [
+    for (final l in w.listings.values)
+      if (l.sellerId != me && w.camels[l.camelId]!.treatments.isNotEmpty) l,
+  ]..sort((a, b) => a.askPrice.value.compareTo(b.askPrice.value));
+  // (the farm's stores filled, so the herd lives through the wait unattended)
+  g.me.farm
+    ..storeKg = 100000
+    ..tankL = 200000
+    ..barleyKg = 40000
+    ..alfalfaKg = 40000
+    ..waterL = 190000;
+  var days = 0;
+  while (treated().length < 2 && days < 365) {
+    g.advanceDays(1);
+    days++;
   }
-  // the vet looks at the first until he finds it (a look a day)
+  final first = treated().first;
   var looks = 0;
-  for (; looks < 8; looks++) {
-    g.dispatch(CheckListing(me, list[0].id));
-    final c = w.camels[list[0].camelId]!;
-    if (c.treatments.any((t) => t.knownBy.contains(me))) break;
+  bool found() =>
+      w.camels[first.camelId]!.treatments.any((t) => t.knownBy.contains(me));
+  for (; looks < 30 && !found() && w.listings.containsKey(first.id); looks++) {
+    g.dispatch(CheckListing(me, first.id));
+    if (!found()) g.advanceDays(1);
+  }
+  // staged: the second bought unchecked, and its finding by the daily look
+  // (a chance of 0.04% a day a level: years of play) called directly
+  Listing? other() => treated().where((l) => l.id != first.id).firstOrNull;
+  for (var d = 0; other() == null && d < 365; d++) {
     g.advanceDays(1);
   }
-  // the second bought unchecked, then found by the daily look
-  final bought = list[1].camelId;
-  final r = g.dispatch(BuyListing(me, list[1].id));
+  final second = other()!;
+  final bought = second.camelId;
+  grant(g, second.askPrice.value + 20000);
+  final r = g.dispatch(BuyListing(me, second.id));
   if (!r.ok) throw StateError('not bought: $r');
   g.advanceDays(1);
   final c = w.camels[bought]!;
   final sim = Sim(g.state);
-  TamperingSystem.foundOutside(sim, g.me, c, c.treatments.single);
+  TamperingSystem.foundOutside(sim, g.me, c, c.treatments.first);
   g.state.record(sim.drain());
-  // نورة treated by her owner
-  final noura = w.aliveOwnedBy(me).firstWhere((x) => x.name == 'نورة');
+  // his eldest camel treated by her owner
+  final noura = w
+      .aliveOwnedBy(me)
+      .where((x) => x.id != bought)
+      .reduce((a, b) => a.ageDays(g.today) >= b.ageDays(g.today) ? a : b);
   g.dispatch(Tamper(me, noura.id, TamperKind.dye, 1));
   g.state.lastSeenUtcMs = now.millisecondsSinceEpoch;
   File(args.first).writeAsStringSync(const SaveCodec().encode(g.state));
   stdout.writeln(
-    'looks $looks, found ${w.camels[list[0].camelId]!.treatments.first.knownBy.contains(me)}, '
+    'played $days days, looks $looks, found ${found()}, '
     'bought ${c.name} declared ${GameView(g.state, me).cannotDeclare(bought)}, '
     'noura ${GameView(g.state, me).cannotDeclare(noura.id)?.code}, cash ${g.me.cash.value}, '
     'invariants ${checkInvariants(g.state)}',
