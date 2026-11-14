@@ -873,11 +873,12 @@ function listingScreen() {
   // on account), one a day (the same day's looks agree); what he finds only the buyer knows. Nothing of a treatment shows
   // before a look finds it (the engine sends only what the player was told: l.treatments)
   const kinds = l.treatments || [], told = kinds.length > 0, n = l.checked || 0, fee = G.haraj.vetFee;
-  const times = n === 1 ? 'مرة' : n === 2 ? 'مرتين' : `${n} مرات`;
+  // (the counting noun; the verb kept with its count: «فحصه | 3 مرات» broke so, the audit)
+  const times = n === 1 ? 'مرة' : count(n, 'time').replace(' ', '\u00a0');
   const vetPoor = G.cash < fee;
   const vetRow = told
     ? alertCard(l.declared ? `${her(c, 'معروضة', 'معروض')} معلن إن ${her(c, 'فيها', 'فيه')} ${tamperNames(kinds)}` : `البيطري لقى ${her(c, 'فيها', 'فيه')} ${tamperNames(kinds)}`, `محد يدري غيرك. لو ${her(c, 'اشتريتها وسجلتها', 'اشتريته وسجلته')} بمزاين وانكشف، الغرامة والحرمان عليك. والتجميل يروح مع الوقت.`)
-    : `<div class="group"><div class="row"><span class="lead">${svg('scope')}</span><b>${n ? `البيطري ${her(c, 'فحصها', 'فحصه')} ${times}` : `${her(c, 'افحصها', 'افحصه')} عند البيطري`}</b><span class="act"><button class="btn ghost" data-act="vet" data-id="${esc(l.id)}" aria-label="${l.checkedToday ? 'البيطري فحصها اليوم، افحص بكرة' : `افحص ${esc(c.name)} عند البيطري بـ ${n0(fee)} ريال`}" ${l.checkedToday || vetPoor ? 'disabled' : ''}>${l.checkedToday ? 'افحص بكرة' : 'افحص'}</button></span><small>${n ? 'ما لقى شي · ' : ''}الفحص بـ ${n0(fee)} ريال، وكل يوم فحص\u00a0جديد${vetPoor && !l.checkedToday ? ' · رصيدك ما يكفي' : ''}</small></div></div>`;
+    : `<div class="group"><div class="row"><span class="lead">${svg('scope')}</span><b>${n ? `البيطري ${her(c, 'فحصها', 'فحصه')}\u00a0${times}` : `${her(c, 'افحصها', 'افحصه')} عند البيطري`}</b><span class="act"><button class="btn ghost" data-act="vet" data-id="${esc(l.id)}" aria-label="${l.checkedToday ? `البيطري ${her(c, 'فحصها', 'فحصه')} اليوم، افحص بكرة` : `افحص ${esc(c.name)} عند البيطري بـ ${n0(fee)} ريال`}" ${l.checkedToday || vetPoor ? 'disabled' : ''}>${l.checkedToday ? 'افحص بكرة' : 'افحص'}</button></span><small>${l.checkedToday ? 'ما لقى شي · ' : ''}الفحص بـ ${n0(fee)} ريال، وكل يوم فحص\u00a0جديد${vetPoor && !l.checkedToday ? ' · رصيدك ما يكفي' : ''}</small></div></div>`;
   const bidRow = `<div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} ${her(c, 'عليها', 'عليه')}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
   return `<div class="body">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${msgCard()}${errCard()}
     <div class="it big"><span class="ph">${photo(c)}</span>${facts}</div>
@@ -932,7 +933,8 @@ function sellScreen() {
   // told, she may be sold declared, at her natural price, no examination and no fine (c.declaredSale, the engine's
   // broker price); treated by himself, the engine refuses it (c.declareRefused) and the page says why
   if (c.declaredSale != null) {
-    if (HJ.ask == null || HJ.askFor !== `d:${c.id}`) { HJ.ask = Math.max(min, roundTo(c.declaredSale, stepOf(c.declaredSale))); HJ.askFor = `d:${c.id}`; }
+    // (never under the broker's price: rounded up a step at most, under her natural worth)
+    if (HJ.ask == null || HJ.askFor !== `d:${c.id}`) { HJ.ask = Math.max(min, Math.ceil(c.declaredSale / stepOf(c.declaredSale)) * stepOf(c.declaredSale)); HJ.askFor = `d:${c.id}`; }
     const kd = stepOf(c.declaredSale);
     return `<div class="body">${back}<div class="title" style="font-size:22px">بيع ${esc(c.name)}</div>${errCard()}
     <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small><small>${her(c, 'فيها', 'فيه')} تجميل، وأنت ما دريت لين انقال لك</small></div>
@@ -2111,7 +2113,7 @@ export function createPhone({ host }) {
         const r = l ? await engine.dispatch({ type: 'checkListing', listing: l.id }) : null;
         if (r && r.ok) {
           const ev = (r.events || []).find((e) => e.type === 'listingChecked'), c = l.camel;
-          HJ.said = ev && ev.found && ev.found.length ? `البيطري لقى ${her(c, 'فيها', 'فيه')} ${tamperNames(ev.found)}` : 'البيطري فحصها وما لقى شي';
+          HJ.said = ev && ev.found && ev.found.length ? `البيطري لقى ${her(c, 'فيها', 'فيه')} ${tamperNames(ev.found)}` : `البيطري ${her(c, 'فحصها', 'فحصه')} وما لقى شي`;
         } else if (r) {
           const code = r.error?.code;
           ERR = code === 'checkedToday' ? `البيطري ${her(l.camel, 'فحصها', 'فحصه')} اليوم، افحص بكرة.` : code === 'insufficientFunds' ? `رصيدك ما يكفي للفحص: ${n0(r.error.params?.needed ?? G.haraj.vetFee)} ريال.` : code === 'notFound' ? her(l.camel, 'انباعت قبل لا يفحصها.', 'انباع قبل لا يفحصه.') : 'جرّب مرة ثانية.';
