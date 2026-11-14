@@ -35,6 +35,7 @@
     color-scheme: dark;
   }
   html, body { height: 100%; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }      /* (iOS enlarges text it judges small when a page is landscape; the game is landscape only and every size is set: none is changed) */
   body { margin: 0; background: #b98a5e; color: var(--ink); font-family: var(--ui); overflow: hidden; -webkit-tap-highlight-color: transparent; }
   /* No press selects or calls out anything on the game's surfaces (the owner, 14 Nov: a long press on his iPhone
      selected the screen). iOS starts a selection and its magnifier on a long press over selectable content (with the
