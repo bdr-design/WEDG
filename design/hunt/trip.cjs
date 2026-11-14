@@ -34,6 +34,17 @@
 // a net a few hundred, 1 draw; the mobile tent about 1.5k, the pigeon cage about 400, the supplies about 800 (static,
 // in the cached shadow map: 3 draws); the falcons' room about 2k in 2 draws, its perches instanced, 1 draw. Every
 // frame's base is counted from the WebGL calls and written to trip_draws.txt.
+// AWAY FOR DAYS IS THE CALENDAR'S ONE MECHANISM (task T15, /home/user/wt/t15 docs/proposals/rush_and_calendar.md section 5):
+// «اطلع» opens the calendar's card before the jump (phone_falcon.cjs views 16-17) with the trip's lines added; the drive
+// is the plan's travel time; each «نام لين الفجر» is one call of the engine's away() to tomorrow, landing at the working
+// hour's start, with ALL the calendar's stops (an illness, a death, a store at 3 days, money below zero, the account at its
+// limit, a fine or ban, an offer, his round's day, a registration closing in 3 days, the breeding season opening, the pens
+// full) plus the camp's own (its supplies out, the trapping season's end, the trip's chosen end); a bird in the net is
+// played live, not a stop; the summary (trip_21) is the calendar's summary view with the trip's lines above its own.
+// DRAW COSTS: the driver's seat is round 1's count only (37 draws / 159k); this run's reading did not take. The binocular
+// view (trip_14) narrows the view, so the far peregrine shows enlarged and needs the near model by its size on screen:
+// about 6k triangles and 3 draws (+3 shadow) over the base; he leaves it by the binoculars' own button at the right edge
+// (the mask hides the top-left buttons).
 // To draw again: build the prototype (THREE_DIR=<three@0.170.0 package> python3 tool/proto_app/assemble.py), serve
 // tool/proto_app/assets/web on a port (PORT, 8765 by default), run `python3 -I design/hunt/cut_bird.py` once, then
 // `NODE_PATH=$(npm root -g) node design/hunt/trip.cjs` from the repository's root; it writes trip_<nn>_<name>.jpg,
@@ -110,7 +121,7 @@ Object.assign(SV, {
   pereNet: `<svg viewBox="0 0 120 70" width="120" height="70"><ellipse cx="60" cy="62" rx="50" ry="6" fill="rgba(60,40,20,.35)"/><path d="M14 48 C28 30 44 26 56 30 L60 20 C64 12 74 12 78 20 C82 28 80 36 72 42 C88 38 100 42 110 48 C94 52 78 54 62 56 L46 56 C34 54 22 52 14 48 Z" fill="#3e454d"/><path d="M60 32 C66 36 72 36 76 32 L74 52 L60 52 Z" fill="#e3dccd"/><circle cx="72" cy="20" r="2" fill="#111"/><path d="M78 20 l5 2 -5 2" fill="#e9c84a"/><path d="M8 30 L112 60 M8 60 L112 26 M30 18 L50 66 M70 14 L90 66" stroke="#2c3322" stroke-width="1.3" opacity=".85"/></svg>`,
   curlewDown: `<svg viewBox="0 0 90 30" width="90" height="30"><ellipse cx="45" cy="24" rx="40" ry="5" fill="rgba(60,40,20,.3)"/><path d="M6 20 C20 10 50 8 76 14 C82 16 86 20 86 22 Z" fill="#b59a74"/><path d="M76 14 l12 -4" stroke="#e0c35a" stroke-width="2"/></svg>`,
   room: `<svg viewBox="0 0 150 100" width="150" height="100"><path d="M6 96 L6 38 L75 10 L144 38 L144 96 Z" fill="#cdbb98"/><path d="M6 38 L75 10 L144 38" fill="none" stroke="#8a7656" stroke-width="4"/><rect x="58" y="54" width="34" height="42" fill="#5a4630"/><rect x="18" y="52" width="26" height="18" fill="#3c4a52"/><rect x="106" y="52" width="26" height="18" fill="#3c4a52"/><path d="M6 96 h138" stroke="#7a6a4f" stroke-width="3"/></svg>`,
-  scope: `<div style="position:fixed;inset:0;background:radial-gradient(ellipse 34% 52% at 36% 50%, transparent 98%, #000 100%), radial-gradient(ellipse 34% 52% at 64% 50%, transparent 98%, #000 100%);mix-blend-mode:multiply"></div>`,
+  scope: `<svg style="position:fixed;inset:0;width:100%;height:100%" viewBox="0 0 956 440" preserveAspectRatio="none"><defs><mask id="bino"><rect width="956" height="440" fill="#fff"/><circle cx="398" cy="220" r="190" fill="#000"/><circle cx="558" cy="220" r="190" fill="#000"/></mask></defs><rect width="956" height="440" fill="#000" mask="url(#bino)"/></svg>`,
 });
 const NET_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 12h18M12 3v18M3 3l18 18M21 3L3 21"/></svg>';
 const PIGEON_ICON = '<svg viewBox="0 0 24 24"><path d="M4 14c2-4 6-6 10-5l3-3 1 3c1.5 1 2.5 2.5 2 4-2 3-6 5-10 4-2.5-.5-4.5-1.5-6-3z"/><path d="M15 3v3M18.5 4.5l-1.5 2"/></svg>';
@@ -166,6 +177,7 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
   const line = (name, best, note) => `${name}: main ${best[0]} draws / ${best[1]} triangles, shadow ${best[2]} / ${best[3]}, total ${best[0] + best[2]} / ${best[1] + best[3]}  (${note})`;
   const count = async (name, note) => { counts.push(line(name, await measure(), note)); console.log(counts[counts.length - 1]); };
   const shot = async (name, note) => {
+    await p.evaluate(() => document.activeElement && document.activeElement.blur && document.activeElement.blur());
     counts.push(line(name, await measure(), note));
     await p.evaluate(() => { window.__q = []; window.__raf = window.requestAnimationFrame; window.requestAnimationFrame = (fn) => { window.__q.push(fn); return 1; }; });
     await p.waitForTimeout(300);
@@ -192,8 +204,8 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
     await p.evaluate(() => {
       const V = window.__camera.position.constructor;
       window.__hunt = window.__addPlace({ key: 'hunt', name: 'طرف النفود', icon: 'falcon', p: new V(-14000, 80, 1500), min: 900, cls: 'far', edge: true, text: () => '',
-        open() { return { sub: 'مقناص · رحلة أيام · غرب العزبة', stats: [['المسافة', '14', 'كم'], ['الطريدة', 'الكروان'], ['العزبة تكفي', '8', 'أيام']],
-          html: '<div class="note">العلف يكفي 9 أيام والماء 8، والعزبة تمشي مثل كل يوم وانت غايب. معك: غيث وعدته، ومؤونة 5 أيام.</div>', actions: [{ label: 'اطلع للرحلة', primary: true, run() {} }] }; } });
+        open() { return { sub: 'مقناص · رحلة أيام · غرب العزبة', stats: [['المسافة', '14', 'كم'], ['الطريدة', 'الكروان'], ['الأيام', 'تختارها']],
+          html: '<div class="note">قبل ما تطلع يوريك الجوال بطاقة التقويم: كم يكفي العلف والماء، واللي يجي بالطريق، ومتى يرجع لك. والعزبة تمشي مثل كل يوم وانت غايب.</div>', actions: [{ label: 'اطلع للرحلة', primary: true, run() {} }] }; } });
       window.__addPlace({ key: 'estate', name: 'المحازة', icon: 'estate', p: new V(-16000, 80, -5000), min: 900, cls: 'far', edge: true, text: () => '', open() { return {}; } });
     });
     await p.waitForTimeout(2500);
@@ -206,8 +218,8 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
     await p.evaluate(() => {
       const V = window.__camera.position.constructor, dir = (dx, dz) => { const k = 60000 / Math.hypot(dx, dz); return new V(dx * k, 200, dz * k); };
       window.__hamad = window.__addPlace({ key: 'hamad', name: 'الحماد · أرض طرح', icon: 'net', p: dir(-185, -575), min: 900, cls: 'far', edge: true, text: () => '',
-        open() { return { sub: 'مخيم أيام · شمال العزبة', stats: [['المسافة', '600', 'كم'], ['الطرح', 'لين 30 نوفمبر'], ['العزبة تكفي', '8', 'أيام']],
-          html: '<div class="note">العلف يكفي 9 أيام والماء 8، والعزبة تمشي مثل كل يوم وانت غايب. عدتك: 6 حمامات، شبك الحمام، مؤونة 10 أيام. ناقصك: الدربيل، الخيمة المتنقلة، شبك الطيور.</div>',
+        open() { return { sub: 'مخيم أيام · شمال العزبة', stats: [['المسافة', '600', 'كم'], ['الطرح', 'لين 30 نوفمبر'], ['عدتك', 'ناقصة', '', 'warn']],
+          html: '<div class="note">قبل ما تطلع يوريك الجوال بطاقة التقويم مع عدتك ومؤونة المخيم: كم يكفي العلف والماء، واللي يجي بالطريق، ومتى يرجع لك.</div>',
           actions: [{ label: 'اطلع للمخيم', primary: true, run() {} }, { label: 'كمّل عدتك', run() {} }] }; } });
       window.__addPlace({ key: 'hail', name: 'حائل · أرض طرح', icon: 'net', p: dir(-120, -190), min: 900, cls: 'far', edge: true, text: () => '', open() { return {}; } });
     });
@@ -217,15 +229,15 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
     await close();
   }
 
-  await p.evaluate(() => (window.__added || []).forEach((l) => { l.off = true; }));      // (the grounds' pins are not on the farm's frames)
+  await p.evaluate(() => (window.__added || []).forEach((l) => { l.off = true; l.el.style.visibility = 'hidden'; }));      // (the grounds' pins are not on the farm's frames)
   // ================================================================ the falcons' room at the farm
   if (ONLY.includes('room')) {
     await p.evaluate(() => { const c = window.__controls, cam = window.__camera; c.target.set(-12, 0, 20); cam.position.set(-60, 34, 70); c.update(); });
     await p.waitForTimeout(2500);
-    await draw(at(440, 250, SV.room.replace('width="150" height="100"', 'width="112" height="75"')) + pin(496, 252, 'room'));
+    await draw(at(355, 92, SV.room.replace('width="150" height="100"', 'width="90" height="60"')) + pin(400, 94, 'room'));
     await shot('trip_04_room', 'the farm: the falcons\' room drawn (a stand-in building) with its pin');
     await open({ key: 'room', name: 'غرفة الصقور', icon: 'room', c: { sub: 'أوكار ومقيض · تشيل 4 صقور', stats: [['الصقور', '2', ''], ['تبي دعو', '1', '', 'warn'], ['المقيض', 'بالصيف']],
-      html: '<div class="note">سهيل · شاهين بحري فرخ، طرحته أنت. غيث · حر فرخ، من مزاد المزارع: ما دعيته من أمس.</div>', actions: [{ label: 'ادعهم', primary: true }, { label: 'نادي الصقور' }] } });
+      html: '<div class="note">سهيل · شاهين بحري فرخ، من مزاد الطرح. غيث · حر فرخ، من مزاد المزارع: ما دعيته من أمس.</div>', actions: [{ label: 'ادعهم', primary: true }, { label: 'نادي الصقور' }] } });
     await shot('trip_05_room_card', 'the room\'s card, opened by its pin (drawn content)');
     await close(); await draw('');
   }
@@ -260,7 +272,7 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
       await shot('trip_07_camp_falcon', 'the falcon trip\'s camp, parked: the tent, the hooded saker on its perch (T11), the supplies and the tent\'s pin drawn; the falcon\'s button in the car\'s row');
       // (in the car: the card docks below the car's row, and the pedals and the steering pad step aside while it is open: a proposal)
       await p.evaluate(() => { const st = document.createElement('style'); st.id = 'incar'; st.textContent = 'body.playing .pop { top: 96px !important; } .pl-pedals, .pl-steer { visibility: hidden; }'; document.head.appendChild(st); });
-      await open({ key: 'camp', name: 'المخيم · اليوم الثالث', icon: 'tent', c: { sub: 'طرف النفود · رحلة مقناص', stats: [['الأيام', '3', ''], ['المؤونة', 'يومين', '', 'warn'], ['العزبة تكفي', '6', 'أيام']],
+      await open({ key: 'camp', name: 'المخيم · اليوم الثالث', icon: 'tent', c: { sub: 'طرف النفود · رحلة مقناص', stats: [['الأيام', '3', ''], ['المؤونة', 'يومين', '', 'warn'], ['العزبة تكفي', '6', 'أيام تقريبًا']],
         html: '<div class="note">الصبح والعصر تطلع بالصقر، والليل تنام. تقدر تفك المخيم وترجع أي وقت.</div>', actions: [{ label: 'نام لين الفجر', primary: true }, { label: 'فك المخيم وارجع' }] } });
       await shot('trip_08_camp_card', 'the camp\'s card, opened by the tent\'s pin: the day, the supplies, the farm\'s days, sleep to dawn or break camp (drawn content)');
       await close(); await draw(''); await p.evaluate(() => document.getElementById('incar')?.remove());
@@ -304,12 +316,12 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
       await shot('trip_16_catch', 'the peregrine in the net (stand-in) with its pin, and the card the tap opened: a sellable bird (drawn)');
       await close();
       await draw(`<div style="left:430px;top:200px;width:50px;height:80px">${img('saker_alert_side', 0, 0, 34)}</div>` + pin(447, 200, 'net'));
-      await open({ key: 'rel', name: 'حر', icon: 'net', c: { sub: 'ما ينطرح · طلقته', html: '<div class="note">طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري.</div>', actions: [{ label: 'طيب', primary: true }] } });
+      await open({ key: 'rel', name: 'حر', icon: 'net', c: { sub: 'ما ينطرح · طلقته', html: '<div class="note">طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري</div>', actions: [{ label: 'طيب', primary: true }] } });
       await shot('trip_17_release', 'a saker in the net (T11\'s saker) released, with the proxy\'s line (drawn)');
       await close();
       await draw(pin(180, 200, 'tent'));
-      await open({ key: 'day', name: 'المخيم · اليوم السادس', icon: 'tent', c: { sub: 'الحماد · مخيم طرح', stats: [['الطيور اليوم', 'ما جا شي'], ['المؤونة', '4', 'أيام'], ['العلف بالعزبة', 'يخلص بعد يومين', '', 'warn']],
-        html: '<div class="note warn">العلف بالعزبة يخلص بعد يومين: تطلبه من الجوال وانت هنا، أو تفك المخيم وترجع.</div>', actions: [{ label: 'نام لين الفجر', primary: true }, { label: 'فك المخيم وارجع' }] } });
+      await open({ key: 'day', name: 'المخيم · اليوم السادس', icon: 'tent', c: { sub: 'الحماد · مخيم طرح', stats: [['الطيور اليوم', 'ما جا شي'], ['المؤونة', '4', 'أيام'], ['العلف بالعزبة', 'باقي 3 أيام', '', 'warn']],
+        html: '<div class="note warn">باقي 3 أيام على العلف بالعزبة: تطلبه من الجوال وانت هنا، أو تفك المخيم وترجع.</div>', actions: [{ label: 'نام لين الفجر', primary: true }, { label: 'فك المخيم وارجع' }] } });
       await shot('trip_18_empty_day', 'an empty day\'s evening: the camp\'s card, opened by the tent\'s pin, with the farm\'s warning that handed the game back (drawn)');
       await close(); await draw('');
       // off the ground: back by the yard, the net's button warns and does not act
@@ -331,13 +343,16 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
       // back home: the trip's summary in the small phone (the calendar's summary, task T15)
       await p.evaluate(() => window.__phone.toggle());
       await p.waitForTimeout(800);
-      await phoneScreen(`${BACK}<div class="title">رجعت من المخيم</div>
-        <div class="tank"><small>الحماد · 9 أيام</small><div class="v">طير واحد</div><div class="ln">فرخ شاهين بحري، بغرفة الصقور</div></div>
+      await phoneScreen(`${BACK}<div class="title">اللي صار</div>
+        <div class="span" style="background:#fff;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:2px"><b style="font:700 15px/1.3 Alexandria,sans-serif">9 أيام · مخيم الحماد</b><small style="font-size:12px;color:#6e6e73">من الخميس 1 أكتوبر لين السبت 10 أكتوبر</small></div>
         <div class="group">
+          <div class="row"><span class="lead">${ps('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 12h18M12 3v18"/>')}</span><b>طرحت فرخ شاهين بحري (مثال)</b><small>اليوم الثامن · بغرفة الصقور</small></div>
           <div class="row"><span class="lead">${ps('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}</span><b>طلقت حر</b><small>اليوم الرابع: المزاد ما يقبله</small></div>
-          <div class="row"><span class="lead">${ps('<rect x="3" y="7" width="18" height="11" rx="2"/>')}</span><b>العلف انطلب من الجوال</b><small>اليوم السادس، ووصل العزبة</small></div>
           <div class="row"><span class="lead">${ps('<circle cx="12" cy="12" r="8.5"/>')}</span><b>المؤونة والبنزين</b><small>صرفت 1,350 ريال</small></div></div>
-        <div class="note">العزبة مشت مثل كل يوم. ومزاد الطرح الليلة بملهم لو تبي تعرضه.</div>`);
+        <div class="group">
+          <div class="row"><span class="lead">${ps('<path d="M12 4 2.5 20h19z"/>')}</span><b>قرب العلف يخلص</b><small>اليوم السادس: طلبته من الجوال ووصل</small></div>
+          <div class="row"><span class="lead">${ps('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}</span><b>ما مرض شي</b><small>وما مات شي</small></div></div>
+        <div class="note">هذا مثال: أغلب المواسم ما ينطرح فيها طير.</div>`);
       await p.waitForTimeout(800);
       await shot('trip_21_back', 'back at the farm: the trip\'s summary in the small phone (drawn content)');
     }
@@ -353,8 +368,8 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
 
 const CAP = {
   trip_01_map_west: 'الخريطة للغرب. مرسوم: دبوس أرض المقناص «طرف النفود» ودبوس «المحازة» بعيد على الأفق.',
-  trip_02_card_hunt: 'تضغط دبوس المقناص فتنفتح بطاقته: الرحلة أيام (كلام المالك 14 نوفمبر)، وكم يكفي العلف والماء بالعزبة (نفس بطاقة القفزة بالتقويم). مرسوم: المحتوى.',
-  trip_03_card_trap: 'الخريطة للشمال: دبابيس أراضي الطرح (الحماد وحائل) باتجاهها الحقيقي، وبطاقة قبل المخيم: عدتك والناقص وأيام العزبة. مرسوم.',
+  trip_02_card_hunt: 'تضغط دبوس المقناص فتنفتح بطاقته: الرحلة أيام (كلام المالك 14 نوفمبر)، و«اطلع للرحلة» يفتح بالجوال بطاقة التقويم نفسها مع سطور الرحلة. مرسوم: المحتوى.',
+  trip_03_card_trap: 'الخريطة للشمال: دبابيس أراضي الطرح (الحماد وحائل) باتجاهها الحقيقي، وبطاقة الأرض بضغطتك؛ «اطلع للمخيم» يفتح بطاقة التقويم مع العدة والمؤونة. مرسوم.',
   trip_04_room: 'العزبة: غرفة الصقور (مبنى بديل مرسوم) ودبوسها (قرار المالك 5).',
   trip_05_room_card: 'بطاقة غرفة الصقور بضغطة دبوسها: الصقور والدعو والمقيض. مرسوم: المحتوى. سعرها وسعتها اختيار لعب.',
   trip_06_drive: 'السواقة للأرض من ورا. كله حقيقي: وهي تمشي يبقى القير بس فوق. نفس السواقة للمقناص وللطرح.',
@@ -365,14 +380,14 @@ const CAP = {
   trip_11_result: 'نزل على الكروان (الصقر صورة المجسم، والكروان المصيود بديل) ودبوس عليه؛ تضغطه فتطلع البطاقة (قرار المالك 3). الصيد ما ينباع.',
   trip_12_lost: 'نادر: الصقر ما رجع. زر جهاز التتبع بنقطة حمرا على الطرف، وبطاقته بضغطتك: غالبًا تلقاه وأحيانًا يروح (قرار المالك 6). مرسوم.',
   trip_13_camp_trap: 'مخيم الطرح، نفس المخيم: الخيمة المتنقلة وقفص الحمام والشبك والمؤونة (بدائل)، وزر الطرح جنب أزرار السيارة. الأرض هنا أرض القصيم بالصورة.',
-  trip_14_dawn: 'الفجر بالدربيل: شاهين عابر بعيد (بديل: الشاهين ما انبنى). على الطرف: زر الحمامة بالشبك وزر الدربيل. مرسوم.',
+  trip_14_dawn: 'الفجر بالدربيل (دايرتين): شاهين عابر بعيد (بديل: الشاهين ما انبنى). على الطرف: زر الحمامة بالشبك، وزر الدربيل اللي يشيله. مرسوم.',
   trip_15_stoop: 'أطلقت الحمامة والشبك على ظهرها، والشاهين ينقض (بدائل). مرسوم.',
   trip_16_catch: 'الشاهين بالشبك (بديل) ودبوسه، وبطاقته بضغطتك: فرخ شاهين بحري ينباع بمزاد الطرح، طوله وعرضه ووزنه. مرسوم.',
-  trip_17_release: 'حر بالشبك (صورة مجسم الحر) ينطلق، بسطر الوكيل (جواب مؤقت): الحر مهدد والمزاد ما يقبله. مرسوم.',
+  trip_17_release: 'حر بالشبك (صورة مجسم الحر) ودبوسه؛ بضغطتك على الدبوس تنفتح البطاقة: ينطلق، بسطر الوكيل (جواب مؤقت) بنصه. مرسوم.',
   trip_18_empty_day: 'يوم فاضي: بطاقة المخيم بضغطة الخيمة بالمسا، وتنبيه العزبة اللي رجّع اللعب لك (العلف يخلص بعد يومين). مرسوم.',
-  trip_19_off_ground: 'جنب العزبة: زر الطرح يحذر وما يشتغل، وبطاقته: الطرح بأرضه وموسمه بس، والشبك براها 100,000 [136] (الوكيل). مرسوم.',
-  trip_20_banned: 'جنب العزبة بالصقر: زر الإرسال يحذر وما يرسل (قرار المالك 4)، وبطاقته والغرامة 5,000 [136]. مرسوم.',
-  trip_21_back: 'رجعت: ملخص المخيم بالجوال الصغير (الحقيقي)، مثل ملخص القفزة بالتقويم. مرسوم: محتوى الشاشة.',
+  trip_19_off_ground: 'جنب العزبة: زر الطرح يحذر وما يشتغل، وبضغطتك على زر التحذير تنفتح بطاقته: الطرح بأرضه وموسمه بس، والشبك براها 100,000 [136] (الوكيل). مرسوم.',
+  trip_20_banned: 'جنب العزبة بالصقر: زر الإرسال يحذر وما يرسل (قرار المالك 4)، وبضغطتك على زر التحذير تنفتح بطاقته والغرامة 5,000 [136]. مرسوم.',
+  trip_21_back: 'رجعت: «اللي صار» بالجوال الصغير، نفس ملخص التقويم ومعه سطور المخيم؛ الطير «مثال». مرسوم: محتوى الشاشة.',
 };
 
 // each frame with its strip under it (outside the game's picture): what is real and what is drawn
