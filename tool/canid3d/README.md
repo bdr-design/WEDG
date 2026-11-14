@@ -32,11 +32,11 @@ corners, the toes out of the paw) and meshed as one closed surface, as `tool/cam
 
 | File | What | Triangles | Draws | Texture pair |
 |---|---|---|---|---|
-| `assets_src/canids/wolf_alert.glb`, `wolf_stalk.glb`, `wolf_run.glb` | the wolf, close: one skin | 7,000 each | 1 | 512 px |
+| `assets_src/canids/wolf_alert.glb`, `wolf_stalk.glb`, `wolf_run.glb` | the wolf, close: the skin and the two eyes (each a ball and its lids) | 7,536 each | 1 | 512 px |
 | `wolf_*_lod1.glb` | the wolf, far: the same skin decimated | 1,300 each | 1 | 256 px |
-| `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, its collar and the collar's ring (3 pieces); barking, also the four canines | 7,616 / 7,616 / 7,760 | 1 | 512 px |
+| `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, the eyes, its collar and the collar's ring; barking, also the four canines | 8,152 / 8,152 / 8,296 | 1 | 512 px |
 | `dog_*_lod1.glb` | the guard dog, far: the skin and the collar (2 pieces) | 1,418 / 1,418 / 1,420 | 1 | 256 px |
-| `stray_alert.glb`, `stray_bark.glb` | the stray, close: one skin (the barking file adds the canines) | 7,000 / 7,144 | 1 | 512 px |
+| `stray_alert.glb`, `stray_bark.glb` | the stray, close: the skin and the eyes (the barking file adds the canines) | 7,536 / 7,680 | 1 | 512 px |
 | `stray_*_lod1.glb` | the stray, far | 1,300 each | 1 | 256 px |
 
 - **One mesh and one material per file, one-sided:** the skin and every extra piece are closed. The collar is in the
@@ -87,9 +87,9 @@ The budget is ADR 0005's: 200 draws and 400k triangles a frame with shadows, and
   are mostly seen far. The guard dog may be near the camera at the pens.
 - **A night scene:**
   - two wolves far: 2 × 1,300;
-  - the guard dog close: 7,616;
+  - the guard dog close: 8,152;
   - three strays far: 3 × 1,300;
-  - total about 13k triangles in 6 draws, 12 with each casting a live shadow;
+  - total about 14.6k triangles in 6 draws, 12 with each casting a live shadow;
   - that is 3% of the triangle budget (7% counting the shadow pass) and 3% of the draws.
   - Textures: three animals, each with its close and far pairs, are 10 MiB uncompressed, about 2.5 MiB compressed.
 - **How large the wolf is on the screen** (the game's camera: 40° vertical field of view, 956 × 440, the camera 28°
@@ -102,12 +102,12 @@ The budget is ADR 0005's: 200 draws and 400k triangles a frame with shadows, and
   - At 20 m the wolf covers about 1,000 screen pixels, so its 1,300 triangles are about one to a pixel.
   - Beyond about 30 m a third level of about 300 triangles would do, and that is cheap to add. Not built: at most
     five canids in a scene make 6.5k far triangles, under 2% of the budget.
-- **Why the close model is 7k:**
+- **Why the close model is about 7.5k:**
   - The skin before decimation has about 300k triangles; collapse decimation keeps them where the shape turns.
   - The toes need about 350–450 triangles a paw to read as four toes close up; at 5,600 in all they took half the
     model and starved the face. At 7,000 the wolf has about 1,950 in the head (with the ears), 1,570 in the four paws
     and 3,480 in the body; the decimation spares the head a little and the paws a little (`skin.HEAD_SPARE`,
-    `PAW_SPARE`). 7k is still under 2% of the frame's 400k.
+    `PAW_SPARE`). The two modelled eyes add about 540. 7.5–8.3k is still about 2% of the frame's 400k.
   - As one skinned mesh this is cheap next to the camels' 8–40k.
 - **Fur is texture and silhouette only:** no shells and no alpha cards. The brush of the tail and the thigh's
   breeches are in the outline; the grizzle of the guard hairs in the colour; the hair's grain in the normal map.
@@ -283,7 +283,7 @@ the ground under the body's middle.
   - The torso is lofted along the body, its lower half narrowing to a keel at the chest and the belly; the back can
     bend (the run).
   - The neck runs on into the back of the skull. The head is lofted along its axis as a wedge, with a lower jaw hinged
-    under the cheek, and a nose pad; the eyes are small bulges on the skull's sides.
+    under the cheek, and a nose pad; the eyes' places and looks (the eyes themselves are made on the skin, below).
   - The ears are cupped blades with rounded tips, set on the skull's corners, splayed and tipped by the pose.
   - The legs are tubes through their joints, the forearm and gaskin flattened sideways. Each leg is solved by two-bone
     inverse kinematics from the shoulder or hip joint to the carpus or hock, which is placed from the paw's spot and
@@ -377,19 +377,40 @@ animation texture beyond it, as ADR 0005 plans for the camels: 32 bones × about
 - **Not modelled:** the fused pads (under the foot), teeth in the closed mouth, and the inside of the mouth beyond a
   painted tongue and gums.
 
+## The face: what is modelled and what is painted (round 5)
+
+- **Modelled:**
+  - each eye: a ball (about 140 triangles) set into an almond socket cut in the skin, its front just proud of the
+    face, and the lids, a thin dark almond rim along the opening (about 130 triangles): about 540 for both eyes;
+  - the mouth: a shallow groove cut along each side of the upper lip's edge, and the upper lip dropped a little over
+    the lower jaw;
+  - the ears' cup (since round 2), the toes and their clefts (rounded since this round), the nose pad, the cheeks.
+- **Painted:**
+  - on the eyeball: the iris (the wolf's amber, the dogs' dark brown) round a round black pupil, the rest of the ball
+    dark, and a small catch-light: the material is one and rough (one draw per animal), so the eye cannot really
+    shine and the catch-light is painted;
+  - the lip line (about 2–3 mm wide with soft edges) in the groove; the lower lip's dark edge only near the corner;
+  - the nose's dark with its nostrils and a painted sheen (it cannot look wet with one rough material);
+  - the ears: dark deep in the hollow, pale tufts of hair at the inner rim;
+  - the coat's every mark, the claws, the pads.
+- **The far models** keep the socket in the skin with the eye painted in it (no ball: at their distances it is
+  under a few pixels).
+
 ## Known gaps, plainly (for the owner)
 
-- **The eyes and the lip line are paint** on the skin: close up they show the texture's steps (an eye is about 25
-  texels long).
+- **The eye cannot shine:** one rough material per animal, so its catch-light is painted and does not move with the
+  light. A second, glossy material for the eyes would cost one more draw per animal: not done.
+- **The lip line and the nose's sheen are paint;** close up they show the texture's steps.
 - **The texture's size:** a texel is about 3 mm on the body (1.6 mm on the head); the grizzle's streaks show their
   steps in the closest pictures.
-- **The toes' clefts** are shallow cuts: close up from the front they read as four toes, with some facets.
+- **The toes' clefts** are shallow rounded cuts: close up from the front they read as four toes, with some facets.
 - **Where a leg meets the trunk** the skin can show a faint crease, and a little webbing between the elbow and the
   chest.
 - **The dog's neck** stands about 55 mm over the withers when it holds its head high (a dog's neck crest; the wolf's
   summer neck is +6 mm).
 - **Muybridge's plate 707** (the dog's gallop) could not be opened; the run follows the reviewer's description.
-- **The stray's loin** is 16% under the dog's (the reviewer asked 10–15%).
+- **The stray's loin** is 16% under the dog's (the reviewer asked 10–15%); its coat's patches are paint on the same
+  skin as the dog's.
 - **The game has no night yet:** the night pictures' moonlight is my choice.
 
 ## Questions for the owner (my recommendation first)
