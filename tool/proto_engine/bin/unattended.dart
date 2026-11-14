@@ -2,7 +2,8 @@
 // docs/proposals/rush_and_calendar.md), by the engine's own rules: a game left alone for a week, a season (91 days)
 // and a year, and what each stretch brought, by the engine's events. A measurement, not the game.
 //
-//   dart run tool/proto_engine/bin/unattended.dart
+//   dart run tool/proto_engine/bin/unattended.dart          (the farms left alone)
+//   dart run tool/proto_engine/bin/unattended.dart stops    (a jump with the design's stops: how often it stops)
 //
 // Farms (seed 4242, the game's start on 1 October 2026):
 //  - start:  the new game as it is (one nursing she-camel, her calf, SAR 20,000, a month of feed and water);
@@ -104,7 +105,116 @@ void run(
   }
 }
 
-void main() {
+/// A jump of [span] days with the stops the design proposes (docs/proposals/rush_and_calendar.md): it hands the game
+/// back on an illness, a death, a store down to its last days, money below zero, an offer or a treatment found; the
+/// "player" then does what each asks (treats the camel, fills the store and the tank) and jumps on to the same day.
+/// [standing]: the store and the tank kept full (a standing order); [vet]: each illness treated the day it comes (a
+/// vet's contract), so neither stops the jump.
+void jump(
+  String name,
+  Game Function() make,
+  int span, {
+  bool standing = false,
+  bool vet = false,
+}) {
+  final g = make();
+  final me = g.me.id;
+  final target = g.today + span;
+  final stops = <String, int>{};
+  final firstStop = <String, int>{};
+  var legs = 1;
+  final sw = Stopwatch()..start();
+  while (g.today < target) {
+    if (standing) {
+      final f = g.me.farm;
+      f
+        ..barleyKg = f.storeKg * 0.3
+        ..alfalfaKg = f.storeKg * 0.7
+        ..waterL = f.tankL.toDouble();
+    }
+    final why = <String>{};
+    for (final e in g.advanceDays(1)) {
+      if (e.owner != me) continue;
+      if (e is FellSick) {
+        if (vet) {
+          g.me.onAccount = 0;
+          g.dispatch(Treat(me, e.camel!));
+        } else {
+          why.add('illness');
+        }
+      }
+      if (e is Died) why.add('death');
+      if (e is SupplyLow) why.add('supply');
+      if (e is CashNegative) why.add('money');
+      if (e is OfferReceived) why.add('offer');
+      if (e is TamperingFound) why.add('found');
+    }
+    if (why.isEmpty || g.today >= target) continue;
+    legs++;
+    final day = g.today.daysSince(target - span);
+    for (final w in why) {
+      stops[w] = (stops[w] ?? 0) + 1;
+      firstStop.putIfAbsent(w, () => day);
+    }
+    // what the player does at the stop
+    for (final c in g.state.world.aliveOwnedBy(me).toList()) {
+      if (c.health == HealthStatus.sick) g.dispatch(Treat(me, c.id));
+    }
+    if (why.contains('supply')) {
+      final f = g.me.farm;
+      final water = Provisions.fits(f, Supply.water, Balance.waterLoadL);
+      if (water > 0) {
+        g.dispatch(OrderSupply(me, Supply.water, water));
+      } else {
+        final small = Provisions.fits(f, Supply.water, Balance.smallWaterLoadL);
+        if (small > 0) {
+          g.dispatch(
+            OrderSupply(me, Supply.water, small, tanker: Tanker.small),
+          );
+        }
+      }
+      final bags = Provisions.fits(f, Supply.barley, Balance.barleyBagKg);
+      if (bags > 1) g.dispatch(OrderSupply(me, Supply.barley, bags * 3 ~/ 10));
+      final bales = Provisions.fits(f, Supply.alfalfa, Balance.alfalfaBaleKg);
+      if (bales > 0) g.dispatch(OrderSupply(me, Supply.alfalfa, bales));
+    }
+  }
+  // ignore: avoid_print
+  print(
+    '$name, a jump of $span days: ${legs - 1} stops ($stops, first on day '
+    '$firstStop), head ${g.state.world.aliveOwnedBy(me).length}, cash ${g.me.cash.value}, '
+    'on account ${g.me.onAccount}, ${sw.elapsedMilliseconds} ms',
+  );
+}
+
+Game big() {
+  final g = start();
+  g.me.farm
+    ..capacity = 10010
+    ..shepherds = 400
+    ..storeKg = 1 << 30
+    ..tankL = 1 << 30;
+  final sim = Sim(g.state);
+  final gen = WorldGen(sim);
+  for (var i = 0; i < 9998; i++) {
+    gen.makeCamel(sim.rng(['bulk', i]), owner: g.me.id, mean: 50);
+  }
+  return g;
+}
+
+void main(List<String> args) {
+  if (args.contains('stops')) {
+    for (final span in [91, 365]) {
+      jump('start', start, span);
+      jump('full', full, span);
+      jump('full, standing order', full, span, standing: true);
+      jump('full, vet contract', full, span, vet: true);
+      jump('full, both', full, span, standing: true, vet: true);
+    }
+    jump('10,000 head, standing order', big, 91, standing: true);
+    jump('10,000 head, both', big, 91, standing: true, vet: true);
+    return;
+  }
   for (final span in [7, 91, 365]) {
     run('start', start, span);
   }
