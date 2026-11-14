@@ -539,10 +539,15 @@ Result _treat(Sim sim, PlayerState p, Treat cmd) {
 /// ill, not by today, so the price he names holds while she is sick and a
 /// player cannot wait for a cheaper day (the second review's N5).
 Rng vetRng(Sim sim, Camel camel) => Rng.keyed(sim.world.seed, [
-  (camel.sickSince ?? sim.today).value,
+  (vetPriceByIllness ? (camel.sickSince ?? sim.today) : sim.today).value,
   'vet',
   camel.id.value,
 ]);
+
+/// True in the game. False only for the check that an old game is unchanged
+/// (tool/proto_engine/test/old_game_test.dart): the vet's price keyed by the
+/// day as before N5, the one change an old game's days show.
+bool vetPriceByIllness = true;
 
 /// What the vet asks to treat [camel] (she must be sick).
 Riyal vetQuote(Sim sim, Camel camel) {
