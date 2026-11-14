@@ -861,6 +861,8 @@ def build_saker(out, sheets=False):
         'hood': skinned_mesh('saker_hood', parts_f['hood'], body, B, atlas, mat, arm),
         'jesses': skinned_mesh('saker_jesses', parts_f['jesses'], body, B, atlas, mat, arm),
     }
+    for k in ('fold', 'open'):
+        add_hidden_morph(meshes[k], body)
     clips = SakerClips()
     arm.animation_data_create()
     frames_mesh = {}
@@ -882,9 +884,18 @@ def build_saker(out, sheets=False):
         frames_mesh[name] = []
         FRAMES_FEET[name] = []
         HIDDEN_FEET[name] = []
+        keys_shape = {}
+        for k in ('fold', 'open'):
+            sk = meshes[k].data.shape_keys
+            sk.animation_data_create()
+            sk.animation_data.action = bpy.data.actions.new(name)      # the same name: merged into the clip on export
+            keys_shape[k] = sk
         for f in range(n + (1 if loop else 0)):
             sp = spec_fn(f % n)
             A.apply(sp, f)
+            for k, sk in keys_shape.items():
+                sk.key_blocks['hidden'].value = 0.0 if sp['mesh'] == k else 1.0
+                sk.key_blocks['hidden'].keyframe_insert('value', frame=f)
             frames_mesh[name].append(sp['mesh'])
             FRAMES_FEET[name].append(sp['feet'] if isinstance(sp['feet'], str) else sp['feet'][0])
             ft = sp['feet']
@@ -892,11 +903,22 @@ def build_saker(out, sheets=False):
         log += [(name,) + e for e in A.log]
         act.use_fake_user = True
         arm.animation_data.action = None
+        for k, sk in keys_shape.items():
+            sk.animation_data.action.use_fake_user = True
+            SHAPE_ACTIONS.setdefault(k, {})[name] = sk.animation_data.action
+            sk.animation_data.action = None
     # the tracks only once every clip is keyed: a track playing while the next clip is posed would leak into it
+    thin = thin_keys([bpy.data.actions[n] for n in CLIPS] + [a for d in SHAPE_ACTIONS.values() for a in d.values()])
+    print(f'keys thinned: {thin[0]} of {thin[1]} kept (each removed key within {QTOL} of the quaternion, {LTOL * 1000:.2f} mm, {STOL} of scale by straight-line interpolation)')
     for name in CLIPS:
         tr = arm.animation_data.nla_tracks.new()
         tr.name = name
         tr.strips.new(name, 0, bpy.data.actions[name])
+        for k in ('fold', 'open'):
+            sk = meshes[k].data.shape_keys
+            t2 = sk.animation_data.nla_tracks.new()
+            t2.name = name
+            t2.strips.new(name, 0, SHAPE_ACTIONS[k][name])
     # the measures: foot slide on the cuff
     for name in CLIPS:
         sl = [e[4] for e in log if e[0] == name and e[1] == 'slide']
@@ -907,8 +929,9 @@ def build_saker(out, sheets=False):
     for o in [arm, *meshes.values()]:
         o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=False,
-                              export_animations=True, export_animation_mode='ACTIONS', export_skins=True,
-                              export_all_influences=False, export_force_sampling=True, export_optimize_animation_size=False,
+                              export_animations=True, export_animation_mode='NLA_TRACKS', export_skins=True,
+                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True,
+                              export_morph=True, export_morph_animation=True, export_morph_normal=False,
                               export_materials='EXPORT', export_extras=False, export_image_format='AUTO')
     common.settle(path)
     t, imgs, nbytes = common.glb_report(path)
@@ -968,6 +991,73 @@ def pair_iou(coA, triA, coB, triB, view):
 
 
 VIEWS = {'side': (0, -1, 0), 'three_quarter': (-1, -1, -0.5), 'front': (-1, 0, 0)}
+
+
+SHAPE_ACTIONS = {}
+QTOL, LTOL, STOL = 0.0015, 0.00005, 0.001
+
+
+def add_hidden_morph(o, body):
+    """A morph target 'hidden' that gathers every vertex to one point inside the body: at weight 1 the mesh shows
+    nothing (and the game, by the convention in README.md, does not draw it)."""
+    o.shape_key_add(name='Basis')
+    kb = o.shape_key_add(name='hidden')
+    c = bird.torso_point(body, 90, 0, 0) * MM
+    for d in kb.data:
+        d.co = c
+
+
+def fcurves_of(act):
+    try:
+        return list(act.fcurves)
+    except AttributeError:
+        out = []
+        for layer in act.layers:
+            for strip in layer.strips:
+                for bag in strip.channelbags:
+                    out += list(bag.fcurves)
+        return out
+
+
+def thin_keys(actions):
+    """Remove keys a straight line between their neighbours reproduces within the tolerance (Douglas-Peucker per
+    channel); the rest made linear. The motion is unchanged within QTOL / LTOL / STOL."""
+    kept = total = 0
+    for act in actions:
+        for fc in fcurves_of(act):
+            pts = [(k.co[0], k.co[1]) for k in fc.keyframe_points]
+            total += len(pts)
+            if len(pts) < 3:
+                kept += len(pts)
+                continue
+            tol = QTOL if 'rotation' in fc.data_path else LTOL if 'location' in fc.data_path else STOL if 'scale' in fc.data_path else 1e-4
+            keep = [0, len(pts) - 1]
+
+            def dp(i, j):
+                if j <= i + 1:
+                    return
+                (x0, y0), (x1, y1) = pts[i], pts[j]
+                worst, wi = -1.0, None
+                for m in range(i + 1, j):
+                    x, y = pts[m]
+                    e = abs(y - (y0 + (y1 - y0) * (x - x0) / (x1 - x0)))
+                    if e > worst:
+                        worst, wi = e, m
+                if worst > tol:
+                    keep.append(wi)
+                    dp(i, wi)
+                    dp(wi, j)
+            dp(0, len(pts) - 1)
+            keep = sorted(set(keep))
+            sel = [pts[i] for i in keep]
+            fc.keyframe_points.clear()
+            fc.keyframe_points.add(len(sel))
+            for kp, (x, y) in zip(fc.keyframe_points, sel):
+                kp.co = (x, y)
+                kp.interpolation = 'LINEAR'
+            fc.update()
+            kept += len(sel)
+    return kept, total
 
 
 def use_clip(arm, name):
