@@ -128,6 +128,32 @@ wip/t15 until it is brought in). Answered before the review's findings; put agai
     until he has seen and approved the design: it touches screens he approved, changes his save, and a wrong stop
     can kill his herd. One word from him and it goes onto his phone.
 
+## Batch 4b: rushing and the calendar, after the design's review
+
+The review found that rushing a delivery, as first designed, bought the herd nothing; that the truck's rush broke
+the 30-day ownership rule; and that the stop on his round's day came too late. Batch 4 stands except as below.
+
+1. **A rushed tanker or feed order.** Answer: make it real and offer it only when the herd is short today: the
+   rushed delivery makes good today's shortfall and the day no longer counts dry or hungry; on other days the row
+   says honestly «الطلبة العادية توصل قبل شرب حلالك بكرة». Condition: tested so that a played day equals a jumped
+   day; how much of the day's loss it undoes and its price are marked game choices. FLAG for him: this makes a
+   rush on a short day close to a necessity, yet it stays cash only (batch 4, item 3), because the ordinary
+   delivery still comes on account.
+2. **The truck's rush.** Answer: priced by the part of the day left, with a small floor (the curve and the floor
+   game choices); the row says «توصل الحين».
+3. **A registration closing while he is away**, for a festival he could enter and has not. Answer: the jump stops
+   three days before, once per festival.
+4. **The breeding season opening** with a female he can breed. Answer: the jump stops at the opening, once a year.
+5. **The herd outgrowing its pens after calvings.** Answer: a warning in the card before leaving and a stop when
+   it happens; if the stop cannot be built tonight, the warning and a line in the summary, and the stop listed as
+   owed to him.
+6. **A vet's early pregnancy scan for a fee, from day 15.** Answer: yes (real practice; it reveals only what the
+   check would, a few days sooner); the fee a game choice. Marked OUR READING. FLAG for him: realism may also
+   argue for moving the ordinary check itself toward days 15 to 20.
+7. **A year's jump at the largest herd** (estimated 15 to 25 s on a phone, unmeasured). Answer: keep a year, with
+   the progress view and «وقّف هنا» working at any moment; on his list of phone tests; a season's cap is the
+   fallback.
+
 ## Waiting for the owner
 
 - Batch 1, item 1's alternative reading of decision 13 (above).
@@ -141,3 +167,5 @@ wip/t15 until it is brought in). Answered before the review's findings; put agai
 - Batch 4: the design of rushing and the calendar itself (he has not seen it); item 1 (our reading of "anything");
   the invented prices (item 2) and the vet contract's fee (item 7); and his word to put the build on his phone
   (item 12).
+- Batch 4b: the two flags (a rush on a short day stays cash only; moving the ordinary pregnancy check toward days
+  15 to 20), and the phone test of a long jump.
