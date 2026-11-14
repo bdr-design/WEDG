@@ -28,7 +28,9 @@
 //                   /home/user/wt/t15 design/ui/phone_calendar.cjs and docs/proposals/rush_and_calendar.md section 5: the
 //                   days «تقريبًا», what falls due on the way, the standing order and the vet's contract, its stops, «يمشي
 //                   لقدام بس») with the trip's own lines (distance, gear, camp supplies) and the camp's own stops added
-//  18 away_summary  the calendar's summary view with the trip's lines above its own; the bird marked «مثال»
+//  18 away_summary  the calendar's summary view with the trip's lines above its own; the bird marked «مثال»; the
+//                   camp's two stops on their days, by the card's own figures: feed for 7 days -> the 3-day store stop on
+//                   day 4; مزاين حائل's registration closing 11 October -> the registration stop on day 8 (8 October)
 // (Round 2's view of a fine is dropped: the owner's decision 4 makes the falcon's and the net's buttons warn and not act,
 // so no fine for hunting or trapping in a banned place can follow; the fines stay listed on the permit. None is shown.)
 // No hunting or trapping engine exists, so no figure here is the game's own. REAL figures (research section 8; all of
@@ -54,7 +56,7 @@
 // THE GAME'S CHOICE, NOT A RULE: «إلا أرض طرح بموسمها» on the coast line: the hunting rules close the coast to 20 km
 // [195], yet the auction takes birds trapped on the coast [197][217]; the research leaves the clash unresolved, and the
 // game lets a trapping ground on the coast stand in its season (a game choice, told in the note as a gap).
-// PROXY (provisional), its lines word for word: «طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع» (item 3); «طلقته: الحر
+// PROXY (provisional), its lines word for word: «طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع» (item 3); «طلقته: الوكري طير مقيم، وطرحه ممنوع» (item 3); «طلقته: الحر
 // مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري» and «طلقته: المزاد ما يقبل إلا الفرخ» (item 4); the saker and the قرناس released (item 4: the قرناس's release a game choice, no ban found); the
 // three routes (item 5); keeping a trapped bird, resale not offered (item 6); trapping lawful only on a trapping ground,
 // in its season, with a trapping permit (item 9: the issuer and terms NOT found; its 500-riyal fee a game choice); a net
@@ -237,7 +239,7 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
     const mine = `<div class="body">${nav()}<div class="title">نادي الصقور</div>${seg(1)}
       <div class="note" style="margin-top:-4px">بغرفة الصقور · صقرين من 4</div>
       <div class="lst">
-        <div class="it two">${pp}<b>سهيل · شاهين بحري فرخ</b><small>اشتريته من مزاد الطرح 20 أكتوبر بـ 71,000</small><small>جوازه باسمك · الطلعات: صاد حبارى مرة</small></div>
+        <div class="it two">${pp}<b>سهيل · شاهين بحري فرخ</b><small>اشتريته من مزاد الطرح 20 أكتوبر بـ 71,000</small><small>جوازه باسمك · الطلعات: صاد حبارى بالمحازة مرة</small></div>
         <div class="it two">${ph}<b>غيث · حر فرخ</b><small>اشتريته من مزاد المزارع بأغسطس</small><small>جوازه باسمك · الملواح 18.906 ثانية</small></div></div>
       <div class="group">${row2('rule', 'الطير اللي تطرحه وتخليه لك ما ينعرض للبيع بعدين', 'ما لقينا له طريق نظامي')}</div>
       <button class="btn pri" style="width:100%">ادعهم اليوم</button></div>`;
@@ -293,7 +295,7 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
       <div class="sec">ممنوع الصيد فيه</div>
       <div class="group">${row2('ban', 'المدن والقرى والمزارع', 'يعني عزبتك وحولها، والاستراحات')}${row2('ban', 'المحميات والمشاريع الكبرى', 'والمحميات الملكية كلها')}${row2('ban', 'الساحل', 'لين 20 كيلو داخل البر، إلا أرض طرح بموسمها')}</div>
       <div class="sec">بالطرح: لو جا بالشبك</div>
-      <div class="group">${row2('ban', 'الشاهين الجبلي', 'طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع')}${row2('ban', 'الوكري', 'ممنوع طرحه: طير مقيم')}${row2('falcon', 'الحر', 'طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري')}${row2('falcon', 'القرناس', 'طلقته: المزاد ما يقبل إلا الفرخ')}${row2('ban', 'بالليل وبالضو', 'ما فيه طرح')}</div>
+      <div class="group">${row2('ban', 'الشاهين الجبلي', 'طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع')}${row2('ban', 'الوكري', 'طلقته: الوكري طير مقيم، وطرحه ممنوع')}${row2('falcon', 'الحر', 'طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري')}${row2('falcon', 'القرناس', 'طلقته: المزاد ما يقبل إلا الفرخ')}${row2('ban', 'بالليل وبالضو', 'ما فيه طرح')}</div>
       <div class="sec">الغرامات</div>
       <div class="group">${row2('alert', 'صيد بدون تصريح', 'غرامته 10,000 ريال')}${row2('alert', 'صيد بمكان أو وقت ممنوع', 'غرامته 5,000 ريال')}${row2('alert', 'الشبك برا أرض الطرح', 'غرامته 100,000 ريال')}${row2('alert', 'الصيد من سيارة تمشي', 'غرامته 100,000 ريال')}</div>
       <div class="note">والصيد نفسه ما ينباع: بيع الصيد ممنوع. اللي ينباع فرخ الشاهين البحري المطروح، بمزاد الطرح بس.</div></div>`;
@@ -328,12 +330,13 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
     const away_summary = `<div class="body">${nav()}<div class="title">اللي صار</div>
       <div class="span"><b>9 أيام · مخيم الحماد</b><small>من الخميس 1 أكتوبر لين السبت 10 أكتوبر</small></div>
       <div class="group">
-        <div class="row two"><span class="lead">${svg('net')}</span><b>طرحت فرخ شاهين بحري (مثال)</b><small>اليوم الثامن · بغرفة الصقور</small></div>
-        <div class="row two"><span class="lead">${svg('falcon')}</span><b>طلقت حر</b><small>اليوم الرابع: المزاد ما يقبله</small></div>
+        <div class="row two"><span class="lead">${svg('net')}</span><b>طرحت فرخ شاهين بحري (مثال)</b><small>اليوم السابع · بغرفة الصقور</small></div>
+        <div class="row two"><span class="lead">${svg('falcon')}</span><b>طلقت حر</b><small>اليوم الثالث: المزاد ما يقبله</small></div>
         <div class="row two"><span class="lead">${svg('box')}</span><b>المؤونة والبنزين</b><small>صرفت 1,350 ريال</small></div></div>
       <div class="group">
         <div class="row two"><span class="lead milk">${svg('scale')}</span><b>الحليب دخلك 450 ريال</b><small>ينباع كل يوم</small></div>
-        <div class="row two"><span class="lead me">${svg('alert')}</span><b>قرب العلف يخلص</b><small>اليوم السادس: طلبته من الجوال ووصل</small></div>
+        <div class="row two"><span class="lead me">${svg('alert')}</span><b>قرب العلف يخلص</b><small>اليوم الرابع: وقف لك، وطلبته من الجوال ووصل</small></div>
+        <div class="row two"><span class="lead fest">${svg('cup')}</span><b>باقي 3 أيام على قفل تسجيل مزاين حائل</b><small>اليوم الثامن: وقف لك، وما سجلت</small></div>
         <div class="row two"><span class="lead brd">${svg('check')}</span><b>ما مرض شي</b><small>وما مات شي</small></div></div>
       <div class="note">هذا مثال: أغلب المواسم ما ينطرح فيها طير. والتفاصيل بالبنك والعزبة.</div></div>`;
 

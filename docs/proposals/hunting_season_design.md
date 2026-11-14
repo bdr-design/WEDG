@@ -57,7 +57,7 @@
 |---|---|
 | `design/hunt/season_calendar.jpg` (`season.cjs`) | The year Aug 2026–Jul 2027: the trapping season and the passage; the auctions told apart (the breeders' auction in August; the trapping auction 1 Oct–30 Nov; the exhibition 1–10 Oct), the three routes each in its month; the hunting season; the festival's two date ranges; the camel year from the engine; a new game's first season |
 | `design/ui/phone_falcon.jpg` (`phone_falcon.cjs`, 18 views) | The home with ten apps; «نادي الصقور»: the auctions and the routes, tonight's trapping lots as bidders see them, الطرح (the permit and the gear), entering a trapped bird, the hammer (an example), his falcons and how each came, الدعو, the festival and its rules, the results; «تصريح الصيد»: the two permits, what is banned and what is released (the proxy's three lines word for word), the fines; the card before leaving and the summary as the calendar's own views with the trip's lines. Round 2's fine view is dropped: by decision 4 the buttons warn and do not act, so no fine for hunting or trapping in a banned place can follow (the fines stay on the permit) |
-| `design/hunt/trip_01..21_*.jpg`, `trip_board.jpg` (`trip.cjs`) | Being away for days: the grounds' pins and the card before leaving (falconry and trapping); the falcons' room and its card; the drive; the falcon trip's camp, its card, the cast, the flight, the result, the rare lost falcon; the trapping camp, dawn through the binoculars, the pigeon and the stoop, the bird in the net, a sellable peregrine, a saker released, an empty day handing the game back, the net's button warning off the ground, the falcon's button warning by the farm, the trip's summary |
+| `design/hunt/trip_01..22_*.jpg`, `trip_board.jpg` (`trip.cjs`) | Being away for days: the grounds' pins and the card before leaving (falconry and trapping); the falcons' room and its card; the drive; the falcon trip's camp, its card, the cast, the flight, the result, the rare lost falcon; the trapping camp, dawn through the binoculars, the pigeon and the stoop, the bird in the net, a sellable peregrine, a saker released, an empty day handing the game back, the net's button warning off the ground, the falcon's button warning by the farm, the trip's summary |
 | `design/hunt/season_money.jpg` (`season.cjs`) | A season of trapping alone as a range, beside falconry's costs and the contests' prizes |
 
 ## The trapping business
@@ -115,7 +115,9 @@
   119 trappers [213], or over «مئات» [211]. Shown as about one season in 13 (1/0.08 = 12.5, rounded
   against the player) to one in 3 (1/0.336 = 2.98).
 - **Mean price:** 88,000 [200] to 160,000 [213].
-- **The season's cost:** 20,000, **invented**.
+- **The season's cost:** 20,000, **invented**; it includes the 500-riyal trapping permit (a game choice), so the
+  table's figures stay hunting.md's. The first-season row subtracts the gear (8,600) from the well-equipped column only:
+  the beginner buys none.
 - **Expected per season:** about −13,000 to +33,760. That is 0.08 × 88,000 − 20,000 = −12,960
   (rounded against the player) and 0.336 × 160,000 − 20,000 = +33,760.
 - **A bird of 300,000 or more:** one season in about 83 to 20. That is 1 ÷ (p × 6/40) = 83.3 and 19.8: at least 6 of
@@ -153,6 +155,9 @@ game's state after each day, a landing minute, a cancel flag, the summary counte
    - *A bird in the net is played live,* in the working hours, not a stop.
    - *What he does himself:* falconry, morning and afternoon flights (game choice); trapping, dawn to 10 a.m. and the
      evening hour [204]: watching, releasing the pigeon, taking the bird.
+   *The sample camp obeys its own card:* feed for 7 days brings the 3-day store stop on day 4 (trip_18), and مزاين
+   حائل's registration closing on 11 October brings the registration stop on day 8 (trip_19); both are in the
+   summary.
 5. **The summary is the calendar's summary view** («اللي صار», phone view 18 and trip_21), with the trip's lines above
    its own (days out, birds caught and released, the camp's spending).
 

@@ -320,10 +320,20 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
       await shot('trip_17_release', 'a saker in the net (T11\'s saker) released, with the proxy\'s line (drawn)');
       await close();
       await draw(pin(180, 200, 'tent'));
-      await open({ key: 'day', name: 'المخيم · اليوم السادس', icon: 'tent', c: { sub: 'الحماد · مخيم طرح', stats: [['الطيور اليوم', 'ما جا شي'], ['المؤونة', '4', 'أيام'], ['العلف بالعزبة', 'باقي 3 أيام', '', 'warn']],
+      await open({ key: 'day', name: 'المخيم · اليوم الرابع', icon: 'tent', c: { sub: 'الحماد · مخيم طرح', stats: [['الطيور اليوم', 'ما جا شي'], ['المؤونة', '6', 'أيام'], ['العلف بالعزبة', 'باقي 3 أيام', '', 'warn']],
         html: '<div class="note warn">باقي 3 أيام على العلف بالعزبة: تطلبه من الجوال وانت هنا، أو تفك المخيم وترجع.</div>', actions: [{ label: 'نام لين الفجر', primary: true }, { label: 'فك المخيم وارجع' }] } });
       await shot('trip_18_empty_day', 'an empty day\'s evening: the camp\'s card, opened by the tent\'s pin, with the farm\'s warning that handed the game back (drawn)');
       await close(); await draw('');
+      await p.evaluate(() => window.__phone.toggle());
+      await p.waitForTimeout(800);
+      await phoneScreen(`${BACK}<div class="title">وقف التقويم</div>
+        <div class="warn"><span class="lead">${ps('<path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>')}</span><b>باقي 3 أيام على قفل تسجيل مزاين حائل</b><small>وقف الخميس 8 أكتوبر، اليوم الثامن بالمخيم. تقدر تسجّل نورة من الجوال وانت هنا.</small></div>
+        <button class="btn pri" style="width:100%">سجّلها</button>
+        <button class="btn ghost" style="width:100%">كمّل المخيم</button>`);
+      await p.waitForTimeout(800);
+      await shot('trip_19_registration', 'day 8 at camp: the calendar\'s registration stop (مزاين حائل closes 11 October) in the small phone (drawn content)');
+      await p.evaluate(() => window.__phone.toggle());
+      await p.waitForTimeout(600);
       // off the ground: back by the yard, the net's button warns and does not act
       await p.evaluate(() => { const d = window.__play.debug; d.enter(); });
       await p.waitForTimeout(2500);
@@ -334,11 +344,11 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
       await p.waitForTimeout(1500); await stepAway();
       await draw(edge(btn(PIGEON_ICON, 'هنا ما فيه طرح', 'big warn', '<i class="dot"></i>')));
       await open({ key: 'noTrap', name: 'هنا ما فيه طرح', icon: 'ban', cls: 'warn', c: { sub: 'مو أرض طرح', html: '<div class="note warn">الطرح بأرض طرح بس وبموسمه، والشبك برا أرض الطرح غرامته 100,000 ريال.</div>', actions: [{ label: 'طيب', primary: true }] } });
-      await shot('trip_19_off_ground', 'by the yard: the net\'s button in its warning state, and the warning card it opened (drawn); it does not act');
+      await shot('trip_20_off_ground', 'by the yard: the net\'s button in its warning state, and the warning card it opened (drawn); it does not act');
       await close();
       await draw(edge(btn(CAST_ICON, 'هنا ممنوع الصيد', 'big warn', '<i class="dot"></i>')) + FIST);
       await open({ key: 'ban', name: 'هنا ممنوع الصيد', icon: 'ban', cls: 'warn', c: { sub: 'قريب من المزارع والعزب', html: '<div class="note warn">الصيد بالمزارع وحولها ممنوع، وغرامته 5,000 ريال لو انمسكت. ابعد عن العزب والقرى وأرسله.</div>', actions: [{ label: 'طيب', primary: true }] } });
-      await shot('trip_20_banned', 'by the yard with the falcon: the cast-off button warns and does not act (decision 4), and its card (drawn)');
+      await shot('trip_21_banned', 'by the yard with the falcon: the cast-off button warns and does not act (decision 4), and its card (drawn)');
       await close(); await draw('');
       // back home: the trip's summary in the small phone (the calendar's summary, task T15)
       await p.evaluate(() => window.__phone.toggle());
@@ -346,15 +356,16 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
       await phoneScreen(`${BACK}<div class="title">اللي صار</div>
         <div class="span" style="background:#fff;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:2px"><b style="font:700 15px/1.3 Alexandria,sans-serif">9 أيام · مخيم الحماد</b><small style="font-size:12px;color:#6e6e73">من الخميس 1 أكتوبر لين السبت 10 أكتوبر</small></div>
         <div class="group">
-          <div class="row"><span class="lead">${ps('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 12h18M12 3v18"/>')}</span><b>طرحت فرخ شاهين بحري (مثال)</b><small>اليوم الثامن · بغرفة الصقور</small></div>
-          <div class="row"><span class="lead">${ps('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}</span><b>طلقت حر</b><small>اليوم الرابع: المزاد ما يقبله</small></div>
+          <div class="row"><span class="lead">${ps('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 12h18M12 3v18"/>')}</span><b>طرحت فرخ شاهين بحري (مثال)</b><small>اليوم السابع · بغرفة الصقور</small></div>
+          <div class="row"><span class="lead">${ps('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}</span><b>طلقت حر</b><small>اليوم الثالث: المزاد ما يقبله</small></div>
           <div class="row"><span class="lead">${ps('<circle cx="12" cy="12" r="8.5"/>')}</span><b>المؤونة والبنزين</b><small>صرفت 1,350 ريال</small></div></div>
         <div class="group">
-          <div class="row"><span class="lead">${ps('<path d="M12 4 2.5 20h19z"/>')}</span><b>قرب العلف يخلص</b><small>اليوم السادس: طلبته من الجوال ووصل</small></div>
+          <div class="row"><span class="lead">${ps('<path d="M12 4 2.5 20h19z"/>')}</span><b>قرب العلف يخلص</b><small>اليوم الرابع: طلبته من الجوال ووصل</small></div>
+          <div class="row"><span class="lead">${ps('<path d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/>')}</span><b>باقي 3 أيام على قفل تسجيل مزاين حائل</b><small>اليوم الثامن: وقف لك، وما سجلت</small></div>
           <div class="row"><span class="lead">${ps('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}</span><b>ما مرض شي</b><small>وما مات شي</small></div></div>
         <div class="note">هذا مثال: أغلب المواسم ما ينطرح فيها طير.</div>`);
       await p.waitForTimeout(800);
-      await shot('trip_21_back', 'back at the farm: the trip\'s summary in the small phone (drawn content)');
+      await shot('trip_22_back', 'back at the farm: the trip\'s summary in the small phone (drawn content)');
     }
   }
   await p.close();
@@ -384,10 +395,11 @@ const CAP = {
   trip_15_stoop: 'أطلقت الحمامة والشبك على ظهرها، والشاهين ينقض (بدائل). مرسوم.',
   trip_16_catch: 'الشاهين بالشبك (بديل) ودبوسه، وبطاقته بضغطتك: فرخ شاهين بحري ينباع بمزاد الطرح، طوله وعرضه ووزنه. مرسوم.',
   trip_17_release: 'حر بالشبك (صورة مجسم الحر) ودبوسه؛ بضغطتك على الدبوس تنفتح البطاقة: ينطلق، بسطر الوكيل (جواب مؤقت) بنصه. مرسوم.',
-  trip_18_empty_day: 'يوم فاضي: بطاقة المخيم بضغطة الخيمة بالمسا، ووقفة التقويم اللي رجّعت اللعب لك (باقي 3 أيام على العلف). مرسوم.',
-  trip_19_off_ground: 'جنب العزبة: زر الطرح يحذر وما يشتغل، وبضغطتك على زر التحذير تنفتح بطاقته: الطرح بأرضه وموسمه بس، والشبك براها 100,000 [136] (الوكيل). مرسوم.',
-  trip_20_banned: 'جنب العزبة بالصقر: زر الإرسال يحذر وما يرسل (قرار المالك 4)، وبضغطتك على زر التحذير تنفتح بطاقته والغرامة 5,000 [136]. مرسوم.',
-  trip_21_back: 'رجعت: «اللي صار» بالجوال الصغير، نفس ملخص التقويم ومعه سطور المخيم؛ الطير «مثال». مرسوم: محتوى الشاشة.',
+  trip_18_empty_day: 'اليوم الرابع، فاضي: بطاقة المخيم بضغطة الخيمة بالمسا، ووقفة التقويم اللي رجّعت اللعب لك (باقي 3 أيام على العلف: العلف كان يكفي 7 أيام). مرسوم.',
+  trip_19_registration: 'اليوم الثامن: وقفة التقويم بالجوال الصغير: باقي 3 أيام على قفل تسجيل مزاين حائل (يقفل 11 أكتوبر)، تسجّل أو تكمّل المخيم. مرسوم: محتوى الشاشة.',
+  trip_20_off_ground: 'جنب العزبة: زر الطرح يحذر وما يشتغل، وبضغطتك على زر التحذير تنفتح بطاقته: الطرح بأرضه وموسمه بس، والشبك براها 100,000 [136] (الوكيل). مرسوم.',
+  trip_21_banned: 'جنب العزبة بالصقر: زر الإرسال يحذر وما يرسل (قرار المالك 4)، وبضغطتك على زر التحذير تنفتح بطاقته والغرامة 5,000 [136]. مرسوم.',
+  trip_22_back: 'رجعت: «اللي صار» بالجوال الصغير، نفس ملخص التقويم ومعه سطور المخيم؛ الطير «مثال». مرسوم: محتوى الشاشة.',
 };
 
 // each frame with its strip under it (outside the game's picture): what is real and what is drawn
