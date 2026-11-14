@@ -39,7 +39,7 @@ const CSS = `
   .phone[data-state="big"] .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
   .phone[data-state="big"] .nav { position: sticky; top: -1px; margin-top: -1px; padding-top: 1px; z-index: 3; background: var(--bg); box-shadow: 0 -3px 0 var(--bg); }      /* (held a pixel past the scroll's top edge, where it already rests, and painted a little above itself: that edge falls between two of the screen's pixels, and a row of the scrolled content showed there; resting a pixel lower, it stepped up as a scroll began) */
   * { box-sizing: border-box; margin: 0; }
-  .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #0b8a5c; --acc-soft: #e3f4ec; --red: #e5372b; --amber: #c27a12; }
+  .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; text-wrap: pretty; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #0b8a5c; --acc-soft: #e3f4ec; --red: #e5372b; --amber: #c27a12; }
   b.fit { font: inherit; }
   .num { font-family: "Alexandria", "IBM Plex Sans Arabic", sans-serif; }
   svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -1276,7 +1276,8 @@ export function createPhone({ host }) {
     st.screen = v; scr.classList.toggle('home', v === 'home');
     // (المزاين's and the chat's screens, as their design: a number kept with the word before it too, «لين | 100,000»)
     // («بـ 64»: the prefix never left at a line's end either)
-    let html = S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0').replace(/(^|[\s>])بـ (?=\d)/g, '$1بـ\u00a0');
+    let html = S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0').replace(/(^|[\s>])بـ (?=\d)/g, '$1بـ\u00a0')
+      .replace(/(^|[\s>])(من|في|على|عن|مع|إلى|الى|لين|قبل|بعد|كل|و) (?=[^\s<])/g, '$1$2\u00a0');      // (nor a short preposition or «و»: «أكبر من | العزبة», «قبل | 3 شهور» split so, the audit)
     if (MZ_SCREENS.has(v)) html = html.replace(/([\u0600-\u06FF]) (?=\d)/g, '$1\u00a0');
     if (same && html === drawn) return false;      // (a redraw that would draw the same: left as it is)
     drawn = html;
