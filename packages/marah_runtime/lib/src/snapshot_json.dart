@@ -361,6 +361,7 @@ class SnapshotJson {
     'distanceKm': d.distanceKm,
     'transportPerHead': d.transportPerHead,
     'registerTotal': d.registerTotal,
+    'tripPaid': d.tripPaid,
     'register': [
       for (final x in d.register)
         {
@@ -370,6 +371,7 @@ class SnapshotJson {
               ? null
               : {'code': x.error!.code.name, 'params': x.error!.params},
           if (x.group.isNotEmpty) 'group': [for (final c in x.group) camel(c)],
+          'trip': x.trip,
         },
     ],
     'rounds': [

@@ -1294,6 +1294,7 @@ class FestivalDetail {
     required this.transportPerHead,
     this.register = const [],
     this.registerTotal = 0,
+    this.tripPaid = 0,
   });
 
   final FestivalCard card;
@@ -1309,6 +1310,9 @@ class FestivalDetail {
   /// ([GameView.ownRound]); [registerTotal] is the herd's head.
   final List<RegisterRow> register;
   final int registerTotal;
+
+  /// The trucking the bank booked for this festival.
+  final int tripPaid;
 }
 
 /// One of the player's camels on the registering screen: its own round at
@@ -1320,6 +1324,7 @@ class RegisterRow {
     this.round,
     this.error,
     this.group = const [],
+    this.trip = 0,
   });
   final CamelCard camel;
   final RoundId? round;
@@ -1328,6 +1333,10 @@ class RegisterRow {
   /// For الفحل وإنتاجه: the offspring the engine shows with the bull (his
   /// best by look), in the order entered after him.
   final List<CamelCard> group;
+
+  /// What registering this entry adds to the festival's trip there and
+  /// back (one shared trip: nothing more when the camels are going anyway).
+  final int trip;
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {

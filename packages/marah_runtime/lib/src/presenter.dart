@@ -659,12 +659,20 @@ class Presenter {
                 for (final id in group.skip(1))
                   if (byId[id] case final k?) card(k, v),
               ],
+              trip: v.tripFor(f.id, group.length),
             ),
           );
           continue;
         }
         final (round, error) = v.ownRound(f.id, c.id);
-        rows.add(RegisterRow(camel: card(c, v), round: round, error: error));
+        rows.add(
+          RegisterRow(
+            camel: card(c, v),
+            round: round,
+            error: error,
+            trip: v.tripFor(f.id, 1),
+          ),
+        );
       }
       // those that may enter first, then the refused, each by look
       register.addAll([
@@ -675,6 +683,7 @@ class Presenter {
     return FestivalDetail(
       register: register,
       registerTotal: herd.length,
+      tripPaid: v.tripPaid(f.id),
       card: festival(f),
       distanceKm: f.distanceKm,
       transportPerHead: Balance.transportCost(f.distanceKm, 1) * 2,

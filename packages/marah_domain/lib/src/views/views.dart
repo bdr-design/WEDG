@@ -330,7 +330,15 @@ class GameView {
     final kids =
         [
           for (final k in _w.aliveOwnedBy(viewer))
-            if (k.sire?.id == bull) (k, Judging.quality(k, today)),
+            // (one already entered here, listed for sale or sick cannot go:
+            // the next best is picked)
+            if (k.sire?.id == bull &&
+                !fest.rounds.any(
+                  (x) => x.entries.any((e) => e.camels.contains(k.id)),
+                ) &&
+                !Eligibility.isListed(_w, k.id) &&
+                k.health != HealthStatus.sick)
+              (k, Judging.quality(k, today)),
         ]..sort((a, b) {
           final d = b.$2.compareTo(a.$2);
           return d != 0 ? d : a.$1.id.value.compareTo(b.$1.id.value);
@@ -577,6 +585,21 @@ class GameView {
             ?.amount ??
         Riyal.zero;
   }
+
+  /// What entering [head] more camels at [f] adds to the trip there and
+  /// back the player pays on his first round's day (one shared trip a
+  /// festival: ContestSystem.festivalTrip).
+  int tripFor(FestivalId f, int head) {
+    final fest = _w.festivals[f];
+    if (fest == null) return 0;
+    return ContestSystem.festivalTrip(fest, me, more: head) -
+        ContestSystem.festivalTrip(fest, me);
+  }
+
+  /// The trucking the bank booked for [f] (its trip there and back).
+  int tripPaid(FestivalId f) => -me.ledger
+      .where((e) => e.category == LedgerCategory.transport && e.ref == f.value)
+      .fold(0, (n, e) => n + e.amount.value);
 
   /// Why [f] cannot be built now (all built or building, or the money),
   /// or null.

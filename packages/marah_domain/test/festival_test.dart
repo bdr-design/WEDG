@@ -2647,6 +2647,93 @@ void main() {
       expect(GameView(g.state, g.me.id).fahalGroup(f.id, young.id).$1, isNull);
     });
 
+    test('الفحل وإنتاجه: an offspring already entered here is passed over; '
+        'a bull with none is refused with none; the trip shown is the one '
+        'the bank books', () {
+      final g = newGame();
+      final f = grand(g);
+      final r = roundOf(f, RoundKind.fahal);
+      final bull = camelFor(g, r, sex: Sex.male, mean: 90);
+      final kids = [
+        for (var i = 0; i < 6; i++) offspringOf(g, bull, r, mean: 40.0 + i * 8),
+      ];
+      g.advanceTo(f.opensOn);
+      // the best of them entered in her own round first
+      final best = kids.last;
+      final own = GameView(g.state, g.me.id).ownRound(f.id, best.id).$1;
+      if (own != null) {
+        g.dispatch(EnterRound(g.me.id, f.id, own, [best.id]));
+      }
+      final entered = f.rounds.any(
+        (x) => x.entries.any((e) => e.camels.contains(best.id)),
+      );
+      final v = GameView(g.state, g.me.id);
+      final (_, group, why) = v.fahalGroup(f.id, bull.id);
+      expect(why, isNull);
+      expect(group, hasLength(r.size));
+      expect(entered, isTrue);
+      expect(group, isNot(contains(best.id)));
+      // the trip registering it adds, then what the bank books on the day:
+      // one shared trip, so what is shown is what the bill grows by
+      final base = ContestSystem.festivalTrip(f, g.me);
+      final trip = v.tripFor(f.id, group.length);
+      expect(g.dispatch(EnterRound(g.me.id, f.id, r.id, group)).ok, isTrue);
+      g.advanceTo(r.day);
+      expect(GameView(g.state, g.me.id).tripPaid(f.id), base + trip);
+      // the six's trip is not six single fares
+      expect(trip, lessThan(v.tripFor(f.id, 1) * group.length));
+      // a grown bull with no offspring
+      final lone = camelFor(g, r, sex: Sex.male, mean: 80);
+      final (_, solo, e) = GameView(g.state, g.me.id).fahalGroup(f.id, lone.id);
+      expect(solo, [lone.id]);
+      expect(e?.params, {'size': r.size, 'have': 1});
+    });
+
+    test('a declared listing carries no premium from the treatment: no offer '
+        'tops what her natural look is worth, whatever he asks', () {
+      final g = newGame(5);
+      final f = grand(g);
+      final c = camelFor(g, roundOf(f, RoundKind.fardiJil), mean: 75);
+      // bought treated without knowing, and told (decision 15)
+      c.treatments.add(
+        Tampering(
+          kind: TamperKind.botox,
+          strength: 3,
+          on: g.today,
+          until: g.today + 200,
+          by: g.state.world.owners.keys.first,
+          knownBy: [g.me.id],
+        ),
+      );
+      final natural = Valuation.value(c, g.today, natural: true).value;
+      expect(Valuation.value(c, g.today).value, greaterThan(natural));
+      for (final ask in [natural, natural * 3 ~/ 2, natural * 5]) {
+        g.state.world.offers.clear();
+        for (final l in [...g.state.world.listings.values]) {
+          if (l.camelId == c.id) g.state.world.listings.remove(l.id);
+        }
+        final r = g.dispatch(ListForSale(g.me.id, c.id, ask, declared: true));
+        expect(r.ok, isTrue, reason: r is Err ? '${r.error.code}' : '');
+        final seen = <OfferId>{};
+        for (var d = 0; d < 40; d++) {
+          g.advanceDays(1);
+          // (her natural worth that day: marketRound to the nearest step)
+          final cap =
+              Valuation.value(c, g.today, natural: true).value *
+              1.04 *
+              Balance.reputationPriceFactor(g.me.reputationIn(c.category));
+          for (final o in g.state.world.offers.values) {
+            if (!seen.add(o.id)) continue;
+            expect(o.amount.value, lessThanOrEqualTo(cap.round() + 500));
+          }
+        }
+        // (at five times her worth few buyers come at all)
+        if (ask < natural * 2) {
+          expect(seen, isNotEmpty, reason: 'no offer came at $ask');
+        }
+      }
+    });
+
     test('الصيت as a band, never the number', () {
       expect(Balance.reputationBand(0), ReputationBand.fallen);
       expect(Balance.reputationBand(9.9), ReputationBand.fallen);
