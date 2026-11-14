@@ -50,6 +50,8 @@ ContentType contentTypeFor(String path) {
     'png' => ContentType('image', 'png'),
     'jpg' || 'jpeg' => ContentType('image', 'jpeg'),
     'wasm' => ContentType('application', 'wasm'),
+    'woff2' => ContentType('font', 'woff2'),
+    'txt' => ContentType('text', 'plain', charset: 'utf-8'),
     _ => ContentType.binary,
   };
 }

@@ -9,6 +9,8 @@ void main() {
     expect(contentTypeFor('assets/web/play.js').mimeType, 'text/javascript');
     expect(contentTypeFor('assets/web/index.html').mimeType, ContentType.html.mimeType);
     expect(contentTypeFor('assets/web/lod0.json').mimeType, 'application/json');
+    expect(contentTypeFor('assets/web/fonts/a.woff2').mimeType, 'font/woff2');
+    expect(contentTypeFor('assets/web/fonts/OFL-x.txt').mimeType, 'text/plain');
   });
   test('only files inside the bundle are served', () {
     expect(assetFor('/'), 'assets/web/index.html');
