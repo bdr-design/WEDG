@@ -341,8 +341,9 @@ animation texture beyond it, as ADR 0005 plans for the camels: 32 bones × about
 
 ## What is unsure
 
-- **No page was opened.** Every figure is from search summaries, marked as such: no head-and-body length or sexed
-  figure for the Arabian wolf, and no measured ear, chest, leg or paw size.
+- **No page was opened by my tools.** Every figure is from search summaries or from the reviewer's opened pages,
+  marked as such: no head-and-body length or sexed figure for the Arabian wolf, and no measured ear, chest, leg or
+  paw size.
 - **The wolf's look beyond Pocock's line** (the saddle, the shoulder bar, the leg line, the face, the eye colour) is
   the common grey-wolf pattern, not confirmed for *arabs*.
 - **The guard dog's type is not settled by any source:** the pariah or Bedouin dog is the nearest description of
@@ -350,8 +351,11 @@ animation texture beyond it, as ADR 0005 plans for the camels: 32 bones × about
 - **The collar is not a sourced practice.**
 - **The volume check is rough:** it subtracts an assumed coat depth.
 - **The game has no night**, so the night pictures' light is my choice.
-- **Not modelled:** separate toes, the fused pads, teeth in the closed mouth, and the inside of the mouth beyond a
-  painted tongue and gums.
+- **Not modelled:** the fused pads (under the foot), teeth in the closed mouth, and the inside of the mouth beyond a
+  painted tongue and gums. The eyes and the lip line are paint on the skin (about 20 texels for an eye).
+- **The skin's small faults:** where a leg meets the trunk the decimated skin can show a faint crease; the stray's
+  loin is 16% under the dog's (the reviewer asked 10-15%); the dog's neck stands 55 mm over the withers when it holds
+  its head high (a dog's neck crest; the wolf's is +6 mm).
 
 ## Questions for the owner (my recommendation first)
 
