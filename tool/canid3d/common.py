@@ -491,7 +491,7 @@ class Studio:
     """A grey studio: a soft key from the front left above, a fill, a rim from behind; AgX so pale plumage keeps its
     detail. Cycles at few samples while working, more for the final set."""
 
-    def __init__(self, out, samples=32, ground=True, ground_col=(0.42, 0.38, 0.33)):
+    def __init__(self, out, samples=32, ground=True, ground_col=(0.42, 0.38, 0.33), ground_size=30.0):
         sc = bpy.context.scene
         self.sc, self.out = sc, out
         sc.render.engine = 'CYCLES'
@@ -518,7 +518,7 @@ class Studio:
         self.ground = None
         if ground:
             me = bpy.data.meshes.new('ground')
-            r = 30.0
+            r = ground_size
             me.from_pydata([(-r, -r, 0), (r, -r, 0), (r, r, 0), (-r, r, 0)], [], [(0, 1, 2, 3)])
             g = bpy.data.objects.new('ground', me)
             mat = bpy.data.materials.new('ground')

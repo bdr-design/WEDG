@@ -234,7 +234,7 @@ class Canid:
 
         # ears: each a cupped blade from its base on the skull to the tip, turned by the pose
         self.ears(o, hd, hn, hv, Lh)
-        if d.teeth and S.get('teeth'):
+        if d.teeth and S.get('teeth') and P.get('jaw', 0.0) > 5:      # (shut, the canines stay inside the lips)
             self.teeth(o, hd, hn, hv, Lh)
 
     def ears(self, o, hd, hn, hv, Lh):

@@ -190,9 +190,9 @@ DOG.update(
 DOG_POSES = {
     'alert': dict(neck=55, head=8),
     # lying at rest by the pen, on its chest (sternal), head up, forelegs out in front, hind legs folded beside it
-    'lie': dict(drop=0.47, pitch=-2, neck=36, head=14, tail=[(60, 0), (80, 20), (20, 75), (0, 120), (0, 150)],
-                legs=dict(fore_l=dict(x=0.78, y=0.085, meta=86, paw=0, n=(0, 0, 1), pole=(-1, 0, -0.35), root=(0.0, 0.06)),
-                          fore_r=dict(x=0.74, y=0.080, meta=86, paw=0, n=(0, 0, 1), pole=(-1, 0, -0.35), root=(0.0, 0.06)),
+    'lie': dict(drop=0.47, pitch=-2, neck=36, head=14, tail=[(72, 0), (84, 25), (12, 80), (0, 125), (0, 150)],
+                legs=dict(fore_l=dict(x=0.78, y=0.085, meta=86, paw=0, n=(0, 0, 1), pole=(-1, 0, -0.2), root=(0.0, 0.10)),
+                          fore_r=dict(x=0.74, y=0.080, meta=86, paw=0, n=(0, 0, 1), pole=(-1, 0, -0.2), root=(0.0, 0.10)),
                           hind_l=dict(x=-0.20, y=0.150, meta=86, paw=4, paw_y=0.0, n=(0, 0, 1), pole=(1, 0.5, 0.1), meta_y=0.0),
                           hind_r=dict(x=-0.22, y=0.150, meta=86, paw=4, n=(0, 0, 1), pole=(1, 0.5, 0.1)))),
     # barking at something: weight forward, forelegs braced ahead, head out level, mouth open, ears forward
@@ -208,3 +208,15 @@ STRAY_POSES = {
 }
 
 SPECIES = {'wolf': (WOLF, WOLF_POSES), 'dog': (DOG, DOG_POSES), 'stray': (DOG, STRAY_POSES)}
+
+# the winter coat, for the owner to compare (not one of the delivered files): longer guard hairs on the neck, shoulders
+# and back, a fuller tail, the body a little fuller; Arabian wolves' winter coat is longer than their summer one but
+# far shorter than northern wolves' (README.md). The amounts are a game choice.
+WOLF_WINTER = dict(WOLF)
+WOLF_WINTER.update(
+    name='wolf_winter',
+    torso=[(x, top + 0.012 * (x > -0.5), bot - 0.006, w * 1.06, wl * 1.06) for x, top, bot, w, wl in WOLF['torso']],
+    neck=[(f, w * 1.18, c * 1.22, t * 1.25) for f, w, c, t in WOLF['neck']],
+    tail_r=[(f, w * 1.35, d * 1.35) for f, w, d in WOLF['tail_r']],
+)
+SPECIES['wolf_winter'] = (WOLF_WINTER, {'alert': WOLF_POSES['alert']})

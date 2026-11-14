@@ -278,6 +278,9 @@ class Coat:
         return self.fur(P, 'ear', col, amount=0.05)
 
     # ---------------------------------------------------------------- the guard dog and the stray
+    def kind_wolf_winter(self, block, P, N, S, T):
+        return self.kind_wolf(block, P, N, S, T)
+
     def kind_dog(self, block, P, N, S, T):
         return self.dog(block, P, N, S, T, stray=False)
 
@@ -313,7 +316,7 @@ class Coat:
             col = mix(base, back, sstep(0.45, 0.9, up) * (0.9 if stray else 0.6))
             if stray:
                 col = mix(col, back, 0.35 * sstep(0.1, 0.5, mott))
-            col = mix(col, white, sstep(-0.3, -0.7, up) * (0.6 if stray else 1.0))
+            col = mix(col, white, sstep(-0.45, -0.8, up) * (0.6 if stray else 1.0))
             if block == 'neck':
                 fwd = N[..., 0]
                 col = mix(col, white, sstep(0.1, 0.6, fwd - up * 0.5) * sstep(1.1, 0.9, z) * (0.7 if stray else 1.0))
@@ -360,9 +363,9 @@ class Coat:
         side = np.abs(N[..., 1])
         # ribs: grooves slanting back and down, about 22 mm apart, over the chest behind the shoulder
         r = (x * H - (z - 0.75) * H * 0.35) / (0.040 * H)
-        groove = (0.5 + 0.5 * np.cos(2 * np.pi * r)) ** 3
+        groove = (0.5 + 0.5 * np.cos(2 * np.pi * r)) ** 2 * 0.6
         zone = sstep(-0.05, 0.05, x) * sstep(0.30, 0.20, x) * sstep(0.58, 0.66, z) * sstep(0.90, 0.82, z) * sstep(0.4, 0.8, side)
-        col = mix(col, col * 0.72, groove * zone)
+        col = mix(col, col * 0.75, groove * zone * (0.6 + 0.4 * noise3(P, 30.0, 9)))
         col = mix(col, col * 1.12, (1 - groove) * zone * 0.5)
         # the hip bone (its point under the skin) light, a hollow under it
         hp = np.array([-0.30 * H, 0.0, 0.90 * H], np.float32)

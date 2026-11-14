@@ -206,11 +206,11 @@ def finish(png, ruler=None):
 
 
 def pictures(kind, pose, o, m):
-    st = common.Studio(OUT, samples=10 if QUICK else 40)
+    st = common.Studio(OUT, samples=10 if QUICK else 32)
     lo, hi = bounds(o)
     mid = (lo + hi) / 2000
     ext = (hi - lo) / 1000
-    res = (720, 540) if QUICK else (1400, 1050)
+    res = (720, 540) if QUICK else (1200, 900)
     st.rig_lights(V3(mid), dist=max(ext[0] * 2.0, 1.2))
     tag = f'{kind}_{pose}'
     ortho = max(ext[0], ext[2] * 1.33) * 1.25
