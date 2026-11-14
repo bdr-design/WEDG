@@ -86,3 +86,11 @@ what was asked overnight; this file is his own word.
 
 Still to be put to him from T18_answers.md: Q-4 (until when a kept trapped peregrine may be released: built as
 1 February to 30 April, a game choice).
+
+## الحراج's compact pages: the two states that still scrolled (after the views landed)
+
+26. The camel's page after a سوم (the seller's answer card at the top pushed it 49–64 px): «الرد داخل خانة السوم: رد
+    البايع يطلع داخل خانة السوم نفسها، مكان السطر الثابت «يرد عليك على طول: يقبل، أو ينزل لك، أو يرفض» اللي ما له
+    فايدة بعد ما رد. الصفحة ترجع تبان كلها تقريبًا بدون سحب وما ينشال شي من الكلام.»
+27. The sell page of a she-camel he treated himself while she nurses a calf (11 px): «ادمج تنبيه الحوار مع الرفض:
+    تنبيه «حوارها يرضع منها» يصير سطر داخل بطاقة الرفض بدل بطاقة لحاله. نفس الكلام، والصفحة تبان كلها.»
