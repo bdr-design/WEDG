@@ -39,8 +39,8 @@ class TrapOdds {
   static const passCoast = 0.0412;
   // (measured by tool/trap_odds.dart over 20,000 seasons: the bare beginner
   // 0.160, the well equipped 0.647)
-  static const groundNorth = 0.8;
-  static const groundSouth = 0.6;
+  static const groundNorth = 0.9;
+  static const groundSouth = 0.85;
   static const november = 0.92;
 
   /// The best day's chance: 1 − (1/3)^(1/61).
@@ -58,15 +58,25 @@ class TrapOdds {
       (FalconSpecies.passagePeregrine, false, 0.12),
       (FalconSpecies.saker, true, g.north ? 0.14 : 0.06),
       (FalconSpecies.saker, false, g.north ? 0.06 : 0.04),
+      // the residents, young and old alike (half each: game choice)
+      (
+        FalconSpecies.mountainPeregrine,
+        true,
+        g.coast && !g.north ? 0.025 : 0.01,
+      ),
       (
         FalconSpecies.mountainPeregrine,
         false,
-        g.coast && !g.north ? 0.05 : 0.02,
+        g.coast && !g.north ? 0.025 : 0.01,
       ),
     ];
     // the lanner, resident inland, the rest (the shares sum to 1)
     final rest = 1.0 - m.fold(0.0, (a, x) => a + x.$3);
-    return [...m, (FalconSpecies.lanner, false, rest)];
+    return [
+      ...m,
+      (FalconSpecies.lanner, true, rest / 2),
+      (FalconSpecies.lanner, false, rest / 2),
+    ];
   }
 
   static double passChance(Ground g, GameDay day) {
@@ -86,10 +96,10 @@ class TrapOdds {
     return Passer(w, pick.$1, pick.$2);
   }
 
-  /// He sees the falcon in its window: always with the binoculars, six times
-  /// in ten without them [223] (game choices).
+  /// He sees the falcon in its window: always with the binoculars, three times
+  /// in four without them [223] (game choices).
   static const spotBinoculars = 1.0;
-  static const spotEyes = 0.6;
+  static const spotEyes = 0.75;
 
   /// It takes the lure: a pigeon 0.7, the bird net 0.5; each lure of the
   /// same kind after a refusal half as likely; after [triesMost] refusals it
@@ -122,4 +132,8 @@ class TrapOdds {
   static const lost = 0.02;
   static const foundWithTracker = 0.95;
   static const foundWithout = 0.6;
+
+  /// Each day it has been lost halves the chance; after this many days not
+  /// found it is gone (game choice: the research gives no figure).
+  static const searchDays = 3;
 }

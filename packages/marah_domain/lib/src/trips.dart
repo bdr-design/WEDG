@@ -9,27 +9,19 @@ import 'catalog/falconry.dart';
 import 'common/time.dart';
 import 'events.dart';
 import 'game.dart';
-import 'handlers/falconry.dart' show cannotStart, ready, tripLines;
+import 'handlers/falconry.dart'
+    show arrival, cannotStart, driveMinutes, ready, tripLines, workStart;
 import 'model/falconry.dart';
 import 'sim.dart';
 
 class Trips {
   const Trips._();
 
-  /// The minute a night lands on (the answers' Q-21): trapping at first
-  /// light, falconry when the hunting day opens, an hour after sunrise
-  /// [135]; home at 06:00 as the calendar does.
-  static int landingMinute(Trip? t, GameDay day) => switch (t?.kind) {
-    TripKind.trapping => HuntSun.dawn(day),
-    TripKind.falconry => HuntSun.sunrise(day) + 60,
-    null => 360,
-  };
-
-  /// The camp's own stops: its supplies out, the season's end, the day he
-  /// chose to be back by. Each a reason's name.
+  /// The camp's own stops, at the ground only: its supplies out, the
+  /// season's end, the day he chose to be back by. Each a reason's name.
   static String? campStop(Game g) {
     final t = g.me.falconry?.trip;
-    if (t == null) return null;
+    if (t == null || t.returning || g.today < t.arriveOn) return null;
     final today = g.today;
     if (!t.oneDay && g.me.hunt.has(Gear.supplies) == 0) return 'suppliesOut';
     final permit = t.kind == TripKind.trapping
@@ -49,17 +41,49 @@ class Trips {
       ..addAll(tripLines(t, g.today));
   }
 
-  /// A night at camp: the plan of one away call to tomorrow (null when he
-  /// is not on a trip of days).
-  static AwayPlan? night(Game g) {
+  /// The next leg of a trip by the away call, with the minute it lands on:
+  /// - the drive out, to the day it reaches the ground, landing at its
+  ///   working hour (the drive as the plan's travel: every stop of the
+  ///   calendar read on the way);
+  /// - a night at the ground: to tomorrow, landing at the working hour's
+  ///   start (the answers' Q-21: trapping at first light, falconry an hour
+  ///   after sunrise [135]);
+  /// - the drive home, to the day it is over, landing at its minute.
+  /// Null when the leg is inside today (a day's outing, a short drive: the
+  /// clock runs it) or there is no trip.
+  static ({AwayPlan plan, int landing})? leg(Game g) {
     final t = g.me.falconry?.trip;
-    if (t == null || t.oneDay) return null;
-    return AwayPlan(
-      g.today + 1,
-      extra: [campStop],
+    if (t == null) return null;
+    final today = g.today;
+    AwayPlan plan(GameDay to, {bool camp = false}) => AwayPlan(
+      to,
+      extra: camp ? [campStop] : const [],
       counters: [count],
-      card: card(g, t.kind, t.ground, t.endOn.daysSince(g.today)),
+      card: card(g, t.kind, t.ground, t.endOn.daysSince(today)),
     );
+    if (t.returning) {
+      return t.homeOn! > today
+          ? (plan: plan(t.homeOn!), landing: t.homeMinute!)
+          : null;
+    }
+    if (t.arriveOn > today) {
+      return (plan: plan(t.arriveOn), landing: t.arriveMinute);
+    }
+    if (t.oneDay) return null;
+    return (
+      plan: plan(today + 1, camp: true),
+      landing: workStart(t.kind, today + 1),
+    );
+  }
+
+  /// A night at camp (the leg to tomorrow), or null.
+  static AwayPlan? night(Game g) {
+    final l = leg(g);
+    final t = g.me.falconry?.trip;
+    if (l == null || t == null || t.returning || t.arriveOn > g.today) {
+      return null;
+    }
+    return l.plan;
   }
 
   /// The trip's lines on the calendar's card before leaving (under its own):
@@ -69,8 +93,9 @@ class Trips {
     Game g,
     TripKind kind,
     Ground ground,
-    int nights,
-  ) {
+    int nights, {
+    int minute = 360,
+  }) {
     final p = g.me;
     final h = p.falconry;
     final region = p.farm.region;
@@ -84,6 +109,11 @@ class Trips {
       'km': ground.kmFrom(region),
       'hours': (ground.hoursFrom(region) * 10).round() / 10,
       'nights': nights,
+      'driveMinutes': driveMinutes(p, ground),
+      'arrive': [
+        arrival(p, kind, ground, g.today, minute).$1.value,
+        arrival(p, kind, ground, g.today, minute).$2,
+      ],
       'oneDay': nights == 0,
       'oneDayPossible': ground.oneDayFrom(region),
       'from': g.today.value,
@@ -104,13 +134,19 @@ class Trips {
           for (final f in h?.falcons ?? const <Falcon>[])
             if (ready(f)) f.name,
         ],
-      'refused': cannotStartName(g, kind, ground, nights),
+      'refused': cannotStartName(g, kind, ground, nights, minute),
     };
   }
 
   /// Why «اطلع» would be refused now (a HuntRefusal's name), or null.
-  static String? cannotStartName(Game g, TripKind k, Ground gr, int n) {
-    final e = cannotStart(Sim(g.state), g.me, k, gr, n);
+  static String? cannotStartName(
+    Game g,
+    TripKind k,
+    Ground gr,
+    int n,
+    int minute,
+  ) {
+    final e = cannotStart(Sim(g.state), g.me, k, gr, n, minute);
     return e == null ? null : (e.params['reason'] as String?) ?? e.code.name;
   }
 }

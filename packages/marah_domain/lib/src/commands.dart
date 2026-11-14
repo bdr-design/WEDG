@@ -271,10 +271,14 @@ final class BuyPermit extends Command {
 /// Orders [units] of [gear] from «نادي الصقور» → «الطرح» (pigeons by the
 /// bird, the camp's supplies by the day, the rest one each): paid now, cash
 /// only, delivered to the farm as feed is (Balance.deliveryDays).
+///
+/// A tracker is ordered for one named [falcon] of his (each bird wears its
+/// own, the answers' Q-27) and fitted to it when it comes.
 final class OrderGear extends Command {
-  const OrderGear(super.actor, this.gear, this.units);
+  const OrderGear(super.actor, this.gear, this.units, {this.falcon});
   final Gear gear;
   final int units;
+  final FalconId? falcon;
 }
 
 /// Buys today's lot [lot] (FalconLot.key) at one of the three auctions, up
@@ -299,18 +303,30 @@ final class HuntAt {
 }
 
 /// Goes out for falcons: [kind] to [ground] for [nights] (0: a day's
-/// outing to a near ground, back the same evening). The farm runs as on any
-/// day meanwhile; each night is one call of the away mechanism (Trips).
+/// outing to a near ground, there and back inside the day), leaving at the
+/// game's [minute] (stamped by the engine). The drive is game time: he is
+/// at the ground at its working hour on the day the drive reaches it
+/// (Trips.leg: the away call carries the days of a long drive). The farm
+/// runs as on any day meanwhile.
 final class StartTrip extends Command {
-  const StartTrip(super.actor, this.kind, this.ground, this.nights);
+  const StartTrip(
+    super.actor,
+    this.kind,
+    this.ground,
+    this.nights, {
+    this.minute,
+  });
   final TripKind kind;
   final Ground ground;
   final int nights;
+  final int? minute;
 }
 
-/// Breaks camp and goes home («فك المخيم وارجع»), at any time.
+/// Breaks camp and drives home («فك المخيم وارجع»), at any time: the drive
+/// home is game time as the drive out is.
 final class EndTrip extends Command {
-  const EndTrip(super.actor);
+  const EndTrip(super.actor, {this.minute});
+  final int? minute;
 }
 
 /// Moves the trapping camp to another trapping ground with the mobile tent.
@@ -382,5 +398,6 @@ final class SearchFalcon extends Command {
 
 /// الدعو: today's care for every falcon in the room (one tap).
 final class CareFalcons extends Command {
-  const CareFalcons(super.actor);
+  const CareFalcons(super.actor, {this.minute});
+  final int? minute;
 }

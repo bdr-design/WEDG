@@ -24,6 +24,7 @@ import '../rules/milk.dart';
 import '../rules/names.dart';
 import '../rules/pasture.dart';
 import '../rules/provisions.dart';
+import '../rules/trap_odds.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
 import '../world_gen.dart';

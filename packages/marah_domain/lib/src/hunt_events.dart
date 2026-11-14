@@ -203,7 +203,7 @@ final class FalconLotLost extends DomainEvent {
   };
 }
 
-enum TripChange { started, ended, moved }
+enum TripChange { started, homeward, ended, moved }
 
 /// A trip started, ended (with its lines for the summary: days, caught,
 /// released, stooped, flights, taken, supplies used) or its camp moved.
@@ -327,8 +327,9 @@ enum Fate {
   /// Neither sold nor kept when the trapping auction closed: set free.
   freedAtClose,
 
-  /// A lost falcon found, or gone for good.
+  /// A lost falcon found, not found today, or gone for good.
   found,
+  notFound,
   gone,
 
   /// Left without الدعو two weeks: it stepped back a week.

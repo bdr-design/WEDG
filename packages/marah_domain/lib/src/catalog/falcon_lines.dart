@@ -92,6 +92,30 @@ enum HuntRefusal {
 
   /// No الدعو in the moult.
   moult,
+
+  /// Still driving to the ground ({'day', 'minute'}: when he is there).
+  driving,
+
+  /// A day's outing whose drive there and back does not fit the day.
+  noTime,
+
+  /// Another trapping ground worked today (one a day).
+  oneGroundADay,
+
+  /// الدعو from away from the farm (a camp, a drive).
+  awayFromFarm,
+
+  /// No falcons at all.
+  noFalcons,
+
+  /// A kept bird offered for sale (the owner's decision 8).
+  keptNotForSale,
+
+  /// The falcon wears a tracker already, or one is on its way for it.
+  hasTracker,
+
+  /// He has looked for the lost falcon today already.
+  searchedToday,
 }
 
 class FalconLines {
@@ -112,12 +136,12 @@ class FalconLines {
       HuntRefusal.roomFull => 'غرفة الصقور مليانة: تاخذ 4 صقور بس',
       HuntRefusal.permitHeld => 'عندك هالتصريح لهالموسم',
       HuntRefusal.needsFalcon => 'تصريح الصقار يبي صقر جوازه باسمك',
-      HuntRefusal.gearFull =>
-        (e.params['room'] as int? ?? 0) == 0
-            ? 'ما تقدر تطلب أكثر منها'
-            : 'تقدر تطلب ${e.params['room']} بس',
-      HuntRefusal.onTrip => 'أنت طالع الحين: ارجع أول',
-      HuntRefusal.notOnTrip => 'ما أنت بمخيم هنا',
+      HuntRefusal.gearFull => _room(
+        e.params['room'] as int? ?? 0,
+        e.params['gear'] as String?,
+      ),
+      HuntRefusal.onTrip => 'انت طالع الحين: ارجع أول',
+      HuntRefusal.notOnTrip => 'مخيمك مو هنا',
       HuntRefusal.tooFar => 'بعيدة على طلعة يوم: ما ترجع نفس اليوم',
       HuntRefusal.noSupplies => 'ما عندك مؤونة للمخيم',
       HuntRefusal.noTent => 'تنقل المخيم بالخيمة المتنقلة بس',
@@ -155,7 +179,38 @@ class FalconLines {
       HuntRefusal.releaseMonths => 'تطلقه من أول فبراير لين آخر أبريل',
       HuntRefusal.notLost => 'صقرك مو ضايع',
       HuntRefusal.moult => 'بالمقيض ما فيه دعو',
+      HuntRefusal.driving => 'لسا بالطريق، ما وصلت',
+      HuntRefusal.noTime => 'ما يمديك تروح وترجع اليوم',
+      HuntRefusal.oneGroundADay => 'اشتغلت اليوم بأرض ثانية: أرض وحدة باليوم',
+      HuntRefusal.awayFromFarm => 'الدعو بغرفة الصقور، وانت برا العزبة',
+      HuntRefusal.noFalcons => 'ما عندك صقور',
+      HuntRefusal.keptNotForSale => 'الطير اللي تخليه لك ما ينعرض للبيع',
+      HuntRefusal.hasTracker => 'عليه جهاز تتبع',
+      HuntRefusal.searchedToday => 'دوّرته اليوم: دوّره بكرة',
     };
+  }
+
+  /// What still fits of a gear, its counting noun in its four forms (1, 2,
+  /// 3 to 10, 11 and up); none: «عندك كفايتك منها».
+  static String _room(int n, String? gear) {
+    if (n <= 0) return 'عندك كفايتك منها';
+    final (one, two, few, many) = switch (gear) {
+      'pigeon' => ('حمامة وحدة', 'حمامتين', 'حمامات', 'حمامة'),
+      'supplies' => (
+        'يوم مؤونة واحد',
+        'يومين مؤونة',
+        'أيام مؤونة',
+        'يوم مؤونة',
+      ),
+      _ => ('وحدة', 'ثنتين', '', ''),
+    };
+    final what = switch (n) {
+      1 => one,
+      2 => two,
+      <= 10 => '$n $few',
+      _ => '$n $many',
+    };
+    return 'تقدر تطلب ${what.trim()} بس';
   }
 
   /// The line of a bird in the net set free at once: the proxy's lines

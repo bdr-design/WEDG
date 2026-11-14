@@ -17,6 +17,7 @@ class FalconrySystem implements DailySystem {
       _trip(sim, p, h);
       _auction(sim, p, h);
       _neglect(sim, p, h);
+      _lost(sim, p, h);
     }
   }
 
@@ -35,7 +36,12 @@ class FalconrySystem implements DailySystem {
   static void _deliver(Sim sim, PlayerState p, Falconry h) {
     if (h.coming.isEmpty) return;
     for (final d in h.coming.where((d) => d.arrivesOn <= sim.today)) {
-      h.gear[d.gear] = h.has(d.gear) + d.units;
+      if (d.gear == Gear.tracker) {
+        // fitted to the falcon it was ordered for (if it is still his)
+        h.falcon(d.falcon!)?.tracker = true;
+      } else {
+        h.gear[d.gear] = h.has(d.gear) + d.units;
+      }
       sim.emit(
         GearDelivered(sim.today, owner: p.id, gear: d.gear, units: d.units),
       );
@@ -48,14 +54,38 @@ class FalconrySystem implements DailySystem {
   static void _trip(Sim sim, PlayerState p, Falconry h) {
     final t = h.trip;
     if (t == null) return;
-    if (t.oneDay) {
+    // home: the drive home over before today; a day's outing ends with its
+    // day (back the same evening)
+    if ((t.returning && sim.today > t.homeOn!) || t.oneDay) {
       endTripNow(sim, p);
       return;
     }
-    final left = h.has(Gear.supplies);
-    if (left > 0) {
-      h.gear[Gear.supplies] = left - 1;
-      t.suppliesUsed++;
+    // a night at the ground: a day of the camp's supplies
+    if (!t.returning && sim.today > t.arriveOn) {
+      final left = h.has(Gear.supplies);
+      if (left > 0) {
+        h.gear[Gear.supplies] = left - 1;
+        t.suppliesUsed++;
+      }
+    }
+  }
+
+  /// A lost falcon not found in TrapOdds.searchDays is gone for good.
+  static void _lost(Sim sim, PlayerState p, Falconry h) {
+    for (final f in [...h.falcons]) {
+      if (f.where != FalconWhere.lost || f.lostOn == null) continue;
+      if (sim.today.daysSince(f.lostOn!) > TrapOdds.searchDays) {
+        h.falcons.remove(f);
+        sim.emit(
+          FalconFate(
+            sim.today,
+            owner: p.id,
+            falcon: f.id.value,
+            name: f.name,
+            fate: Fate.gone,
+          ),
+        );
+      }
     }
   }
 

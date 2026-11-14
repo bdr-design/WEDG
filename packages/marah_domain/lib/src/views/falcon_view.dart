@@ -212,10 +212,19 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
             'endOn': t.endOn.value,
             'oneDay': t.oneDay,
             'supplyDays': h!.has(Gear.supplies),
-            'sighted': t.workDay == today && t.sighted && !t.resolved,
-            'done': t.workDay == today && t.resolved,
+            'arriveOn': t.arriveOn.value,
+            'arriveMinute': t.arriveMinute,
+            'homeOn': t.homeOn?.value,
+            'homeMinute': t.homeMinute,
+            'sighted':
+                h.work?.day == today &&
+                h.work!.ground == t.ground &&
+                h.work!.sighted &&
+                !h.work!.resolved,
+            'done': h.work?.day == today && h.work!.resolved,
+            'workedToday': h.work?.day == today ? h.work!.ground.name : null,
             'lines': tripLines(t, today),
-            'landing': Trips.landingMinute(t, today + 1),
+            'leg': Trips.leg(Game(state))?.landing,
             'stop': Trips.campStop(Game(state)),
           },
     'today': {
@@ -226,7 +235,6 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
       'quarry': {
         for (final g in Ground.values)
           if (g.hunting) g.name: quarryAt(g, today)?.label,
-        'open': quarryAt(null, today)?.label,
       },
     },
     'lots': [
