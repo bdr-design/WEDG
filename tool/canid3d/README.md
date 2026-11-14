@@ -32,11 +32,11 @@ corners, the toes out of the paw) and meshed as one closed surface, as `tool/cam
 
 | File | What | Triangles | Draws | Texture pair |
 |---|---|---|---|---|
-| `assets_src/canids/wolf_alert.glb`, `wolf_stalk.glb`, `wolf_run.glb` | the wolf, close: one skin | 5,600 each | 1 | 512 px |
+| `assets_src/canids/wolf_alert.glb`, `wolf_stalk.glb`, `wolf_run.glb` | the wolf, close: one skin | 7,000 each | 1 | 512 px |
 | `wolf_*_lod1.glb` | the wolf, far: the same skin decimated | 1,300 each | 1 | 256 px |
-| `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, its collar and the collar's ring (3 pieces); barking, also the four canines | 6,216 / 6,216 / 6,360 | 1 | 512 px |
+| `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, its collar and the collar's ring (3 pieces); barking, also the four canines | 7,616 / 7,616 / 7,760 | 1 | 512 px |
 | `dog_*_lod1.glb` | the guard dog, far: the skin and the collar (2 pieces) | 1,420 each | 1 | 256 px |
-| `stray_alert.glb`, `stray_bark.glb` | the stray, close: one skin (the barking file adds the canines) | 5,600 / 5,742 | 1 | 512 px |
+| `stray_alert.glb`, `stray_bark.glb` | the stray, close: one skin (the barking file adds the canines) | 7,000 / 7,142 | 1 | 512 px |
 | `stray_*_lod1.glb` | the stray, far | 1,300 each | 1 | 256 px |
 
 - **One mesh and one material per file, one-sided:** the skin and every extra piece are closed. The collar is in the
@@ -45,17 +45,20 @@ corners, the toes out of the paw) and meshed as one closed surface, as `tool/cam
   map (the fur's grain: fine streaks along the hair's run and the coat's coarser lie); roughness is one value
   (0.85). 512 px close is 2.67 MiB uncompressed with mipmaps (both textures, RGBA8, counted as ADR 0005 counts them),
   about 0.67 MiB as ASTC 4×4. 256 px far is 0.67 MiB uncompressed.
-- **The texture layout:** Blender's smart projection of the skin, packed with a margin of 0.006 of the layout (3
-  texels at 512 px) between islands and at the border, the head given 2.4 times the texture per millimetre (the unwrap
-  is made on a copy whose head is swollen, then copied back). The texture covers about 45% of its square.
+- **The texture layout:** Blender's smart projection of the skin, packed with a margin of 0.003 (about 1.5 texels
+  at 512 px) between islands, the head given 2.0 times the texture per millimetre (the unwrap is made on a copy whose
+  head is swollen, then copied back). The texture covers about 58% of its square: a texel is about 3.0 mm on the
+  body and 1.6 mm on the head at 512 px (6.0 and 3.2 mm far).
   - **No two texture triangles overlap:** where the decimated skin folds a sliver under its neighbour, the projection
     overlaps; one face of each such pair is moved to a free place of its own. `build.py` rasterises every triangle at
     2048 px and stops the build if any two share texels.
   - Empty texels take their nearest painted texel's colour, which within a margin is the island's own.
   - The samplers clamp to the edge (nothing wraps in from the far border); the tangents are written into the file
     (the normal map is in their frame).
-  - **The margin, a trade-off:** a margin of 0.010–0.013 (5–7 texels, the reviewer's suggestion) left only 25–30%
-    of the square covered, half the texture's sharpness; 3 texels keep 45%.
+  - **The margin, a trade-off:** margins of 0.010–0.013 (5–7 texels) left only 25–30% of the square covered, half
+    the texture's sharpness; 3 texels kept 45% (3.7 mm a texel on the body: the grizzle stepped close up); 1.5 texels
+    keep 58%. With no overlaps left, a thin margin only lets a mipmap far down mix two neighbouring islands, whose
+    colours are near each other on one animal.
 - **Reproducible:** the same code writes the same GLB files byte for byte. The exporter's triangle order is settled
   after writing (`common.settle`, as in `tool/weapon3d/akm.py` and `tool/bird3d`). Checked by building every file
   twice and comparing checksums (the report gives the result).
@@ -84,7 +87,7 @@ The budget is ADR 0005's: 200 draws and 400k triangles a frame with shadows, and
   are mostly seen far. The guard dog may be near the camera at the pens.
 - **A night scene:**
   - two wolves far: 2 × 1,300;
-  - the guard dog close: 6,216;
+  - the guard dog close: 7,616;
   - three strays far: 3 × 1,300;
   - total about 13k triangles in 6 draws, 12 with each casting a live shadow;
   - that is 3% of the triangle budget (7% counting the shadow pass) and 3% of the draws.
@@ -99,9 +102,12 @@ The budget is ADR 0005's: 200 draws and 400k triangles a frame with shadows, and
   - At 20 m the wolf covers about 1,000 screen pixels, so its 1,300 triangles are about one to a pixel.
   - Beyond about 30 m a third level of about 300 triangles would do, and that is cheap to add. Not built: at most
     five canids in a scene make 6.5k far triangles, under 2% of the budget.
-- **Why the close model is 5.6k:**
-  - The skin before decimation has about 300k triangles; collapse decimation keeps them where the shape turns (the
-    head, the ears, the toes, the hocks) and thins them on the flanks.
+- **Why the close model is 7k:**
+  - The skin before decimation has about 300k triangles; collapse decimation keeps them where the shape turns.
+  - The toes need about 350–450 triangles a paw to read as four toes close up; at 5,600 in all they took half the
+    model and starved the face. At 7,000 the wolf has about 1,950 in the head (with the ears), 1,570 in the four paws
+    and 3,480 in the body; the decimation spares the head a little and the paws a little (`skin.HEAD_SPARE`,
+    `PAW_SPARE`). 7k is still under 2% of the frame's 400k.
   - As one skinned mesh this is cheap next to the camels' 8–40k.
 - **Fur is texture and silhouette only:** no shells and no alpha cards. The brush of the tail and the thigh's
   breeches are in the outline; the grizzle of the guard hairs in the colour; the hair's grain in the normal map.
@@ -311,8 +317,13 @@ python build.py OUT scale,night,winter,far render
 CANID_VOLUME=1 ...                          # also the standing model's volume
 ```
 
-Blender is the `bpy` module (the project's `blendenv`), with numpy, SciPy and scikit-image (marching cubes) in the
-same environment. The GLB files are copied to `assets_src/canids/` and the
+**Requirements:** Blender as the `bpy` module (the project's `blendenv`), with numpy, SciPy, scikit-image (marching
+cubes) and Pillow in the same environment.
+
+**Time:** the whole set (16 GLBs) takes about 17 minutes on this machine (4 cores shared with other agents), the
+pictures much longer. Each pose's field is voxelised piece by piece in Python (a ray parity per voxel column), each
+texel of two textures is found on the skin, on the nearest piece and on the standing animal, and the occlusion casts
+48 rays from every vertex; the overlap check rasterises every triangle at 2048 px. The GLB files are copied to `assets_src/canids/` and the
 pictures to `design/canids/`.
 
 ## The rig and clips to come (not built)
@@ -370,6 +381,9 @@ animation texture beyond it, as ADR 0005 plans for the camels: 32 bones × about
 
 - **The eyes and the lip line are paint** on the skin: close up they show the texture's steps (an eye is about 25
   texels long).
+- **The texture's size:** a texel is about 3 mm on the body (1.6 mm on the head); the grizzle's streaks show their
+  steps in the closest pictures.
+- **The toes' clefts** are shallow cuts: close up from the front they read as four toes, with some facets.
 - **Where a leg meets the trunk** the skin can show a faint crease, and a little webbing between the elbow and the
   chest.
 - **The dog's neck** stands about 55 mm over the withers when it holds its head high (a dog's neck crest; the wolf's

@@ -298,7 +298,7 @@ def vertex_normals(V, Fv):
     return vn / np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-12)
 
 
-MARGIN = 0.006       # the projection's margin between islands; the packer's own is 0.004 of an island's scale
+MARGIN = 0.003       # the projection's margin between islands (the packer's own is 0.003 too: about 1.5 texels at 512 px)
 
 
 def unwrap(o, head_c_mm, head_r_mm, gain=2.0):
@@ -329,7 +329,7 @@ def unwrap(o, head_c_mm, head_r_mm, gain=2.0):
     bpy.ops.uv.smart_project(angle_limit=math.radians(62), island_margin=MARGIN, area_weight=0.0,
                              correct_aspect=True, scale_to_bounds=False)
     bpy.ops.uv.select_all(action='SELECT')
-    bpy.ops.uv.pack_islands(rotate=True, margin=0.004)
+    bpy.ops.uv.pack_islands(rotate=True, rotate_method="ANY", margin=0.003)
     bpy.ops.object.mode_set(mode='OBJECT')
     uv = np.empty(len(me.loops) * 2, np.float32)
     me.uv_layers.active.data.foreach_get('uv', uv)
@@ -392,7 +392,21 @@ def relocate(uv, faces, V, Fv, size=512):
             uv[face] = q * sc + (np.array([x, y]) + m) / size
             occ[y:y + w, x:x + w] = True
         if not done:
-            raise SystemExit('no free place left in the texture layout for a face')
+            # the layout is full: shrink it all a little toward its corner, which frees a strip along two edges
+            uv *= 0.96
+            fid, _ = raster(uv, size)
+            occ = fid >= 0
+            busy = ndimage.binary_dilation(occ, iterations=m)
+            ii = np.pad(np.cumsum(np.cumsum(busy, 0), 1), ((1, 0), (1, 0)))
+            w = int(math.ceil(q.max() * size)) + 2 * m + 1
+            win = ii[w:, w:] - ii[:-w, w:] - ii[w:, :-w] + ii[:-w, :-w]
+            free = np.argwhere(win == 0)
+            free = free[(free[:, 0] >= m) & (free[:, 1] >= m) & (free[:, 0] + w <= size - m) & (free[:, 1] + w <= size - m)]
+            if not len(free):
+                raise SystemExit('no free place left in the texture layout for a face')
+            y, x = free[0]
+            uv[face] = q + (np.array([x, y]) + m) / size
+            occ[y:y + w, x:x + w] = True
 
 
 def uv_overlaps(UV, size=2048, eps=0.02):

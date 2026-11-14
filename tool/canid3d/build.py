@@ -94,6 +94,14 @@ def build(kind, pose):
                     print('   face', f_, 'xyz', V_[F_[f_]].round(1).tolist(), 'uv', UV[f_].round(4).tolist())
             raise SystemExit(f'{kind}_{pose} level {level}: {len(bad)} pairs of texture triangles overlap: {bad[:6]}')
         edge = int(((UV < 0.002) | (UV > 0.998)).any(axis=(1, 2)).sum())
+        Vv, Fq = skin.mesh_arrays(o)
+        a3 = 0.5 * np.linalg.norm(np.cross(Vv[Fq[:, 1]] - Vv[Fq[:, 0]], Vv[Fq[:, 2]] - Vv[Fq[:, 0]]), axis=1)
+        e1, e2 = UV[:, 1] - UV[:, 0], UV[:, 2] - UV[:, 0]
+        a2 = 0.5 * np.abs(e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]) * TEX[level] ** 2
+        fc_ = Vv[Fq].mean(1)
+        nearhead = np.linalg.norm(fc_ - np.array(tuple(head_c)), axis=1) < 0.9 * Lh
+        print(f'   texel size: body {np.sqrt(a3[~nearhead].sum() / a2[~nearhead].sum()):.1f} mm, head '
+              f'{np.sqrt(a3[nearhead].sum() / a2[nearhead].sum()):.1f} mm ({TEX[level]} px)')
         print(f'   texture layout level {level}: no overlapping triangles (checked at 2048 px); {edge} faces touch its border')
         col, nrm, cover = texture.bake(coat, m, rest, o, UV, n_skin, blocks, TEX[level], H)
         if level == 0 and os.environ.get('CANID_ATLAS'):
