@@ -37,7 +37,7 @@ def saker_rest(wings, level=0):
     import saker
     pose = dict(saker.POSES['flight'])
     pose.update({'wings': wings, 'tucked': False, 'foot': (75, 22, -125), 'foot_turn': 8, 'tail_droop': 0,
-                 'tail_spread': 1.0, 'wing_dihedral': 0.0})
+                 'tail_spread': 1.0, 'wing_dihedral': 0.0, 'fluff': 1.05})      # as the approved perched birds
     det = bird.Detail(level)
     body = bird.Body(saker.stations(pose), pose, det, head_weight=2.0)
     spec = saker.SPEC
@@ -65,6 +65,7 @@ def saker_rest(wings, level=0):
 
 
 TOE_NAMES = ('toeM', 'toeI', 'toeO', 'toeH')
+JESS_N = 5
 TOE_WHY = ('middle toe', 'inner toe', 'outer toe', 'hind toe')
 JESS_LEN = 150.0      # mm from the anklet to the swivel (the reviewer's 15-20 cm; Gulf cords about 30 cm folded)
 
@@ -105,10 +106,14 @@ def saker_bones(pts, body):
     add('neck2', body.at(212), body.at(240), 'neck1', 'the upper neck')
     add('head', body.at(240), body.at(292), 'neck2', 'the head: looks around; carries beak, eyes and hood')
     add('hood', body.at(252) + V3((0, 0, 20)), body.at(252) + V3((0, 0, 50)), 'head', 'the hood: lifted off and set on')
-    add('tail', tp(20, 3), tp(-205, 3), 'body', 'the tail: lifts, drops and fans (by its width scale)')
+    add('tail', tp(20, 3), tp(-205, 3), 'body', 'the tail: lifts and drops')
+    add('tail.L', tp(20, 3, 6), tp(-205, 3, 18), 'tail', 'the tail\'s left feathers: fan out')
+    add('tail.R', tp(20, 3, -6), tp(-205, 3, -18), 'tail', 'the tail\'s right feathers: fan out')
     for side, s in ((1, 'L'), (-1, 'R')):
-        add(f'fold.{s}', tp(160, 25, 52 * side), tp(-135, 12, 10 * side), 'body',
-            'the folded wing (folded mesh only): lifts, droops, opens a little before the swap')
+        add(f'fold.{s}', tp(160, 25, 52 * side), tp(40, 22, 45 * side), 'body',
+            'the folded wing (folded mesh only): lifts, droops, opens before the swap')
+        add(f'fold_tip.{s}', tp(40, 22, 45 * side), tp(-135, 12, 10 * side), f'fold.{s}',
+            'the folded wing\'s primaries (folded mesh only): swing out as the wing opens, so the swap matches')
         add(f'wing_up.{s}', tp(130, 8, 30 * side), tp(130, 8, 120 * side), 'body', 'the arm (humerus): the wingbeat')
         add(f'wing_fore.{s}', tp(130, 8, 120 * side), tp(125, 8, 215 * side), f'wing_up.{s}', 'the forearm: the fold at the elbow')
         add(f'wing_hand.{s}', tp(125, 8, 215 * side), tp(40, 0, 600 * side), f'wing_fore.{s}', 'the hand and primaries: the fold at the wrist, the upstroke flick')
@@ -126,9 +131,9 @@ def saker_bones(pts, body):
             add(f'{nm}1.{s}', f + dv * -2, f + dv * j, f'tarsus.{s}', f'the {TOE_WHY[ti]}, first joint: each toe lies on the cuff its own way')
             add(f'{nm}2.{s}', f + dv * j, f + dv * (length - 2), f'{nm}1.{s}', f'the {TOE_WHY[ti]}, last joints and talon: curl and hook in')
         a = pts['tarsus_' + k] + V3((7.4, 0, 0))
-        for j in range(3):
-            add(f'jess{j + 1}.{s}', a + V3((0, 0, -JESS_LEN * j / 3)), a + V3((0, 0, -JESS_LEN * (j + 1) / 3)),
-                f'tarsus.{s}' if j == 0 else f'jess{j}.{s}', 'a third of the jess: the cord bends and trails')
+        for j in range(JESS_N):
+            add(f'jess{j + 1}.{s}', a + V3((0, 0, -JESS_LEN * j / JESS_N)), a + V3((0, 0, -JESS_LEN * (j + 1) / JESS_N)),
+                f'tarsus.{s}' if j == 0 else f'jess{j}.{s}', 'a fifth of the jess: the cord sags, swings and trails')
     return B
 
 
@@ -176,19 +181,32 @@ def weights_for(pc, tag, body, B):
         return [{'hood': 1.0} for _ in pc.V]
     if kind == 'tail':
         root = B['tail'][0]
-        return [blend('body', 'tail', (root.x - q.x) / 40.0) for q in pc.V]
+        out = []
+        for q in pc.V:
+            along = (root.x - q.x) / 40.0
+            if along < 1.0:
+                out.append(blend('body', 'tail', along))
+            else:
+                out.append(blend('tail', 'tail.L' if q.y > 0 else 'tail.R', (abs(q.y) - 4) / 22.0))
+        return out
     if kind == 'fold':
-        return [blend('body', f'fold.{s}', (175 - q.x) / 40.0) for q in pc.V]
+        out = []
+        for q in pc.V:
+            if q.x > 120:
+                out.append(blend('body', f'fold.{s}', (175 - q.x) / 40.0))
+            else:
+                out.append(blend(f'fold.{s}', f'fold_tip.{s}', (70 - q.x) / 60.0))
+        return out
     if kind == 'wing':
         out = []
         for q in pc.V:
             y = abs(q.y)
             if y < 60:
                 out.append(blend('body', f'wing_up.{s}', (y - 30) / 30))
-            elif y < 135:
-                out.append(blend(f'wing_up.{s}', f'wing_fore.{s}', (y - 105) / 30))
+            elif y < 160:
+                out.append(blend(f'wing_up.{s}', f'wing_fore.{s}', (y - 95) / 60))      # a wide band at the elbow
             else:
-                out.append(blend(f'wing_fore.{s}', f'wing_hand.{s}', (y - 195) / 40))
+                out.append(blend(f'wing_fore.{s}', f'wing_hand.{s}', (y - 172) / 76))   # and at the wrist
         return out
     if kind == 'shank':
         knee, ankle = B[f'shank.{s}'][0], B[f'shank.{s}'][1]
@@ -209,10 +227,10 @@ def weights_for(pc, tag, body, B):
         start = tag[2]
         out = []
         for q in pc.V:
-            f = (start.z - q.z) / JESS_LEN * 3.0       # 0..3 along the cord
-            j = min(int(f), 2)
+            f = (start.z - q.z) / JESS_LEN * JESS_N       # 0..JESS_N along the cord
+            j = min(int(f), JESS_N - 1)
             t = f - j
-            if t > 0.75 and j < 2:
+            if t > 0.75 and j < JESS_N - 1:
                 out.append(blend(f'jess{j + 1}.{s}', f'jess{j + 2}.{s}', (t - 0.75) / 0.5))
             elif t < 0.25 and j > 0:
                 out.append(blend(f'jess{j}.{s}', f'jess{j + 1}.{s}', (t + 0.25) / 0.5))
@@ -220,7 +238,7 @@ def weights_for(pc, tag, body, B):
                 out.append({f'jess{j + 1}.{s}': 1.0})
         return out
     if kind == 'swivel':
-        return [{'jess3.R': 1.0} for _ in pc.V]
+        return [{f'jess{JESS_N}.R': 1.0} for _ in pc.V]
     raise ValueError(kind)
 
 
@@ -341,29 +359,35 @@ class Cord:
     """A jess as a chain of points (verlet): pinned at the anklet, pulled by gravity and by the air the bird
     flies through. Points in mm, armature space."""
 
-    def __init__(self, start, n=4, length=JESS_LEN):
+    def __init__(self, start, n=JESS_N + 1, length=JESS_LEN):
         self.seg = length / (n - 1)
         self.p = [V3(start) + V3((0, 0, -self.seg * i)) for i in range(n)]
         self.q = [x.copy() for x in self.p]
 
-    def step(self, anchor, air, dt=1.0 / FPS, sub=4):
+    def step(self, anchor, air, dt=1.0 / FPS, sub=4, end=None):
         g = V3((0, 0, -9810.0))
         for _ in range(sub):
             h = dt / sub
             self.p[0] = V3(anchor)
+            if end is not None:
+                self.p[-1] = V3(end)
             for i in range(1, len(self.p)):
                 v = (self.p[i] - self.q[i]) * 0.92
                 self.q[i] = self.p[i].copy()
-                drag = (V3(air) - v / h) * 0.9 * h      # pulled toward moving with the air
-                self.p[i] = self.p[i] + v + (g * h * h) + drag * h * 8
-            for _ in range(3):
+                drag = (V3(air) - v / h) * 0.5 * h      # pulled toward moving with the air
+                self.p[i] = self.p[i] + v + (g * h * h) + drag * h * 5
+            for _ in range(4):
                 self.p[0] = V3(anchor)
+                if end is not None:
+                    self.p[-1] = V3(end)
                 for i in range(1, len(self.p)):
                     d = self.p[i] - self.p[i - 1]
                     L = d.length or 1e-6
                     corr = d * ((L - self.seg) / L)
                     if i == 1:
                         self.p[i] = self.p[i] - corr
+                    elif end is not None and i == len(self.p) - 1:
+                        self.p[i - 1] = self.p[i - 1] + corr
                     else:
                         self.p[i - 1] = self.p[i - 1] + corr * 0.5
                         self.p[i] = self.p[i] - corr * 0.5
@@ -392,8 +416,14 @@ def keys(f, pts):
 
 PERCH_TB = V3((-58, 0, 80))
 PLANTED = ('cuff', 'perch', 'ground')
+PERCH_NECK = (14, -32, -40)      # neck1, neck2, head turns that put the perched frame on saker_fist.glb
+PERCH_TAIL = 10                  # the tail's lift, the same fit
+SWAP_FOLD = {'out': 8, 'up': 50, 'twist': 0, 'tip_out': 10, 'tip_up': -28}      # the folded mesh at the swap (tuned at cast_off's frame 13)
+SWAP_OPEN = {'up': -5, 'sweep': 65, 'fore': -80, 'hand': 170, 'twist': 0}      # the spread wing at the swap (overlap 0.898 with SWAP_FOLD, side and three-quarter)
 FRAMES_FEET = {}
-FOOT_LIFT = 2.5      # mm: the foot's centre held this far above the support, so the soles' pads rest on it
+HIDDEN_FEET = {}      # per frame: the feet meant drawn up out of sight (not reaching for the cuff or the quarry)
+BODY = []
+FOOT_LIFT = 4.0      # mm: the foot's centre held this far above the support under it, so the soles' pads rest on it
 
 
 def flat_surface(x, y):
@@ -401,18 +431,70 @@ def flat_surface(x, y):
     return 0.0      # the tail base when perched (the static saker_fist's pose: body pitch 66)
 
 
+class Heightmap:
+    """The top surface of a closed mesh (the cuff as exported), sampled on a millimetre grid: z = f(x, y), the
+    highest face above each point; None-like (very low) off the mesh."""
+
+    def __init__(self, pieces, x0=-115, x1=70, y0=-60, y1=60, step=1.0):
+        self.x0, self.y0, self.step = x0, y0, step
+        nx, ny = int((x1 - x0) / step) + 1, int((y1 - y0) / step) + 1
+        H = np.full((ny, nx), -1e6)
+        for pc in pieces:
+            P = np.array([tuple(v) for v in pc.V])
+            for a, b, c in pc.T:
+                A, B, Cc = P[a], P[b], P[c]
+                n = np.cross(B - A, Cc - A)
+                if n[2] <= 1e-9:
+                    continue      # only faces looking up make the top
+                lo = np.floor((np.minimum(np.minimum(A, B), Cc)[:2] - (x0, y0)) / step).astype(int)
+                hi = np.ceil((np.maximum(np.maximum(A, B), Cc)[:2] - (x0, y0)) / step).astype(int)
+                lo = np.maximum(lo, 0)
+                hi = np.minimum(hi, (nx - 1, ny - 1))
+                if (hi < lo).any():
+                    continue
+                gx, gy = np.meshgrid(np.arange(lo[0], hi[0] + 1), np.arange(lo[1], hi[1] + 1))
+                px, py = x0 + gx * step, y0 + gy * step
+                d = (B[1] - Cc[1]) * (A[0] - Cc[0]) + (Cc[0] - B[0]) * (A[1] - Cc[1])
+                if abs(d) < 1e-12:
+                    continue
+                l1 = ((B[1] - Cc[1]) * (px - Cc[0]) + (Cc[0] - B[0]) * (py - Cc[1])) / d
+                l2 = ((Cc[1] - A[1]) * (px - Cc[0]) + (A[0] - Cc[0]) * (py - Cc[1])) / d
+                l3 = 1 - l1 - l2
+                ok = (l1 >= -1e-6) & (l2 >= -1e-6) & (l3 >= -1e-6)
+                z = l1 * A[2] + l2 * B[2] + l3 * Cc[2]
+                cur = H[gy, gx]
+                H[gy, gx] = np.where(ok & (z > cur), z, cur)
+        self.H = H
+
+    def __call__(self, x, y):
+        fx, fy = (x - self.x0) / self.step, (y - self.y0) / self.step
+        ix, iy = int(math.floor(fx)), int(math.floor(fy))
+        if ix < 0 or iy < 0 or ix + 1 >= self.H.shape[1] or iy + 1 >= self.H.shape[0]:
+            return -1e6
+        tx, ty = fx - ix, fy - iy
+        h = self.H[iy:iy + 2, ix:ix + 2]
+        if (h < -1e5).any():
+            return float(h.max())
+        return float(h[0, 0] * (1 - tx) * (1 - ty) + h[0, 1] * tx * (1 - ty) + h[1, 0] * (1 - tx) * ty + h[1, 1] * tx * ty)
+
+
 class SakerClips:
     """Each clip returns, for a frame, a dict the poser applies. Distances mm, angles degrees."""
 
     def __init__(self):
         import gear
-        self.cuff = gear.dass_top
+        self.cuff = Heightmap(gear.dass(0))
         self.beat = 7          # frames a wingbeat at 30 fps: 4.29 Hz (Pennycuick 1996 predicts 4.3-4.8 Hz)
 
     # the shared pieces of a pose
-    def perched(self, f, pitch=66.0, crouch=0.0):
-        tb = PERCH_TB + V3((10 * crouch, 0, -16 * crouch))
-        return {'pitch': pitch - 14 * crouch, 'tb': tb, 'feet': 'cuff', 'mesh': 'fold'}
+    def perched(self, f, pitch=66.0, crouch=0.0, feet='cuff'):
+        """The approved perched pose (the static saker_fist's: body 66 degrees; the neck, head and tail turns fitted
+        to it), lowered and leaned forward by [crouch]."""
+        tb = PERCH_TB + V3((14 * crouch, 0, -34 * crouch))
+        k = 1.0 - crouch
+        neck = tuple(lerp(a, b, crouch) for a, b in zip(PERCH_NECK, (0, -20, -10)))
+        return {'pitch': pitch - 26 * crouch, 'tb': tb, 'feet': feet, 'mesh': 'fold', 'neck': neck,
+                'tail_lift': PERCH_TAIL * k}
 
     def wings_flap(self, ph, amp=40.0, mean=5.0):
         """The wingbeat: ph 0..1 (0 the top of the upstroke). The arm sweeps up and down; on the upstroke the wing
@@ -421,44 +503,46 @@ class SakerClips:
         up = mean + amp * math.cos(2 * math.pi * ph)
         down = math.sin(2 * math.pi * ph)        # positive in the downstroke
         flex = max(0.0, -down) ** 0.8            # the upstroke
-        return {'up': up, 'sweep': 10 * flex, 'fore': -34 * flex, 'hand': 58 * flex, 'twist': 6 * down,
+        return {'up': up, 'sweep': 18 * flex, 'fore': -72 * flex, 'hand': 118 * flex, 'twist': 6 * down,
                 'hand_up': 22 * flex - 6 * max(0.0, down), 'hand_twist': 16 * down - 10 * flex}
 
     HALF_FOLD = {'up': 26, 'sweep': 52, 'fore': -78, 'hand': 92, 'twist': 0, 'hand_up': 0, 'hand_twist': 0}
     RAISED = {'up': 62, 'sweep': 22, 'fore': -14, 'hand': 16, 'twist': 0, 'hand_up': 8, 'hand_twist': 0}
 
     def cast_off(self, f):
-        """The lean and crouch on the fist (0-14), the wings opening, the push of the legs (15-19) with the first
-        downstroke; the feet leave at 19 and close and draw up at once; she drops below the fist in the first beats,
-        then climbs away. The folded mesh to frame 13; at 14 the spread mesh, its wings folded by the bones to the
-        point where it still reads right, then opened by them."""
-        lean = ramp(f, 3, 14)
+        """The lean and crouch on the fist (4-13) while the folded wings open at the shoulder and the primaries swing
+        out (SWAP_FOLD by 13); at 14 the spread mesh in the same outline (SWAP_OPEN), opened by its bones to the
+        raised wings (18); the first downstroke from 18 with the push of the legs; the feet leave at 20, trail two
+        frames, then close and draw up out of sight by 24; she drops below the fist in her first beats (to about
+        190 mm under it at 30) and then climbs away. The drop and the speeds are game choices."""
+        crouch = ramp(f, 4, 13)
         if f < 14:
-            p = self.perched(f, pitch=66 - 22 * lean, crouch=lean)
-            p.update({'fold_lift': 30 * ramp(f, 9, 13.5), 'jess_hold': True, 'mesh': 'fold'})
+            p = self.perched(f, crouch=crouch)
+            k = ramp(f, 7, 13)
+            p.update({'fold': {kk: v * k for kk, v in SWAP_FOLD.items()}, 'jess_hold': True})
+            if f == 13:
+                p['wing'] = dict(SWAP_OPEN)      # the hidden spread mesh already in the same outline
             return p
-        # the spread mesh from frame 14: unfolding (14-18), then the beat
-        g = (f - 18) / self.beat
-        beat = self.wings_flap((g + 0.75) % 1.0, amp=46, mean=4) if f >= 18 else None
         if f < 18:
             k = ramp(f, 14, 18)
-            w = {kk: lerp(self.HALF_FOLD[kk], self.RAISED[kk], k) for kk in self.HALF_FOLD}
+            w = {kk: lerp(SWAP_OPEN.get(kk, 0.0), self.RAISED[kk], k) for kk in self.RAISED}
         else:
-            k = ramp(f, 18, 21)
-            w = {kk: lerp(self.RAISED[kk], beat[kk], k) if f < 21 else beat[kk] for kk in self.RAISED}
-        # the path: still on the fist to 15, the push to 19, then away: a dip below the fist, then the climb
-        push = ramp(f, 15, 19)
-        t = max(0.0, (f - 17) / FPS)
-        x = 60 * push + 0.5 * 5.0 * t * t * 1000 + 900 * t
-        z = -10 * push - 0.5 * 2.4 * t * t * 1000 + 0.5 * 4.4 * max(0.0, t - 0.25) ** 2 * 1000
-        pitch = keys(f, [(14, 44), (17, 36), (20, 24), (28, 14), (40, 8)])
-        tb = PERCH_TB + V3((10, 0, -16)) + V3((x, 0, z))
-        if f < 19:
-            feet = 'cuff'
-        else:
-            feet = ('push', ramp(f, 19, 25))
-        return {'pitch': pitch, 'tb': tb, 'feet': feet, 'mesh': 'open', 'wing': w,
-                'tail_spread': lerp(1.3, 1.08, ramp(f, 16, 32)), 'jess_hold': f < 19, 'clench': ramp(f, 19, 24)}
+            beat = self.wings_flap(((f - 18) / self.beat + 0.0) % 1.0, amp=46, mean=4)
+            w = {kk: lerp(self.RAISED[kk], beat[kk], ramp(f, 18, 19.5)) for kk in self.RAISED}
+        push = ramp(f, 16, 20)
+        t = max(0.0, (f - 19) / FPS)
+        x = 70 * push + 0.5 * 5.0 * t * t * 1000 + 1100 * t
+        z = -10 * push - 0.5 * 3.6 * t * t * 1000 + 0.5 * 7.0 * max(0.0, t - 0.22) ** 2 * 1000
+        pitch = keys(f, [(13, 40), (17, 34), (21, 22), (28, 12), (40, 8)])
+        tb = PERCH_TB + V3((14, 0, -34)) + V3((x, 0, z))
+        feet = 'cuff' if f < 20 else ('push', ramp(f, 21, 24))
+        sp = {'pitch': pitch, 'tb': tb, 'feet': feet, 'mesh': 'open', 'wing': w, 'neck': (0, -20, -10) if f < 20 else None,
+              'tail_spread': lerp(1.3, 1.08, ramp(f, 16, 32)), 'jess_hold': f < 20, 'clench': ramp(f, 21, 24)}
+        if sp['neck'] is None:
+            del sp['neck']
+        if f == 14:
+            sp['fold'] = dict(SWAP_FOLD)
+        return sp
 
     def flight(self, f):
         ph = (f / self.beat) % 1.0
@@ -468,29 +552,38 @@ class SakerClips:
                 'wing': w, 'tail_spread': 1.05, 'clench': 1.0, 'air': V3((-20000, 0, 0))}
 
     def land(self, f, surface):
-        """A glide in, the flare (body up to 55 degrees, the wings forward and beating to brake, the tail fanned and
-        dropped), the legs thrown forward, contact at frame 28, the wings folded by the bones to the half-fold, the
-        swap to the folded mesh at 39, the settle to the perched 66 degrees by 45."""
+        """In low, about 350 mm under the fist, and a swing up to it (a game choice from what falconers describe);
+        the flare (body up to 55 degrees, the wings forward and beating to brake, the tail fanned and dropped), the
+        legs thrown forward, contact at 28; the wings raised and folded along the back by the bones to SWAP_OPEN
+        (37), the swap to the folded mesh in the same outline at 38 (SWAP_FOLD), closed by 45, the perched pose."""
         s_ = min(f / 28.0, 1.0)
         x = -3000 * (1 - s_) ** 2
-        z = 400 * (1 - s_) ** 2
-        pitch = keys(f, [(0, 6), (14, 14), (26, 55), (34, 62), (45, 66)])
+        z = -350 * math.sin(math.pi * min(1.0, s_ * 1.0)) * (1 - s_) ** 0.3 if f < 28 else 0.0
+        pitch = keys(f, [(0, 4), (12, 2), (20, 30), (26, 52), (31, 44), (38, 42), (45, 66)])      # leaning forward while she folds, as she does when she leans into the swap
         tb_air = V3((x, 0, z)) + PERCH_TB + V3((25, 0, -10)) * (1 - ramp(f, 26, 40))
-        brake = ramp(f, 12, 18) * (1 - ramp(f, 27, 30))
+        brake = ramp(f, 14, 20) * (1 - ramp(f, 27, 30))
         if f < 14:
-            w = {'up': 8 + 2 * math.sin(f / 3), 'sweep': -4, 'fore': -6, 'hand': 10, 'twist': 0, 'hand_twist': -4}
+            w = {'up': 6 + 2 * math.sin(f / 3), 'sweep': -4, 'fore': -6, 'hand': 10, 'twist': 0, 'hand_twist': -4}
         else:
             b = self.wings_flap(((f - 14) / 6.0) % 1.0, amp=34, mean=14)
             b['sweep'] -= 22 * brake        # the wings brought forward to brake
-            fold = ramp(f, 29, 38.5)
-            w = {k: lerp(b[k], self.HALF_FOLD.get(k, 0.0), fold) for k in b}
-        mesh = 'open' if f < 39 else 'fold'
-        reach = ramp(f, 14, 24)
+            up_back = ramp(f, 28, 32) * (1 - ramp(f, 32, 37))
+            raised = dict(self.RAISED, up=58, sweep=40)
+            b = {k: lerp(b.get(k, 0.0), raised.get(k, 0.0), up_back) if f < 32 else b.get(k, 0.0) for k in set(b) | set(raised)}
+            fold = ramp(f, 30, 37)
+            w = {k: lerp(b.get(k, 0.0), SWAP_OPEN.get(k, 0.0), fold) for k in set(b) | set(SWAP_OPEN)}
+        mesh = 'open' if f < 38 else 'fold'
+        reach = ramp(f, 16, 24)
         feet = surface if f >= 28 else ('reach', reach)
-        return {'pitch': pitch, 'tb': tb_air, 'feet': feet, 'mesh': mesh, 'wing': w,
-                'fold_lift': 30 * (1 - ramp(f, 39, 45)),
-                'tail_spread': lerp(1.0, 1.45, brake) if f < 32 else lerp(1.45, 1.0, ramp(f, 32, 42)),
-                'tail_drop': 18 * brake, 'open_toes': reach * (1 - ramp(f, 27, 29))}
+        sp = {'pitch': pitch, 'tb': tb_air, 'feet': feet, 'mesh': mesh, 'wing': w,
+              'tail_spread': lerp(1.0, 1.5, brake) if f < 32 else lerp(1.5, 1.0, ramp(f, 32, 42)),
+              'tail_drop': 18 * brake, 'open_toes': reach * (1 - ramp(f, 27, 29))}
+        if f >= 37:
+            sp['fold'] = {kk: v * (1 - ramp(f, 38, 45)) for kk, v in SWAP_FOLD.items()}
+        if f >= 40:
+            sp.update({'neck': tuple(lerp(a, b, ramp(f, 40, 45)) for a, b in zip((20 * 42 / 66, -46 * 42 / 66, -40 * 42 / 66), PERCH_NECK)),
+                       'tail_lift': PERCH_TAIL * ramp(f, 40, 45)})
+        return sp
 
     def land_cuff(self, f):
         return self.land(f, 'cuff')
@@ -581,7 +674,7 @@ CLIPS = {      # name: (frames, method, loops)
 
 # ------------------------------------------------------------------ applying a pose
 REST_FOOT = (75.0, 22.0, -125.0)        # the rest pose's foot, body frame (the tail base at the origin)
-TUCK_FOOT = (24.0, 9.0, -10.0)          # drawn up under the tail coverts (as saker.POSES['flight'])
+TUCK_FOOT = (150.0, 8.0, -14.0)         # drawn up into the breast and belly feathers, the toes clenched: out of sight
 REACH_FOOT = (150.0, 26.0, -120.0)
 PUSH_FOOT = (-10.0, 20.0, -95.0)        # straight back and down at the end of the kick      # thrown forward to take the cuff when landing
 FIST_JESS = (36.0, 2.0, -26.0)          # where the falconer's fist holds the jesses (saker_fist)
@@ -605,38 +698,42 @@ class Applier:
     def to_world(self, W, p):
         return (W @ (V3(p) * MM)) / MM
 
-    def toes_on(self, s, side, surface):
-        """Curl each toe, joint by joint, so the toe and its talon lie on the surface z = surface(x, y): of the
-        angles that keep every vertex of that segment (the toe's skin, and on the last joint the talon) at or
-        above the surface, the one that brings the lowest of them closest to it (0.5 mm)."""
+    def toes_on(self, s, side, surface, foot_target):
+        """Lay each toe, joint by joint, on the surface z = surface(x, y) (the exported cuff's own top, sampled; or the
+        flat perch): of the angles that keep every vertex of the segment (its skin; on the last joint the talon too)
+        at least 0.4 mm above the surface, the one that brings the lowest closest to it. The toes are set in the
+        world from their rest frames, not from the tarsus, so they stay put while the leg moves above them."""
         P = self.P
+        rest_foot = P.rest[f'tarsus.{s}'].translation / MM + P.rest[f'tarsus.{s}'].to_3x3() @ V3((0, P.pb[f'tarsus.{s}'].bone.length / MM, 0))
         for nm in TOE_NAMES:
             for j in (1, 2):
                 b = f'{nm}{j}.{s}'
                 V = self.toe_verts.get(b)
                 bpy.context.view_layer.update()
                 p = P.pb[b]
-                M0 = p.matrix.copy()
-                head = M0.translation
-                cur = (M0.to_3x3() @ V3((0, 1, 0))).normalized()
-                flat = V3((cur.x, cur.y, 0))
-                flat = flat.normalized() if flat.length > 1e-6 else cur
-                local = P.rest[b].inverted()
-                best, best_M = None, M0
+                Rr = P.rest[b]
+                rest_dir = (Rr.to_3x3() @ V3((0, 1, 0))).normalized()
+                if j == 1:
+                    head = (V3(foot_target) + (Rr.translation / MM - rest_foot)) * MM
+                else:
+                    head = p.matrix.translation.copy()
+                flat = V3((rest_dir.x, rest_dir.y, 0)).normalized()
+                local = Rr.inverted()
+                best, best_M = None, None
                 for a in np.linspace(-35, 95, 131):
                     ar = math.radians(a)
                     want = flat * math.cos(ar) + V3((0, 0, -1)) * math.sin(ar)
-                    r = cur.rotation_difference(want).to_matrix().to_4x4()
-                    M = Matrix.Translation(head) @ r @ Matrix.Translation(-head) @ M0
+                    r = rest_dir.rotation_difference(want).to_matrix()
+                    M = Matrix.Translation(head) @ (r @ Rr.to_3x3()).to_4x4()
                     A = np.array(M @ local)
                     W = (V @ A[:3, :3].T + A[:3, 3]) / MM
                     clear = min(w[2] - surface(w[0], w[1]) for w in W)
-                    score = abs(clear - 0.5) + (1000 if clear < -0.3 else 0)
+                    score = abs(clear - 0.6) + (1000 if clear < 0.4 else 0)
                     if best is None or score < best:
                         best, best_M = score, M
                 p.matrix = best_M
 
-    def apply(self, sp, frame):
+    def apply(self, sp, frame, key=True):
         P = self.P
         P.reset()
         W, R = self.body_matrix(sp)
@@ -644,13 +741,19 @@ class Applier:
         P.place('root', Matrix.Translation((root_at - self.rest_root) * MM))
         P.place('body', W)
         k = sp['pitch'] / 66.0
-        P.turn('neck1', (0, -1, 0), 20 * k)
-        P.turn('neck2', (0, -1, 0), -46 * k)
-        P.turn('head', (0, -1, 0), -40 * k + sp.get('head_pitch', 0.0))
+        if sp['mesh'] == 'fold' and 'neck' not in sp:
+            # sitting: the turns fitted to the approved static (PERCH_NECK), in proportion to the body's pitch
+            sp = dict(sp, neck=tuple(v * k for v in PERCH_NECK), tail_lift=sp.get('tail_lift', PERCH_TAIL))
+        n1, n2, n3 = sp.get('neck', (20 * k, -46 * k, -40 * k))
+        P.turn('neck1', (0, -1, 0), n1)
+        P.turn('neck2', (0, -1, 0), n2)
+        P.turn('head', (0, -1, 0), n3 + sp.get('head_pitch', 0.0))
         if sp.get('head_yaw'):
             P.turn('head', (0, 0, 1), sp['head_yaw'])
-        P.turn('tail', (0, 1, 0), sp.get('tail_drop', 0.0) - 0.15 * sp['pitch'] * (1 if sp['mesh'] == 'fold' else 0))
-        P.pb['tail'].scale = (sp.get('tail_spread', 1.0), 1, 1)
+        P.turn('tail', (0, 1, 0), sp.get('tail_drop', 0.0) + sp.get('tail_lift', 0.0))
+        fan = (sp.get('tail_spread', 1.0) - 1.0) * 45.0      # degrees each side
+        P.turn('tail.L', (0, 0, -1), fan)
+        P.turn('tail.R', (0, 0, 1), fan)
         hood = sp.get('hood', 0.0)
         P.pb['hood'].scale = (1, 1, 1) if hood >= 1.0 else (0.001,) * 3
         P.pb['hood'].location = (0, sp.get('hood_lift', 0.0) * MM, 0)      # the bone points up: its Y is up
@@ -664,6 +767,13 @@ class Applier:
                 P.turn(f'wing_hand.{s}', (0, 0, side), w['hand'])
                 P.turn(f'wing_hand.{s}', (side, 0, 0), w.get('hand_up', 0.0))
                 P.turn(f'wing_hand.{s}', (0, side, 0), w.get('hand_twist', 0.0))
+            fp = sp.get('fold')
+            if fp:
+                P.turn(f'fold.{s}', (0, 0, -side), fp.get('out', 0.0))
+                P.turn(f'fold.{s}', (side, 0, 0), fp.get('up', 0.0))
+                P.turn(f'fold.{s}', (0, side, 0), fp.get('twist', 0.0))
+                P.turn(f'fold_tip.{s}', (0, 0, -side), fp.get('tip_out', 0.0))
+                P.turn(f'fold_tip.{s}', (side, 0, 0), fp.get('tip_up', 0.0))
             lift = sp.get('fold_lift', 0.0)
             if lift:
                 P.turn(f'fold.{s}', (0, 0, -side), 0.6 * lift)
@@ -672,9 +782,11 @@ class Applier:
         feet = sp['feet']
         for side, s in ((1, 'L'), (-1, 'R')):
             if feet in PLANTED:
-                target = V3((0.0, 22.0 * side, FOOT_LIFT)) + V3(sp.get('foot_shift', (0, 0, 0))) * (1 if side > 0 else 0)
+                surf = self.C.cuff if feet == 'cuff' else flat_surface
+                target = V3((0.0, 22.0 * side, 0.0)) + V3(sp.get('foot_shift', (0, 0, 0))) * (1 if side > 0 else 0)
+                target.z = surf(target.x, target.y) + FOOT_LIFT
                 P.leg(s, target, V3((-1, 0, -0.25)))
-                self.toes_on(s, side, self.C.cuff if feet == 'cuff' else flat_surface)
+                self.toes_on(s, side, self.C.cuff if feet == 'cuff' else flat_surface, target)
             else:
                 mode, kf = feet
                 hang = V3(REST_FOOT) * V3((1, side, 1))
@@ -687,7 +799,9 @@ class Applier:
                 else:
                     bf = tuck.lerp(reach, kf)
                 target = self.to_world(W, bf)
-                pole = (R.to_3x3() @ V3((-1, 0, -0.3)))
+                tk = kf if mode in ('free', 'push') else (1 - kf)      # how far drawn up
+                th = math.radians(lerp(197.0, 368.0, smooth01((tk - 0.2) / 0.6)))      # back-down, through down, to forward
+                pole = R.to_3x3() @ V3((math.cos(th), 0, math.sin(th)))
                 P.leg(s, target, pole)
                 cl = sp.get('clench', 0.0)
                 op = sp.get('open_toes', 0.0)
@@ -706,23 +820,24 @@ class Applier:
         air = V3(sp.get('air', (0, 0, 0))) - vel
         if self.cords is None:
             self.cords = {s: Cord(P.head_of(f'jess1.{s}')) for s in ('L', 'R')}
+            self.gust = 0
         for side, s in ((1, 'L'), (-1, 'R')):
             anchor = P.head_of(f'jess1.{s}')
-            pts = self.cords[s].step(anchor, air)
-            if sp.get('jess_hold'):
-                hold = V3(FIST_JESS) * V3((1, side, 1))
-                # held: the cord's end is in the falconer's fist
-                for i in range(1, 4):
-                    pts[i] = anchor.lerp(hold, i / 3.0)
-                self.cords[s].q = [p.copy() for p in pts]
-            for j in range(3):
+            # a little turbulence in the air, so a trailing cord swings and does not lie as a rod
+            self.gust += 1
+            wob = V3((0, 900 * math.sin(self.gust * 0.9 + side), 1400 * math.sin(self.gust * 0.63 + 2 * side))) if V3(air).length > 2000 else V3((0, 0, 0))
+            hold = V3(FIST_JESS) * V3((1, side, 1)) if sp.get('jess_hold') else None
+            pts = self.cords[s].step(anchor, V3(air) + wob, end=hold)
+            for j in range(JESS_N):
                 P.aim(f'jess{j + 1}.{s}', pts[j + 1])
-        P.key(frame)
+        if key:
+            P.key(frame)
         # measures
         if feet in PLANTED:
             for s in ('L', 'R'):
                 side = 1 if s == 'L' else -1
-                want = V3((0, 22 * side, FOOT_LIFT)) + V3(sp.get('foot_shift', (0, 0, 0))) * (1 if side > 0 else 0)
+                want = V3((0, 22 * side, 0)) + V3(sp.get('foot_shift', (0, 0, 0))) * (1 if side > 0 else 0)
+                want.z = (self.C.cuff if feet == 'cuff' else flat_surface)(want.x, want.y) + FOOT_LIFT
                 self.log.append(('slide', frame, s, (P.tail_of(f'tarsus.{s}') - want).length))
 
 
@@ -733,6 +848,7 @@ def build_saker(out, sheets=False):
     sc = bpy.context.scene
     sc.render.fps = FPS
     parts_f, pts, body = saker_rest('fold')
+    BODY[:] = [body]
     parts_o, _, _ = saker_rest('open')
     B = saker_bones(pts, body)
     atlas = paint.atlas('saker')
@@ -765,11 +881,14 @@ def build_saker(out, sheets=False):
             A.prev_root = None
         frames_mesh[name] = []
         FRAMES_FEET[name] = []
+        HIDDEN_FEET[name] = []
         for f in range(n + (1 if loop else 0)):
             sp = spec_fn(f % n)
             A.apply(sp, f)
             frames_mesh[name].append(sp['mesh'])
             FRAMES_FEET[name].append(sp['feet'] if isinstance(sp['feet'], str) else sp['feet'][0])
+            ft = sp['feet']
+            HIDDEN_FEET[name].append(not isinstance(ft, str) and ((ft[0] in ('free', 'push') and ft[1] >= 0.999) or (ft[0] == 'reach' and ft[1] <= 0.001)))
         log += [(name,) + e for e in A.log]
         act.use_fake_user = True
         arm.animation_data.action = None
@@ -795,6 +914,60 @@ def build_saker(out, sheets=False):
     t, imgs, nbytes = common.glb_report(path)
     print(f'saker_rig.glb: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {len(B)} bones; {nbytes / 1024:.0f} KB')
     return arm, meshes, frames_mesh, B, clips
+
+
+def evaluated_co(o):
+    """The mesh's posed vertices (mm) and triangles."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = o.evaluated_get(dg)
+    me = ev.to_mesh()
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get('co', co)
+    tri = np.empty(len(me.polygons) * 3, dtype=np.int64)
+    me.polygons.foreach_get('vertices', tri)
+    ev.to_mesh_clear()
+    return co.reshape(-1, 3) / MM, tri.reshape(-1, 3)
+
+
+def silhouette(co, tri, view, px=2.0, box=None):
+    """A mesh's silhouette from a direction (orthographic), on a grid of [px] mm, as a boolean image."""
+    from PIL import Image, ImageDraw
+    v = V3(view).normalized()
+    up = V3((0, 0, 1))
+    right = v.cross(up).normalized()
+    up = right.cross(v).normalized()
+    X = co @ np.array(tuple(right))
+    Y = co @ np.array(tuple(up))
+    x0, y0, x1, y1 = box if box else (X.min() - 5, Y.min() - 5, X.max() + 5, Y.max() + 5)
+    w, h = int((x1 - x0) / px) + 1, int((y1 - y0) / px) + 1
+    im = Image.new('1', (w, h), 0)
+    d = ImageDraw.Draw(im)
+    U = (X - x0) / px
+    W = (y1 - Y) / px
+    for a, b, c in tri:
+        d.polygon([(U[a], W[a]), (U[b], W[b]), (U[c], W[c])], fill=1)
+    return np.array(im, bool), (x0, y0, x1, y1)
+
+
+def iou(a, b):
+    return float((a & b).sum()) / max(float((a | b).sum()), 1.0)
+
+
+def pair_iou(coA, triA, coB, triB, view):
+    """Silhouette overlap of two posed meshes from one direction, in one frame of reference."""
+    v = V3(view).normalized()
+    up = V3((0, 0, 1))
+    right = v.cross(up).normalized()
+    up = right.cross(v).normalized()
+    allc = np.vstack([coA, coB])
+    X, Y = allc @ np.array(tuple(right)), allc @ np.array(tuple(up))
+    box = (X.min() - 5, Y.min() - 5, X.max() + 5, Y.max() + 5)
+    A, _ = silhouette(coA, triA, view, box=box)
+    B_, _ = silhouette(coB, triB, view, box=box)
+    return iou(A, B_)
+
+
+VIEWS = {'side': (0, -1, 0), 'three_quarter': (-1, -1, -0.5), 'front': (-1, 0, 0)}
 
 
 def use_clip(arm, name):
@@ -844,7 +1017,7 @@ def talon_depths(arm, meshes, frames_mesh, name, n, surface=None):
         for i in sel:
             x, y, z = co[i]
             if abs(y) < 45 and -100 < x < 60:
-                dd = (surface or gear.dass_top)(x, y) - z
+                dd = surface(x, y) - z
                 if dd > depth:
                     depth, where = dd, (round(x), round(y), round(z), [g.name for g in o.vertex_groups if any(vg.group == g.index for vg in o.data.vertices[i].groups)])
         ev.to_mesh_clear()
@@ -924,6 +1097,154 @@ def contact_sheet(arm, meshes, frames_mesh, name, frames, out, view='side', res=
     return path
 
 
+def tune_swaps(arm, meshes, clips):
+    """For each clip's swap, the folded wing's opening that best matches the spread mesh in that very frame."""
+    import itertools
+    A = Applier(arm, clips)
+    A.toe_verts = toe_vertex_sets(meshes['fold'])
+    for name, f in (('land_cuff', 37),):
+        sp = getattr(clips, name)(f)
+        sp = dict(sp, wing=dict(SWAP_OPEN))
+        sp.pop('fold', None)
+        A.apply(dict(sp, mesh='open'), 0, key=False)
+        bpy.context.view_layer.update()
+        coO, triO = evaluated_co(meshes['open'])
+        best = None
+        fp = {'out': 24, 'up': 34, 'twist': 0, 'tip_out': 20, 'tip_up': -45}
+        A.apply(dict(sp, mesh='fold', fold=fp), 0, key=False)
+        bpy.context.view_layer.update()
+        coF, triF = evaluated_co(meshes['fold'])
+        for up, sw, fo, ha, tw in itertools.product((-15, -5, 5, 15), (60, 72, 84), (-70, -90), (160, 180), (-10, 10)):
+            w = {'up': up, 'sweep': sw, 'fore': fo, 'hand': ha, 'twist': tw}
+            A.apply(dict(sp, mesh='open', wing=w, fold=fp), 0, key=False)
+            bpy.context.view_layer.update()
+            coO, triO = evaluated_co(meshes['open'])
+            sc = min(pair_iou(coO, triO, coF, triF, VIEWS['side']), pair_iou(coO, triO, coF, triF, VIEWS['three_quarter']))
+            if best is None or sc > best[0]:
+                best = (sc, up, sw, fo, ha, tw)
+        print(f'{name} frame {f}: best overlap %.3f with the spread wing at up %d sweep %d fore %d hand %d twist %d' % best)
+
+
+def tune(arm, meshes, clips, body):
+    """Search (1) the folded mesh's wing pose that matches the spread mesh at the half-fold, and (2) the neck, head
+    and tail turns that put the perched frame on the approved static saker_fist.glb. Prints the best of each."""
+    A = Applier(arm, clips)
+    A.toe_verts = toe_vertex_sets(meshes['fold'])
+    # the spread mesh folded by its bones as far as it still reads right; the folded mesh opened (shoulder and
+    # primaries) to match it
+    import itertools
+    base = {'pitch': 50, 'tb': PERCH_TB, 'feet': 'cuff', 'mesh': 'fold', 'fold': SWAP_FOLD}
+    A.apply(dict(base), 0, key=False)
+    bpy.context.view_layer.update()
+    coF, triF = evaluated_co(meshes['fold'])
+    best = None
+    for up, sw, fo, ha in itertools.product((-12, -5, 2), (58, 65, 72), (-72, -86), (160, 175)):
+        w = {'up': up, 'sweep': sw, 'fore': fo, 'hand': ha, 'twist': 0}
+        A.apply(dict(base, mesh='open', wing=w), 0, key=False)
+        bpy.context.view_layer.update()
+        coO, triO = evaluated_co(meshes['open'])
+        sc = min(pair_iou(coO, triO, coF, triF, VIEWS['side']), pair_iou(coO, triO, coF, triF, VIEWS['three_quarter']))
+        if best is None or sc > best[0]:
+            best = (sc, up, sw, fo, ha)
+    print('fold match: best overlap %.3f with the spread wing at up %d sweep %d fore %d hand %d' % best)
+    if os.environ.get('TUNE_ONLY_FOLD'):
+        return best, None
+    # (2) the perched frame against the approved static model, in place
+    import common as _c
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(HERE, '..', '..', 'assets_src', 'birds', 'saker_fist.glb'))
+    new = [o for o in bpy.data.objects if o not in before]
+    stat = [o for o in new if o.type == 'MESH' and o.name.endswith('body')][0]
+    bpy.context.view_layer.update()
+    coS = np.array([tuple(stat.matrix_world @ v.co) for v in stat.data.vertices]) / MM
+    triS = np.array([tuple(p.vertices) for p in stat.data.polygons])
+    for o in new:
+        o.hide_render = True
+        o.hide_set(True)
+    bestp = None
+    for n1 in (0, 7, 14):
+        for n2 in (-32, -24, -16):
+            for n3 in (-46, -40, -34):
+                for tl in (4, 10, 16):
+                    sp = {'pitch': 66, 'tb': PERCH_TB, 'feet': 'cuff', 'mesh': 'fold', 'neck': (n1, n2, n3), 'tail_lift': tl}
+                    A.apply(sp, 0, key=False)
+                    bpy.context.view_layer.update()
+                    coF, triF = evaluated_co(meshes['fold'])
+                    sc = min(pair_iou(coS, triS, coF, triF, VIEWS['side']), pair_iou(coS, triS, coF, triF, VIEWS['front']))
+                    if bestp is None or sc > bestp[0]:
+                        bestp = (sc, n1, n2, n3, tl)
+    print('perched fit: best overlap %.3f at neck %d %d head %d tail %d' % bestp)
+    for o in new:
+        bpy.data.objects.remove(o)
+    return best, bestp
+
+
+def group_set(o, prefixes, wmin=0.3):
+    names = {g.index for g in o.vertex_groups if g.name.startswith(prefixes)}
+    return np.array([v.index for v in o.data.vertices if any(g.group in names and g.weight > wmin for g in v.groups)], int)
+
+
+def inside_body(body, Q):
+    """Which rest-pose points (mm, N x 3) lie inside the body's surface (by the nearest section)."""
+    C = np.array([tuple(sec.c) for sec in body.secs])
+    U = np.array([tuple(sec.u) for sec in body.secs])
+    Vv = np.array([tuple(sec.v) for sec in body.secs])
+    rows = np.array(body.rows)
+    out = np.zeros(len(Q), bool)
+    for i, q in enumerate(Q):
+        j = int(np.argmin(((C - q) ** 2).sum(1)))
+        x, y = (q - C[j]) @ U[j], (q - C[j]) @ Vv[j]
+        a = rows[j, 1] if x >= 0 else rows[j, 2]
+        out[i] = (abs(x) / a) ** 2 + (abs(y) / rows[j, 3]) ** 2 < 1.0
+    return out
+
+
+def motion_checks(arm, meshes, frames_mesh, clips, body):
+    """The build's own checks, per clip: the swap's silhouette overlap, the feet out of sight in flight, the
+    wing's flex in the beat."""
+    sc = bpy.context.scene
+    feetO = group_set(meshes['open'], ('toe', 'tarsus'))
+    feetF = group_set(meshes['fold'], ('toe', 'tarsus'))
+    for name, (n, fn, loop) in CLIPS.items():
+        use_clip(arm, name)
+        fm = frames_mesh[name]
+        for f in range(1, n):
+            if fm[f] != fm[f - 1]:
+                worst = 1.0
+                for g in (f - 1, f):
+                    sc.frame_set(g)
+                    a, ta = evaluated_co(meshes['fold'])
+                    b, tb = evaluated_co(meshes['open'])
+                    worst = min(worst, pair_iou(a, ta, b, tb, VIEWS['side']), pair_iou(a, ta, b, tb, VIEWS['three_quarter']))
+                print(f'{name}: swap {fm[f - 1]} -> {fm[f]} at frame {f}: silhouette overlap {worst:.3f} (the lower of side and three-quarter, frames {f - 1} and {f})')
+        flying = [f for f in range(n) if FRAMES_FEET[name][f] not in PLANTED and HIDDEN_FEET[name][f]]
+        if flying:
+            worst, wf = 0, None
+            for f in flying:
+                sc.frame_set(f)
+                o = meshes[fm[f]]
+                idx = feetO if fm[f] == 'open' else feetF
+                co, _ = evaluated_co(o)
+                M = np.array((arm.matrix_world @ arm.pose.bones['body'].matrix @ arm.pose.bones['body'].bone.matrix_local.inverted()).inverted())
+                Q = co[idx] * MM
+                R = (Q @ M[:3, :3].T + M[:3, 3]) / MM
+                out = int((~inside_body(body, R)).sum())
+                if out > worst:
+                    worst, wf = out, f
+                if name == 'cast_off':
+                    pass
+            print(f'{name}: feet and tarsi vertices outside the body while drawn up (frames {flying[0]}-{flying[-1]}, {len(flying)} frames): max {worst}' + (f' (frame {wf})' if wf is not None else ''))
+        if name == 'flight':
+            d = []
+            for f in range(n):
+                sc.frame_set(f)
+                pb = arm.pose.bones
+                sh = pb['wing_up.L'].head
+                tip = pb['wing_hand.L'].tail
+                d.append((tip - sh).length / MM)
+            print(f'flight: shoulder to wingtip {min(d):.0f} to {max(d):.0f} mm ({100 * min(d) / max(d):.0f}% at the most flexed)')
+
+
 CUFF_CLIPS = ('hood_off', 'hood_on', 'cast_off', 'land_cuff')
 PERCH_CLIPS = ('perch_idle', 'rouse', 'land_perch')
 FLYING = ('flight', 'glide', 'stoop', 'bind')
@@ -975,8 +1296,18 @@ def all_sheets(arm, meshes, frames_mesh, out, q, only=None):
 if __name__ == '__main__':
     OUT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else 'out')
     os.makedirs(OUT, exist_ok=True)
-    arm, meshes, frames_mesh, B, clips = build_saker(OUT)
     mode = sys.argv[3] if len(sys.argv) > 3 else ''
+    if mode == 'tune':
+        CLIPS_KEEP = dict(CLIPS)
+        CLIPS.clear()
+    arm, meshes, frames_mesh, B, clips = build_saker(OUT)
+    if mode == 'tune':
+        CLIPS.update(CLIPS_KEEP)
+        if os.environ.get('TUNE_SWAPS'):
+            tune_swaps(arm, meshes, clips)
+        else:
+            tune(arm, meshes, clips, BODY[0])
+        sys.exit(0)
     only = os.environ.get('CLIPS_ONLY', '').split(',') if os.environ.get('CLIPS_ONLY') else None
     if mode in ('sheets', 'quick'):
         all_sheets(arm, meshes, frames_mesh, OUT, mode == 'quick', only)
@@ -993,12 +1324,13 @@ if __name__ == '__main__':
             strip_gif(arm, meshes, frames_mesh, 'flight', list(range(0, 14)), OUT, repeat=3,
                       cam=lambda f, r: ((r.x + 1.6, r.y - 1.3, r.z + 0.8), (r.x + 0.15, r.y, r.z + 0.05), None))
     if mode == 'measure':
+        motion_checks(arm, meshes, frames_mesh, clips, BODY[0])
         import gear
         for name, (n, fn, loop) in CLIPS.items():
             on = planted_frames(name, n, FRAMES_FEET)
             if not on:
                 continue
-            surf = gear.dass_top if name in CUFF_CLIPS else flat_surface
+            surf = clips.cuff if name in CUFF_CLIPS else flat_surface
             d = talon_depths(arm, meshes, frames_mesh, name, n, surf)
             print(f'{name}: deepest toe or talon vertex under the {"cuff" if name in CUFF_CLIPS else "surface"} '
                   f'while standing on it: {max(d[f] for f in on):.1f} mm over {len(on)} frames')
