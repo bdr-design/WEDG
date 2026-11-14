@@ -1,7 +1,7 @@
 // An old game is unchanged (the review of task T15's part B): the session branch's own scripted game (bin/same_seed's
 // two years, before the rush and the calendar existed), played on this build without the new paths, must give the
 // lines the session branch gave at 7b5b481 (test/data/same_seed_7b5b.txt), week for week, the whole state hashed:
-//  - exactly, with the vet's price keyed by the day as it was (vetPriceByIllness = false) and the farm's day record
+//  - exactly, with the vet's price keyed by the day as it was (runWithVetKeyedByDay, a zone no running game enters) and the farm's day record
 //    (new: every day writes it) left out of the hash;
 //  - and on the build as it is, identical to week 28; from week 32 the money differs, by the one change an old game
 //    shows: the vet's price is keyed by the illness's first day, not by the day she is treated (the second review's
@@ -12,7 +12,7 @@ library;
 
 import 'dart:io';
 
-import 'package:marah_domain/src/handlers/handlers.dart' as handlers;
+import 'package:marah_domain/testing.dart';
 import 'package:marah_proto_engine/same_seed.dart';
 import 'package:test/test.dart';
 
@@ -23,13 +23,10 @@ void main() {
       .toList();
 
   test('the old game, with the vet keyed by the day as before: identical', () {
-    handlers.vetPriceByIllness = false;
-    try {
-      final lines = sameSeedLines(rush: false, legacyState: true).toList();
-      expect(lines, stored);
-    } finally {
-      handlers.vetPriceByIllness = true;
-    }
+    final lines = runWithVetKeyedByDay(
+      () => sameSeedLines(rush: false, legacyState: true).toList(),
+    );
+    expect(lines, stored);
   });
 
   test(

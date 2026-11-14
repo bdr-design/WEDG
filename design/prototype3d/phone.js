@@ -1498,7 +1498,7 @@ function calCardScreen() {
   const word = (n) => (n >= N ? '<span class="pos">يكفي</span>' : '<span style="color:var(--red);font-weight:700">ما يكفي</span>');
   const standW = (R.standing || []).includes('water'), standF = (R.standing || []).includes('feed');
   const supRow = (icon, name, last, fill, after, key, can) => `<div class="row r3"><span class="lead${last < N ? ' bad' : ''}">${svg(icon)}</span><b>${name} · ${last <= 0 ? (key === 'water' ? 'خلص' : 'خلص') : `يكفي ${days(Math.min(last, 999))}`}</b>${can ? `<span class="act"><button class="btn sm ghost" data-act="calFill" data-s="${key}" aria-label="عبّ ${name}">عبّه</button></span>` : ''}<small>${fill}${word(after)}</small></div>`;
-  const wFill = standW ? 'الطلب الثابت شغّال: يجيك الوايت بنفسه. ' : F.tanker ? `وايت ${Math.round(F.tanker.litres / 1000)} طن يعبّي الخزان ${n0(Math.min(F.tankRoom, F.tanker.litres))} لتر والباقي يرجع، بـ ${n0(F.tanker.price)} ريال، يصير يكفي ${days(F.water)} تقريبًا: ` : 'الخزان ما يشيل وايت الحين: ';
+  const wFill = standW ? 'الطلب الثابت شغّال: يجيك الوايت بنفسه. ' : F.tanker ? `وايت ${Math.round(F.tanker.litres / 1000)} طن ${F.tankRoom < F.tanker.litres ? `يعبّي الخزان ${n0(F.tankRoom)} لتر والباقي يرجع` : `يجيب ${n0(F.tanker.litres)} لتر`}، بـ ${n0(F.tanker.price)} ريال، يصير يكفي ${days(F.water)} تقريبًا: ` : 'الخزان ما يشيل وايت الحين: ';
   const fFill = standF ? 'الطلب الثابت شغّال: يجيك العلف بنفسه. ' : F.bags + F.bales > 0 ? `${[F.bags ? count(F.bags, 'bag') : '', F.bales ? count(F.bales, 'bale') : ''].filter(Boolean).join(' و')} بـ ${n0(F.feedCost)} ريال، يصير يكفي ${days(F.feed)} تقريبًا: ` : `${STORE().the} ${STORE().none} مكان الحين: `;
   const wAfter = standW ? N : F.tanker ? F.water : lw, fAfter = standF ? N : F.bags + F.bales > 0 ? F.feed : lf;
   const stopAt = Math.min(wAfter, fAfter) - 3;
@@ -1581,16 +1581,38 @@ function calStopScreen() {
   if (!G || !R) return `<div class="body">${back}<div class="title">التقويم</div>${waiting()}</div>`;
   const s = R.stop, w = stopWords(s), left = R.target - R.to, sure = HJ.sure === 'calGo';
   const blocked = RU().awayBlock;
-  // what else the same day gave, said with it (the engine carries them: AwayStop.also)
-  const ALSO = { illness: 'مرض شي من حلالك', death: 'مات شي من حلالك', supply: 'قرب العلف أو الماء يخلص', money: 'نزل رصيدك تحت الصفر', account: 'حساب التاجر وصل حده', fine: 'انكشف تجميل بحلالك', offer: 'جاك سوم', registration: 'قرب يقفل تسجيل مهرجان', breeding: 'بدا وقت الضراب', crowded: 'ضاقت الشبوك' };
-  const also = (s.also || []).filter((k) => ALSO[k] && !(s.kind === 'round' && k === 'money')).map((k) => ALSO[k]);
+  // what else the same day gave (the engine carries them: AwayStop.also), each with the same weight as the one told:
+  // its own row and its own action
+  const also = alsoRows(s);
   return `<div class="body">${back}<div class="title">وقف التقويم</div>
-    ${also.length ? `<div class="note" style="order:2">وصار بنفس اليوم: ${also.join('، ')}.</div>` : ''}
     <div class="${s.kind === 'round' || s.kind === 'breeding' || s.kind === 'cancelled' ? 'msgc good' : 'warn'}"><span class="lead">${svg(s.kind === 'round' ? 'cup' : 'alert')}</span><b>${w.title}</b><small>وقف ${ddAt(R.to)}${left > 0 ? `، وباقي ${days(left)} لين ${dShortAt(R.target)}` : ''}. ${w.line}</small></div>
     ${w.act ? `<button class="btn pri wide" data-go="${w.go}"${w.tab ? ` data-tab="${w.tab}"` : ''}>${w.act}</button>` : ''}
     ${left > 0 ? `<button class="btn ${blocked ? '' : sure ? 'sure' : 'ghost'} wide" data-act="calGo" data-again="1" ${blocked ? 'disabled' : ''}>${sure ? 'اضغط مرة ثانية ويكمل' : `كمّل لين ${ddAt(R.target)}`}</button>` : ''}
     ${blocked === 'round' && s.kind === 'round' ? '<div class="note">ما يكمّل إلا بعد ما يخلص الشوط، عشان ما يفوتك شي منه.</div>' : blocked === 'sick' ? '<div class="note">يكمّل بعد ما تعالج اللي مرض.</div>' : ''}
+    ${also ? `<div class="sec">وصار بنفس اليوم</div><div class="group">${also}</div>` : ''}
     <div class="group"><div class="row r3" data-go="calSum" role="button" tabindex="0"><span class="lead sea">${svg('flag')}</span><b>اللي صار لين هنا</b><span class="chev">${svg('chev')}</span><small>${days(R.to - R.from)}، من ${dShortAt(R.from)}</small></div></div></div>`;
+}
+// the day's other stops, each a row with its action (the stop card) or without (the summary)
+const ALSO = {
+  illness: { t: 'مرض شي من حلالك', act: 'العزبة', go: 'build' },
+  death: { t: 'مات شي من حلالك', act: 'العزبة', go: 'build' },
+  supply: { t: 'قرب العلف أو الماء يخلص', act: 'العلف', go: 'feed' },
+  money: { t: 'رصيدك صار تحت الصفر', act: 'البنك', go: 'bank' },
+  account: { t: 'حساب التاجر وصل حده', act: 'البنك', go: 'bank' },
+  fine: { t: 'انكشف تجميل بحلالك', act: 'الحراج', go: 'haraj' },
+  offer: { t: 'جاك سوم على إعلان', act: 'إعلاناتي', go: 'haraj', tab: 'mine' },
+  registration: { t: 'قرب يقفل تسجيل مهرجان تقدر تدخله', act: 'المزاين', go: 'mazayen' },
+  breeding: { t: 'بدا وقت الضراب وعندك ناقة تنلقح', act: null, go: null },
+  crowded: { t: 'ضاقت الشبوك على حلالك', act: 'ابنِ شبك', go: 'build' },
+};
+function alsoRows(stop, actions = true) {
+  return (stop.also || []).filter((k) => ALSO[k]).map((k) => {
+    const a = ALSO[k];
+    // a store: the one that is low, water or feed (الوايت or العلف)
+    const go = k === 'supply' && G && (sup('water').short || sup('water').daysLeft <= 3) ? 'water' : a.go;
+    const act = k === 'supply' && go === 'water' ? 'الوايت' : a.act;
+    return `<div class="row ${actions && act ? 'r3' : 'r2'}"><span class="lead bad">${svg('alert')}</span><b>${a.t}</b>${actions && act ? `<span class="act"><button class="btn sm ghost" data-go="${go}"${a.tab ? ` data-tab="${a.tab}"` : ''}>${act}</button></span>` : ''}<small>${k === 'money' && stop.kind === 'round' ? 'نقل حلالك للمهرجان نزّله' : 'بنفس اليوم'}</small></div>`;
+  }).join('');
 }
 const SPENT = { feed: 'العلف', water: 'الوايت', wages: 'الرواتب', vet: 'البيطري', vetContract: 'عقد البيطري', transport: 'النقل' };
 function calSumScreen() {
@@ -1609,7 +1631,7 @@ function calSumScreen() {
   if ((m.registrationsOpened || []).length) rows.push(`<div class="row r2"><span class="lead fest">${svg('cup')}</span><b>انفتح تسجيل ${count(m.registrationsOpened.length, 'fest')}</b><small>${m.registrationsOpened.map(shortFest).join('، ')}</small></div>`);
   if (m.offers) rows.push(`<div class="row r2"><span class="lead">${svg('haraj')}</span><b>جاك ${count(m.offers, 'bid')}</b><small>شوفها بإعلاناتي</small></div>`);
   if (m.listingsExpired) rows.push(`<div class="row r2"><span class="lead">${svg('haraj')}</span><b>انتهى ${count(m.listingsExpired, 'order')}</b><small>إعلاناتك اللي ما انباعت</small></div>`);
-  if (R.stop.kind !== 'target' && R.stop.kind !== 'cancelled') rows.push(`<div class="row r2"><span class="lead bad">${svg('alert')}</span><b>${stopWords(R.stop).title}</b><small>هذا اللي وقّف التقويم</small></div>`);
+  if (R.stop.kind !== 'target' && R.stop.kind !== 'cancelled') rows.push(`<div class="row r2"><span class="lead bad">${svg('alert')}</span><b>${stopWords(R.stop).title}</b><small>هذا اللي وقّف التقويم</small></div>`, alsoRows(R.stop, false));
   return `<div class="body">${back}<div class="title">اللي صار</div>
     <div class="span"><b>${days(R.to - R.from)}</b><small>من ${ddAt(R.from)} لين ${ddAt(R.to)}</small></div>
     <div class="group">${rows.join('')}</div>

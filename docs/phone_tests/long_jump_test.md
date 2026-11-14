@@ -4,9 +4,9 @@
 
 ## الخطوات
 
-1. افتح الرابط اللي يرسله لك المساعد: فيه لعبة محفوظة فيها 10,000 راس.
+1. نزّل نسخة التجربة اللي يجهزها لك المساعد وافتحها: تبدأ من لعبة محفوظة فيها 10,000 راس (حفظ لعبتك العادية ما يتأثر).
 2. افتح الجوال داخل اللعبة، واضغط «التقويم».
-3. اضغط «اختار يوم»، وروح للشهر اللي بعد 12 شهر، واختار أي يوم فيه، واضغط «امشِ لين …».
+3. اضغط «اختار يوم»، وروح لآخر شهر يطلع لك، واختار آخر يوم يخليك تختاره (التقويم يمشي سنة بالكثير)، واضغط «امشِ لين …».
 4. في بطاقة «قبل ما تمشي»: شغّل «طلب ثابت للماء والعلف»، واضغط «اتعاقد» عند «عقد البيطري» مرتين.
 5. اضغط «امشِ لين …»، وبعدها «اضغط مرة ثانية ويمشي»، وشغّل ساعة الإيقاف بجوال ثاني أو بساعتك.
 6. وهو يمشي: تأكد إن التاريخ تحت «وصل» يتغيّر، وإن الشاشة ما تعلّق.
@@ -15,6 +15,14 @@
 9. لما يطلع «يحفظ اللعبة…» ثم «اللي صار»: وقّف الساعة، واكتب كم دقيقة وثانية أخذت كلها.
 10. المس ظهر الجوال: عادي، دافي، ولا حار؟ واكتب كم كانت البطارية قبل وبعد.
 11. أرسل للمساعد: الوقت، وكم مرة وقف، وحرارة الجوال، والبطارية قبل وبعد.
+
+## How the large save reaches his phone (English)
+
+The iPhone app keeps its save as files in its own Documents folder, through its local server
+(tool/proto_app/README.md); that folder is not reachable from outside the app (no file sharing is enabled), and a
+link cannot carry a save into it. So the test needs a **test build** that starts once from a 10,000-head save bundled
+with it, kept apart from his own game's save. That build is **not made yet**: it is owed before this test, and the
+steps above assume it.
 
 ## How his numbers are read (English)
 
