@@ -68,10 +68,10 @@ SPEC = {
     'leg': {'knee': (95, -20, 20), 'tibia': 116, 'tarsus': 57, 'shank_r': (34, 27, 18, 13, 9.5),
             'tarsus_r': (6.6, 5.6, 6.2), 'jess_at': 0.5, 'trouser': 0.38},
     'toes': [      # (heading deg, length, radius, (claw length, claw arc deg), curl)
-        (0, 52, 4.6, (21, 125), 0),      # the middle toe
-        (-30, 39, 4.4, (23, 130), 0),     # the inner toe
-        (32, 41, 4.0, (17, 120), 0),      # the outer toe
-        (180, 28, 4.8, (25, 130), 0),     # the hind toe (hallux)
+        (0, 52, 5.3, (21, 125), 0),      # the middle toe
+        (-30, 39, 5.0, (23, 130), 0),     # the inner toe
+        (32, 41, 4.6, (17, 120), 0),      # the outer toe
+        (180, 28, 5.4, (25, 130), 0),     # the hind toe (hallux)
     ],
 }
 

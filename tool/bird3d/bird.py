@@ -431,7 +431,7 @@ def foot_parts(foot, toes, heading, side, det, pose):
             # the toe lies on the surface and bends down over its last joint
             ang = bend * smoothstep(0.55, 1.0, f) if tucked else 0.0
             q = foot + d * (length * f - 2.0) + V3((0, 0, r * 0.9))      # from just behind the foot's middle
-            knuckle = 1.0 + 0.22 * math.sin(f * math.pi * 3) ** 2 if det.level == 0 else 1.0
+            knuckle = 1.0 + 0.30 * math.sin(f * math.pi * 3) ** 2 if det.level == 0 else 1.0
             rad.append(r * (1.1 - 0.35 * f) * knuckle)
             if grip and not tucked:
                 # the toe follows the support's surface: it grips the fist rather than overhangs it or sinks in
