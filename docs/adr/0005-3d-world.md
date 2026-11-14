@@ -708,11 +708,14 @@ the closed meter names the variant.
   | The 8k level to 24 m, not 48 | 349k | 696k | 624k | 6.3% over the pens |
   | The 8k level to 30 m | 427k | 735k | 656k | 2.1% over the pens |
   | The full level within 5 m, not 8 | 544k | 613k | 547k | 1.0% at eye height, 2.1% near |
-  | A 4k middle level instead of the 8k | 377k | 576k | 496k | 5.6% over the pens, 4.1% near, 1.9% at eye height |
+  | A 4k middle level instead of the 8k | 160k less | 148k less | 160k less | 4.3% over the pens, 3.9% near, 1.7% at eye height |
   | Full-level camels' shadows from the 1.5k mesh | 544k | 696k | 643k | 0.7% at eye height and near |
 
-  (The 4k level's frames come from a second page load, whose ground cover
-  differed a little: its changed pixels include some of that.)
+  (The 4k level was measured in its own page load, both frames from it: the
+  middle level's draws given the 4k mesh in place. In that load "now" was
+  537k, 724k and 656k, and the 4k level 377k, 576k and 496k; the other rows
+  are from another load, whose ground cover differed a little. The changed
+  pixels are on the camels; 555 to 1,157 more are in their shade.)
 
   The 4k level was made with `tool/camel3d/lods.py`'s steps from the same
   rigged source (its clips and skeleton bit for bit the shipped ones'); it is
