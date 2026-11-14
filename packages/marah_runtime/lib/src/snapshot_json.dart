@@ -86,6 +86,7 @@ class SnapshotJson {
       ],
     },
     'rush': s.rush,
+    'falcons': s.falcons,
     'findings': [
       for (final f in s.findings)
         {

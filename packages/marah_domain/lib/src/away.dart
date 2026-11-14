@@ -3,15 +3,18 @@
 // camp of days will. It only advances days and reads conditions: what the
 // days do is the daily pipeline's, the same code a played day runs (a
 // caller's daily work belongs there too, keyed by state, never here).
+import 'catalog/falconry.dart';
 import 'common/result.dart';
 import 'common/time.dart';
 import 'events.dart';
 import 'game.dart';
 import 'model/camel.dart';
 import 'model/contest.dart';
+import 'model/falconry.dart';
 import 'model/player.dart';
 import 'rules/account.dart';
 import 'rules/eligibility.dart';
+import 'rules/hunt_balance.dart';
 
 /// Why a stretch away ended before its day, or that it reached it.
 enum AwayStopKind {
@@ -51,6 +54,11 @@ enum AwayStopKind {
 
   /// The herd outgrew its pens.
   crowded,
+
+  /// A falcon left at the farm would step back tomorrow without its الدعو
+  /// (the answers' Q-22: a state-based stop, landed the morning before, so
+  /// he can go to the room). Its subject the falcon, its name said.
+  falconCare,
 
   /// A caller's own condition (the hunt: the camp's supplies out, the
   /// trapping season's end, the trip's chosen end, his falcon's care).
@@ -285,6 +293,8 @@ class AwayRun {
           summary.pregnanciesFailed++;
         case SupplyDelivered():
           summary.delivered++;
+        case GearDelivered():
+          summary.delivered++;
         case SupplyOrdered(:final standing):
           if (standing) summary.standingOrders++;
         case SupplyLow(:final supply):
@@ -350,6 +360,24 @@ class AwayRun {
         !Eligibility.isBreedingSeason(today - 1) &&
         herd.any((c) => Eligibility.femaleCanBreed(c, today) == null)) {
       at(AwayStopKind.breeding);
+    }
+    // his falcons left at the farm (on a falconry trip they are with him)
+    final h = me.falconry;
+    if (h != null &&
+        h.trip?.kind != TripKind.falconry &&
+        !HuntBalance.moultMonths.contains(today.month) &&
+        !HuntBalance.moultMonths.contains((today + 1).month)) {
+      for (final f in h.falcons) {
+        final c = f.caredOn;
+        if (c == null || f.where != FalconWhere.home || f.dauDays == 0) {
+          continue;
+        }
+        if (today.daysSince(c) % HuntBalance.stepBackDays ==
+            HuntBalance.stepBackDays - 1) {
+          at(AwayStopKind.falconCare, subject: f.id.value, name: f.name);
+          break;
+        }
+      }
     }
     for (final c in plan.extra) {
       final why = c(game);

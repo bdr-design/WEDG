@@ -1,3 +1,4 @@
+import 'catalog/falconry.dart';
 import 'common/ids.dart';
 import 'model/player.dart';
 import 'model/tampering.dart';
@@ -254,4 +255,132 @@ final class MarkFindingsTold extends Command {
 final class SetTestMoney extends Command {
   const SetTestMoney(super.actor, {required this.on});
   final bool on;
+}
+
+// --------------------------------------------------------------- falconry
+// The hunting season (task T18, part A: docs/agents/T18_hunting_build.md).
+// The falcons' room is a facility: BuildFacility(Facility.falconRoom).
+
+/// Buys [kind] for the season open now, or the next to open (cash only:
+/// the merchant's account is for the herd's feed, water and vet).
+final class BuyPermit extends Command {
+  const BuyPermit(super.actor, this.kind);
+  final PermitKind kind;
+}
+
+/// Orders [units] of [gear] from «نادي الصقور» → «الطرح» (pigeons by the
+/// bird, the camp's supplies by the day, the rest one each): paid now, cash
+/// only, delivered to the farm as feed is (Balance.deliveryDays).
+final class OrderGear extends Command {
+  const OrderGear(super.actor, this.gear, this.units);
+  final Gear gear;
+  final int units;
+}
+
+/// Buys today's lot [lot] (FalconLot.key) at one of the three auctions, up
+/// to his own ceiling [upTo] (the answers' Q-17 revised: no bidding game;
+/// the price is not known before the hammer, as the design says «قيمته ما
+/// تنعرف إلا بالمزاد»). If [upTo] reaches the hammer he pays the hammer;
+/// else the lot goes to another bidder, its price told, gone for good. Cash
+/// only (Q-18): a ceiling above his money is refused.
+final class BuyFalcon extends Command {
+  const BuyFalcon(super.actor, this.lot, this.upTo);
+  final String lot;
+  final int upTo;
+}
+
+/// Where a button was pressed, as the map says: on [ground], or off the
+/// grounds ([off]); exactly one of the two.
+final class HuntAt {
+  const HuntAt.ground(Ground this.ground) : off = null;
+  const HuntAt.off(HuntOff this.off) : ground = null;
+  final Ground? ground;
+  final HuntOff? off;
+}
+
+/// Goes out for falcons: [kind] to [ground] for [nights] (0: a day's
+/// outing to a near ground, back the same evening). The farm runs as on any
+/// day meanwhile; each night is one call of the away mechanism (Trips).
+final class StartTrip extends Command {
+  const StartTrip(super.actor, this.kind, this.ground, this.nights);
+  final TripKind kind;
+  final Ground ground;
+  final int nights;
+}
+
+/// Breaks camp and goes home («فك المخيم وارجع»), at any time.
+final class EndTrip extends Command {
+  const EndTrip(super.actor);
+}
+
+/// Moves the trapping camp to another trapping ground with the mobile tent.
+final class MoveCamp extends Command {
+  const MoveCamp(super.actor, this.ground);
+  final Ground ground;
+}
+
+/// Looks for a falcon (with the binoculars if he has them) where he stands,
+/// at the game's [minute] (stamped by the engine from its own clock).
+final class SpotFalcon extends Command {
+  const SpotFalcon(super.actor, this.at, {this.minute});
+  final HuntAt at;
+  final int? minute;
+}
+
+/// Releases [lure] at the falcon he has seen.
+final class ReleaseLure extends Command {
+  const ReleaseLure(super.actor, this.at, this.lure, {this.minute});
+  final HuntAt at;
+  final Lure lure;
+  final int? minute;
+}
+
+/// Enters a trapped bird for tonight's trapping auction (the club checks it
+/// and documents the trapping; the hammer falls tonight; no fee).
+final class EnterTrapAuction extends Command {
+  const EnterTrapAuction(super.actor, this.falcon);
+  final FalconId falcon;
+}
+
+/// Keeps a trapped bird as his own (the club's check, the registration and
+/// the passport; a free place in the room). Never offered for sale again.
+final class KeepBird extends Command {
+  const KeepBird(super.actor, this.falcon);
+  final FalconId falcon;
+}
+
+/// Sets free a trapped peregrine he kept (the owner's item 19: from
+/// February, or he keeps it; the window HuntBalance.releaseFrom/To).
+final class ReleaseFalcon extends Command {
+  const ReleaseFalcon(super.actor, this.falcon);
+  final FalconId falcon;
+}
+
+/// Unhoods and casts [falcon] where he stands: on foot, or from the car
+/// ([inCar], [moving]: a cast from a moving car is refused).
+final class CastFalcon extends Command {
+  const CastFalcon(
+    super.actor,
+    this.falcon,
+    this.at, {
+    this.inCar = false,
+    this.moving = false,
+    this.minute,
+  });
+  final FalconId falcon;
+  final HuntAt at;
+  final bool inCar;
+  final bool moving;
+  final int? minute;
+}
+
+/// Looks for a lost falcon (by the tracker's signal if it wears one).
+final class SearchFalcon extends Command {
+  const SearchFalcon(super.actor, this.falcon);
+  final FalconId falcon;
+}
+
+/// الدعو: today's care for every falcon in the room (one tap).
+final class CareFalcons extends Command {
+  const CareFalcons(super.actor);
 }

@@ -1,13 +1,16 @@
 import '../catalog/catalog.dart';
+import '../catalog/falconry.dart';
 import '../commands.dart' show OrderSupply;
 import '../common/ids.dart';
 import '../common/money.dart';
 import '../common/result.dart';
 import '../common/rng.dart';
 import '../events.dart';
+import '../handlers/falconry.dart' show endTripNow;
 import '../handlers/handlers.dart' show placeOrder, treatCamel;
 import '../model/camel.dart';
 import '../model/contest.dart';
+import '../model/falconry.dart';
 import '../model/game_state.dart';
 import '../model/market.dart';
 import '../model/player.dart';
@@ -15,6 +18,7 @@ import '../model/tampering.dart';
 import '../rules/balance.dart';
 import '../rules/contest_rules.dart';
 import '../rules/genetics.dart';
+import '../rules/hunt_balance.dart';
 import '../rules/judging.dart';
 import '../rules/milk.dart';
 import '../rules/names.dart';
@@ -23,6 +27,8 @@ import '../rules/provisions.dart';
 import '../rules/valuation.dart';
 import '../sim.dart';
 import '../world_gen.dart';
+
+part 'falconry_system.dart';
 
 /// One part of the daily simulation. Systems run in a fixed order each day
 /// (see [dailyPipeline]); each draws randomness from its own keyed stream.
@@ -42,6 +48,7 @@ const List<DailySystem> dailyPipeline = [
   MarketSystem(),
   TamperingSystem(),
   ContestSystem(),
+  FalconrySystem(),
 ];
 
 // ------------------------------------------------------------- calendar

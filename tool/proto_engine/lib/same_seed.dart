@@ -270,3 +270,114 @@ int textHash(String s) {
   }
   return h;
 }
+
+/// The hunting season's paths (task T18), on a game of their own so the main
+/// run above stays the base's: the room, the permits, the gear, a falcon
+/// bought, الدعو, a camp of nights by the away call with the trapping's
+/// commands each dawn, birds entered and sold or kept, a day's outing with
+/// casts. A line each week of the run, on both platforms.
+Iterable<String> huntLines({int seed = 11}) sync* {
+  final g = Game.create(
+    seed: seed,
+    playerName: 'اللاعب',
+    farmName: 'العزبة',
+    region: Region.qassim,
+    favourite: ColorCategory.majaheem,
+    startDay: GameDay.ofDate(DateTime.utc(2026, 9, 20)),
+    startedAt: DateTime.utc(2026, 11, 1),
+  );
+  grant(g, 3000000);
+  final me = g.me.id;
+  var ok = 0, refused = 0;
+  void send(Command c) => g.dispatch(c).ok ? ok++ : refused++;
+  String line(String what) {
+    final text = canonicalJson(g.state.toJson());
+    return 'hunt $what day ${g.today.value} cash ${g.me.cash.value} '
+        'ok $ok refused $refused length ${text.length} hash ${textHash(text)}';
+  }
+
+  send(BuildFacility(me, Facility.falconRoom));
+  send(BuyPermit(me, PermitKind.trapping));
+  for (final (x, n) in [
+    (Gear.pigeon, 20),
+    (Gear.pigeonNet, 1),
+    (Gear.birdNet, 1),
+    (Gear.binoculars, 1),
+    (Gear.mobileTent, 1),
+    (Gear.supplies, 40),
+    (Gear.tracker, 1),
+  ]) {
+    send(OrderGear(me, x, n));
+  }
+  g.advanceTo(GameDay.ofDate(DateTime.utc(2026, 10)));
+  yield line('ready');
+  // a falcon from the exhibition, and one from the trapping auction
+  for (final r in [FalconRoute.exhibition, FalconRoute.trapping]) {
+    for (var i = 0; i < 6; i++) {
+      final lots = FalconMarket.lots(g.state.world.seed, r, g.today);
+      if (lots.isNotEmpty) {
+        send(BuyFalcon(me, lots.first.key, 400000));
+        break;
+      }
+      g.advanceDays(1);
+    }
+  }
+  send(BuyPermit(me, PermitKind.hunting));
+  yield line('bought');
+  // the camp: 20 nights at الحماد, the dawn's work each day
+  send(StartTrip(me, TripKind.trapping, Ground.hamad, 20));
+  const at = HuntAt.ground(Ground.hamad);
+  for (var night = 0; night < 20; night++) {
+    final m = HuntSun.dawn(g.today) + 30;
+    send(SpotFalcon(me, at, minute: m));
+    for (final l in [Lure.pigeon, Lure.birdNet, Lure.pigeon]) {
+      send(ReleaseLure(me, at, l, minute: m));
+    }
+    for (final f in [...g.me.hunt.held]) {
+      send(
+        g.me.hunt.falcons.length < 3
+            ? KeepBird(me, f.id)
+            : EnterTrapAuction(me, f.id),
+      );
+    }
+    send(CareFalcons(me));
+    final plan = Trips.night(g);
+    if (plan == null) break;
+    final run = AwayRun(g, plan);
+    while (!run.done) {
+      run.step();
+    }
+    if (night % 5 == 4) yield line('camp ${run.stop!.kind.name}');
+    if (run.stop!.kind == AwayStopKind.extra) break;
+  }
+  send(EndTrip(me));
+  yield line('home');
+  // الدعو for four weeks, then a day's outing at the estate in November
+  for (var w = 0; w < 5; w++) {
+    send(CareFalcons(me));
+    g.advanceDays(7);
+  }
+  send(CareFalcons(me));
+  send(StartTrip(me, TripKind.falconry, Ground.estate, 0));
+  for (final f in [...g.me.hunt.falcons]) {
+    for (var i = 0; i < 3; i++) {
+      send(
+        CastFalcon(
+          me,
+          f.id,
+          const HuntAt.ground(Ground.estate),
+          minute: HuntSun.sunrise(g.today) + 90 + 60 * i,
+        ),
+      );
+      if (f.where == FalconWhere.lost) send(SearchFalcon(me, f.id));
+    }
+  }
+  g.advanceDays(1);
+  yield line('outing');
+  // the season out, the auction's close, the winter, a kept bird set free
+  g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 2, 2)));
+  for (final f in [...g.me.hunt.falcons.where((f) => f.keep)]) {
+    send(ReleaseFalcon(me, f.id));
+  }
+  yield line('spring');
+}

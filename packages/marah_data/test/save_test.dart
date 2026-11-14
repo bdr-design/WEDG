@@ -116,6 +116,90 @@ Map<String, Object?> toNow(Map<String, Object?> data, int from) {
 void main() {
   const codec = SaveCodec();
 
+  // the hunting season (T18): a game saved before it, by the base's own
+  // build, takes falcons and is saved at the new version
+  for (final (name, path) in [
+    ('v11 (the sample)', fixtures[11]!),
+    ('v12 (the sample)', fixtures[12]!),
+    // the base's build (b079dce) after the same-seed run's 104 weeks
+    (
+      'v11, a played game of two years',
+      'test/fixtures/save_v11_seed7_104w.json',
+    ),
+  ]) {
+    test('the hunting season (T18): a $name save plays a season with falcons '
+        'and saves at ${SaveCodec.huntVersion}', () {
+      final loaded = codec.decode(File(path).readAsStringSync()) as Loaded;
+      expect(loaded.migratedFrom, lessThan(SaveCodec.huntVersion));
+      expect(SaveCodec.huntVersion, SaveCodec.savedKnowingVersion + 1);
+      expect(SaveCodec.currentVersion, SaveCodec.huntVersion);
+      final g = Game(loaded.state);
+      final before = jsonEncode(g.me.toJson());
+      expect(g.me.falconry, isNull);
+      expect(before, isNot(contains('falconry')));
+      // to the next 26 September, then the season
+      var day = GameDay.ofDate(DateTime.utc(g.today.year, 9, 26));
+      if (day <= g.today)
+        day = GameDay.ofDate(DateTime.utc(g.today.year + 1, 9, 26));
+      g.advanceTo(day);
+      Sim(g.state).pay(g.me, const Riyal(5000000), LedgerCategory.opening);
+      final me = g.me.id;
+      expect(g.dispatch(BuildFacility(me, Facility.falconRoom)).ok, isTrue);
+      expect(g.dispatch(BuyPermit(me, PermitKind.trapping)).ok, isTrue);
+      for (final (x, n) in [
+        (Gear.pigeon, 10),
+        (Gear.pigeonNet, 1),
+        (Gear.supplies, 10),
+      ]) {
+        expect(g.dispatch(OrderGear(me, x, n)).ok, isTrue);
+      }
+      g.advanceTo(GameDay.ofDate(DateTime.utc(day.year, 10, 1)));
+      var bought = false;
+      while (!bought) {
+        for (final l in FalconMarket.lots(
+          g.state.world.seed,
+          FalconRoute.trapping,
+          g.today,
+        )) {
+          bought = bought || g.dispatch(BuyFalcon(me, l.key, 1000000)).ok;
+        }
+        if (!bought) g.advanceDays(1);
+      }
+      expect(
+        g.dispatch(StartTrip(me, TripKind.trapping, Ground.hamad, 5)).ok,
+        isTrue,
+      );
+      for (var i = 0; i < 5; i++) {
+        final m = HuntSun.dawn(g.today) + 30;
+        g.dispatch(
+          SpotFalcon(me, const HuntAt.ground(Ground.hamad), minute: m),
+        );
+        g.dispatch(
+          ReleaseLure(
+            me,
+            const HuntAt.ground(Ground.hamad),
+            Lure.pigeon,
+            minute: m,
+          ),
+        );
+        final run = AwayRun(g, Trips.night(g)!);
+        while (!run.done) {
+          run.step();
+        }
+      }
+      g.dispatch(EndTrip(me));
+      final text = codec.encode(g.state);
+      expect((jsonDecode(text) as Map)['version'], SaveCodec.huntVersion);
+      final back = (codec.decode(text) as Loaded).state;
+      expect(jsonEncode(back.toJson()), jsonEncode(g.state.toJson()));
+      expect(back.players.values.first.falconry!.falcons, hasLength(1));
+      expect(checkInvariants(back), isEmpty);
+      // and the rest of the year
+      final again = Game(back)..advanceDays(300);
+      expect(checkInvariants(again.state), isEmpty);
+    });
+  }
+
   test('round trip is exact', () {
     final g = sampleGame();
     final text = codec.encode(g.state, savedAt: DateTime.utc(2026));
@@ -490,7 +574,10 @@ void main() {
       final state = GameState.fromJson(toNow(out, 7));
       expect(checkInvariants(state), isEmpty);
       final farm = state.players.values.first.farm;
-      for (final f in Facility.values.where((f) => f != Facility.pen)) {
+      // (the falcons' room came later, T18: no old farm has one)
+      for (final f in Facility.values.where(
+        (f) => f != Facility.pen && f != Facility.falconRoom,
+      )) {
         expect(farm.has(f), f.most, reason: f.name);
       }
       // the old start's 20 head: the first pen's 6 and two more pens' room

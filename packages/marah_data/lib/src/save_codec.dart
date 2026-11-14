@@ -19,7 +19,7 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = savedKnowingVersion;
+  static const currentVersion = huntVersion;
 
   /// The version the rush and the calendar (task T15) bring: the one after
   /// the session branch's when this build is brought in (one constant, so
@@ -29,6 +29,10 @@ class SaveCodec {
   /// The version that keeps who bought a treated camel knowing (T16, the
   /// owner's item 12 of 14 Nov 2026), after the rush's.
   static const savedKnowingVersion = rushVersion + 1;
+
+  /// The version the hunting season (task T18) brings, after T16's (one
+  /// constant, so it is renumbered in one place).
+  static const huntVersion = savedKnowingVersion + 1;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
@@ -45,6 +49,7 @@ class SaveCodec {
     9: _v9ToV10,
     rushVersion - 1: _toRush,
     savedKnowingVersion - 1: _v11ToV12,
+    huntVersion - 1: _toHunt,
   };
 
   /// v11 to v12: a treatment keeps the players who bought her knowing of it
@@ -486,6 +491,14 @@ class SaveCodec {
   /// follow it.
   static Map<String, Object?> _toRush(Map<String, Object?> input) =>
       jsonDecode(jsonEncode(input)) as Map<String, Object?>;
+
+  /// To the hunting season (task T18): a player's `falconry` (his falcons,
+  /// permits, gear), the falcons' room as a facility, the season's ledger
+  /// kinds and events are new and optional: a game saved before has none of
+  /// them and plays on as it was. The step only marks the version, so that
+  /// an older app meets a save of a game with falcons as too new for it,
+  /// not as a corrupt one.
+  static Map<String, Object?> _toHunt(Map<String, Object?> input) => input;
 
   String encode(GameState state, {DateTime? savedAt}) => jsonEncode({
     'format': format,

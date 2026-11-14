@@ -190,6 +190,34 @@ class EngineCore {
   /// one before (the price shown is the price paid), refused after it (a
   /// stale confirm after the day turned too), and stamped when it has none.
   (Command?, Err?) _stampHour(Command c) {
+    // the hunting season's buttons: the game's minute is always the
+    // engine's own (the hours of the hunt and the trap, task T18)
+    switch (c) {
+      case SpotFalcon(:final actor, :final at):
+        return (SpotFalcon(actor, at, minute: minuteOfDay()), null);
+      case ReleaseLure(:final actor, :final at, :final lure):
+        return (ReleaseLure(actor, at, lure, minute: minuteOfDay()), null);
+      case CastFalcon(
+        :final actor,
+        :final falcon,
+        :final at,
+        :final inCar,
+        :final moving,
+      ):
+        return (
+          CastFalcon(
+            actor,
+            falcon,
+            at,
+            inCar: inCar,
+            moving: moving,
+            minute: minuteOfDay(),
+          ),
+          null,
+        );
+      default:
+        break;
+    }
     final now = minuteOfDay() ~/ 60;
     int? asked;
     switch (c) {
@@ -335,6 +363,46 @@ class EngineCore {
     _publish();
     _scheduleNextDay();
     return (run: run, refused: null);
+  });
+
+  /// A night at camp («نام لين الفجر», task T18): one away call to
+  /// tomorrow with the camp's own stops and lines, landing at the working
+  /// hour's start (Trips). Refused when he is not on a trip of days.
+  Future<({AwayRun? run, DomainError? refused})> tripNight() async {
+    final g = _game;
+    final plan = g == null ? null : Trips.night(g);
+    if (g == null || plan == null) {
+      return (
+        run: null,
+        refused: const DomainError(ErrorCode.huntRefused, {
+          'reason': 'notOnTrip',
+        }),
+      );
+    }
+    final t = g.me.falconry?.trip;
+    return away(
+      plan.target,
+      landingMinute: Trips.landingMinute(t, plan.target),
+      extra: plan.extra,
+      counters: plan.counters,
+      card: plan.card,
+    );
+  }
+
+  /// The hunting season's catalog (asked once by the phone).
+  Future<Map<String, Object?>?> falconCatalog() => _serial(() async {
+    final g = _game;
+    return g == null ? null : falconCatalogOf(g.state, g.me.id);
+  });
+
+  /// The trip's lines for the card before leaving.
+  Future<Map<String, Object?>?> tripCard(
+    TripKind kind,
+    Ground ground,
+    int nights,
+  ) => _serial(() async {
+    final g = _game;
+    return g == null ? null : Trips.card(g, kind, ground, nights);
   });
 
   /// Moves [s]'s clock anchor so that now is [minute] of [day], in the

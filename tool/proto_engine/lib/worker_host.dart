@@ -204,6 +204,40 @@ class WorkerHost {
                   },
             'away': run?.toJson(),
           });
+        case 'tripNight':
+          // a night at camp (T18): one away call to tomorrow, landing at the
+          // working hour's start, with the camp's own stops
+          _ticker?.cancel();
+          final res = await core.tripNight();
+          _startTicker();
+          final run = res.run;
+          _reply(id, {
+            'ok': run != null,
+            'error': res.refused == null
+                ? null
+                : {
+                    'code': res.refused!.code.name,
+                    'params': res.refused!.params,
+                  },
+            'away': run?.toJson(),
+          });
+        case 'falconCatalog':
+          _reply(id, {'ok': true, 'catalog': await core.falconCatalog()});
+        case 'tripCard':
+          final k = TripKind.values
+              .where((x) => x.name == m['kind'])
+              .firstOrNull;
+          final gr = Ground.values
+              .where((x) => x.name == m['ground'])
+              .firstOrNull;
+          final n = m['nights'];
+          if (k == null || gr == null || n is! num) {
+            return _reply(id, {'ok': false, 'error': 'badTrip'});
+          }
+          _reply(id, {
+            'ok': true,
+            'card': await core.tripCard(k, gr, n.toInt()),
+          });
         case 'flush':
           await core.flush();
           _reply(id, {'ok': true});
