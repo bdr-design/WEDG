@@ -1259,6 +1259,21 @@ const S = {
     strength: strengthScreen,
   };
 
+// A screen's words kept together where a line must not break: a number with the word after it («20,000 | ريال»),
+// «بـ» with its number («بـ 64»), a short preposition or «و» with the word after it («أكبر من | العزبة», «قبل | 3
+// شهور»; the audit), and on المزاين's and the chat's screens a number with the word before it too («لين | 100,000»).
+// (A preposition right after another, «من بعد المفرودة»: the space before the second was taken by the first match, so
+// the pass runs again till nothing changes; no lookbehind, which iOS's WebKit reads only from 16.4, the app from 15.)
+export function keepTogether(html, mazayen = false) {
+  let out = html.replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0').replace(/(^|[\s>])بـ (?=\d)/g, '$1بـ\u00a0');
+  for (let i = 0; i < 4; i++) {
+    const next = out.replace(/(^|[\s>])(من|في|على|عن|مع|إلى|الى|لين|قبل|بعد|كل|و) (?=[^\s<])/g, '$1$2\u00a0');
+    if (next === out) break;
+    out = next;
+  }
+  return mazayen ? out.replace(/([\u0600-\u06FF]) (?=\d)/g, '$1\u00a0') : out;
+}
+
 export function createPhone({ host }) {
   const el = document.createElement('div'), root = el.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar" role="dialog" aria-label="الجوال" aria-hidden="true"><div class="dim"></div><div class="dev" tabindex="-1"><div class="scr" inert></div></div><div class="sr" role="status" aria-live="polite"></div></div>`;
@@ -1277,9 +1292,7 @@ export function createPhone({ host }) {
     st.screen = v; scr.classList.toggle('home', v === 'home');
     // (المزاين's and the chat's screens, as their design: a number kept with the word before it too, «لين | 100,000»)
     // («بـ 64»: the prefix never left at a line's end either)
-    let html = S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0').replace(/(^|[\s>])بـ (?=\d)/g, '$1بـ\u00a0')
-      .replace(/(^|[\s>])(من|في|على|عن|مع|إلى|الى|لين|قبل|بعد|كل|و) (?=[^\s<])/g, '$1$2\u00a0');      // (nor a short preposition or «و»: «أكبر من | العزبة», «قبل | 3 شهور» split so, the audit)
-    if (MZ_SCREENS.has(v)) html = html.replace(/([\u0600-\u06FF]) (?=\d)/g, '$1\u00a0');
+    let html = keepTogether(S[v](), MZ_SCREENS.has(v));
     if (same && html === drawn) return false;      // (a redraw that would draw the same: left as it is)
     drawn = html;
     scr.innerHTML = `<span class="pill"></span>${sbar()}${html}<div class="hb"></div>`;      // (a number kept on the line of the word after it: «20,000 | ريال» split across lines otherwise)
