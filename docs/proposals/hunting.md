@@ -339,7 +339,8 @@ falcons", sources 184–223; most are SPA pages read in full.
     bird over 2020–25 and about 160,000 in 2025 (search summary [213]).
   - The record is 650,000 [187][199].
   - Of the 18 sales of 2025 that SPA reported, 6 were above 300,000. The news over-reports dear
-    birds; over the whole 2025 season it was at least one in seven [185][211][213].
+    birds; over the whole 2025 season they were at least 6 of 40, a share of 0.15
+    [185][211][213].
   - Most birds are taken by groups of 2–9 who share the price [184][190][200]. 119 trappers were
     credited with the 40 birds of 2025 [213], out of «مئات الطواريح المشاركين» [211][219].
 
@@ -371,23 +372,24 @@ wolves at the calves) rise, so a long camp wants a herdsman first (game choice).
 ### 9.3 The odds and a season's income, as a range (game choices on real numbers)
 
 A lone trapper's chance of one sold bird in a full season is about 40 birds over the number of
-trappers who go out. That is **0.08 to 0.34**: one in three only among those who succeeded
-(119), lower if «مئات» went out [213][211]. The season's mean price is 88,000 to 160,000
+trappers who go out: 40/500 = 0.08, 40/200 = 0.20, and 40/119 = 0.336. The last is the share
+among those who succeeded (119) and the top the sources allow; it is lower if «مئات» went out
+[213][211]. The season's mean price is 88,000 to 160,000
 [200][213]. The cost of a season (camp, fuel, pigeons, nets) is **invented**: 20,000 here, and
 in the game it follows the gear bought.
 
 | A lone trapper's chance p (game choice) | Mean price | Expected, a season | A bird of 300,000+ |
 |---|---|---|---|
-| 0.08 | 88,000 | about −13,000 | at least 1 season in 80 |
-| 0.20 | 100,000 | about 0 | at least 1 season in 30 |
-| 0.34 | 160,000 | about +34,000 | at least 1 season in 20 (1 in 15 if one bird in five is that dear) |
+| 0.08 (40/500) | 88,000 | −12,960 (0.08 × 88,000 − 20,000) | at least 1 season in 83 (1 / (0.08 × 0.15)) |
+| 0.20 (40/200) | 100,000 | 0 (0.20 × 100,000 − 20,000) | at least 1 season in 33 (1 / (0.20 × 0.15)) |
+| 0.336 (40/119) | 160,000 | +33,760 (0.336 × 160,000 − 20,000) | at least 1 season in 20 (1 / (0.336 × 0.15) = 19.8, rounded to the nearest, against the player) |
 
-The last column takes one bird in seven at 300,000 or more, as in 2025 [213]; that share is a floor, so each frequency is "at least". p = 0.08 assumes 500 trappers went out; «مئات» does not cap them at 500, so 0.08 is a choice, not a bound the sources set. These are not "close to reality": p is unknown. The table shows the range the sources allow.
+The last column takes the share of birds at 300,000 or more as **6/40 = 0.15**: the 6 such sales SPA reported in 2025 [185][211][216][217] against the season's 40 birds [213]. That share is a floor, so each frequency is "at least". The figures are unrounded, except where said. p = 0.08 assumes 500 trappers went out; «مئات» does not cap them at 500, so 0.08 is a choice, not a bound the sources set. These are not "close to reality": p is unknown. The table shows the range the sources allow.
 
 **Where the gear places the player (the owner's answer, game choice):**
-- **A bare beginner sits near the bottom (p ≈ 0.08).** That is a few pigeons, one kind of net,
+- **A bare beginner sits near the bottom (p ≈ 0.08, one season in 12.5).** That is a few pigeons, one kind of net,
   no binoculars, an inland ground, a short camp and the evening hour.
-- **A well-equipped, well-placed trapper sits near the top (p ≈ 0.34), never beyond.** That is
+- **A well-equipped, well-placed trapper sits near the top (p ≈ 0.336, one season in 2.98), never beyond.** That is
   plenty of fit pigeons, every kind of net with quail and a lure bird for النقل, binoculars, the
   mobile tent, supplies for the whole 60 days, a 4x4, a coastal or northern ground, October,
   and dawn.
@@ -494,12 +496,13 @@ the Arabic line to put to him is in 13.8.
 4. **Partners in trapping.** Most birds are taken by groups who share the price [184][190][200].
    *Recommended:* allowed, sharing the price.
    > *The proxy's provisional answer (item 2):* build alone first, with the gear he named; partners drawn in the design as the next step, for him to pull forward with one word. This differs from the recommendation (yes now).
-5. **The odds and the gear.** *Recommended:* the gear moves a lone trapper from about one season
-   in 12 (a beginner) to one in 3 (well equipped, well placed), never beyond.
-   *Alternative:* a beginner lower, about one in 25, because the number of trappers who go out is
-   unknown and may be well above 500. In either case the news over-reports dear birds; over the
-   whole 2025 season at least one bird in seven sold above 300,000 [213].
-   > *The proxy's provisional answer (item 1):* the first range (one in 12 to one in 3, never past it); the 20,000 camp cost marked as invented; never more generous without him.
+5. **The odds and the gear.** *Recommended:* the gear moves a lone trapper from one season in
+   12.5 (a beginner, p = 0.08) to one in 2.98 (well equipped, well placed, p = 0.336), never beyond.
+   *Alternative:* a beginner lower, one in 25 (p = 0.04, 1,000 trappers out), because the number of
+   trappers who go out is unknown and may be well above 500. In either case the news over-reports
+   dear birds; over the whole 2025 season at least 6 of the 40 birds (0.15) sold above 300,000
+   [185][211][213].
+   > *The proxy's provisional answer (item 1):* the first range (the proxy wrote one in 12 to one in 3; computed, one in 12.5 to one in 2.98), never past it; the 20,000 camp cost marked as invented; never more generous without him.
 6. **A mountain peregrine or a lanner in the net.** Trapping them is banned [194].
    *Recommended:* released at once, never kept or sold.
    > *The proxy's provisional answer (item 3):* released at once with the line «طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع».
