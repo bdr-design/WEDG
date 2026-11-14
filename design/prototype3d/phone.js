@@ -38,7 +38,7 @@ const CSS = `
   .phone[data-state="big"] .body { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
   .phone[data-state="big"] .nav { position: sticky; top: -1px; margin-top: -1px; padding-top: 1px; z-index: 3; background: var(--bg); box-shadow: 0 -3px 0 var(--bg); }      /* (held a pixel past the scroll's top edge, where it already rests, and painted a little above itself: that edge falls between two of the screen's pixels, and a row of the scrolled content showed there; resting a pixel lower, it stepped up as a scroll began) */
   * { box-sizing: border-box; margin: 0; }
-  .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; text-wrap: pretty; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #0b8a5c; --acc-soft: #e3f4ec; --red: #e5372b; --amber: #c27a12; }
+  .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; text-wrap: pretty; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #087a51; --acc-soft: #e3f4ec; --red: #d42f25; --amber: #a3660e; }      /* (each a little darker than approved, to 4.5:1 or better where it writes text, WCAG AA: green 4.37 → 5.37 under white and 3.83 → 4.71 on its pale chip, red 4.27 → 4.96, amber 3.45 → 4.70 on white, the proxy's T-B) */
   b.fit { font: inherit; }
   .num { font-family: "Alexandria", "IBM Plex Sans Arabic", sans-serif; }
   svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -187,7 +187,7 @@ const CSS = `
   .row.next b { color: var(--ink2); font-weight: 500; }
   .row.bad .lead { background: #fde6e4; color: var(--red); }
   .row .lead.rk { font: 700 15px/1 "Alexandria", sans-serif; }
-  .row .lead.rk.g1 { background: #fbefd2; color: #a8730c; }
+  .row .lead.rk.g1 { background: #fbefd2; color: #8f620a; }
   .row.later .lead { background: #eeeef1; color: #8e8e93; }
   .row.two { grid-template-columns: 36px 1fr; }
   .row .qty .dot { display: inline-block; min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px "Alexandria", sans-serif; text-align: center; padding: 0 5px; font-style: normal; }
