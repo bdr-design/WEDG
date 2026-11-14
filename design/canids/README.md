@@ -6,6 +6,7 @@ the weight on the phone and the owner's questions); the models are in `assets_sr
 | File | What it shows | State |
 |---|---|---|
 | `wolf_alert_*`, `wolf_stalk_*`, `wolf_run_*` | The Arabian wolf (الذيب العربي), an adult in its summer coat, one skin: standing alert, the low stalking walk near the pens, running off. Side (with a centimetre ruler), three-quarter; standing, also the head close, the front, from above and the forepaws close (`wolf_alert_paws.jpg`). | Awaiting the owner's approval |
+| `dog_head_1m5_game_camera.jpg` | The guard dog close to the game's camera (956 × 440, 40° field of view), in the game's light. | Awaiting the owner's approval |
 | `canids_far_15m.jpg` | The far models (wolf, guard dog, stray) from the game's camera at 15 m in the game's afternoon light, with a ×4 enlargement. | Awaiting the owner's approval |
 | `dog_alert_*`, `dog_lie_*`, `dog_bark_*` | The guard dog (كلب الحراسة): the local pariah or Bedouin type, a male, sandy with white, with a collar; standing alert, lying at rest by the pen, barking. | Awaiting the owner's approval (its type is question 3) |
 | `stray_alert_*`, `stray_bark_*` | The stray dog (الكلب الضال): the guard dog's body with a lean, dusty coat and no collar; standing wary, barking. | Awaiting the owner's approval |
@@ -19,4 +20,4 @@ the weight on the phone and the owner's questions); the models are in `assets_sr
 - The forepaws close: `wolf_alert_paws.jpg`, `dog_alert_paws.jpg`, `stray_alert_paws.jpg`.
 - The closed mouth has no teeth (the barking mouth has its canines); the fused middle toe pads are under the foot and
   not modelled.
-- The eyes and the lip line are paint on the skin: close up (the head pictures) the eye is only about 20 texels long.
+- The eyes are modelled (a ball in a socket, dark lids); their iris, pupil and catch-light are paint, and with one rough material per animal the eye cannot really shine. The lip line and the nose's sheen are paint.

@@ -34,7 +34,7 @@ corners, the toes out of the paw) and meshed as one closed surface, as `tool/cam
 |---|---|---|---|---|
 | `assets_src/canids/wolf_alert.glb`, `wolf_stalk.glb`, `wolf_run.glb` | the wolf, close: the skin and the two eyes (each a ball and its lids) | 7,536 each | 1 | 512 px |
 | `wolf_*_lod1.glb` | the wolf, far: the same skin decimated | 1,300 each | 1 | 256 px |
-| `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, the eyes, its collar and the collar's ring; barking, also the four canines | 8,152 / 8,152 / 8,296 | 1 | 512 px |
+| `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, the eyes, its collar and the collar's ring; barking, also the four canines | 8,152 / 8,150 / 8,296 | 1 | 512 px |
 | `dog_*_lod1.glb` | the guard dog, far: the skin and the collar (2 pieces) | 1,418 / 1,418 / 1,420 | 1 | 256 px |
 | `stray_alert.glb`, `stray_bark.glb` | the stray, close: the skin and the eyes (the barking file adds the canines) | 7,536 / 7,680 | 1 | 512 px |
 | `stray_*_lod1.glb` | the stray, far | 1,300 each | 1 | 256 px |
@@ -72,6 +72,7 @@ The pictures are in `design/canids/` (JPEG):
 - **Standing:** the front view, the view from above, and the forepaws close from three-quarter front with a raking light (`*_alert_paws.jpg`).
 - `canids_far_15m.jpg`: the far models (standing) from the game's camera at 15 m in the game's light, as the phone
   shows them, with a ×4 enlargement.
+- `dog_head_1m5_game_camera.jpg`: the guard dog near the game's camera (40° field of view, 956 × 440, looking 28° down), the nearest the game brings it.
 - `canids_scale.jpg`: all of them beside the player's figure and a calf a few days old.
 - `wolf_night_20m.jpg`, `wolf_night_46m.jpg`, `wolf_day_46m.jpg`: the wolf where the game will show it (below).
 - `wolf_summer_winter.jpg`: the coats compared (question 2).
@@ -320,7 +321,7 @@ CANID_VOLUME=1 ...                          # also the standing model's volume
 **Requirements:** Blender as the `bpy` module (the project's `blendenv`), with numpy, SciPy, scikit-image (marching
 cubes) and Pillow in the same environment.
 
-**Time:** the whole set (16 GLBs) took 4 min 48 s in my last run on this machine (4 cores shared with other agents,
+**Time:** the whole set (16 GLBs) took 4 min 3 s in my last run on this machine (4 cores shared with other agents,
 load about 25) and about 17 minutes in the reviewer's run; the full picture set takes about an hour and a half. Each pose's field is voxelised piece by piece in Python (a ray parity per voxel column), each
 texel of two textures is found on the skin, on the nearest piece and on the standing animal, and the occlusion casts
 48 rays from every vertex; the overlap check rasterises every triangle at 2048 px. The GLB files are copied to `assets_src/canids/` and the
