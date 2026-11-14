@@ -991,7 +991,7 @@ function myListings() {
     const c = l.camel, left = l.expiresOn - G.today;
     const offer = (o) => {
       const sure = HJ.sure === `accept:${o.id}`, fee = Math.round(o.amount * G.haraj.commission);
-      return `<div class="row"><span class="lead">${svg('user')}</span><b>${esc(o.buyerName)} سام ${n0(o.amount)}</b><span class="act two"><button class="btn ${sure ? 'sure' : 'pri'}" data-act="accept" data-o="${esc(o.id)}" aria-label="اقبل سوم ${esc(o.buyerName)}">${sure ? 'أكّد' : 'اقبل'}</button><button class="btn ghost" data-act="decline" data-o="${esc(o.id)}" aria-label="ارفض سوم ${esc(o.buyerName)}">لا</button></span><small>يوصلك ${n0(o.amount - fee)} بعد السعي · ${when(o.expiresOn - G.today)}</small></div>`;
+      return `<div class="row"><span class="lead">${svg('user')}</span><b>${esc(o.buyerName)} سام\u00a0${n0(o.amount)}</b><span class="act two"><button class="btn ${sure ? 'sure' : 'pri'}" data-act="accept" data-o="${esc(o.id)}" aria-label="اقبل سوم ${esc(o.buyerName)}">${sure ? 'أكّد' : 'اقبل'}</button><button class="btn ghost" data-act="decline" data-o="${esc(o.id)}" aria-label="ارفض سوم ${esc(o.buyerName)}">لا</button></span><small>يوصلك\u00a0${n0(o.amount - fee)} بعد السعي\u00a0· ${when(o.expiresOn - G.today)}</small></div>`;
     };
     const sure = HJ.sure === `unlist:${l.id}`;
     return `<div class="it"><span class="ph">${photo(c)}</span><b>${esc(c.name)} · ${titleOf(c)}</b><small>${her(c, 'معروضة', 'معروض')}${l.declared ? ' معلن' : ''} بـ ${n0(l.askPrice)} · الإعلان ${when(left)}</small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${l.offers.length ? count(l.offers.length, 'bid') : `ما ${her(c, 'جاها', 'جاه')} سوم للحين`}</small></div>
