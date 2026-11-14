@@ -70,3 +70,19 @@ what was asked overnight; this file is his own word.
 21. The camel's page in الحراج with the vet's row added (it scrolled about 80 px; shown as built and compact):
     «المضغوط بدون سحب: كل الأقسام والكلام نفسها والخط نفسه، بس المسافات بين الأقسام أضيق شوي وصورة الناقة أصغر
     شوي (84 بدل 96). الصفحة كلها تبان بدون سحب.»
+
+## The hunting engine's four open points (asked while the engine was being built; T18_answers.md)
+
+22. A sellable peregrine in the net with no free place in the falcons' room, or no room built (Q-13, Q-15):
+    «يبقى معك لين تبيعه: تمسكه بالمخيم والعزبة بدون غرفة لين ينباع بمزاد الطرح. عشان تخليه لك لازم مكان فاضي بالغرفة.
+    وإذا سكّر المزاد وهو لا انباع ولا له مكان، ينطلق مع سطر يقول ليش.»
+23. Paying for hunting's purchases (the falcon, the trapping gear, the falcons' room, the permits, the tracker)
+    (Q-18): «نقد من الرصيد بس: كلها كماليات ما تنشرى بالدين، مثل الاستعجال. اللي ما عنده رصيد ما يشتري.»
+24. Reselling a falcon he bought at an auction (Q-20): «لا، مو الحين: مثل قرارك في الطير اللي صدته وخليته: ما نعرض
+    بيعة ما لقينا لها طريق نظامي واضح. الصقر المشترى يبقى لك للقنص.»
+25. A second sellable bird in the same trapping season (Q-28): «ايه، بنفس الفرصة: مثل الواقع: كل يوم بالمخيم له
+    فرصته، وممكن يجيك ثاني بدون حد وبدون مساعدة. المجهز زين يصيد بموسمين من كل 3 مثل ما قلت، ومعدله يطلع أكثر شوي
+    من طير بالموسم.»
+
+Still to be put to him from T18_answers.md: Q-4 (until when a kept trapped peregrine may be released: built as
+1 February to 30 April, a game choice).

@@ -97,3 +97,9 @@ The reviewer's rules table raised 28 places where the documents disagree or are 
 - `Facility.room` (the sitting room) stays; the falcons' room is a new value.
 - season.cjs's header line about selling at the next autumn's auction is stale: decision 8 governs; correct the
   comment when you next touch the file.
+
+## The owner's answers (14 Nov 2026, the same day)
+
+Q-13/Q-15, Q-18, Q-20 and Q-28 were put to him and he chose the provisional answer in each
+(docs/agents/owner_decisions_2026-11-14.md items 22–25): they are now his word, not provisional; the switches may
+be removed where they cost anything to keep. Q-4 is still provisional.
