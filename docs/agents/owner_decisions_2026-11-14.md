@@ -67,3 +67,6 @@ what was asked overnight; this file is his own word.
     either: release it from February, or keep it through the year).
 20. The pregnancy check: «21 يوم وفحص مبكر مدفوع: الفحص العادي يبقى على 21 يوم، ولو تبي تعرف بدري تدفع للبيطري سونار
     من يوم 15. ينبني لما تنبني شاشة الضراب بالجوال.» (Confirms the proxy's batch 4b item 6.)
+21. The camel's page in الحراج with the vet's row added (it scrolled about 80 px; shown as built and compact):
+    «المضغوط بدون سحب: كل الأقسام والكلام نفسها والخط نفسه، بس المسافات بين الأقسام أضيق شوي وصورة الناقة أصغر
+    شوي (84 بدل 96). الصفحة كلها تبان بدون سحب.»
