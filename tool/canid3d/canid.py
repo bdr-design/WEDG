@@ -144,7 +144,11 @@ class Canid:
     # ---------------------------------------------------------------- torso
     def torso(self):
         S, d, H = self.S, self.d, self.H
-        rows = resample(S['torso'], d.body_st)
+        # the torso's two ends closed by a last tiny section, so their caps are points, not fans
+        t0, t1 = S['torso'][0], S['torso'][-1]
+        ends = [(t0[0] - 0.025, (t0[1] + t0[2]) / 2 + 0.03, (t0[1] + t0[2]) / 2 - 0.03, 0.012, 0.010)]
+        ends2 = [(t1[0] + 0.022, (t1[1] + t1[2]) / 2 + 0.03, (t1[1] + t1[2]) / 2 - 0.03, 0.012, 0.010)]
+        rows = resample(ends + S['torso'] + ends2, d.body_st)
         secs = []
         for x, top, bot, w, wl in rows:
             c = self.body_pt(x, (top + bot) / 2)

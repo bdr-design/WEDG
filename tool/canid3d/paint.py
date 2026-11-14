@@ -122,7 +122,7 @@ class Coat:
         n2 = noise3(P, 9.0, seed + 7)
         return base * (1 + amount * n1[..., None] + 0.04 * n2[..., None])
 
-    def eye_rim(self, P, col, rim, width=1.18):
+    def eye_rim(self, P, col, rim, width=1.06):
         """The dark-lined lids round the eye: an almond, longer along the head than up it, its front corner a little
         lower than its back."""
         o, hd, hn, hv, Lh = self.hf
@@ -131,7 +131,7 @@ class Coat:
             a = q @ hd
             b = q @ hn + 0.18 * a
             d = np.sqrt(a * a + (b / 0.70) ** 2)
-            col = mix(col, rim, sstep(self.er * (width + 0.22), self.er * width, d))
+            col = mix(col, rim, sstep(self.er * (width + 0.12), self.er * width, d))
         return col
 
     def iris(self, S, iris, pupil):
@@ -348,7 +348,7 @@ class Coat:
             col = mix(base, back, sstep(0.03, 0.08, b) * sstep(0.6, 0.3, a) * 0.5)
             col = mix(col, base * 0.82, sstep(0.75, 0.95, a))                      # the muzzle's end darker
             col = mix(col, white, sstep(-0.02, -0.045, b + 0.1 * (a - 0.5)) * (0.5 if stray else 0.8))
-            col = self.eye_rim(P, col, black, 1.35)
+            col = self.eye_rim(P, col, black, 1.04)
             col = self.lips(block, P, N, a, b, col, black)
             col = self.fur(P, block, col, amount=0.05)
             return self.done(col, 0.82, block)
