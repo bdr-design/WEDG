@@ -289,3 +289,165 @@ player's, and it is real.
 - Any rule on shooting a wolf or a stray dog attacking a herd, and what herders really keep.
 - The 2026 falconry festival's dates (one source says 17–30 Nov 2026).
 - Every phone weight above is an estimate until the models exist and are measured.
+
+## 9. Trapping passage falcons (الطرح) as a second business (proposal, awaiting the owner)
+
+The owner chose «تجارة ثانية» and wrote «اصيده صيد وفيه طيور بس قيمتها عاليه جدًا»
+(docs/agents/hunting_owner_decisions.md, decision 2). Read as الطرح: the player traps wild
+passage falcons in their season and sells them at the auction. **That reading is still to be
+confirmed with him** (question 11). The facts are in research section 8, "Trapping wild passage
+falcons", sources 184–221; most of them are SPA pages read in full this time.
+
+### 9.1 What the real rules allow, in short
+
+- **The season:** 1 Oct – 30 Nov, 60 days, with the auction at Malham running alongside
+  [184][185][186].
+- **What is worth selling:** only a **passage peregrine juvenile (فرخ شاهين بحري)** trapped in
+  the Kingdom is accepted. The saker (الحر) and the peregrine قرناس are refused, and the club
+  urges trappers not to take the saker [184][185][188]. Trapping the resident mountain peregrine
+  and the lanner (الوكري) is banned [194].
+- **The paperwork:** the club's or centre's field team checks the bird and documents the
+  trapping. A trapping registration document leads to the falcon's passport, an electronic ring
+  is fitted after the sale, there are no fees, and transport and lodging to the auction are
+  paid [190][191][192][184].
+- **The licence itself (who gives it, on what terms) was not found.** The rules for hunting
+  seem to clash with how trapping is really done: birds of prey, the 20 km coastal strip, nets,
+  night and lights. So trapping appears to be governed apart from the hunting season (research,
+  "Where the rules seem to clash").
+- **The money:**
+  - Season totals of SAR 6–7 million for 40–81 birds [200][212][213].
+  - The 18 sales of 2025 read: median about 112,000; 6 of the 18 sold for 300,000 or more
+    (301–361 thousand) [185][209][211][216][217][219].
+  - The record is 650,000, twice on one night in 2020 [187][199].
+  - Most birds are taken by groups of 2–9 trappers who share the price [184][190][200].
+  - About 119 trappers were credited with the 40 birds of 2025 [213], out of «مئات الطواريح»
+    who go out [211][219].
+- **The practice:**
+  - Camps for weeks [198][204], on the north, the north-east and above all the coasts [204].
+  - Dawn to 10 a.m. and the last hour before sunset [204].
+  - A net on a pigeon's back as the main method, with the quail, النقل, المناشبية and المخدجة
+    as others [198][204].
+  - A catch can take 15 minutes or days [209][210].
+  - The dear birds are sold within days of the catch [199][187].
+
+### 9.2 What it would be in the game
+
+- **Before the season:**
+  - Register with «نادي الصقور» and take a «تصريح الطرح» in the in-game phone. Generic names
+    (the owner's decision); that a separate trapping permit exists is a game choice, because the
+    real route was not found.
+  - Buy the gear: nets (شبك), lure pigeons (حمام) and a camp. Prices: game choice, none found.
+- **The trip:**
+  - The player taps a trapping ground's pin (الطرح pins at real places: الحماد، أم خنصر،
+    الدبدبة، الجبيل، الليث، القنفذة، جازان، شرورة…) and drives there in the Land Cruiser
+    (decision 1's pattern).
+  - He picks a spot, sets out the pigeon with the net at dawn, and waits. The wait passes in
+    game time.
+- **The catch:**
+  - Chance, shaped by:
+    - the place (coasts best [204]);
+    - the week (October the peak [205]);
+    - the hour (dawn best, the evening hour poor [204]);
+    - the method (pigeon first, then the others when the falcon refuses [198][204]);
+    - the wind and the light (game choice in how much each counts).
+  - Most days nothing comes. When a falcon is caught, its kind is chance: mostly a فرخ شاهين
+    بحري, sometimes a saker or a قرناس, which the auction will not take. The player releases
+    it (game choice, as the real rule for them was not found).
+- **The bird:**
+  - It goes to the falcons' room at the farm (decision 5) with a hood, and is shown by its
+    length, width in inches and weight, as the auction shows it [187][216]. Its worth is never
+    shown as a number before the sale (the views rule).
+  - The player must take it to the auction within days (game choice anchored on [199]); the
+    club's team "documents" it at the ground.
+- **The auction:**
+  - The live auction at Malham (a pin) between 1 Oct and 30 Nov.
+  - Opening bids of 30,000–150,000 and a result drawn from the real distribution: median about
+    112,000, about one bird in seven at 300,000 or more (at least 6 of the 40 birds of 2025
+    [185][211][213]; one in three among the sales SPA reported, which over-counts the dear ones),
+    a record bird at 650,000 very rarely (game choice within the real range).
+  - Partners share the price.
+- **Partners (الطواريح):**
+  - Going with companions raises the chance of a catch and divides the price, as in reality
+    (game choice: how much).
+  - A lone player is allowed, but has lower odds.
+
+### 9.3 Is it a business at real odds? A season's honest expected income
+
+These figures are game choices anchored on the real numbers; nothing below is measured.
+
+- **Odds of selling a bird:** about 119 credited trappers for 40 birds in 2025 [213], out of
+  "hundreds" who went out. **Assume a full season at good grounds gives a lone player about a
+  1 in 3 chance of one sellable bird** (game choice).
+- **Price:** a mean of about 130,000 (between 100,000 over 2020–25 [213] and 160,000 in 2025
+  [213]; game choice).
+- **Costs for a season:** camp, fuel, pigeons and nets at about 20,000 (game choice; no real
+  figure found).
+- **Expected:** ⅓ × 130,000 − 20,000 ≈ **+23,000 a season**.
+- **The spread:**
+  - About **two seasons in three lose about 20,000**.
+  - One in three gains about 50,000–340,000.
+  - About one season in twenty sells a bird for 300,000 or more.
+  - A record bird (650,000) comes about once in a long career.
+- **So it is a lottery shaped by skill** (place, week, method), not a steady income. That is
+  true to the real trade, and it is what «فيه طيور بس قيمتها عاليه جدًا» says.
+
+### 9.4 What stays illegal, and how the game treats it
+
+Never shown as lawful, following the owner's pattern (decision 4: the button warns and does not
+act):
+- **Out of season** (before 1 Oct or after 30 Nov), or **without the permit:** the net button
+  turns into a warning and says why. Nothing is set.
+- **A resident falcon** (شاهين جبلي، وكري): it can come into the net by chance. The game makes
+  the player release it at once. It can never be kept or sold (real ban [194]; how the game
+  stages it is a game choice).
+- **A saker or a قرناس:** released. The auction refuses them [184].
+- **Selling outside the auction:** not offered. Trappers once sold at the حراج [204], but the
+  game offers only the documented channel (game choice).
+- **Shotguns, poison or injuring the bird:** not in the game.
+
+### 9.5 Where it meets other designs
+
+- **The season design** (docs/proposals/hunting_season_design.md) needs two corrections from
+  this research:
+  - It sells a falcon at the next autumn's auction **as a قرناس**, which the real auction does
+    not accept [184][188].
+  - It prices a wild-caught فرخ at 32,000, below every 2025 sale read (71,000 and up) [217].
+- **The calendar:** the trapping season (Oct–Nov) lies over the الوسم rains, the start of
+  mating, and the falconry festival if it is in November.
+- **Decision 7** says an outing takes hours and returns the same day, while real trappers camp
+  for weeks (question 12).
+
+### 9.6 Weight on the phone (estimate, not measured)
+
+- **The trapping scene:** the falcon (the existing model), a lure pigeon (about 1–2k triangles,
+  skinned) and the net (a few hundred triangles). About +3 draws over the drive view.
+- **The camp:** tents and a fire as static objects in the cached shadow map, about +4 draws.
+  Nothing else changes in the farm view.
+
+### 9.7 Questions for the owner (recommendation first, then the line to put to him)
+
+11. **Is الطرح what he meant?** *Recommended:* yes, as described, with the real odds.
+    > قصدك بالتجارة إنك تطرح الصقور المهاجرة بنفسك في موسمها (أكتوبر ونوفمبر) وتبيعها في المزاد؟ والطير الغالي نادر: من 18 بيعة في 2025 ست وصلت فوق 300 ألف، والرقم القياسي 650 ألف.
+12. **The trip's length.** *Recommended:* a camp of several days while the herdsman runs the
+    farm, because real trappers camp for weeks; the alternative is day trips under decision 7.
+    > الطواريح يخيمون أسابيع، والمقناص عندك طلعة ساعات: الطرح تبيه مخيم كم يوم والراعي يمسك العزبة، ولا طلعة يوم وترجع؟ نقترح مخيم.
+13. **Partners.** *Recommended:* allowed, sharing the price, because most real birds are
+    trapped by groups.
+    > أغلب الطرح يكون جماعة ويتقاسمون السعر: تبي اللاعب يقدر ياخذ معه طواريح ويقسم معهم؟
+14. **The odds.** *Recommended:* about one season in three brings a sellable bird, and most
+    seasons lose a little.
+    > نخلي فرصة الطير في الموسم حوالي وحدة من ثلاث، وأغلب المواسم تخسر شوي، والطير الغالي نادر؟
+15. **A resident or a saker in the net.** *Recommended:* released at once, never kept.
+    > لو طاح بالشبك شاهين جبلي أو وكري أو حر: يتطلق على طول وما ينحفظ ولا ينباع؟
+
+### 9.8 Not found
+
+- Who gives a trapping licence and on what terms.
+- A limit per trapper.
+- The rule for a saker or قرناس caught by mistake.
+- The days of waiting usual for one bird.
+- The real cost of a camp.
+- The colour, origin and size names (تام/مثلوث) of the dear birds sold.
+- What «راهي» after a size means, and how the width is measured.
+- The first days of handling after the catch.
+- The Shobrak study's yearly counts.

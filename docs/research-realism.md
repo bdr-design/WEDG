@@ -304,6 +304,91 @@ Checked against search results; most news hosts cannot be opened from here, so a
 - **Race times (400 m):** in the 2025 edition, round winners between 17.653 s (عوايد, a professionals' qualifying round) and 18.027 s, with 17.905 s and 18.061 s for first and second in one owners' round (confirmed in a search summary [182]); 16.549 s by a falcon named أسود in 2022, reported as a record (confirmed in a search summary [183]). The reviewer reports about 16.869 s by a falcon named شامان in an earlier edition, which my search did not find (uncertain). The distance has changed between editions and events (300 m and 200 m are also reported), so times of other editions may be at other distances (uncertain [183]).
 - **Not found:** the weight of each beauty part, the entry fee, the Saudi doping penalties, and the rules text itself (sfc.org.sa could not be opened).
 
+**Trapping wild passage falcons (الطرح), searched 14 Nov 2026, after the owner made falcons a second business**
+
+*How this part was read.* Most hosts still do not open from this machine, but **spa.gov.sa (the Saudi Press Agency) does open with curl**, so for the first time in this file many facts below come from **pages I opened and read** (marked "page read"). The rest are "search summary" as before. Sabq, Okaz, ajel, the Falcons Club (sfc.org.sa), NCW and the Shobrak study could not be opened.
+
+*The law and the licence*
+- **The trapping season is 1 October to 30 November, 60 days,** and the auction of locally trapped falcons runs with it (page read [184][185][186]). In 2020 and 2024 the auction ran 1 Oct – 15 Nov (page read [187][188]); 2025 and 2026 to 30 Nov (page read [184][189]).
+- **Who runs it:** the Saudi Falcons Club ran the auction to 2025; in 2026 the National Falcon Centre (المركز الوطني للصقور) runs it (page read [184][189]). The club's field teams «تستقبل مالك الصقر (الطاروح)» in the regions (east, north, north-west, south-west, and the centre in 2022), check the bird and **document the trapping** (page read [190][191]). The club issues a **trapping registration document (وثيقة تسجيل طرح)**, which lets its holder get the falcon's **passport** from NCW (page read [192]).
+- **Only passage peregrine juveniles are accepted:** the auction takes only «فروخ الشاهين البحري المهاجر التي تُطرح داخل المملكة», and **not the peregrine قرناس nor the saker (الحر)**, «دعمًا لاستدامتهما» (page read [184][189][185]). The peregrine قرناس class was dropped from the auction and from the falcon beauty contest in 2024 (page read [188]). Before that, قرناس birds were sold: 65,000 and 31,000 in 2020, 250,000 for one from العويقيلة in 2023 (page read [187][193]). The club also says it works «بمنع بيعها والتوعية بعدم طرحها، خصوصًا الصقر الحر» (page read [185]).
+- **Resident falcons are banned:** NCW banned trapping the mountain peregrine (الشاهين الجبلي) and the lanner (الصقر الوكري), announced Feb 2021, to be written into the next hunting rules (page read [194]); a later search summary says NCW kept the ban «لحين إعلان تنظيم الطرح وفقًا لنظام البيئة» (search summary [156]).
+- **Trapping without a licence** is warned against by the Environmental Security Forces, with the hunting fines: no licence SAR 10,000, nets and snares 100,000 (search summary [156]). **Who gives a trapping licence, and on what terms, was not found** (uncertain). The hunting-season permit in «فطري» is for air-rifle holders and registered falconers to hunt the listed quarry, and says nothing about trapping falcons (page read [195][196]).
+- **Where the rules seem to clash (uncertain, not resolved by any source):**
+  - The hunting rules ban hunting all birds of prey [135] and hunting along the coast to 20 km inland [195], yet the official auction takes peregrines trapped on the coast (al-Lith, al-Qunfudhah, Jazan, Jubail, Yanbu, al-Wajh) and SPA reports the coasts as trapping grounds (page read [197][217]).
+  - The main tool is a net (الشبك), while the hunting fines list nets at SAR 100,000 [136].
+  - One traditional method (المخدجة) is at night with a light [198], while hunting at night and with bright lights is banned [135][136].
+  - So trapping passage peregrines appears to be governed apart from the hunting season, through the club or the centre; the text that makes it lawful was not found.
+- **After the sale:** an electronic ring (الحجل الإلكتروني) is fitted and the official papers issued (page read [191]); the club gives an export certificate for the bird (page read [199]). **No fees** on buying or selling (page read [191][190], 2022 and 2023). The club or centre pays the trapper's transport and lodging to the auction at Malham (page read [184][189]), and draws prizes for trappers: ten prizes of SAR 5,000 in 2022 (page read [200]).
+- **Not found:** a bag limit per trapper; what must be done with a saker or قرناس caught by mistake (released?); whether an unsold bird may be sold elsewhere. Falconers traditionally released passage birds in spring, and more are now kept (search summary [201]).
+
+*The practice*
+- **Migration:** passage falcons pass the north from the start of September, «أشهرها الشاهين البحري، والحر» (page read [198]); the peregrine passage in the north is in October (page read [202][203]); migration runs to December (page read [204]); a KAU thesis gives September to December with the peak in October, concentrated on the Red Sea shore (search summary [205]).
+- **Places named in the sources:**
+  - **North:** الحماد (100 km west of Arar in 2020 [198], east of Arar in 2024 [203]: the two pages disagree), أم خنصر east of Arar, العويقيلة, Rafha (page read [198][202][193][187][191]), Turaif (search summary [207]).
+  - **North-east:** Hafr al-Batin (الدبدبة، ظهرة حفر الباطن، الفاو الشمالي), al-Khafji, Jubail, سحمة الصمان (page read [187][221][200][217][219]).
+  - **South:** al-Sulayyil, the Empty Quarter (الربع الخالي; الحلوة), Sharurah (page read [189][191][211]; search summary [206]).
+  - **West coast:** Jazan (الحصاحيص، وادي بيض), al-Lith, al-Qunfudhah, المجيرمة, Rabigh, Mastura, Yanbu (الحنو), al-Wajh, al-Muwaylih, Hali (page read [197][216][217][221][190]).
+  - **What makes a place good:** it lies on the migration path; open ground near coasts, plains and valley beds; wind direction and clear visibility matter (page read [197][198]). A 30-year trapper: «المناطق الساحلية هي الأفضل للطرح بلا منازع» (page read [204]).
+- **The camp:** trappers stay on site for more than two months in الحماد (page read [198]). The camp is stocked for the whole stay so the trapper need not go to town: tents, cooking gear, water and fuel; preparing it takes about a month (page read [204]). Arar's camping markets and fuel stations get busy (page read [202]).
+- **Methods and their names:**
+  - **الشبك:** a net on the back of a pigeon thrown to the falcon (page read [198][204]). The pigeon may be tied by the feet to a stake or rock (search summary [208], weak).
+  - **Other lure birds:** wild quail with the net on its foot and a feather tied to it (page read [204]). Trappers carry nets for pigeons, for other birds and for the jerboa, in case the falcon refuses the pigeon (page read [204]).
+  - **المخدجة:** a long-handled net used at night with a light on the falcon's eyes (page read [198]).
+  - **النقل:** a feather or meat on the foot of a باشق or eagle inside a net, flown usually after 10 a.m.; the falcon attacks it and is caught (page read [198]).
+  - **المناشبية:** the hardest method, used when the falcon refuses pigeon and «المريعي». The falcon is given a pigeon without a net; once it has eaten it is driven far until tired; it seeks the shade of large trees, where the net is set (page read [198]). An iron-wire net in tree shade that takes one to two days to build (search summary [207]).
+  - **خدج الطير:** following a falcon after sunset and taking it with a large net (search summary [207]). «الكرشع» is named only on a blog (uncertain [208]).
+- **Hours:** the morning, from dawn to about 10 a.m., and a short evening hour before sunset with very low success, mostly used to find where the falcon will be at dawn (page read [204]).
+- **How long it takes:** one bird took about 40 minutes with a group (page read [209]); another took 15 minutes; another came after days of waiting (search summary [210]). How many days a trapper usually waits: not found.
+- **How many falcons a trapper takes:** not found per trapper. Birds are usually **trapped by groups who share them**: 2, 3, 4, 5, 6, 7 and 9 trappers on one bird (page read [184][190][193][200][211][219]), and 12 (search summary [220]). Totals:
+  - 2022: 81 falcons sold (page read [200]).
+  - 2024: about 50 falcons from 30 sites (search summary [212]).
+  - 2025: 28 by night 18 (page read [185]); 40 falcons from 119 trappers at 35 sites for the season (search summary [213]).
+  - SPA calls the auction an income for «مئات الطواريح» (page read [211][219]).
+  - A 2015 study (Shobrak) modelled the numbers trapped in the Kingdom from 1996 to 2013 from trappers' and dealers' interviews, with more peregrines than sakers and a rising trend; its yearly counts were not read (search summary [214]).
+- **After the catch:** the record bird was trapped one day before it was sold (page read [199]); one sold bird was trapped the Monday before (page read [187]). The hood, taming and feeding in the first days were not found.
+
+*The money (the auction of trapped falcons)*
+- **Season totals:**
+  - 2022: SAR 7.125 million for 81 falcons in 30 nights, about 88,000 a bird (page read [200]).
+  - 2024: about 6 million (search summary [212]).
+  - 2025: 4.592 million for 28 falcons by night 18 (page read [185]), and about 6.4 million for 40 falcons for the season (search summary [213]).
+  - 2020–2025: about 45.3 million for 455 falcons, about 100,000 a bird (search summary [213]).
+  - 2026 (running): 3.558 million in October's 14 nights (search summary [215]).
+- **Record prices:**
+  - SAR 650,000 twice on one night in October 2020, both فرخ شاهين:
+    - Rafha: 15 in long, 15½ in wide, 1,007 g.
+    - ظهرة حفر الباطن: 16 × 16 in, 1,122 g, trapped the day before, «الأعلى تاريخياً لشاهين فرخ».
+    - (page read [187][199])
+  - 400,000 in 2024 (الدبدبة) (page read [221]).
+  - 361,000 in 2025 (Jazan, الحصاحيص: 15¼ × 15¼ in «راهي», 950 g) (page read [216]).
+  - 375,000 in 2026 (أم خنصر) (search summary [215]; not on a page read).
+- **Ordinary prices**, from the sales on the pages read: 2025 sales were 71, 71, 78, 81, 82, 100, 101, 102, 105, 119, 158, 193, 301, 307, 308, 351, 360 and 361 thousand (page read [185][209][211][216][217][219]). Earlier years: 2022 sales of 50–201 thousand, 2023 of 64–300 thousand, 2024 of 61–400 thousand (page read [191][200][190][193][221]). **Of the 18 sales of 2025 read, 6 were 300,000 or more, and the median was about 112,000.** These are the sales SPA chose to report, so dear birds may be over-counted (uncertain). Opening bids: 30,000–150,000 (page read).
+- **What makes a bird dear:** the sources say «مواصفاته المميزة وندرته» (page read [187]). The north's head falconer lists the ability to take houbara, speed, a short leg, a well-proportioned beak and a quick wingbeat (page read [198]). Each sale gives the length, width in inches and weight in grams (page read). Bigger birds are not always dearer: 15½ in and 960 g sold for 193,000, while 15¼ in and 950 g sold for 361,000 (page read [209][216]). Colour, origin and «تام/مثلوث» were not given for any sale read (uncertain).
+- **The trapper's cost:** a month's preparation and a camp for the season (page read [204]); fuel, food, nets and lure birds. No figures found.
+- **A dealer's scale:** a falcon trader of 25 years put his yearly falcon trade at SAR 3–4 million; his own earlier record purchase was 600,000 (page read [199]).
+
+*The words of the craft*
+- **الطرح** is «صيد أو شبك» a falcon (page read [204][185]). **الطاروح** is «الشخص الذي يقوم بطرح الصقر واصطياده» (page read [204]); plural **الطواريح** (page read). **القنص / قنصة** is a trapping session (page read [204]); **المقناص** is the trip or season (page read [202]).
+- **فرخ / قرناس:** used by the auction (page read); a falconers' forum says فرخ is a bird in its first year and first plumage, and قرناس one that has moulted once or more (search summary [208], weak).
+- **شاهين بحري / شاهين جبلي:** passage (sea) and resident (mountain) peregrine (page read [184][194]).
+- **الوكري:** the resident lanner (page read [194]). **الحر:** the saker (page read).
+- **Sizes:** «تام / وافي / كامل», «مثلوث» and «تبع / قرموشة» are size names for female and male birds; the forums disagree on their order and meaning (search summary [208], weak).
+- **Colours:** «أشقر، أحمر (أقرب للحناء)، أشعل» (search summary [208], weak). «أدهم» not found.
+- **الشيهانة:** a female peregrine, in a trapper's own words (page read [204]).
+- **العرض / الطول in inches:** each sale gives a length and a width in inches (page read). A falconer in a short video measures the length from the shoulder to the tail's end and calls the width "round" (search summary [218], weak). A wingspan would be about a metre, so 15–16 inches (38–41 cm) is a body measure, **not the wingspan** (inference). **What «راهي» after a size means was not found.**
+
+*What a trapper would call wrong in a game (inferred from the sources above, not a trapper's words)*
+1. A lone trapper as the rule: most birds are taken by groups who share the price.
+2. A saker or a peregrine قرناس at the auction: neither is accepted.
+3. Trapping a mountain peregrine or a lanner: banned.
+4. A sure catch in minutes: it can be 15 minutes or days, and many go home with nothing.
+5. Trapping at noon or by any light: dawn to 10 a.m. and the last hour are the times.
+6. Inland only: the coasts are the best ground.
+7. Keeping a trapped bird for months before selling: the dear ones are sold within days.
+8. A fee on the sale: there is none.
+9. A shot or an injured bird: the bird must be taken unharmed.
+
 **Beside the camel calendar (from sections 4 and 7):** the hunting season (1 Sep – 31 Jan) covers the الوسم rains (from 16 Oct), the falcon passage and auctions (Oct–Nov), the falconry festival (Nov or Dec–Jan), the camel festival (Dec – early Jan) and the start of mating (Nov). The summer (Feb–Aug) has no hunting season.
 
 ---
@@ -492,3 +577,41 @@ Checked against search results; most news hosts cannot be opened from here, so a
 181. https://ajel.sa/local/ga7w12vhel ; https://sabq.org/saudia/0nhm8xhz04
 182. https://ajel.sa/local/y3hcpn ; https://www.al-madina.com/ampArticle/967535 ; https://sabq.org/article/D21Cb2f (the search summary did not separate them)
 183. https://www.alwatan.com.sa/ampArticle/1116928 ; https://ajel.sa/local/tjryvy (the search summary did not separate them)
+184. https://www.spa.gov.sa/N2697985 (page read: SPA, 11 Oct 2026)
+185. https://www.spa.gov.sa/N2433717 (page read: SPA, 1 Nov 2025)
+186. https://www.spa.gov.sa/N2403651 (page read: SPA, 21 Sep 2025)
+187. https://www.spa.gov.sa/2144408 (page read: SPA, 13 Oct 2020)
+188. https://www.spa.gov.sa/N2175607 (page read: SPA, 22 Sep 2024)
+189. https://www.spa.gov.sa/N2712969 (page read: SPA, 28 Oct 2026)
+190. https://www.spa.gov.sa/N1991561 (page read: SPA, 4 Nov 2023)
+191. https://www.spa.gov.sa/2397494 (page read: SPA, 1 Nov 2022)
+192. https://www.spa.gov.sa/2154100 (page read: SPA, 5 Nov 2020)
+193. https://www.spa.gov.sa/N1990311 (page read: SPA, 1 Nov 2023)
+194. https://www.spa.gov.sa/2195246 (page read: SPA, 27 Feb 2021)
+195. https://www.spa.gov.sa/N2665841 (page read: SPA, 1 Sep 2026)
+196. https://www.spa.gov.sa/N2388596 (page read: SPA, 1 Sep 2025)
+197. https://spa.gov.sa/N2708264 (page read: SPA, 23 Oct 2026)
+198. https://www.spa.gov.sa/2143238 (page read: SPA, 10 Oct 2020)
+199. https://www.spa.gov.sa/2144815 (page read: SPA, 14 Oct 2020)
+200. https://www.spa.gov.sa/2400481 (page read: SPA, 13 Nov 2022)
+201. https://pmc.ncbi.nlm.nih.gov/articles/PMC4486468 ; https://www.birdsofsaudiarabia.com/2015/08/falcon-trapping-in-saudi-arabia-paper.html (search summary)
+202. https://www.spa.gov.sa/ar/w2687160 (page read: SPA, 27 Sep 2026)
+203. https://www.spa.gov.sa/N2179655 (page read: SPA, 29 Sep 2024)
+204. https://www.spa.gov.sa/2286972 (page read: SPA, 19 Sep 2021)
+205. https://kau.edu.sa/Files/130/Researches/22421_23997.pdf (search summary)
+206. https://tafaol.sa/news/175350/ ; https://www.akhbaar24.com/محليات/شاهين-فرخ-يتصدر-مزاد-الصقور-بـ221-ألف-ريال-773150 (search summary)
+207. https://www.arabnews.com/node/2575109 (search summary)
+208. http://falconsarabic.blogspot.com/2011/06/blog-post.html ; https://banymaklab.com/vb/node/6343 ; http://mganees.blogspot.com/2014/06/blog-post.html ; https://www.almrsal.com/post/831059 (search summary; blogs and forums, weak)
+209. https://www.spa.gov.sa/N2427399 (page read: SPA, 24 Oct 2025)
+210. https://sabq.org/article/vrz67tl ; https://ajel.sa/local/v2ppc8yku6 (search summary)
+211. https://www.spa.gov.sa/N2443433 (page read: SPA, 13 Nov 2025)
+212. https://www.spa.gov.sa/N2208293 (search summary; the page opened but its text was not extracted)
+213. https://sabq.org/article/i63vhyv (search summary)
+214. https://www.researchgate.net/publication/276522971 ; http://www.sakerfalcon.org/data/00063/Shobrak(SakerTrap)SaudiJBioSci2014_635578781174971916.pdf (search summary)
+215. https://sabq.org/article/t17m68d ; https://akher.news/82581/ (search summary)
+216. https://www.spa.gov.sa/N2432816 (page read: SPA, 30 Oct 2025)
+217. https://www.spa.gov.sa/N2413173 ; https://www.spa.gov.sa/N2413602 ; https://www.spa.gov.sa/N2422024 ; https://www.spa.gov.sa/N2426731 ; https://www.spa.gov.sa/N2427349 ; https://www.spa.gov.sa/N2429925 ; https://www.spa.gov.sa/N2435078 ; https://www.spa.gov.sa/N2437269 ; https://www.spa.gov.sa/N2438638 (pages read: SPA, Oct–Nov 2025)
+218. https://www.youtube.com/shorts/BLRnGQQsYb8 (search summary, weak)
+219. https://www.spa.gov.sa/N2423158 (page read: SPA, 18 Oct 2025)
+220. https://www.spa.gov.sa/N2702667 (search summary; the page opened but its text was not extracted)
+221. https://spa.gov.sa/N2194869 (page read: SPA, 24 Oct 2024)
