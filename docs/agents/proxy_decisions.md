@@ -52,6 +52,40 @@ listed under "Waiting for the owner".
    show at the game's viewing distance, close them before he sees the birds; if they are gaps that do not mislead,
    show the birds with the gaps written beside the pictures in plain words.
 
+## Batch 3: the trapping business (الطرح), from the research of task T6
+
+All of it goes into the design he is shown, not straight into a build.
+
+1. **The odds and what gear does.** Answer: accept the proposed range (a game choice inside the sourced range): a
+   lone beginner with little gear catches a sellable bird in about one season in 12; a well-equipped trapper on
+   good ground about one in 3; gear moves him along the range and never past it; a bird of 300,000 or more at
+   least about one season in 80 to one in 20; a season's expected result about −13,000 to +34,000 riyals. The
+   20,000 camp cost is invented and must be marked so, in the GDD and to him. Never more generous without him: he
+   said the dear birds are worth a great deal, not that they are common.
+2. **Partners.** Answer: build alone first, with the gear he named; partners (the real practice: groups who share
+   the price) drawn in the design as the next step, for him to pull forward with one word.
+3. **A banned bird in the net (الشاهين الجبلي، الوكري).** Answer: the game releases it at once with a line saying
+   why: «طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع».
+4. **A saker (حر) or an adult (قرناس) in the net.** Answer: released. The saker is endangered, the club campaigns
+   against trapping it and the auction refuses it; no ban was found for the قرناس, so its release is a marked
+   game choice, cheap to change. «طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري»؛ «طلقته: المزاد ما يقبل
+   إلا الفرخ».
+5. **Where the player's own hunting falcon comes from.** Answer: all three real routes in the design, each in its
+   month (a farm-bred saker at the August auction; an imported saker at the October exhibition; a peregrine of the
+   year at the trapping auction), built in that order.
+6. **Keeping a trapped bird.** Answer: he may keep it for hunting and the contests instead of selling; resale
+   later is not offered, because no lawful route was found (an open point for him).
+7. **The farm during a camp of days.** Answer: it runs by its own rules, as in his decision 7 for the outing; he
+   can break camp and drive back at any time; no new risk is invented; the card before leaving says honestly how
+   long the feed and water last (the same card as the calendar's jump). A herdsman required for long camps is his
+   to choose later, with the wolf danger.
+8. **Our reading that decision 7 (a few hours, back the same day) stays for falcon outings and the camp of days is
+   trapping only.** Answer: keep it, marked as ours, for him to confirm.
+9. **Trapping shown as lawful, with the rules' clash unresolved.** Answer: yes, inside its own ground (a pin), its
+   season and a trapping permit (the issuer and terms were not found: price and terms a marked game choice);
+   everywhere else the hunting rules hold as he decided (a net there is a 100,000 fine; the button warns and does
+   not act). The gap is written in the GDD and told to him in plain words.
+
 ## Waiting for the owner
 
 - Batch 1, item 1's alternative reading of decision 13 (above).
@@ -60,3 +94,5 @@ listed under "Waiting for the owner".
 - Batch 1, item 5: whether a buyer who knew may sell declared.
 - Batch 2: the birds' look (his eye: design/birds on the session branch once the reviewer confirms); the 1024 px
   texture for the falcon on the fist, after he tries 512 on his phone.
+- Batch 3: every item, when the trapping design is shown; above all item 8 (our reading of his words), item 6's
+  open point (resale of a kept bird) and item 9's gap (the trapping regulation's text was not found).
