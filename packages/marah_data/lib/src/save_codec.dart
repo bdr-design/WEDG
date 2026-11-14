@@ -19,7 +19,12 @@ class SaveCodec {
   /// The version this build writes. Bump it with every change to the shape
   /// of the state, and add the step from the previous version to
   /// [migrations] in the same change.
-  static const currentVersion = 10;
+  static const currentVersion = rushVersion;
+
+  /// The version the rush and the calendar (task T15) bring: the one after
+  /// the session branch's when this build is brought in (one constant, so
+  /// it is renumbered in one place).
+  static const rushVersion = 11;
 
   /// `migrations[n]` upgrades data from version n to n + 1. Each step works
   /// on plain JSON so it never depends on today's classes.
@@ -34,6 +39,7 @@ class SaveCodec {
     7: _v7ToV8,
     8: _v8ToV9,
     9: _v9ToV10,
+    rushVersion - 1: _toRush,
   };
 
   /// v1 to v2 (the owner's decisions of 12 Nov 2026):
@@ -456,6 +462,17 @@ class SaveCodec {
   /// tested game as one too new for it, not as a corrupt one (its ledger kind
   /// is unknown there).
   static Map<String, Object?> _v9ToV10(Map<String, Object?> input) => input;
+
+  /// v10 to v11, the rush and the calendar (task T15): a camel's arrival by a
+  /// rushed truck (`arrivedOn`), the farm's day record (`today`), its
+  /// standing orders and the vet's contract are new and optional: a game
+  /// saved before has none of them, and a camel on the truck when it was
+  /// saved still arrives as the truck brings her (her `acquiredOn` is
+  /// unchanged, so the 30 days of ownership count as before). The step only
+  /// marks the version; it is a step of its own so that a later change can
+  /// follow it.
+  static Map<String, Object?> _toRush(Map<String, Object?> input) =>
+      jsonDecode(jsonEncode(input)) as Map<String, Object?>;
 
   String encode(GameState state, {DateTime? savedAt}) => jsonEncode({
     'format': format,
