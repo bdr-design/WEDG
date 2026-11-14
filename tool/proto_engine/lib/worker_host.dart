@@ -428,11 +428,12 @@ class WorkerHost {
       'ok': ok,
       'error': error,
     },
-    AwayProgress(:final done, :final total, :final day) => {
+    AwayProgress(:final done, :final total, :final day, :final saving) => {
       'type': 'away',
       'done': done,
       'total': total,
       'day': day.value,
+      if (saving) 'saving': true,
     },
     CatchUpProgress(:final done, :final total) => {
       'type': 'catchUp',

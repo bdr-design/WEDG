@@ -62,10 +62,14 @@ final class CatchUpProgress extends Push {
 /// [total] game days simulated, the world now at [day]. At most a few a
 /// second.
 final class AwayProgress extends Push {
-  const AwayProgress(this.done, this.total, this.day);
+  const AwayProgress(this.done, this.total, this.day, {this.saving = false});
   final int done;
   final int total;
   final GameDay day;
+
+  /// The days are run and the game is being saved (about a second in
+  /// JavaScript at 10,000 head): the progress view says so.
+  final bool saving;
 }
 
 /// Whether the latest change is safely on disk. Sent when this changes

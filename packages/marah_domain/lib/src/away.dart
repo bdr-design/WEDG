@@ -141,10 +141,34 @@ typedef AwayCondition = String? Function(Game game);
 
 /// A stretch away: a [target] day and the stops (section 5's plan). The
 /// landing minute is the runtime's (EngineCore.away), not the domain's.
+/// A caller's own counting of a day (the hunt: days out, birds seen and
+/// caught, released), into [AwaySummary.extra]; it reads the game and the
+/// day's events and changes nothing (a caller's daily work is a daily
+/// system, never this).
+typedef AwayCounter = void Function(
+  Game game,
+  List<DomainEvent> dayEvents,
+  AwaySummary summary,
+);
+
 class AwayPlan {
-  const AwayPlan(this.target, {this.extra = const []});
+  const AwayPlan(
+    this.target, {
+    this.extra = const [],
+    this.counters = const [],
+    this.card = const {},
+  });
   final GameDay target;
+
+  /// A caller's own stop conditions, read after each day with the others.
   final List<AwayCondition> extra;
+
+  /// A caller's own lines for the summary, counted as the days run.
+  final List<AwayCounter> counters;
+
+  /// A caller's own lines for the card before leaving (gear, camp supplies,
+  /// distance), carried to the result for the phone to show with its own.
+  final Map<String, Object?> card;
 }
 
 /// One stretch, a day at a time: [step] simulates the next day, counts it,
@@ -210,14 +234,14 @@ class AwayRun {
     final me = game.me;
     summary.days++;
     if (me.farm.milkOn == today) summary.milk += me.farm.milkIncome;
-    AwayStop? first;
+    // every stop the day gave, in the order they were read; the first is
+    // the one told, except that his round's day comes before all (landed
+    // before its first stage), the others said with it (the money its trip
+    // took below zero, the review's L2)
+    final found = <AwayStop>[];
     void at(AwayStopKind k, {String? subject, String? name, String? extra}) =>
-        first ??= AwayStop(
-          k,
-          today,
-          subject: subject,
-          name: name,
-          extra: extra,
+        found.add(
+          AwayStop(k, today, subject: subject, name: name, extra: extra),
         );
     final covered = me.farm.standing;
     for (final e in events) {
@@ -319,10 +343,30 @@ class AwayRun {
       final why = c(game);
       if (why != null) at(AwayStopKind.extra, extra: why);
     }
-    if (first == null && today >= plan.target) {
+    for (final c in plan.counters) {
+      c(game, events, summary);
+    }
+    AwayStop? first;
+    final round = found.where((x) => x.kind == AwayStopKind.round).firstOrNull;
+    if (round != null) {
+      // with what else the day gave (the money below zero, a store low...)
+      final also = {
+        for (final x in found)
+          if (x.kind != AwayStopKind.round) x.kind.name,
+      };
+      first = AwayStop(
+        AwayStopKind.round,
+        today,
+        subject: round.subject,
+        name: round.name,
+        extra: also.isEmpty ? null : also.join(','),
+      );
+    } else if (found.isNotEmpty) {
+      first = found.first;
+    } else if (today >= plan.target) {
       first = AwayStop(AwayStopKind.target, today);
     }
-    if (first != null) finish(first!);
+    if (first != null) finish(first);
     return stop;
   }
 
@@ -386,5 +430,6 @@ class AwayRun {
     'target': plan.target.value,
     'stop': stop?.toJson(),
     'summary': summary.toJson(),
+    if (plan.card.isNotEmpty) 'card': plan.card,
   };
 }

@@ -79,6 +79,7 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
       ),
       'signVetContract' => SignVetContract(me),
       'cancelVetContract' => CancelVetContract(me),
+      'treatAll' => TreatAll(me),
       'setCalfShare' => SetCalfShare(
         me,
         CalfShare.values.byName(_str(j['share'])),
@@ -208,6 +209,7 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
   },
   SignVetContract() => {'type': 'signVetContract'},
   CancelVetContract() => {'type': 'cancelVetContract'},
+  TreatAll() => {'type': 'treatAll'},
   SetCalfShare(:final share) => {'type': 'setCalfShare', 'share': share.name},
   EnterRound(:final festival, :final round, :final camels) => {
     'type': 'enterRound',
