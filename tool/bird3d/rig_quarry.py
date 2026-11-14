@@ -370,6 +370,9 @@ class Clips:
         self.alert_neck = (0, 0, 0) if name == 'houbara' else (0, 0)
         self.run_neck = (-28, -18, 10) if name == 'houbara' else (-30, 8)
         self.fly_neck = (-62, -10, 8) if name == 'houbara' else (-60, 20)
+        # the body's pitch at the swap: where the two meshes' outlines match best (houbara 0.93 at 0 against 0.86 at
+        # -14; stone-curlew 0.91 at -14)
+        self.swap_pitch = 0.0 if name == 'houbara' else -14.0
         self.trail = (-70, 30, -45) if name == 'houbara' else (-90, 16, -30)      # torso frame: the feet behind, under the tail
 
     def flap(self, ph, amp, mean):
@@ -410,7 +413,7 @@ class Clips:
         swap = 14
         if f < swap:
             r = self.run(f)
-            r['pitch'] = lerp(-6, -14, ramp(f, 8, 13))
+            r['pitch'] = lerp(-6, self.swap_pitch, ramp(f, 8, 13))      # the chest lifted level as the wings open
             r['bob'] += -18 * ramp(f, 8, 13)
             if f >= 9:
                 r['fold'] = {k: v * ramp(f, 9, 13) for k, v in self.swap_fold.items()}
@@ -428,7 +431,7 @@ class Clips:
             w = self.flap(((f - swap - 4) / self.beat) % 1.0, 48, 4)
         t = max(0.0, (f - swap - 2) / FPS)
         root = V3((1800 * t + 0.5 * 3000 * t * t, 0, 0.5 * 2500 * t * t))
-        sp = {'mesh': 'open', 'wing': w, 'pitch': keys(f, [(swap, -10), (swap + 4, 18), (swap + 12, 8), (40, 4)]),
+        sp = {'mesh': 'open', 'wing': w, 'pitch': keys(f, [(swap, self.swap_pitch), (swap + 4, 18), (swap + 12, 8), (40, 4)]),
               'root': root, 'neck': tuple(lerp(a, b, ramp(f, swap, swap + 10)) for a, b in zip(self.run_neck, self.fly_neck)),
               'tail_spread': 1.25}
         if f < swap + 3:
@@ -540,7 +543,8 @@ def build(name, out, clips_wanted=None):
             sk.animation_data.action.use_fake_user = True
             shape_actions.setdefault(k, {})[cname] = sk.animation_data.action
             sk.animation_data.action = None
-    rig.thin_keys([bpy.data.actions[c] for c in clips] + [a for d in shape_actions.values() for a in d.values()])
+    rig.thin_keys([bpy.data.actions[c] for c in clips])
+    rig.step_keys([a for d in shape_actions.values() for a in d.values()])
     for cname in clips:
         tr = arm.animation_data.nla_tracks.new()
         tr.name = cname
@@ -556,17 +560,18 @@ def build(name, out, clips_wanted=None):
             print(f'{cname}: a planted foot\'s distance from its place, max {max(sl):.2f} mm over {len(sl)} foot-frames')
     path = os.path.join(out, f'{name}_rig.glb')
     bpy.ops.object.select_all(action='DESELECT')
-    for o in [arm, *meshes.values()]:
+    for o in [arm, *meshes.values(), *far.values()]:      # the far level in the same file, on the same skeleton
         o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=False,
                               export_animations=True, export_animation_mode='NLA_TRACKS', export_skins=True,
-                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True,
+                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=False,
                               export_morph=True, export_morph_animation=True, export_morph_normal=False,
                               export_materials='EXPORT', export_extras=False, export_image_format='AUTO')
     common.settle(path)
+    rig.step_in_file(path)
     t, imgs, nbytes = common.glb_report(path)
     print(f'{name}_rig.glb: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {len(B)} bones; {nbytes / 1024:.0f} KB')
-    rig.export_far(arm, far, os.path.join(out, f'{name}_rig_far.glb'))
+    rig.glb_checks(path)
     rig.CLIPS.clear()
     rig.CLIPS.update(clips)
     return arm, meshes, frames_mesh, B, C, body
@@ -578,6 +583,20 @@ if __name__ == '__main__':
     mode = sys.argv[3] if len(sys.argv) > 3 else ''
     os.makedirs(OUT, exist_ok=True)
     arm, meshes, frames_mesh, B, C, body = build(NAME, OUT)
+    if mode == 'tunepitch':
+        A = QApplier(NAME, arm, B, body, rig.toe_vertex_sets(meshes['fold']))
+        A.trail = C.trail
+        for o in meshes.values():
+            o.data.shape_keys.key_blocks['hidden'].value = 0.0
+        sf, so = SWAP[NAME]
+        for pitch in (-14, 0, 15, 30, 45):
+            for neck in (C.run_neck, C.alert_neck):
+                base = dict(C.take_off(13), pitch=pitch, neck=neck, wing=so, fold=sf)
+                A.apply(base, 0, key=False)
+                bpy.context.view_layer.update()
+                a, ta = rig.evaluated_co(meshes['fold'])
+                b, tb = rig.evaluated_co(meshes['open'])
+                print(NAME, 'pitch', pitch, 'neck', neck, 'side %.3f three-quarter %.3f' % (rig.pair_iou(a, ta, b, tb, rig.VIEWS['side']), rig.pair_iou(a, ta, b, tb, rig.VIEWS['three_quarter'])))
     if mode == 'tune':
         import itertools
         A = QApplier(NAME, arm, B, body, rig.toe_vertex_sets(meshes['fold']))
@@ -633,12 +652,15 @@ if __name__ == '__main__':
         q = mode == 'quick'
         res = (240, 180) if q else (360, 270)
         d = 1.1 if NAME == 'houbara' else 0.8
+        only = os.environ.get('SHEETS_ONLY')
         for cname, (n, fn, loop) in CLIPS[NAME].items():
+            if only and cname not in only.split(','):
+                continue
             flying = cname in ('flight',)
             sand.hide_render = flying
             k = 12
             frames = sorted(set(int(round(i * (n - 1) / (k - 1))) for i in range(k)))
-            dd = d * (1.5 if flying else 1.0)
+            dd = d * (1.5 if flying else 1.6 if cname in ('take_off', 'escape') else 1.0)      # the raised wing in the frame
             side = lambda f, r, dd=dd: ((r.x + 0.1, r.y + 4, r.z + 0.25), (r.x + 0.1, r.y, r.z + 0.25), dd)
             tq = lambda f, r, dd=dd: ((r.x + 1.2 * dd, r.y + 1.0 * dd, r.z + 0.3 + 0.5 * dd), (r.x + 0.1, r.y, r.z + 0.22), None)
             if flying:
@@ -664,3 +686,27 @@ if __name__ == '__main__':
                         b, tb = rig.evaluated_co(meshes['open'])
                         worst = min(worst, rig.pair_iou(a, ta, b, tb, rig.VIEWS['side']), rig.pair_iou(a, ta, b, tb, rig.VIEWS['three_quarter']))
                     print(f'{cname}: swap {fm[f - 1]} -> {fm[f]} at frame {f}: silhouette overlap {worst:.3f}')
+        # loops: the last frame must lead back into the first (the bones' heads, frame n against frame 0)
+        for cname, (n, fn, loop) in CLIPS[NAME].items():
+            rig.use_clip(arm, cname)
+            if loop:
+                pos = []
+                for f in range(n):
+                    sc.frame_set(f)
+                    pos.append({b.name: (arm.matrix_world @ b.head).copy() for b in arm.pose.bones})
+                step = lambda a, b: max((a[k] - b[k]).length for k in a) / rig.MM
+                inner = max(step(pos[f], pos[f - 1]) for f in range(1, n))
+                print(f'{cname}: loop seam, the largest bone-head step from frame {n - 1} back to frame 0: '
+                      f'{step(pos[0], pos[-1]):.2f} mm (the largest step inside the loop {inner:.2f} mm)')
+            if cname == 'flight':
+                d, ang = [], []
+                for f in range(n):
+                    sc.frame_set(f)
+                    pb = arm.pose.bones
+                    d.append((pb['wing_hand.L'].tail - pb['wing_up.L'].head).length / rig.MM)
+                    back = (pb['body'].head - pb['body'].tail).normalized()          # the torso's axis, tailward
+                    for s in 'LR':
+                        leg = (pb[f'tarsus.{s}'].tail - pb[f'shank.{s}'].head).normalized()
+                        ang.append(math.degrees(back.angle(leg)))
+                print(f'flight: shoulder to wingtip {min(d):.0f} to {max(d):.0f} mm ({100 * min(d) / max(d):.0f}% at the most flexed)')
+                print(f'flight: legs trailing, knee to foot within {min(ang):.0f} to {max(ang):.0f} degrees of the tailward axis')

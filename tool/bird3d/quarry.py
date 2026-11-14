@@ -127,12 +127,15 @@ def houbara_extras(body, det, pose):
     c, t, u, v = body.frame_at(447)
     au, ad, b = body.size_at(447)
     out = []
-    plan = [(0.0, 0.0, 60), (-0.6, 3.0, 54), (0.6, 3.0, 54), (-1.2, 6.0, 46), (1.2, 6.0, 46), (-1.7, 9.0, 38), (1.7, 9.0, 38)]
+    # a loose tuft: eleven feathers of different lengths, overlapping, each rising a little off the crown and
+    # drooping at its tip, the middle ones longest
+    plan = [((i - 5) / 5.0 * 1.4, abs(i - 5) * 1.6 + (i % 2) * 2.0, 62 - abs(i - 5) * 4 + (i % 3) * 3, 5.5 + (i % 3) * 1.5)
+            for i in range(11)]
     if det.level != 0:
-        plan = plan[:1]
-    for side, back, L in plan:
+        plan = plan[5:6]
+    for side, back, L, lift0 in plan:
         base = c + u * (au - 1.5) + v * side * 4.0 - t * back
-        lift = 7.5 - 2.0 * abs(side)
+        lift = lift0 - 1.2 * abs(side)
         pts = smooth_path([base + t * 3, base - t * (L * 0.3) + u * lift + v * side * 3,
                            base - t * (L * 0.7) + u * (lift - 0.5) + v * side * 6, base - t * L + u * (lift - 3) + v * side * 8], 6 if det.level == 0 else 3)
         secs = []
@@ -141,8 +144,8 @@ def houbara_extras(body, det, pose):
             a, bb = pts[max(i - 1, 0)], pts[min(i + 1, len(pts) - 1)]
             tt = (bb - a).normalized()
             uu, vv = bird.frame(tt, u)
-            w = 3.0 * math.sin(math.pi * min(0.15 + f * 1.1, 1.0)) + 0.5
-            secs.append(Sec(q, uu, vv, 0.9, 0.7, w, p=2.0))
+            w = 4.0 * math.sin(math.pi * min(0.15 + f * 1.1, 1.0)) + 0.5
+            secs.append(Sec(q, uu, vv, 0.8, 0.6, w, p=2.0))
         out.append(loft('crest', secs, 6 if det.level == 0 else 4, caps=(True, True)))
     return out
 

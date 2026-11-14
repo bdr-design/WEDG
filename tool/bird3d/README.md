@@ -32,7 +32,7 @@ end).
 | `saker_alert.glb` | perched, unhooded, alert | 5,896 + 560 jesses = 6,456 | 2 |
 | `saker_flight.glb` | cast off: wings spread, the feet clenched (toes and talons curled in) and drawn up into the belly and undertail feathers, out of sight; only the jesses trail | 6,232 + 400 = 6,632 | 2 |
 | `saker_*_lod1.glb` | the far model of each pose: no jesses, brow, tooth or eye ring (under a pixel at tens of metres) | 1,334 (hooded, with the hood) / 1,204 / 1,300 | 1–2 |
-| `houbara_alert.glb`, `houbara_flight.glb` | | 5,428 / 6,484 | 1 |
+| `houbara_alert.glb`, `houbara_flight.glb` | | 5,716 / 6,772 (the crest a tuft of 11 feathers) | 1 |
 | `houbara_*_lod1.glb` | | 1,084 / 1,468 | 1 |
 | `curlew_alert.glb`, `curlew_flight.glb` | | 5,084 / 5,420 | 1 |
 | `curlew_*_lod1.glb` | | 1,120 / 1,216 | 1 |
@@ -297,10 +297,9 @@ stone-curlew) build them. The static GLBs above stay as the approved look; the r
 
 | File | Meshes (triangles) | Bones | Clips |
 |---|---|---|---|
-| `saker_rig.glb` | folded 5,896, spread 6,232, hood 724, jesses 580 | 49 | 12 |
-| `saker_rig_far.glb` | folded 1,204, spread 1,300 (the far meshes of T11, 256 px) | 49 | the same 12 |
-| `houbara_rig.glb` / `_far` | folded 5,428 / 1,084, spread 6,484 / 1,468 | 36 | 5 |
-| `curlew_rig.glb` / `_far` | folded 5,084 / 1,120, spread 5,420 / 1,216 | 34 | 5 |
+| `saker_rig.glb` | near: folded 5,896, spread 6,232, hood 724, jesses 580; far (the T11 far meshes, 256 px): folded 1,204, spread 1,300 | 49 | 13 |
+| `houbara_rig.glb` | near: folded 5,716, spread 6,772 (the crest tuft added); far: 1,084 / 1,468 | 36 | 5 |
+| `curlew_rig.glb` | near: folded 5,084, spread 5,420; far: 1,120 / 1,216 | 34 | 5 |
 
 **One skeleton, two meshes, swapped where their outlines match.** Each bird is built in a rest pose (the saker with
 the body level and the legs down; the quarry in their approved alert stance), once with the wings folded and once
@@ -315,12 +314,37 @@ frame. Measured by the build (the lower of the side and three-quarter overlap, i
 | saker `cast_off`, frame 14 | 0.911 |
 | saker `land_cuff` / `land_perch`, frame 38 | 0.893 / 0.891 |
 | stone-curlew `take_off`, frame 14 | 0.909 |
-| houbara `take_off` and `escape` | 0.864 (its broad, slotted wing folds least well; the closest the search found) |
+| houbara `take_off` and `escape`, frames 14 and 36 | 0.931 (searched with the body level at the swap) |
 
 **The swap is in the file.** Each body mesh has a morph target `hidden` that gathers its vertices to one point
-inside the body; every clip keys it (1 hidden, 0 shown), so a mixer plays the swap with no game code. The hood is
-hidden the same way by its bone's scale (0). **Convention for the page** (a later task): a mesh whose morph
-`hidden` is at 1, and the hood when the bone `hood` is scaled to 0, are set not visible, so they cost no draw.
+inside the body; every clip keys it (1 hidden, 0 shown) with STEP interpolation, so a mixer plays the swap with no
+game code and a frame sampled between two keys never shows a half-gathered bird. The build checks the written file
+and stops if any morph-weight channel is not STEP. The saker's folded meshes also carry a morph `fluff` (the
+contour feathers raised, for the rouse), STEP too: in glTF one mesh's morph weights share one channel.
+
+**One file, one skeleton.** The far level (the T11 far meshes, 256 px) is in the same file, skinned to the same
+skeleton, so the near and far meshes share the clips and one mixer (ADR 0005's lesson from the camels). It saves
+the far file's copy of the clips (401 KB for the saker, 109 / 88 KB for the houbara and the stone-curlew) and a
+second skeleton and mixer per bird. The build checks there is one skin.
+
+**The hood is game state.** Only `hood_off` and `hood_on` key the hood bone (STEP, the build checks no other clip
+does); every other clip leaves it as the game set it, so a hooded falcon idles, rouses or sits in the car with the
+same clips. `perch_hooded` is a quieter idle for the hooded bird.
+
+### For the game page (not built here)
+
+- **What to draw.** Hide a mesh whose `hidden` weight is 0.5 or more, and the hood when its bone's scale is under
+  0.01 (it is keyed to 0.001, not 0). Show the near or the far pair by distance. As the file is, everything drawn:
+  4 draws, 13.4k triangles; with this rule a perched saker is 3 draws, 7.2k (folded body, hood, jesses), a flying
+  one 2 draws, 6.8k (spread body, jesses).
+- **Bounds.** three.js culls a skinned mesh by its rest-pose bounds, and `cast_off` and the landings move the root
+  by up to 3 m. Recommended: `frustumCulled = false` on the bird's meshes (one to three meshes, a few birds: cheaper
+  than recomputing bounds each frame).
+- **Root motion.** `flight`, `glide`, `stoop`, `mantle` and the quarry's loops are in place (the game moves the
+  bird). `cast_off`, `land_cuff`, `land_perch`, `take_off`, `escape` and `bind` carry their own root motion,
+  because they start or end on a fixed support (the fist, the perch, the ground, the quarry): the game puts the
+  bird's origin at the support (the fist's top, the perch's top) and plays them there, then hands over to the
+  in-place loop at the clip's last frame.
 
 **The saker's bones (49)** and why:
 
@@ -328,7 +352,7 @@ hidden the same way by its bone's scale (0). **Convention for the page** (a late
 |---|---|---|
 | root, body | 2 | where she stands; the torso's pitch, roll, bob |
 | neck1, neck2, head | 3 | keep the head level as the body tilts; the head looks round |
-| hood | 1 | the hood lifted off and set on (scale 0: not shown) |
+| hood | 1 | the hood lifted off and set on (scale 0.001: not shown); keyed only by `hood_off` and `hood_on` |
 | tail, tail.L, tail.R | 3 | the tail lifts and drops; its two halves fan out (the flare, the mantle) |
 | fold, fold_tip (each side) | 4 | the folded mesh's wing opens at the shoulder and its primaries swing out to meet the swap |
 | wing_up, wing_fore, wing_hand (each side) | 6 | the beat at the shoulder; the flex at the elbow and wrist on the upstroke; the hand's twist |
@@ -344,15 +368,16 @@ hind toe) and no hood or jesses. At most two bones a vertex.
 | Bird | Clip | Frames | Reference |
 |---|---|---|---|
 | saker | `perch_idle` (loop) | 120 | small shifts of weight, a look to each side, a flick of the tail: game choice |
-| saker | `rouse` | 36 | the feathers raised and shaken (about half a second at 7 shakes a second): game choice |
-| saker | `hood_off`, `hood_on` | 30 each | on the fist; the hood lifted (the hand not drawn), she looks round |
-| saker | `cast_off` | 41 | the lean and crouch, the wings opening to the swap at 14, the push with the legs, the feet off the fist at 20, trailing two frames, drawn up by 24; she drops about 190 mm below the fist in her first beats, then climbs (the drop and the speeds are game choices) |
-| saker | `flight` (loop) | 14 | two beats of 7 frames: 4.3 Hz, inside the 4.3–4.8 Hz Pennycuick's (1996) formula predicts; the wing flexes at the elbow and wrist on the upstroke (shoulder to tip 73% of its spread length), the hand twists; the body bobs against the beat |
+| saker | `perch_hooded` (loop) | 150 | hooded: quieter than unhooded (breathing, one slow small turn of the head toward a sound), since the hood is there to keep her calm: game choice from that purpose |
+| saker | `rouse` | 36 | every contour feather raised at once (the morph `fluff`, up to 7 mm on the body), the whole bird shaken through for about half a second (7 shakes a second), the plumage laid smooth again: game choice |
+| saker | `hood_off`, `hood_on` | 30 each | on the fist; the hood lifted (the hand not drawn). **Held back from the owner's motion sheet: they come with the man's hand rig**, which will carry the hood; the hood's path here is a placeholder |
+| saker | `cast_off` | 41 | the lean and crouch, the wings opening to the swap at 14, the push with the legs, the feet off the fist at 20, trailing two frames, drawn up by 24; the tail raised clear of the fist (17-30), and only then she drops (her tail base about 220 mm below where it sat, at frame 35), then climbs (the drop and the speeds are game choices) |
+| saker | `flight` (loop) | 14 | two beats of 7 frames: 4.3 Hz, inside the 4.3–4.8 Hz Pennycuick's (1996) formula predicts (the formula from a search summary, not opened); the wing flexes at the elbow and wrist on the upstroke (shoulder to tip 73% of its spread length), the hand twists; the body bobs against the beat |
 | saker | `glide` (loop) | 60 | the wings held, a slow roll |
 | saker | `stoop` | 40 | the spread mesh's wings drawn in by its bones to the tightest outline that still reads right, the body tipped 55° down, the head in line; no swap here (the folded mesh matched at best 0.69 at this angle); `bind` starts from the same outline |
-| saker | `bind` | 24 | thrown up from the dive, the feet struck forward, closing at frame 10 (on the quarry), heavy beats |
-| saker | `mantle` (loop) | 60 | on the ground over the kill: the wings spread and drooped, the tail fanned, the head down, looking up |
-| saker | `land_cuff`, `land_perch` | 46 each | in low, about 350 mm under the fist, a swing up, the flare (the tail fanned, the wings forward braking), contact at 28, the wings folded along the back to the swap at 38, the perched pose at 45; the approach is a game choice |
+| saker | `bind` | 24 | thrown up from the dive, the feet struck forward, closing at frame 10 (on the quarry), heavy beats; drawn without the quarry |
+| saker | `mantle` (loop) | 60 | on the ground over the kill: the wings spread and drooped, the tail fanned, the head down, looking up; drawn without the kill or the ground |
+| saker | `land_cuff`, `land_perch` | 46 each | she comes in from the side away from the falconer's body, beating down to about 300 mm under the fist, then swoops up to it on spread wings (as Harris' hawks swoop down and up to a perch: KleinHeerenbrink et al. 2022, *Nature*, known from summaries of it, not opened), turning a quarter to face along the fist, rises clear of the cuff and forearm, flares (the tail fanned, the wings forward braking) and drops onto it: contact at 28, the wings folded along the back to the swap at 38, the perched pose at 45. The side, the heights and the turn are game choices; the build measures the path clear of the support |
 | houbara | `stand` (loop) | 120 | alert, one foot back, the head turning, the crest lifting |
 | houbara | `run` (loop) | 16 | low and level, the neck forward; a stride every 8 frames at 3 m/s (game choice: no measured speed found) |
 | houbara | `take_off` | 40 | two strides, a crouch, the spring, deep beats, the legs trailing behind the body with the feet closed |
@@ -368,23 +393,34 @@ hind toe) and no hood or jesses. At most two bones a vertex.
 `saker_fist.glb`: silhouette overlap 0.89 from the side and 0.96 from the front, in place (the toes, gripping, and
 the tarsus differ most).
 
-**Measured** (by `rig.py OUT saker measure`, `rig_quarry.py OUT <bird> measure`, and the reviewer's own tools):
-- A planted foot stays within 0.00 mm of its place (saker, every clip on the cuff, perch or ground), within 0.56
-  mm in the houbara's run.
-- Toes on the cuff: each toe is laid joint by joint on the exported cuff's own top (a millimetre heightmap of its
-  faces), set in the world so it stays put while the leg moves. By the reviewer's method (ray parity and exact
-  distance against the exported `dass.glb`): the deepest toe vertex 1.2 mm inside, in any sampled frame of
-  `cast_off`, `land_cuff` and `hood_off`; 0.0 mm on the perch and the ground.
-- Feet out of sight in flight: no toe or tarsus vertex outside the body in any saker frame meant drawn up
-  (`flight`, `glide`, `stoop`, `cast_off` from 24, the landings' glide). The houbara and the stone-curlew fly with
-  their legs trailing and their feet closed, as they are seen to (from field guides, not opened).
-- Skin stretch (the shown mesh): in `flight` the triangles' area stays between 0.07 and 3.7 of rest (16 triangles
-  beyond 0.25–4 at the wrist on the upstroke); near the swaps, for one to four frames, down to 0.007 at the tightly
-  folded wrist.
-- Clip data: 401 KB for the saker's twelve clips (keys thinned within 0.0002 of the quaternion and 0.01 mm, so
-  the chain from the root to a talon stays within a millimetre, then the exporter's lossless reduction); the far
-  file carries the same clips.
-- The same code writes the same files twice.
+**Measured** (printed by every build: `rig.py OUT saker measure`, `rig_quarry.py OUT <bird> measure`; and the
+reviewer's own tools):
+- **Feet planted:** within 0.00 mm of their place in every saker clip on the cuff, the perch or the ground; within
+  0.56 mm in the houbara's run, take-off and escape; 0.00 mm for the stone-curlew.
+- **Toes on the cuff:** each toe laid joint by joint on the exported cuff's top (a millimetre heightmap of its
+  faces), set in the world so it stays put while the leg moves: the deepest toe vertex 1.1 mm under it (1.04 mm by
+  the reviewer's ray-parity method against `dass.glb`); 0.0 mm on the perch and the ground.
+- **Nothing through the support:** in every frame of every clip on the cuff or the perch, before the feet take it
+  and after they leave, no vertex of the shown body inside the cuff, a 45 mm forearm 400 mm behind it, or the
+  perch (the landings now come in from the side; the cast-off lifts the tail clear before she drops). Once
+  planted, only the tail on the fist (see What is unsure) and, on the perch, two tarsus vertices under 1 mm.
+- **Swaps:** STEP in the file (the build fails otherwise); overlaps as in the table above.
+- **Feet out of sight in flight:** no toe or tarsus vertex outside the body in any saker frame meant drawn up
+  (`flight`, `glide`, `stoop`, `cast_off` from 24, the landings until 16). The houbara and the stone-curlew fly
+  with their legs trailing, the knee-to-foot line within 10-11° of the body's axis, feet closed, as they are seen
+  to (field guides, not opened).
+- **Wing flex in the beat:** shoulder to tip at the most flexed 73% of the spread (saker), 77% (houbara), 74%
+  (stone-curlew).
+- **Loops:** the step from the last frame back to the first is no larger than the steps inside the loop (houbara
+  stand 0.46 mm against 3.37 mm; run 43 against 118; flight 109 against 176; the stone-curlew alike).
+- **Forearm and hand inside the body:** none in `flight`, `glide`, `mantle`; 58 vertices in the stoop's drawn-in
+  wing and the start of `bind`; 70 at the swaps.
+- **Skin stretch** (the shown mesh, the reviewer's measure): in `flight` the triangles' area stays between 0.07
+  and 3.7 of rest; near the swaps, for one to four frames, down to 0.007 at the tightly folded wrist.
+- **Clip data:** 316 KB for the saker's thirteen clips, 102 KB the houbara's five, 79 KB the stone-curlew's
+  (bones thinned within 0.0002 of the quaternion and 0.01 mm, so the chain from the root to a talon stays within a
+  millimetre; morph weights and the hood kept as steps).
+- **The same code writes the same files twice** (each bird built twice and compared byte for byte).
 
 **Weight on the phone.** A hunting scene: one falcon close (one body mesh drawn at a time: 5.9–6.2k triangles, plus
 the hood and jesses 1.3k: 3 draws), a few quarry far (1.1–1.5k each, one draw each, skinned on the same skeletons
@@ -393,8 +429,9 @@ herd camel's cost; the far level is skinned too (its clips are the near ones), s
 these few birds. Textures unchanged (512 px near, 256 px far).
 
 **Pictures** (`design/birds/motion/`, awaiting the owner's approval of the motion): for every clip a contact sheet
-from the side and one three-quarter (`<bird>_<clip>_side.jpg`, `_tq.jpg`), the saker's feet on the cuff close,
-and two small GIFs (the cast-off and the flight).
+from the side and one three-quarter (`<bird>_<clip>_side.jpg`, `_tq.jpg`; the landings seen across their path from
+ahead of the fist, `_front.jpg`), the saker's feet on the cuff close, and two small GIFs (the cast-off and the
+flight). `hood_off` and `hood_on` are held back: they come with the man's hand rig.
 
 ## What is unsure
 
@@ -414,6 +451,17 @@ and two small GIFs (the cast-off and the flight).
 - **No page could be opened from this machine.** Everything is from the text of the reviewer's fetched Wikipedia pages
   or from search summaries, marked as such.
 
+- **The perched tail and the falconer's forearm.** On the fist, the approved pose's tail hangs where a level
+  forearm straight behind the cuff would be: the build's check (the cuff, and a 45 mm forearm to 400 mm behind it)
+  finds up to 92 tail vertices, 31 mm deep, in every frame she sits on the fist. Nothing else enters the cuff or the
+  forearm in any frame. It is for the man's arm rig to settle: the fist held higher than the elbow and the forearm
+  turned a little out, or the falcon turned to sit across the fist. Asked below.
+- **The wrist on the upstroke.** At the most flexed frames of `flight` (5-6 and 12-13) some wrist triangles fall
+  to 7-9% of their rest area (a crease seen close from the front); in the swaps' folds, for one to four frames,
+  to under 1%. An extra weight ring or a corrective shape would cost a morph target; not done, listed.
+- **Hand slivers in the stoop.** Seen from below, a few forearm and hand vertices pass inside the flank in the
+  drawn-in wing (58 at most, frame 12, after turning the wing 10°; 75 before); the same outline at the swaps (70).
+
 ## Questions for the owner
 
 The proxy answered these provisionally (batch 2 of `docs/agents/proxy_decisions.md`); they stand until the owner
@@ -428,10 +476,13 @@ says otherwise.
    trapping research found the trapping auction sells only that bird; started only after he approves the saker. The
    gyr (الجير) later, as a real مزاين class. (My recommendation had been the الجير بيور first.)
 4. **512 or 1024 px for the falcon on the fist.** Not decided: 512 px stays until he tries it on his phone.
+5. **The falcon's place on the fist.** The approved pose faces along the forearm, so its tail falls across a level
+   forearm. My recommendation: keep the pose and give the man's arm the falconer's carry (the fist raised above
+   the elbow, the forearm a little out), checked by the same build test when the man's rig is made; the other way
+   is to turn her to sit across the fist, which changes the approved look.
 
 ## Not done yet
 
-- The rig and the clips (next task).
 - The adult saker's texture, the other falcons, the air rifle's quarry (later, by the brief).
 - The cage, scales, lure, bag and tracker.
 - Putting the birds into the game page.

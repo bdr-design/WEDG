@@ -156,10 +156,9 @@ def beak(body, spec, det):
         # the cere: bare skin over the beak's root, from inside the face onto the horn, a little fuller than it
         L = b['cere']
         cs = []
-        for f in (0.0, 0.35, 0.7, 1.0):
+        for f, k in ((0.0, 0.92), (0.3, 1.10), (0.65, 1.08), (1.0, 0.99)):      # rising out of the face, not a collar
             q = o + t * (L * f - 8) + u * 0.6
             au, ad, bl, br = sizes[0]
-            k = 1.16 - 0.18 * f
             cs.append(Sec(q, u, v, au * k, ad * 0.85, bl * k, br * k, p=2.2))
         out.append(loft('skin', cs, det.beak_ring, caps=(True, True)))
     return out

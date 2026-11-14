@@ -340,8 +340,10 @@ class Poser:
         self.aim(f'shank.{s}', ankle)
         self.aim(f'tarsus.{s}', foot_mm)
 
-    def key(self, frame):
+    def key(self, frame, skip=()):
         for p in self.pb:
+            if p.name in skip:
+                continue
             p.keyframe_insert('rotation_quaternion', frame=frame)
             p.keyframe_insert('location', frame=frame)
             p.keyframe_insert('scale', frame=frame)
@@ -414,12 +416,35 @@ def keys(f, pts):
     return pts[-1][1]
 
 
+def spline(f, pts):
+    """A value through [(frame, value)...] with a continuous speed (monotone cubic, Fritsch-Carlson)."""
+    if f <= pts[0][0]:
+        return pts[0][1]
+    if f >= pts[-1][0]:
+        return pts[-1][1]
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    d = [(ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]) for i in range(len(xs) - 1)]
+    m = [d[0]] + [0.0 if d[i - 1] * d[i] <= 0 else 2 / (1 / d[i - 1] + 1 / d[i]) for i in range(1, len(d))] + [d[-1]]
+    i = max(j for j in range(len(xs) - 1) if xs[j] <= f)
+    h = xs[i + 1] - xs[i]
+    t = (f - xs[i]) / h
+    return ((2 * t ** 3 - 3 * t ** 2 + 1) * ys[i] + (t ** 3 - 2 * t ** 2 + t) * h * m[i]
+            + (-2 * t ** 3 + 3 * t ** 2) * ys[i + 1] + (t ** 3 - t ** 2) * h * m[i + 1])
+
+
 PERCH_TB = V3((-58, 0, 80))
+STOOP_TWIST = 10.0
+# the landing's path (the body's centre against where it is at contact, mm, by frame): across from the right, low,
+# up past the fist's side, over it, down onto it (game choices, measured clear of the cuff and forearm by the build)
+LAND_Y = [(0, -3000), (12, -900), (18, -420), (22, -300), (25, -150), (28, 0)]
+LAND_Z = [(0, -150), (8, -300), (14, -260), (19, -60), (23, 90), (26, 60), (28, 0)]
+LAND_X = [(0, 0), (28, 0)]
 PLANTED = ('cuff', 'perch', 'ground')
 PERCH_NECK = (14, -32, -40)      # neck1, neck2, head turns that put the perched frame on saker_fist.glb
 PERCH_TAIL = 10                  # the tail's lift, the same fit
 SWAP_FOLD = {'out': 8, 'up': 50, 'twist': 0, 'tip_out': 10, 'tip_up': -28}      # the folded mesh at the swap (tuned at cast_off's frame 13)
 SWAP_OPEN = {'up': -5, 'sweep': 65, 'fore': -80, 'hand': 170, 'twist': 0}      # the spread wing at the swap (overlap 0.898 with SWAP_FOLD, side and three-quarter)
+STOOP_WING = dict(SWAP_OPEN, twist=STOOP_TWIST)      # the stoop's drawn-in wing: the swap's outline, the wing turned a little leading edge down (fewest forearm and hand vertices inside the flank of those tried)
 FRAMES_FEET = {}
 HIDDEN_FEET = {}      # per frame: the feet meant drawn up out of sight (not reaching for the cuff or the quarry)
 BODY = []
@@ -531,13 +556,15 @@ class SakerClips:
             w = {kk: lerp(self.RAISED[kk], beat[kk], ramp(f, 18, 19.5)) for kk in self.RAISED}
         push = ramp(f, 16, 20)
         t = max(0.0, (f - 19) / FPS)
+        td = max(0.0, t - 0.1)      # she drops only once her tail is clear of the fist
         x = 70 * push + 0.5 * 5.0 * t * t * 1000 + 1100 * t
-        z = -10 * push - 0.5 * 3.6 * t * t * 1000 + 0.5 * 7.0 * max(0.0, t - 0.22) ** 2 * 1000
+        z = -10 * push - 0.5 * 3.6 * td * td * 1000 + 0.5 * 7.0 * max(0.0, td - 0.22) ** 2 * 1000
         pitch = keys(f, [(13, 40), (17, 34), (21, 22), (28, 12), (40, 8)])
         tb = PERCH_TB + V3((14, 0, -34)) + V3((x, 0, z))
         feet = 'cuff' if f < 20 else ('push', ramp(f, 21, 24))
         sp = {'pitch': pitch, 'tb': tb, 'feet': feet, 'mesh': 'open', 'wing': w, 'neck': (0, -20, -10) if f < 20 else None,
-              'tail_spread': lerp(1.3, 1.08, ramp(f, 16, 32)), 'jess_hold': f < 20, 'clench': ramp(f, 21, 24)}
+              'tail_spread': lerp(1.3, 1.08, ramp(f, 16, 32)), 'jess_hold': f < 20, 'clench': ramp(f, 21, 24),
+              'tail_lift': keys(f, [(15, 0), (18, 26), (27, 26), (33, 0)])}      # the tail raised clear of the fist
         if sp['neck'] is None:
             del sp['neck']
         if f == 14:
@@ -551,21 +578,43 @@ class SakerClips:
         return {'pitch': 4 + 2 * math.sin(2 * math.pi * ph), 'tb': V3((0, 0, bob)), 'feet': ('free', 1.0), 'mesh': 'open',
                 'wing': w, 'tail_spread': 1.05, 'clench': 1.0, 'air': V3((-20000, 0, 0))}
 
+    LAND_CENTRE = V3((120.0, 0.0, 0.0))      # the body's centre ahead of the tail base (body frame): the path is its
+
+    def land_place(self, f):
+        """Where she is (the tail base) and her heading. From contact (28) on, on the support as before. Before: she
+        comes in across the falconer's front from his right, low, under the fist's height (a falcon comes to the
+        fist low and swings up to it; the side and the heights are game choices), turns a quarter to face along
+        the fist as she flares, rises above it clear of the cuff and forearm, and drops onto it."""
+        pitch = keys(f, [(0, 4), (12, 2), (20, 30), (26, 52), (31, 44), (38, 42), (45, 66)])
+        tb_c = lambda g: PERCH_TB + V3((25, 0, -10)) * (1 - ramp(g, 26, 40))
+        if f >= 28:
+            return tb_c(f), pitch, 0.0
+        yaw = spline(f, [(0, 90), (14, 88), (22, 40), (27, 0), (28, 0)])
+        Rm = lambda p_, y_: (Matrix.Rotation(math.radians(y_), 3, 'Z') @ Matrix.Rotation(math.radians(-p_), 3, 'Y'))
+        c28 = tb_c(28) + Rm(keys(28, [(26, 52), (31, 44)]), 0.0) @ self.LAND_CENTRE
+        dy = spline(f, LAND_Y)
+        dz = spline(f, LAND_Z)
+        dx = spline(f, LAND_X)
+        c = c28 + V3((dx, dy, dz))
+        return c - Rm(pitch, yaw) @ self.LAND_CENTRE, pitch, yaw
+
     def land(self, f, surface):
-        """In low, about 350 mm under the fist, and a swing up to it (a game choice from what falconers describe);
-        the flare (body up to 55 degrees, the wings forward and beating to brake, the tail fanned and dropped), the
-        legs thrown forward, contact at 28; the wings raised and folded along the back by the bones to SWAP_OPEN
-        (37), the swap to the folded mesh in the same outline at 38 (SWAP_FOLD), closed by 45, the perched pose."""
-        s_ = min(f / 28.0, 1.0)
-        x = -3000 * (1 - s_) ** 2
-        z = -350 * math.sin(math.pi * min(1.0, s_ * 1.0)) * (1 - s_) ** 0.3 if f < 28 else 0.0
-        pitch = keys(f, [(0, 4), (12, 2), (20, 30), (26, 52), (31, 44), (38, 42), (45, 66)])      # leaning forward while she folds, as she does when she leans into the swap
-        tb_air = V3((x, 0, z)) + PERCH_TB + V3((25, 0, -10)) * (1 - ramp(f, 26, 40))
-        brake = ramp(f, 14, 20) * (1 - ramp(f, 27, 30))
-        if f < 14:
-            w = {'up': 6 + 2 * math.sin(f / 3), 'sweep': -4, 'fore': -6, 'hand': 10, 'twist': 0, 'hand_twist': -4}
+        """In low across the falconer's front and a swing up to the fist (land_place); the flare (body up to 55
+        degrees, the wings forward and beating to brake, the tail fanned), the legs thrown forward, contact at
+        28; the wings raised and folded along the back by the bones to SWAP_OPEN (37), the swap to the folded mesh
+        in the same outline at 38 (SWAP_FOLD), closed by 45, the perched pose."""
+        tb_air, pitch, yaw = self.land_place(f)
+        brake = ramp(f, 18, 22) * (1 - ramp(f, 27, 30))
+        glide = {'up': 10, 'sweep': -4, 'fore': -6, 'hand': 10, 'twist': 0, 'hand_up': 0, 'hand_twist': -4}
+        if f < 19:
+            # beating down the slope, then the wings held spread on the swoop up (Harris' hawks to a perch:
+            # KleinHeerenbrink et al. 2022, Nature, from summaries of it, not opened)
+            fl = self.wings_flap((f / self.beat) % 1.0, amp=36, mean=5)
+            k = ramp(f, 9, 13)
+            w = {kk: lerp(fl.get(kk, 0.0), glide.get(kk, 0.0), k) for kk in set(fl) | set(glide)}
         else:
-            b = self.wings_flap(((f - 14) / 6.0) % 1.0, amp=34, mean=14)
+            b = self.wings_flap(((f - 19) / 6.0 + 0.75) % 1.0, amp=34, mean=14 + 10 * ramp(f, 20, 26))
+            b = {kk: lerp(glide.get(kk, 0.0), b.get(kk, 0.0), ramp(f, 19, 20.5)) for kk in set(b) | set(glide)}
             b['sweep'] -= 22 * brake        # the wings brought forward to brake
             up_back = ramp(f, 28, 32) * (1 - ramp(f, 32, 37))
             raised = dict(self.RAISED, up=58, sweep=40)
@@ -575,7 +624,7 @@ class SakerClips:
         mesh = 'open' if f < 38 else 'fold'
         reach = ramp(f, 16, 24)
         feet = surface if f >= 28 else ('reach', reach)
-        sp = {'pitch': pitch, 'tb': tb_air, 'feet': feet, 'mesh': mesh, 'wing': w,
+        sp = {'pitch': pitch, 'yaw': yaw, 'tb': tb_air, 'feet': feet, 'mesh': mesh, 'wing': w,
               'tail_spread': lerp(1.0, 1.5, brake) if f < 32 else lerp(1.5, 1.0, ramp(f, 32, 42)),
               'tail_drop': 18 * brake, 'open_toes': reach * (1 - ramp(f, 27, 29))}
         if f >= 37:
@@ -600,14 +649,26 @@ class SakerClips:
                 'mesh': 'fold', 'head_yaw': yaw, 'head_pitch': 4 * math.sin(3 * c),
                 'tail_drop': -10 * math.exp(-((f - 90) / 2.5) ** 2), 'fold_lift': 2 * max(0.0, math.sin(c))}
 
+    def perch_hooded(self, f):
+        """Five seconds hooded (in the tent, the car, on the perch): she sits quieter than unhooded, as the hood is
+        there to keep her calm (game choice from that purpose: no looking round, no tail flick): breathing, a
+        slow small turn of the head toward a sound, back; it loops. The hood itself is not keyed (game state)."""
+        c = 2 * math.pi * f / 150.0
+        yaw = keys(f, [(0, 0), (40, 0), (55, 12), (85, 12), (100, 0), (150, 0)])
+        return {'pitch': 66 + 0.8 * math.sin(3 * c), 'tb': PERCH_TB + V3((0, 0, 1.0 * math.sin(3 * c))), 'feet': 'perch',
+                'mesh': 'fold', 'head_yaw': yaw, 'head_pitch': 1.5 * math.sin(c)}
+
     def rouse(self, f):
-        """The rouse: the feathers raised and shaken through, about half a second of shaking, then smoothed."""
-        sh = ramp(f, 6, 9) * (1 - ramp(f, 22, 26))
-        osc = math.sin(2 * math.pi * f * 7.0 / FPS)
-        return {'pitch': 66 + 3 * sh, 'tb': PERCH_TB + V3((0, 0, 4 * sh)), 'feet': 'perch', 'mesh': 'fold',
-                'roll': 9 * sh * osc, 'head_yaw': 22 * sh * math.sin(2 * math.pi * f * 7.0 / FPS + 0.6),
-                'fold_lift': 10 * ramp(f, 2, 7) * (1 - ramp(f, 24, 32)) + 4 * sh * abs(osc),
-                'tail_spread': 1.0 + 0.25 * sh * abs(osc)}
+        """The rouse: every contour feather raised at once (the morph 'fluff', 2-6), the whole bird shaken through
+        for about half a second (roll and head at 7 Hz, the folded wings lifted, the tail fanned with it), then the
+        plumage laid smooth again (24-32)."""
+        sh = ramp(f, 7, 9) * (1 - ramp(f, 22, 25))
+        osc = math.sin(2 * math.pi * (f - 7) * 7.0 / FPS)
+        fl = ramp(f, 2, 6) * (1 - ramp(f, 24, 32))
+        return {'pitch': 66 + 4 * fl, 'tb': PERCH_TB + V3((0, 0, 6 * fl)), 'feet': 'perch', 'mesh': 'fold',
+                'roll': 14 * sh * osc, 'head_yaw': 28 * sh * math.sin(2 * math.pi * (f - 7) * 7.0 / FPS + 0.6),
+                'fold_lift': 12 * fl + 5 * sh * abs(osc), 'tail_spread': 1.0 + 0.12 * fl + 0.25 * sh * abs(osc),
+                'fluff': fl}
 
     def hood_off(self, f):
         """On the fist: the falconer draws the braces and lifts the hood off (the hand is not drawn); she looks round."""
@@ -637,7 +698,7 @@ class SakerClips:
         air = V3((-30000 * math.cos(math.radians(pitch)), 0, 30000 * math.sin(math.radians(-pitch))))
         g = self.glide(0)['wing']
         k = ramp(f, 0, 12)
-        w = {kk: lerp(g.get(kk, 0.0), SWAP_OPEN.get(kk, 0.0), k) for kk in set(g) | set(SWAP_OPEN)}
+        w = {kk: lerp(g.get(kk, 0.0), STOOP_WING.get(kk, 0.0), k) for kk in set(g) | set(STOOP_WING)}
         return {'pitch': pitch, 'head_pitch': 0.8 * pitch, 'tb': V3((0, 0, 0)), 'feet': ('free', 1.0), 'clench': 1.0,
                 'air': air, 'tail_spread': 1.0, 'mesh': 'open', 'wing': w}
 
@@ -647,7 +708,7 @@ class SakerClips:
         pitch = keys(f, [(0, -55), (8, 38), (14, 30), (24, 20)])
         if f < 10:
             # from the stoop's end: the spread mesh in the swap's outline (SWAP_OPEN), opening to the brake
-            r = {kk: lerp(SWAP_OPEN.get(kk, 0.0), self.RAISED[kk], ramp(f, 0, 4)) for kk in self.RAISED}
+            r = {kk: lerp(STOOP_WING.get(kk, 0.0), self.RAISED[kk], ramp(f, 0, 4)) for kk in self.RAISED}
             w = {kk: lerp(r[kk], self.wings_flap(0.25, amp=46)[kk], ramp(f, 4, 10)) for kk in self.RAISED}
             w['sweep'] -= 18 * ramp(f, 3, 9)
         else:
@@ -668,8 +729,17 @@ class SakerClips:
                 'tail_spread': 1.5, 'tail_drop': 14, 'head_pitch': -34 + 30 * look, 'head_yaw': 20 * look * math.sin(c * 2)}
 
 
+HOOD_CLIPS = ('hood_off', 'hood_on')      # the only clips that key the hood
+HOODED_CLIPS = ('perch_hooded',)          # drawn with the hood on (the hood itself is game state)
+
+
+def saker_mod():
+    import saker
+    return saker
+
+
 CLIPS = {      # name: (frames, method, loops)
-    'perch_idle': (120, 'perch_idle', True), 'rouse': (36, 'rouse', False), 'hood_off': (30, 'hood_off', False),
+    'perch_idle': (120, 'perch_idle', True), 'perch_hooded': (150, 'perch_hooded', True), 'rouse': (36, 'rouse', False), 'hood_off': (30, 'hood_off', False),
     'hood_on': (30, 'hood_on', False), 'cast_off': (41, 'cast_off', False), 'flight': (14, 'flight', True),
     'glide': (60, 'glide', True), 'stoop': (40, 'stoop', False), 'bind': (24, 'bind', False),
     'mantle': (60, 'mantle', True), 'land_cuff': (46, 'land_cuff', False), 'land_perch': (46, 'land_perch', False),
@@ -682,6 +752,7 @@ TUCK_FOOT = (150.0, 8.0, -14.0)         # drawn up into the breast and belly fea
 REACH_FOOT = (150.0, 26.0, -120.0)
 PUSH_FOOT = (-10.0, 20.0, -95.0)        # straight back and down at the end of the kick      # thrown forward to take the cuff when landing
 FIST_JESS = (36.0, 2.0, -26.0)          # where the falconer's fist holds the jesses (saker_fist)
+HOOD_SHOWN = [False]      # the hood's state while posing a clip that does not key it (game state)
 TALON_LIFT = 7.0                        # the distal joint's end held this far above the cuff so the curved talon's tip meets it
 
 
@@ -696,7 +767,8 @@ class Applier:
         self.log = []
 
     def body_matrix(self, sp):
-        R = Matrix.Rotation(math.radians(-sp['pitch']), 4, 'Y') @ Matrix.Rotation(math.radians(sp.get('roll', 0.0)), 4, 'X')
+        R = (Matrix.Rotation(math.radians(sp.get('yaw', 0.0)), 4, 'Z') @ Matrix.Rotation(math.radians(-sp['pitch']), 4, 'Y')
+             @ Matrix.Rotation(math.radians(sp.get('roll', 0.0)), 4, 'X'))
         return Matrix.Translation(V3(sp['tb']) * MM) @ R, R
 
     def to_world(self, W, p):
@@ -758,9 +830,11 @@ class Applier:
         fan = (sp.get('tail_spread', 1.0) - 1.0) * 45.0      # degrees each side
         P.turn('tail.L', (0, 0, -1), fan)
         P.turn('tail.R', (0, 0, 1), fan)
-        hood = sp.get('hood', 0.0)
-        P.pb['hood'].scale = (1, 1, 1) if hood >= 1.0 else (0.001,) * 3
-        P.pb['hood'].location = (0, sp.get('hood_lift', 0.0) * MM, 0)      # the bone points up: its Y is up
+        if 'hood' in sp:      # keyed only by the clips that put the hood on or take it off: otherwise game state
+            P.pb['hood'].scale = (1, 1, 1) if sp['hood'] >= 1.0 else (0.001,) * 3
+            P.pb['hood'].location = (0, sp.get('hood_lift', 0.0) * MM, 0)      # the bone points up: its Y is up
+        else:
+            P.pb['hood'].scale = (1, 1, 1) if HOOD_SHOWN[0] else (0.001,) * 3
         w = sp.get('wing')
         for side, s in ((1, 'L'), (-1, 'R')):
             if w:
@@ -835,7 +909,7 @@ class Applier:
             for j in range(JESS_N):
                 P.aim(f'jess{j + 1}.{s}', pts[j + 1])
         if key:
-            P.key(frame)
+            P.key(frame, skip=() if 'hood' in sp else ('hood',))
         # measures
         if feet in PLANTED:
             for s in ('L', 'R'):
@@ -867,6 +941,8 @@ def build_saker(out, sheets=False):
     }
     for k in ('fold', 'open'):
         add_hidden_morph(meshes[k], body)
+    eye_x = body.at(saker_mod().SPEC['eye']['d']).x
+    add_fluff_morph(meshes['fold'], body, eye_x)
     # the far level: the T11 far meshes (256 px) on the same skeleton, the same clips; no hood or jesses at that range
     pf1, _, body1 = saker_rest('fold', level=1)
     po1, _, _ = saker_rest('open', level=1)
@@ -877,6 +953,7 @@ def build_saker(out, sheets=False):
     for k in far:
         add_hidden_morph(far[k], body1)
         far[k].hide_render = True
+    add_fluff_morph(far['fold'], body1, eye_x)
     FAR[:] = [far]
     clips = SakerClips()
     arm.animation_data_create()
@@ -888,6 +965,7 @@ def build_saker(out, sheets=False):
         arm.animation_data.action = act
         A = Applier(arm, clips)
         A.toe_verts = toe_verts
+        HOOD_SHOWN[0] = name in HOODED_CLIPS
         spec_fn = getattr(clips, fn)
         if loop:      # settle the cords over two loops before recording
             for f in range(2 * n):
@@ -911,6 +989,9 @@ def build_saker(out, sheets=False):
             for k, sk in keys_shape.items():
                 sk.key_blocks['hidden'].value = 0.0 if sp['mesh'] == k.split('_')[0] else 1.0
                 sk.key_blocks['hidden'].keyframe_insert('value', frame=f)
+                if 'fluff' in sk.key_blocks:
+                    sk.key_blocks['fluff'].value = sp.get('fluff', 0.0)
+                    sk.key_blocks['fluff'].keyframe_insert('value', frame=f)
             frames_mesh[name].append(sp['mesh'])
             FRAMES_FEET[name].append(sp['feet'] if isinstance(sp['feet'], str) else sp['feet'][0])
             ft = sp['feet']
@@ -923,8 +1004,10 @@ def build_saker(out, sheets=False):
             SHAPE_ACTIONS.setdefault(k, {})[name] = sk.animation_data.action
             sk.animation_data.action = None
     # the tracks only once every clip is keyed: a track playing while the next clip is posed would leak into it
-    thin = thin_keys([bpy.data.actions[n] for n in CLIPS] + [a for d in SHAPE_ACTIONS.values() for a in d.values()])
+    thin = thin_keys([bpy.data.actions[n] for n in CLIPS])
     print(f'keys thinned: {thin[0]} of {thin[1]} kept (each removed key within {QTOL} of the quaternion, {LTOL * 1000:.2f} mm, {STOL} of scale by straight-line interpolation)')
+    step_keys([a for d in SHAPE_ACTIONS.values() for a in d.values()])
+    step_keys([bpy.data.actions[n] for n in HOOD_CLIPS if n in CLIPS], path_has=('pose.bones["hood"].scale',))
     for name in CLIPS:
         tr = arm.animation_data.nla_tracks.new()
         tr.name = name
@@ -941,32 +1024,19 @@ def build_saker(out, sheets=False):
             print(f'{name}: a planted foot\'s distance from its place, max {max(sl):.2f} mm over {len(sl) // 2} frames')
     path = os.path.join(out, 'saker_rig.glb')
     bpy.ops.object.select_all(action='DESELECT')
-    for o in [arm, *meshes.values()]:
+    for o in [arm, *meshes.values(), *far.values()]:      # the far level in the same file, on the same skeleton
         o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=False,
                               export_animations=True, export_animation_mode='NLA_TRACKS', export_skins=True,
-                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True,
+                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=False,
                               export_morph=True, export_morph_animation=True, export_morph_normal=False,
                               export_materials='EXPORT', export_extras=False, export_image_format='AUTO')
     common.settle(path)
+    step_in_file(path)
     t, imgs, nbytes = common.glb_report(path)
     print(f'saker_rig.glb: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {len(B)} bones; {nbytes / 1024:.0f} KB')
-    export_far(arm, far, os.path.join(out, 'saker_rig_far.glb'))
+    glb_checks(path, hood_clips=HOOD_CLIPS)
     return arm, meshes, frames_mesh, B, clips
-
-
-def export_far(arm, far, path):
-    bpy.ops.object.select_all(action='DESELECT')
-    for o in [arm, *far.values()]:
-        o.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=False,
-                              export_animations=True, export_animation_mode='NLA_TRACKS', export_skins=True,
-                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True,
-                              export_morph=True, export_morph_animation=True, export_morph_normal=False,
-                              export_materials='EXPORT', export_extras=False, export_image_format='AUTO')
-    common.settle(path)
-    t, imgs, nbytes = common.glb_report(path)
-    print(f'{os.path.basename(path)}: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {nbytes / 1024:.0f} KB')
 
 
 def evaluated_co(o):
@@ -1039,6 +1109,29 @@ def add_hidden_morph(o, body):
         d.co = c
 
 
+FLUFF = {'body': 7.0, 'neck1': 6.0, 'neck2': 6.0, 'head': 4.0, 'shank': 6.0, 'fold': 3.0, 'fold_tip': 1.0,
+         'tail': 1.5, 'tail.L': 1.5, 'tail.R': 1.5}      # mm each bone's feathers rise in the rouse (game choice)
+
+
+def add_fluff_morph(o, body, eye_x):
+    """A morph target 'fluff': the contour feathers raised all over, as in the first moment of a rouse, by moving
+    each vertex out along its normal by FLUFF of the bones that carry it (the bill, eyes, feet and jesses do not
+    move: the head only behind the eye)."""
+    kb = o.shape_key_add(name='fluff')
+    gi = {g.index: g.name for g in o.vertex_groups}
+    me = o.data
+    for v, d in zip(me.vertices, kb.data):
+        a = 0.0
+        for ge in v.groups:
+            nm = gi[ge.group]
+            key = nm.split('.')[0] if nm.split('.')[0] in ('shank', 'fold', 'fold_tip') else nm
+            amt = FLUFF.get(key, 0.0)
+            if nm == 'head' and v.co.x / MM > eye_x - 12:
+                amt = 0.0
+            a += ge.weight * amt
+        d.co = v.co + v.normal * (a * MM)
+
+
 def fcurves_of(act):
     try:
         return list(act.fcurves)
@@ -1092,6 +1185,86 @@ def thin_keys(actions):
     return kept, total
 
 
+def step_keys(actions, path_has=None):
+    """Morph weights (the swap's 'hidden', the rouse's 'fluff') and the hood's scale play as steps: a clip
+    sampled between two keys must never show a half-gathered mesh or a shrunken hood. Keys that repeat the value
+    before them are dropped, the rest made CONSTANT (exported as glTF STEP)."""
+    n = 0
+    for act in actions:
+        for fc in fcurves_of(act):
+            if path_has and not any(h in fc.data_path for h in path_has):
+                continue
+            pts = [(k.co[0], k.co[1]) for k in fc.keyframe_points]
+            sel = [p for i, p in enumerate(pts) if i == 0 or i == len(pts) - 1 or abs(p[1] - pts[i - 1][1]) > 1e-9]
+            fc.keyframe_points.clear()
+            fc.keyframe_points.add(len(sel))
+            for kp, (x, y) in zip(fc.keyframe_points, sel):
+                kp.co = (x, y)
+                kp.interpolation = 'CONSTANT'
+            fc.update()
+            n += 1
+    return n
+
+
+def step_in_file(path):
+    """The exporter samples morph weights (and writes them LINEAR) whatever the curves' interpolation; sampled on
+    every frame, the same values played as STEP are the curves exactly. Set STEP on every morph-weight channel and
+    on the hood's scale, in the file's JSON (its length kept by the padding)."""
+    import json
+    import struct
+    raw = bytearray(open(path, 'rb').read())
+    jl = struct.unpack_from('<I', raw, 12)[0]
+    g = json.loads(bytes(raw[20:20 + jl]))
+    names = [nd.get('name', '') for nd in g.get('nodes', [])]
+    for an in g.get('animations', []):
+        for ch in an['channels']:
+            t = ch['target']
+            if t['path'] == 'weights' or (names[t.get('node', 0)] == 'hood' and t['path'] == 'scale'):
+                smp = an['samplers'][ch['sampler']]
+                assert smp.get('interpolation', 'LINEAR') in ('LINEAR', 'STEP'), smp
+                smp['interpolation'] = 'STEP'
+    js = json.dumps(g, separators=(',', ':')).encode()
+    js += b' ' * ((-len(js)) % 4)
+    rest = raw[20 + jl:]
+    out = bytearray(raw[:12]) + struct.pack('<I', len(js)) + raw[16:20] + js + rest
+    struct.pack_into('<I', out, 8, len(out))
+    open(path, 'wb').write(out)
+
+
+def glb_checks(path, hood_clips=()):
+    """The build's own checks on the written file; a failure stops the build. Prints: the clips, the clip data,
+    every morph-weight channel's interpolation (must be STEP), which clips key the hood (only [hood_clips])."""
+    import json
+    import struct
+    with open(path, 'rb') as fh:
+        raw = fh.read()
+    jl = struct.unpack('<I', raw[12:16])[0]
+    g = json.loads(raw[20:20 + jl])
+    names = [nd.get('name', '') for nd in g.get('nodes', [])]
+    acc, bad, hood, nweights = set(), [], [], 0
+    for an in g.get('animations', []):
+        for ch in an['channels']:
+            smp = an['samplers'][ch['sampler']]
+            acc.update((smp['input'], smp['output']))
+            node = names[ch['target'].get('node', 0)]
+            if ch['target']['path'] == 'weights':
+                nweights += 1
+                if smp.get('interpolation', 'LINEAR') != 'STEP':
+                    bad.append((an['name'], node))
+            if node == 'hood' and ch['target']['path'] == 'scale':
+                hood.append(an['name'])
+    nb = sum(g['bufferViews'][g['accessors'][a]['bufferView']]['byteLength'] for a in acc)
+    meshes = [m['name'] for m in g.get('meshes', [])]
+    skins = len(g.get('skins', []))
+    print(f'{os.path.basename(path)}: meshes {", ".join(meshes)}; {skins} skin(s), {len(g.get("animations", []))} clips, clip data {nb / 1024:.0f} KB')
+    print(f'{os.path.basename(path)}: morph-weight channels {nweights}, not STEP {len(bad)}' + (f' {bad[:4]}' if bad else ''))
+    hood = sorted(set(hood))
+    print(f'{os.path.basename(path)}: clips keying the hood: {", ".join(hood) if hood else "none"}')
+    assert not bad, 'a morph-weight channel is not STEP'
+    assert set(hood) <= set(hood_clips), f'the hood is keyed outside {hood_clips}: {hood}'
+    assert skins == 1, 'the detail levels must share one skeleton'
+
+
 def show_both(arm, on=True):
     """For a measure: every mesh shown (the morph 'hidden' held at 0), or back to the clip's own keys."""
     for o in arm.children:
@@ -1114,6 +1287,9 @@ def use_clip(arm, name):
         except (AttributeError, IndexError):
             pass
     assign(arm.animation_data, bpy.data.actions[name])
+    if 'hood' in arm.pose.bones:
+        arm.pose.bones['hood'].scale = (1, 1, 1) if name in HOODED_CLIPS else (0.001,) * 3      # game state, unless the clip keys it
+        arm.pose.bones['hood'].location = (0, 0, 0)
     for o in arm.children:
         sk = o.data.shape_keys if o.type == 'MESH' else None
         if sk and sk.animation_data:
@@ -1165,6 +1341,71 @@ def talon_depths(arm, meshes, frames_mesh, name, n, surface=None):
         if f in (0,) and where:
             print('   deepest at', where)
     return out
+
+
+FOREARM = (-400.0, 45.0)      # the falconer's forearm behind the cuff: to x = -400 mm, 45 mm round (the cuff's rim 47)
+
+
+def inside_support(Q, kind):
+    """For points Q (n x 3, mm, the clip's world), how deep each lies inside the support (0 outside): the cuff's
+    padded loft (its rows, analytic) and the forearm behind it; or the perch's pad and turned head and stake."""
+    import gear
+    x, y, z = Q[:, 0], Q[:, 1], Q[:, 2]
+    depth = np.zeros(len(Q))
+    if kind == 'cuff':
+        r = np.array(gear.DASS_ROWS, float)
+        zz = z + 52.0
+        inx = (x >= r[0, 0]) & (x <= r[-1, 0])
+        au, ad, b, pp = (np.interp(x, r[:, 0], r[:, k]) for k in (1, 2, 3, 4))
+        a = np.where(zz >= 0, au, ad)
+        F = (np.abs(y) / b) ** pp + (np.abs(zz) / a) ** pp
+        d = (1.0 - np.minimum(F, 1.0) ** (1.0 / pp)) * np.minimum(a, b)
+        depth = np.where(inx & (F < 1.0), d, 0.0)
+        rr = np.sqrt(y ** 2 + zz ** 2)
+        arm_in = (x < r[0, 0]) & (x > FOREARM[0]) & (rr < FOREARM[1])
+        depth = np.maximum(depth, np.where(arm_in, FOREARM[1] - rr, 0.0))
+    else:
+        zs = [0.0, -2.5, -6.0, -10.0, -14.0, -30.0, -38.0, -50.0, -66.0, -80.0, -92.0, -400.0]
+        rs = [66.0, 73.0, 75.0, 74.0, 75.0, 73.0, 66.0, 48.0, 32.0, 24.0, 22.0, 20.0]
+        R = np.interp(-z, [-v for v in zs], rs)
+        rr = np.sqrt(x ** 2 + y ** 2)
+        ok = (z < 0.0) & (z > -400.0) & (rr < R)
+        depth = np.where(ok, np.minimum(R - rr, -z), 0.0)
+    return depth
+
+
+def support_checks(arm, meshes, frames_mesh, name, n, kind):
+    """Every frame of a clip on the cuff or the perch: before the feet take it, no vertex of the shown body inside
+    it; once they have, none but the toes', and the toes within TOE_DEPTH_OK."""
+    sc = bpy.context.scene
+    use_clip(arm, name)
+    toes = {k: np.array(sorted(group_set(meshes[k], ('toe',))), int) for k in ('fold', 'open')}
+    pre, post, tdeep = [], [], (0.0, None)
+    for f in range(n):
+        sc.frame_set(f)
+        m = frames_mesh[name][f]
+        co, _ = evaluated_co(meshes[m])
+        d = inside_support(co, kind)
+        planted = FRAMES_FEET[name][f] in PLANTED
+        mask = np.ones(len(co), bool)
+        if planted:
+            mask[toes[m]] = False
+            td = float(d[toes[m]].max()) if len(toes[m]) else 0.0
+            if td > tdeep[0]:
+                tdeep = (td, f)
+        dm = np.where(mask, d, 0.0)
+        cnt = int((dm > 0.5).sum())
+        if cnt:
+            i = int(np.argmax(dm))
+            v = meshes[m].data.vertices[i]
+            gi = {g.index: g.name for g in meshes[m].vertex_groups}
+            top = gi[max(v.groups, key=lambda g: g.weight).group] if len(v.groups) else '?'
+            (post if planted else pre).append((f, cnt, round(float(dm.max()), 1), top))
+    print(f'{name}: vertices inside the {"cuff or forearm" if kind == "cuff" else "perch"} before the feet take it '
+          f'(frame, count, deepest mm, its bone): {pre if pre else "none"}')
+    print(f'{name}: once planted, vertices other than the toes inside: {post if post else "none"}; '
+          f'toes at most {tdeep[0]:.1f} mm in (analytic surface; frame {tdeep[1]})')
+    return pre, post, tdeep
 
 
 def strip_gif(arm, meshes, frames_mesh, name, frames, out, cam, res=(240, 180), samples=6, repeat=1):
@@ -1345,7 +1586,10 @@ def motion_checks(arm, meshes, frames_mesh, clips, body):
     sc = bpy.context.scene
     feetO = group_set(meshes['open'], ('toe', 'tarsus'))
     feetF = group_set(meshes['fold'], ('toe', 'tarsus'))
+    wingO = np.array(sorted(group_set(meshes['open'], ('wing_fore', 'wing_hand'))), int)
     for name, (n, fn, loop) in CLIPS.items():
+        if name in CUFF_CLIPS or name in PERCH_CLIPS:
+            support_checks(arm, meshes, frames_mesh, name, n, 'cuff' if name in CUFF_CLIPS else 'perch')
         use_clip(arm, name)
         fm = frames_mesh[name]
         for f in range(1, n):
@@ -1358,6 +1602,20 @@ def motion_checks(arm, meshes, frames_mesh, clips, body):
                     b, tb = evaluated_co(meshes['open'])
                     worst = min(worst, pair_iou(a, ta, b, tb, VIEWS['side']), pair_iou(a, ta, b, tb, VIEWS['three_quarter']))
                 print(f'{name}: swap {fm[f - 1]} -> {fm[f]} at frame {f}: silhouette overlap {worst:.3f} (the lower of side and three-quarter, frames {f - 1} and {f})')
+        if any(m == 'open' for m in fm):
+            worst, wf = 0, None
+            for f in range(n):
+                if fm[f] != 'open':
+                    continue
+                sc.frame_set(f)
+                co, _ = evaluated_co(meshes['open'])
+                M = np.array((arm.matrix_world @ arm.pose.bones['body'].matrix @ arm.pose.bones['body'].bone.matrix_local.inverted()).inverted())
+                Q = co[wingO] * MM
+                R = (Q @ M[:3, :3].T + M[:3, 3]) / MM
+                cnt = int(inside_body(body, R).sum())
+                if cnt > worst:
+                    worst, wf = cnt, f
+            print(f'{name}: forearm and hand vertices inside the body (spread mesh): max {worst}' + (f' (frame {wf})' if wf is not None else ''))
         flying = [f for f in range(n) if FRAMES_FEET[name][f] not in PLANTED and HIDDEN_FEET[name][f]]
         if flying:
             worst, wf = 0, None
@@ -1387,7 +1645,7 @@ def motion_checks(arm, meshes, frames_mesh, clips, body):
 
 
 CUFF_CLIPS = ('hood_off', 'hood_on', 'cast_off', 'land_cuff')
-PERCH_CLIPS = ('perch_idle', 'rouse', 'land_perch')
+PERCH_CLIPS = ('perch_idle', 'perch_hooded', 'rouse', 'land_perch')
 FLYING = ('flight', 'glide', 'stoop', 'bind')
 
 
@@ -1427,8 +1685,13 @@ def all_sheets(arm, meshes, frames_mesh, out, q, only=None):
         if name in FLYING:
             side = lambda f, r, d=d: ((r.x + 0.1, r.y + 4, r.z), (r.x + 0.1, r.y, r.z), d)
             tq = lambda f, r, d=d: ((r.x + 1.3 * d, r.y - 1.1 * d, r.z + 0.6 * d), (r.x + 0.1, r.y, r.z), None)
-        paths.append(contact_sheet(arm, meshes, frames_mesh, name, frames, out, res=res, samples=6 if q else 12, cam=side,
-                                   label=f'{name}, from the side (30 frames a second): awaiting the owner\'s approval of the motion', tag='side'))
+        if name in ('land_cuff', 'land_perch'):      # she comes in from the side: seen across her path, from ahead of the fist
+            side = lambda f, r, d=d: ((r.x + 4, r.y, r.z + 0.25), (r.x, r.y, r.z + 0.25), d * 1.2)
+            paths.append(contact_sheet(arm, meshes, frames_mesh, name, frames, out, res=res, samples=6 if q else 12, cam=side,
+                                       label=f'{name}, from ahead of the fist, across her path (30 frames a second): awaiting the owner\'s approval of the motion', tag='front'))
+        else:
+            paths.append(contact_sheet(arm, meshes, frames_mesh, name, frames, out, res=res, samples=6 if q else 12, cam=side,
+                                       label=f'{name}, from the side (30 frames a second): awaiting the owner\'s approval of the motion', tag='side'))
         paths.append(contact_sheet(arm, meshes, frames_mesh, name, frames, out, res=res, samples=6 if q else 12, cam=tq,
                                    label=f'{name}, three-quarter (30 frames a second): awaiting the owner\'s approval of the motion', tag='tq'))
     return paths
@@ -1441,6 +1704,9 @@ if __name__ == '__main__':
     if mode == 'tune':
         CLIPS_KEEP = dict(CLIPS)
         CLIPS.clear()
+    if os.environ.get('BUILD_ONLY'):      # for trying one clip: build just these
+        for k in [k for k in CLIPS if k not in os.environ['BUILD_ONLY'].split(',')]:
+            del CLIPS[k]
     arm, meshes, frames_mesh, B, clips = build_saker(OUT)
     if mode == 'tune':
         CLIPS.update(CLIPS_KEEP)
