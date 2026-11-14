@@ -19,6 +19,8 @@ const W = 334, H = 712, EDGE = 10;        // the device at true size, and its ma
 
 const CSS = `
   :host { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
+  *, *::before, *::after { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }      /* (a long press selects nothing and calls nothing out: farm.html's top) */
+  img, svg { -webkit-user-drag: none; }
   .phone { position: absolute; inset: 0; overflow: hidden; color-scheme: light; }
   .dim { position: absolute; inset: 0; background: rgba(12, 8, 4, 0.55); display: none; pointer-events: auto; touch-action: none; }
   .dev { position: absolute; width: ${W}px; height: ${H}px; border-radius: 50px; padding: 9px; background: linear-gradient(145deg, #4a4036, #1d1813 40%, #2b241d);
@@ -641,7 +643,7 @@ const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '
 const fem = (c) => c.sex === 'female';
 const her = (c, f, m) => (fem(c) ? f : m);      // a word by the camel's sex: her (f) or his (m)
 const titleOf = (c) => `${c.ageName} ${COAT[c.category][fem(c) ? 0 : 1]}`;
-const photo = (c) => `<img src="phone/${PHOTO[c.category]}" alt=""${c.category === 'homr' ? ' class="homr"' : ''}>`;
+const photo = (c) => `<img src="phone/${PHOTO[c.category]}" alt="" draggable="false"${c.category === 'homr' ? ' class="homr"' : ''}>`;
 const est = (c) => `<bdi dir="ltr">${n0(c.estimateLow)}–${n0(c.estimateHigh)}</bdi>`;
 const ageText = (d) => (d < 30 ? days(Math.max(1, d)) : d < 365 ? count(Math.floor(d / 30), 'month') : count(Math.floor(d / 365), 'year'));
 const dueText = (c) => { const d = c.dueOn - G.today; return d <= 1 ? 'تولد بكرة' : d < 60 ? `تولد بعد ${days(d)}` : `تولد بعد ${count(Math.round(d / 30), 'month')}`; };
@@ -1259,7 +1261,8 @@ export function createPhone({ host }) {
   const el = document.createElement('div'), root = el.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>${CSS}</style><div class="phone" data-state="closed" lang="ar" role="dialog" aria-label="الجوال" aria-hidden="true"><div class="dim"></div><div class="dev" tabindex="-1"><div class="scr" inert></div></div><div class="sr" role="status" aria-live="polite"></div></div>`;
   host.appendChild(el);
-  const box = root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim'), sr = root.querySelector('.sr');
+  root.addEventListener('selectstart', (e) => e.preventDefault(), true);      // (it does not leave the shadow tree for the page's guard: farm.html)
+  const box =root.querySelector('.phone'), dev = root.querySelector('.dev'), scr = root.querySelector('.scr'), dim = root.querySelector('.dim'), sr = root.querySelector('.sr');
   const st = { state: 'closed', play: false, screen: 'home', s: SMALL };
   const listeners = new Set();
   let press = null, lastDown = 0, bigAt = 0, focusBack = null, shownAt = 0;
