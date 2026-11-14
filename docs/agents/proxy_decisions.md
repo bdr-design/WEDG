@@ -154,6 +154,32 @@ the 30-day ownership rule; and that the stop on his round's day came too late. B
    the progress view and «وقّف هنا» working at any moment; on his list of phone tests; a season's cap is the
    fallback.
 
+## Batch 5: the phone's typography and money without limit (task T14)
+
+The plain typographic faults (widows, a preposition left at a line's end, letter-spacing on Arabic, figures not
+lining up in columns, fonts loaded from the network) are fixed without asking. These were the choices that are his:
+
+1. **Text size in the enlarged phone** (its smallest text is about 1.1 mm on his screen, because the enlarged
+   phone is the small one scaled to 0.59 of true size, by his decision of 13 Nov). Answer: prepare the smallest
+   sizes raised one step, only where each approved layout still fits, as before/after pictures; NOT applied until
+   he sees them.
+2. **Contrast of the small green, red and grey text** (4.27 to 4.45 against the 4.5 the standard asks). Answer:
+   darken each slightly and apply it; one before/after pair shown to him. His eye; cheap to undo.
+3. **The figure "1"** («11» reads close to «١١» in the phone's face at these sizes). Answer: prepare the phone's
+   FIGURES in IBM Plex Sans Arabic as before/after pictures; NOT applied until he sees them.
+4. **What "money without limit" is.** Answer: a top-up: while the switch is on, cash is brought back to 10,000,000
+   (a marked game choice) by ledger rows of their own kind, «فلوس تجربة»; every other rule still runs and the bank
+   still adds up.
+5. **Where the switch lives.** Answer: a two-tap line in the test meter's opened details; no phone screen reaches
+   it. FOR A RELEASE: the release build must not carry the meter.
+6. **How a game that used it is marked.** Answer: in the save (on now; the first day it was on, never cleared),
+   on the meter, and in the bank's rows; nothing on the map or the phone's home.
+7. **Turning it off.** Answer: the money stays and the mark stays; for an honest game he starts a new one. His
+   option later: taking the unspent test money back.
+8. **The long-press fix on his phone tonight, on its own.** Answer: yes, once its reviewer finds nothing and the
+   checks are green, on two conditions checked first: the long press that enlarges the phone works exactly as
+   before; any text field can still be typed in and edited.
+
 ## Waiting for the owner
 
 - Batch 1, item 1's alternative reading of decision 13 (above).
@@ -169,3 +195,5 @@ the 30-day ownership rule; and that the stop on his round's day came too late. B
   (item 12).
 - Batch 4b: the two flags (a rush on a short day stays cash only; moving the ordinary pregnancy check toward days
   15 to 20), and the phone test of a long jump.
+- Batch 5: the before/after pictures of the larger text (item 1) and of the figures' face (item 3); the darker
+  colours (item 2); the long press tried on his phone (only his phone can confirm it).
