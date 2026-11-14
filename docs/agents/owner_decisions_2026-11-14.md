@@ -42,3 +42,16 @@ what was asked overnight; this file is his own word.
 12. A buyer who knew of a treatment before buying, selling declared with no fine: «لا: البيع المعلن بدون غرامة للي
     ما درى بس. اللي اشتراها وهو يدري يتركها، أو ينتظر لين يروح التجميل، أو يبيعها ساكت ويتحمل خطر الفحص.»
     (Confirms item 5.)
+
+## الحراج's new views, the phone's type, the camels' triangles
+
+13. الحراج's four new views (the vet's check before buying; the vet finds a treatment; the declared sale for an owner
+    who did not know; the refusal for one who treated her himself: design/ui/phone_haraj_vet.jpg): his own words:
+    «اعتمدها مع التدقيق في التنسيق والثقل» (approved, with close attention to the formatting and the weight).
+14. The text size in the in-game phone (shown before and after one step larger): «خله مثل ما هو: يبقى الحجم الحالي
+    والشاشات مثل ما اعتمدتها.» (The larger sizes are dropped.)
+15. The phone's figures (the "1" that reads like «١»): «غيّر خط الأرقام: الأرقام بكل شاشات الجوال تصير بالخط اللي
+    واحده له علم وقاعدة، والحروف ما تتغير.» (IBM Plex Sans Arabic for figures only, at the current sizes.)
+16. The camels' triangles (now 537k over the pens and 724k at eye height, against the budget's 400k): «النسخة الوسط
+    الأخف الحين: نطبق نسخة وسط 4 آلاف مثلث بدل 8 آلاف: أكبر توفير (537 ← 377 ألف فوق الحظاير) ويغيّر حوالي 4% من
+    بكسلات النوق.» (The other three options are not adopted now.)
