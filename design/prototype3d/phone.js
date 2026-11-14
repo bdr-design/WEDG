@@ -802,7 +802,7 @@ const photo = (c) => `<img src="phone/${PHOTO[c.category]}" alt="" draggable="fa
 const est = (c) => `<bdi dir="ltr">${n0(c.estimateLow)}–${n0(c.estimateHigh)}</bdi>`;
 const ageText = (d) => (d < 30 ? days(Math.max(1, d)) : d < 365 ? count(Math.floor(d / 30), 'month') : count(Math.floor(d / 365), 'year'));
 const dueText = (c) => { const d = c.dueOn - G.today; return d <= 1 ? 'تولد بكرة' : d < 60 ? `تولد بعد ${days(d)}` : `تولد بعد ${count(Math.round(d / 30), 'month')}`; };
-const healthText = (c) => (c.health === 'sick' ? her(c, 'مريضة', 'مريض') : c.health === 'treated' ? 'تحت العلاج' : her(c, 'صحتها زينة', 'صحته زينة'));
+const healthText = (c) => (c.health === 'sick' ? her(c, 'مريضة', 'مريض') : c.health === 'treated' ? 'تحت العلاج' : her(c, 'صحتها\u00a0زينة', 'صحته\u00a0زينة'));
 // a step for a price set by + and − (a game choice: 500 riyals under 50,000, 1,000 under 200,000, then 5,000)
 const stepOf = (v) => (v < 50000 ? 500 : v < 200000 ? 1000 : 5000);
 const roundTo = (v, k) => Math.round(v / k) * k;
