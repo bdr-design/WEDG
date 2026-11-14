@@ -112,6 +112,7 @@ const CSS = `
   .warn { display: grid; grid-template-columns: 36px 1fr; column-gap: 11px; align-items: center; padding: 10px 12px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1.5px #f3c2bd; }
   .warn .lead { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #fde6e4; color: var(--red); grid-row: span 2; align-self: start; }
   .warn b { font-size: 13.5px; } .warn small { font-size: 11.5px; color: var(--ink2); }
+  .warn small.also { grid-column: 2; margin-top: 4px; } .warn small.also b { font-size: inherit; color: var(--ink); }      /* (her suckling calf as a line of the refusal's card: the owner's item 27) */
   .row .act { grid-row: span 2; }
   .row .act .btn { height: 36px; border-radius: 11px; font-size: 13px; padding-inline: 14px; }
   .btn[disabled] { background: #eeeef1; color: #a5a5ab; cursor: default; }
@@ -401,7 +402,7 @@ const sup = (k) => G.farm.supplies.find((x) => x.supply === k);
 const lowCount = (keys) => !G ? 0 : keys.filter((k) => { const x = sup(k); return x.short || (x.daysLeft != null && x.daysLeft <= 3); }).length;
 const badge = (n) => n ? `<span class="bd">${n}</span>` : '';
 const waiting = () => `<div class="note" style="margin-top:6px">يجهّز…</div>`;
-const alertCard = (title, line) => `<div class="warn"><span class="lead">${svg('alert')}</span><b>${title}</b><small>${line}</small></div>`;
+const alertCard = (title, line, also = '') => `<div class="warn"><span class="lead">${svg('alert')}</span><b>${title}</b><small>${line}</small>${also ? `<small class="also">${also}</small>` : ''}</div>`;
 const errCard = () => ERR ? alertCard('ما تم الطلب', ERR) : '';
 // cash below zero (wages or a fine can take it there: the owner's decision 8): no camel bought and nothing built till
 // it is paid
@@ -971,13 +972,16 @@ function sellScreen() {
   const ownT = refusedBy ? G.tamperings.filter((t) => t.camel === c.id) : [];
   const own = ownT.length ? ownT.map((t) => `${TAMPER[t.kind]} ${STRENGTH[t.strength - 1]}`) : null, ownKinds = ownT.map((t) => t.kind);
   const gone = ownKinds.length === 1 ? theTamper(ownKinds[0]) : 'التجميل';
+  // (her suckling calf, when she is refused too: a line of the refusal's card, not a card of its own: the owner's item 27)
+  const suckTitle = dam ? `${cf('حوارتها', 'حوارها')} ${esc(dam.calfName)} ${cf('ترضع', 'يرضع')} منها` : '', suckLine = dam ? `لو بعتها ${cf('تضعف بدون حليب أمها', 'يضعف بدون حليب أمه')}، خصوصًا قبل 3 شهور.` : '';
+  const suckAlso = own && dam ? `<b>${suckTitle}.</b> ${suckLine}` : '';
   const ownCard = !own ? '' : knew
-    ? alertCard(`ما تقدر ${her(c, 'تعلنها', 'تعلنه')}`, `${her(c, 'اشتريتها', 'اشتريته')} وأنت تدري، والبيع المعلن للي ما درى بس. ${her(c, 'تخليها', 'تخليه')} عندك، أو\u00a0تنتظر لين يروح ${gone}، أو\u00a0${her(c, 'تبيعها', 'تبيعه')} ساكت وتتحمل خطر الفحص.`)
-    : alertCard(`ما تقدر ${her(c, 'تعلنها', 'تعلنه')}`, `أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}، والتجميل ممنوع برا المهرجان بعد، وإعلانه اعتراف. ${her(c, 'انتظرها', 'انتظره')} لين يروح ${gone}، أو\u00a0${her(c, 'بيعها', 'بيعه')} ساكت ${her(c, 'ويفحصونها', 'ويفحصونه')} قبل ما يدفعون.`);
+    ? alertCard(`ما تقدر ${her(c, 'تعلنها', 'تعلنه')}`, `${her(c, 'اشتريتها', 'اشتريته')} وأنت تدري، والبيع المعلن للي ما درى بس. ${her(c, 'تخليها', 'تخليه')} عندك، أو\u00a0تنتظر لين يروح ${gone}، أو\u00a0${her(c, 'تبيعها', 'تبيعه')} ساكت وتتحمل خطر الفحص.`, suckAlso)
+    : alertCard(`ما تقدر ${her(c, 'تعلنها', 'تعلنه')}`, `أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}، والتجميل ممنوع برا المهرجان بعد، وإعلانه اعتراف. ${her(c, 'انتظرها', 'انتظره')} لين يروح ${gone}، أو\u00a0${her(c, 'بيعها', 'بيعه')} ساكت ${her(c, 'ويفحصونها', 'ويفحصونه')} قبل ما يدفعون.`, suckAlso);
   return `<div class="body">${back}<div class="title" style="font-size:22px">بيع ${esc(c.name)}</div>${errCard()}
     <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small>${own ? `<small>${her(c, 'فيها', 'فيه')} ${own.join(' و')}، ${knew ? `${her(c, 'واشتريتها', 'واشتريته')} وأنت تدري` : `أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}`}</small>` : what ? `<small>${what}</small>` : ''}</div>
     ${ownCard}
-    ${dam ? alertCard(`${cf('حوارتها', 'حوارها')} ${esc(dam.calfName)} ${cf('ترضع', 'يرضع')} منها`, `لو بعتها ${cf('تضعف بدون حليب أمها', 'يضعف بدون حليب أمه')}، خصوصًا قبل 3 شهور.`) : ''}
+    ${dam && !suckAlso ? alertCard(suckTitle, suckLine) : ''}
     <div class="sec">${her(c, 'اعرضها', 'اعرضه')} بالحراج</div>
     <div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سعرك</b><span class="stp"><button data-act="askStep" data-d="-1" aria-label="سعر أقل" ${HJ.ask - k >= min ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.ask)}</b> <span>ريال</span></span><button data-act="askStep" data-d="1" aria-label="سعر أكثر">${svg('plus')}</button></span><small>السعي ${n0(fee)} ريال · يوصلك ${n0(HJ.ask - fee)}</small></div></div>
     ${hint ? `<div class="note">${hint}</div>` : ''}
