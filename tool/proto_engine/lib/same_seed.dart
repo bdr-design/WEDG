@@ -15,6 +15,8 @@ Iterable<String> sameSeedLines({
   int weeks = 104,
   int every = 4,
   void Function(Game game)? end,
+  bool rush = true,
+  bool legacyState = false,
 }) sync* {
   final game = Game.create(
     seed: seed,
@@ -34,14 +36,14 @@ Iterable<String> sameSeedLines({
     if (w % every == 0 || w == weeks) {
       yield 'week $w day ${game.today.value} cash ${game.me.cash.value} '
           'commands ${bot.commands} refused ${bot.refused} extras $extras '
-          '${stateLine(game.state)}';
+          '${legacyState ? stateLineV9(game.state) : stateLine(game.state)}';
     }
     if (w == weeks) {
       yield 'extras ${[for (final e in done.entries) '${e.key} ${e.value}'].join(', ')}';
       end?.call(game);
       return;
     }
-    extras += _extras(game, w, done);
+    extras += _extras(game, w, done, rush: rush);
     bot.week();
   }
 }
@@ -51,7 +53,7 @@ Iterable<String> sameSeedLines({
 /// taken off the market, a female put to the farm's own bull, an entry
 /// withdrawn, a camel secretly treated. Returns how many went through, and counts them by kind in
 /// [done].
-int _extras(Game game, int week, Map<String, int> done) {
+int _extras(Game game, int week, Map<String, int> done, {bool rush = true}) {
   final me = game.me.id;
   var ok = 0;
   void send(Command c) {
@@ -144,21 +146,23 @@ int _extras(Game game, int week, Map<String, int> done) {
   // the rush and being away (T15), so their paths run on both platforms: a
   // pen built now, a camel rushed home, the standing orders and the vet's
   // contract switched on and off, a short day's tanker, and a week away
-  if (week == 6) send(BuildFacility(me, Facility.pen, now: true));
-  if (week == 12) {
+  if (rush && week == 6) send(BuildFacility(me, Facility.pen, now: true));
+  if (rush && week == 12) {
     send(SetStandingOrder(me, StandingOrder.water, on: true));
     send(SetStandingOrder(me, StandingOrder.feed, on: true));
     send(SignVetContract(me));
   }
-  if (week == 40) send(CancelVetContract(me));
-  if (week == 60) send(SetStandingOrder(me, StandingOrder.feed, on: false));
-  for (final c in v.herd) {
-    if (c.onTheWay) send(RushTruck(me, c.id, hour: week % 24));
+  if (rush && week == 40) send(CancelVetContract(me));
+  if (rush && week == 60) {
+    send(SetStandingOrder(me, StandingOrder.feed, on: false));
   }
-  if (game.me.farm.today?.waterShort ?? false) {
+  for (final c in v.herd) {
+    if (rush && c.onTheWay) send(RushTruck(me, c.id, hour: week % 24));
+  }
+  if (rush && (game.me.farm.today?.waterShort ?? false)) {
     send(OrderSupply(me, Supply.water, 1, tanker: Tanker.small, now: true));
   }
-  if (week == 101) {
+  if (rush && week == 101) {
     final run = AwayRun(game, AwayPlan(game.today + 7));
     while (!run.done) {
       run.step();
@@ -183,6 +187,20 @@ int _extras(Game game, int week, Map<String, int> done) {
 /// read back on the other platform must reproduce (bin/read_save.dart).
 String stateLine(GameState state) {
   final text = canonicalJson(state.toJson());
+  return 'length ${text.length} hash ${textHash(text)}';
+}
+
+/// [stateLine] of the state as a save before the rush (v9) holds it: the
+/// farm's day record, which every day now writes, left out (the old game's
+/// check: test/old_game_test.dart).
+String stateLineV9(GameState state) {
+  final j = state.toJson();
+  for (final p in j['players']! as List<Object?>) {
+    ((p! as Map<String, Object?>)['farm']! as Map<String, Object?>).remove(
+      'today',
+    );
+  }
+  final text = canonicalJson(j);
   return 'length ${text.length} hash ${textHash(text)}';
 }
 
