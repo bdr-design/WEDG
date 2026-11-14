@@ -34,3 +34,23 @@ Read as: the falcon outing (الطلعة للمقناص) is a trip of days too, 
 back the same day" no longer binds it. The rest of decision 7 stands as he chose it («العزبة تمشي مثل كل يوم»: the
 farm runs as on any day while he is away). Whether a short outing of one day stays possible beside the trip of
 days is not in his words: the design shows it and he chooses.
+
+## 14 Nov 2026: the season's design approved, and three answers
+
+Shown the redrawn design (design/hunt/trip_board.jpg, design/ui/phone_falcon.jpg, design/hunt/season_calendar.jpg,
+design/hunt/season_money.jpg), he answered, each in the words of the option he chose:
+
+1. Where the trapping gear is bought: «من الجوال: تشتريها من تطبيق «نادي الصقور» تحت «الطرح»، وتوصل عزبتك مثل العلف.
+   ما يحتاج مكان جديد على الخريطة.»
+2. A one-day outing beside the trip of days: «ايه، الاثنين: طلعة يوم لأرض قريبة ترجع منها نفس اليوم، ورحلة أيام بمخيم
+   للأرض البعيدة. أنت تختار كل مرة.»
+3. How a day at the trapping camp is played: «تشوف وتطلق الحمامة: تدوّر الصقر بالدربيل، تختار الطعم، وتطلق الحمامة
+   بيدك. والنتيجة (طاح بالشبك أو لا) تنحسب من عدتك وأرضك وحظك.»
+4. The design itself: «اعتمده وابدأ البناء: يبدأ البناء على أجوبتك هنا: المحرك أول، ثم الجوال، ثم المخيم والمقناص
+   بالخريطة. كل جزء يمر على مراجعه.»
+
+Still the proxy's provisional answers inside the approved design (docs/agents/proxy_decisions.md batch 3), to be
+put to him one by one: the odds' range; alone first with partners as the next step; banned birds, the saker and the
+قرناس released; a trapped bird kept with no resale; trapping lawful only on its ground, in its season, with its
+permit. Still open: the falcon festival's date; releasing a wild-caught falcon in spring; aiming with the air
+rifle; cheating in falcon contests; what «العرض» in inches measures.
