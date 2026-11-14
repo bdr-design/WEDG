@@ -483,13 +483,34 @@ The rules above as built, with the measurements (the commits' messages carry the
   300-head herd kept watered by the standing orders.
 - **A year away, measured** (`tool/proto_engine/bin/away_cost.dart`, the standing orders and the contract on, the
   player going on after each stop): 56 head 204 ms on the VM, 471 ms in JavaScript; **10,000 head 3.7 s on the VM,
-  12.8 s in JavaScript** (the slowest day 66 ms / 730 ms), 10 legs (registrations and the breeding season), 9,969
+  12.8 s in JavaScript** (the slowest day measured 66 ms / 730 ms; the reviewer did not reproduce the 730 ms day,
+  which was a pause of the loaded machine, not a day of the game's), 10 legs (registrations and the breeding season), 9,969
   of 10,000 alive at the end. On a mid-range phone, two to three times slower: about **25 to 40 s** for a year at
   10,000 head (an estimate), the progress view and «وقّف هنا» working throughout; the game's own farm (56 head) well
   under 2 s.
 - **Found while measuring:** a standing water order sent one tanker however large the herd (10,000 head went dry);
   it now sends what the tank takes. The account's limit walked the whole herd for every treatment; it is now worked
   out only when the cash does not cover one (a year at 10,000 head: 12.8 s to 3.7 s on the VM).
+- **The second review of part B** (its mutations: 46 rules broken one at a time, 21 had survived):
+  - every stop has its test (`packages/marah_domain/test/away_stops_test.dart`): on its day, once, not when the
+    standing order or the vet's contract covers it; registration only when he could enter and has not; breeding only
+    with a female the engine lets him breed; the round's day refused while told. The 23 rules that had survived,
+    re-broken one at a time: each now caught;
+  - a day's other stops are carried with the one told (`AwayStop.also`, said on the card «وصار بنفس اليوم: …»): a
+    fine found the day an illness came had been lost;
+  - his round's day is the stop told even when the festival's trip takes the money below zero that day, the money
+    said on the card (L2); the make-good corrects only the camels in the herd at dawn (L1);
+  - a caller's own lines: `AwayPlan.counters` (into the summary's `extra`) and `AwayPlan.card` (L3);
+  - the snapshot lists the first 20 sick by name, how many in all and the price of treating them all, with
+    `TreatAll` (two taps on the phone): at 10,000 head with 1,000 sick the snapshot is 60,886 characters (240k
+    before; limit 80,000 in the budget test);
+  - the progress view says «يحفظ اللعبة…» while the final save runs (about 0.7 s in JavaScript at 10,000 head);
+  - an old game is unchanged: the session branch's own two-year script, played on this build without the new
+    paths, gives its stored lines (7b5b481) exactly with the vet's price keyed by the day as before and the day record
+    left out of the hash; on the build as it is, identical to week 28, then the money differs by N5 alone
+    (`tool/proto_engine/test/old_game_test.dart`);
+  - the save is version 11, on an identity 10 (T14's money switch, which reaches the owner first), tested from a v9
+    save of the session branch's build and a v10 save of T14's, each with a camel on the truck.
 - **Owed:** the early pregnancy scan (the phone has no breeding screen to hold it); the stop on the pens outgrown is
   built (`crowded`), with the card's warning.
 
