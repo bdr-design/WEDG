@@ -150,7 +150,7 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
     const t = (await res.text()).replace('startEngine({ onSnapshot:', 'startEngine({ newGame: { seed: 4242 }, onSnapshot:').replace('window.__phone = phone;', HOOK);
     await r.fulfill({ response: res, body: t });
   });
-  await p.goto(`http://127.0.0.1:${PORT}/index.html`);
+  await p.goto(`http://127.0.0.1:${PORT}/index.html`, { timeout: 600000 });
   await p.waitForFunction(() => window.__play && window.marahEngine && window.marahEngine.snapshot, null, { timeout: 600000 });
   await p.waitForTimeout(4000);
   await p.evaluate(([PIN_ICONS]) => {
@@ -384,7 +384,7 @@ const CAP = {
   trip_15_stoop: 'أطلقت الحمامة والشبك على ظهرها، والشاهين ينقض (بدائل). مرسوم.',
   trip_16_catch: 'الشاهين بالشبك (بديل) ودبوسه، وبطاقته بضغطتك: فرخ شاهين بحري ينباع بمزاد الطرح، طوله وعرضه ووزنه. مرسوم.',
   trip_17_release: 'حر بالشبك (صورة مجسم الحر) ودبوسه؛ بضغطتك على الدبوس تنفتح البطاقة: ينطلق، بسطر الوكيل (جواب مؤقت) بنصه. مرسوم.',
-  trip_18_empty_day: 'يوم فاضي: بطاقة المخيم بضغطة الخيمة بالمسا، وتنبيه العزبة اللي رجّع اللعب لك (العلف يخلص بعد يومين). مرسوم.',
+  trip_18_empty_day: 'يوم فاضي: بطاقة المخيم بضغطة الخيمة بالمسا، ووقفة التقويم اللي رجّعت اللعب لك (باقي 3 أيام على العلف). مرسوم.',
   trip_19_off_ground: 'جنب العزبة: زر الطرح يحذر وما يشتغل، وبضغطتك على زر التحذير تنفتح بطاقته: الطرح بأرضه وموسمه بس، والشبك براها 100,000 [136] (الوكيل). مرسوم.',
   trip_20_banned: 'جنب العزبة بالصقر: زر الإرسال يحذر وما يرسل (قرار المالك 4)، وبضغطتك على زر التحذير تنفتح بطاقته والغرامة 5,000 [136]. مرسوم.',
   trip_21_back: 'رجعت: «اللي صار» بالجوال الصغير، نفس ملخص التقويم ومعه سطور المخيم؛ الطير «مثال». مرسوم: محتوى الشاشة.',

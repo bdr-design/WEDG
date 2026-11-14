@@ -111,7 +111,7 @@ const CSS = `
   .sbar .clk { font-size: 0; } .sbar .clk::after { content: "9:41"; font-size: 14px; }
   .it .ph img { height: 56px; width: auto; display: block; } .it.big .ph img { height: 82px; }
   .it.two { grid-template-columns: 58px 1fr; }
-  .it.lot { grid-template-columns: 58px 1fr 76px; } .it.lot .pr { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .it.lot { grid-template-columns: 58px 1fr 76px; } .it.lot b, .it.lot small { grid-column: 2; } .it.lot .pr { grid-column: 3; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   /* the calendar's card and summary (task T15, design/ui/phone_calendar.cjs in /home/user/wt/t15), copied as they are */
   .row .lead.fest { background: #fbefd2; color: #a8730c; } .row .lead.me { background: #fde6e4; color: var(--red); }
   .row .lead.milk { background: #e6eef8; color: #2f7fcf; } .row .lead.brd { background: var(--acc-soft); color: var(--acc); }
@@ -134,7 +134,7 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
   const ctx = await b.newContext({ viewport: { width: 956, height: 440 }, deviceScaleFactor: 2 });
   const p = await ctx.newPage();
   await p.route('**/index.html', async (r) => { const res = await r.fetch(); await r.fulfill({ response: res, body: (await res.text()).replace('startEngine({ onSnapshot:', 'startEngine({ newGame: { seed: 4242 }, onSnapshot:') }); });
-  await p.goto(`http://127.0.0.1:${PORT}/index.html`);
+  await p.goto(`http://127.0.0.1:${PORT}/index.html`, { timeout: 600000 });
   await p.waitForFunction(() => window.marahEngine && window.marahEngine.snapshot, null, { timeout: 600000 });
   await p.waitForTimeout(2500);
   await p.evaluate(() => { window.requestAnimationFrame = () => 0; });
