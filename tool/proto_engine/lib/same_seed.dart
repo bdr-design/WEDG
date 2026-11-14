@@ -158,7 +158,7 @@ int _extras(Game game, int week, Map<String, int> done) {
   if (game.me.farm.today?.waterShort ?? false) {
     send(OrderSupply(me, Supply.water, 1, tanker: Tanker.small, now: true));
   }
-  if (week % 26 == 13) {
+  if (week == 101) {
     final run = AwayRun(game, AwayPlan(game.today + 7));
     while (!run.done) {
       run.step();
