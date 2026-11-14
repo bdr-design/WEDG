@@ -831,6 +831,7 @@ const KIND = {
     if (l.fineFor === 'sale') return l.name ? `غرامة بيع ${esc(l.name)}` : 'غرامة بيع';
     return l.name ? `غرامة تجميل ${esc(l.name)}` : 'غرامة تجميل';
   } },
+  testMoney: { name: 'فلوس تجربة', icon: 'bank', line: () => 'فلوس بلا حد للتجربة' },      // (the owner's testing only: the meter's switch, farm.html; GDD 13)
 };
 // a kind this phone has no words for yet (the engine may add one before the phone knows it): said plainly, never broken
 const OTHER = { name: 'حركة ثانية', icon: 'bank', line: (l) => (one(l) && l.day ? dayName(l.day) : count(l.count, 'time')) };
