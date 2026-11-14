@@ -19,6 +19,9 @@ extension type const FestivalId(String value) {}
 
 extension type const RoundId(String value) {}
 
+/// One of the player's falcons (task T18).
+extension type const FalconId(String value) {}
+
 /// Issues unique ids for one world. Ids embed the world seed so two offline
 /// worlds never produce the same id, and the counter keeps them ordered.
 class IdGenerator {
@@ -40,4 +43,5 @@ class IdGenerator {
   FestivalId festival() => FestivalId(_next('f'));
   RoundId round() => RoundId(_next('r'));
   OwnerId owner() => OwnerId(_next('w'));
+  FalconId falcon() => FalconId(_next('k'));
 }

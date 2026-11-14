@@ -4,6 +4,7 @@ import '../common/ids.dart';
 import '../common/money.dart';
 import '../common/time.dart';
 import '../rules/balance.dart';
+import 'falconry.dart';
 import 'tampering.dart';
 
 /// The ration: an adult's dry matter a day and the barley's share of it (the
@@ -96,7 +97,12 @@ enum Facility {
   tent(price: 15000, most: 1),
 
   /// The farm's room, a sitting room with air conditioning.
-  room(price: 60000, most: 1);
+  room(price: 60000, most: 1),
+
+  /// غرفة الصقور (the owner's decision 5): perches and the moulting room
+  /// (أوكار ومقيض), with its pin and card; holds HuntBalance.roomHolds
+  /// falcons. SAR 18,000 (game choice, the season's design).
+  falconRoom(price: 18000, most: 1);
 
   const Facility({
     required this.price,
@@ -430,6 +436,23 @@ enum LedgerCategory {
 
   /// The vet's monthly contract fee (T15; the proxy's batch 4c).
   vetContract,
+
+  /// A falcon bought at one of the three auctions (its ref the falcon; T18).
+  falconPurchase,
+
+  /// A trapped bird sold at the trapping auction: the price in full, with
+  /// no fee [191][190] (its ref the falcon; T18).
+  falconSale,
+
+  /// A hunting or trapping permit's fee (its ref the permit's kind; T18).
+  huntPermit,
+
+  /// The trapping gear and the camp's supplies (its ref the gear; T18).
+  falconGear,
+
+  /// The falcons' keep, by the day, one row a month (T18; the answers'
+  /// Q-25).
+  falconUpkeep,
 }
 
 /// One money movement. Recurring costs (feed, wages) are kept as one row per
@@ -573,6 +596,7 @@ class PlayerState {
     List<Finding>? untold,
     this.testMoney = false,
     this.testedFrom,
+    this.falconry,
   }) : ledger = ledger ?? [],
        reputation = reputation ?? {},
        dealer = dealer ?? [],
@@ -612,6 +636,13 @@ class PlayerState {
   /// so results from it are not taken for an honest game's.
   GameDay? testedFrom;
 
+  /// His part of the hunting season (T18): null until he first touches it,
+  /// so a game that never does is saved as before.
+  Falconry? falconry;
+
+  /// [falconry], made on first use.
+  Falconry get hunt => falconry ??= Falconry();
+
   double reputationIn(ColorCategory c) =>
       reputation[c] ?? Balance.startingReputation;
 
@@ -629,6 +660,7 @@ class PlayerState {
     // (written only when set: a game that never used it is saved as before)
     if (testMoney) 'testMoney': true,
     if (testedFrom != null) 'testedFrom': testedFrom!.value,
+    if (falconry != null) 'falconry': falconry!.toJson(),
   };
 
   static PlayerState fromJson(Map<String, Object?> j) => PlayerState(
@@ -658,5 +690,8 @@ class PlayerState {
     testedFrom: j['testedFrom'] == null
         ? null
         : GameDay(j['testedFrom']! as int),
+    falconry: j['falconry'] == null
+        ? null
+        : Falconry.fromJson(j['falconry']! as Map<String, Object?>),
   );
 }

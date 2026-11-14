@@ -1,10 +1,13 @@
 import 'catalog/catalog.dart';
+import 'catalog/falconry.dart';
 import 'catalog/region.dart';
 import 'common/ids.dart';
 import 'common/time.dart';
 import 'model/contest.dart';
 import 'model/player.dart';
 import 'model/tampering.dart';
+
+part 'hunt_events.dart';
 
 /// Why a camel died.
 /// Why a camel died: an illness, old age, a young calf's death in its first
@@ -451,7 +454,9 @@ sealed class DomainEvent {
         cases: j['cases']! as int,
         fines: j['fines']! as int,
       ),
-      final other => throw FormatException('unknown event type $other'),
+      final other =>
+        _huntEvent(other, day, owner, camel, j) ??
+            (throw FormatException('unknown event type $other')),
     };
   }
 

@@ -988,6 +988,7 @@ class PlayerSnapshot {
     this.testMoney = false,
     this.testedFrom,
     this.rush = const {},
+    this.falcons = const {},
   });
 
   /// Money without limit for the owner's testing is on (TestMoney), and the
@@ -998,6 +999,10 @@ class PlayerSnapshot {
   /// The rush, the standing orders, the vet and the calendar's guard, as
   /// the engine prices them (rushFacts, T15).
   final Map<String, Object?> rush;
+
+  /// The hunting season: the catalog, his falcons, permits and gear, the
+  /// falcons' room's pin, today's lots (falconFacts, T18). No hidden value.
+  final Map<String, Object?> falcons;
 
   /// Increases with every snapshot; older ones can be dropped.
   final int revision;

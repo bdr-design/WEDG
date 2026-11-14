@@ -35,6 +35,17 @@ enum MoneyKind {
 
   /// Money paid to have a thing finished now (the rush, T15).
   rush,
+
+  /// The hunting season (T18): falcons bought, a trapped bird sold at the
+  /// trapping auction (the price in full: its own kind), the permits, the
+  /// trapping gear and the camp's supplies (FalconLines.moneyKinds).
+  falcons,
+  falconSale,
+  permits,
+  gear,
+
+  /// The falcons' keep (20 riyals a day each: HuntBalance.upkeepPerDay).
+  falconUpkeep,
 }
 
 /// Why a camel or a herd was trucked: the ledger keeps the transport row's
@@ -199,6 +210,11 @@ class Money {
     LedgerCategory.tampering => MoneyKind.tampering,
     LedgerCategory.fine || LedgerCategory.fineAtSale => MoneyKind.fine,
     LedgerCategory.testMoney => MoneyKind.testMoney,
+    LedgerCategory.falconPurchase => MoneyKind.falcons,
+    LedgerCategory.falconSale => MoneyKind.falconSale,
+    LedgerCategory.huntPermit => MoneyKind.permits,
+    LedgerCategory.falconGear => MoneyKind.gear,
+    LedgerCategory.falconUpkeep => MoneyKind.falconUpkeep,
   };
 
   /// The opening balance (every opening row: one in a game).

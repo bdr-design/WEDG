@@ -23,6 +23,7 @@ import '../rules/valuation.dart';
 import '../sim.dart';
 import '../systems/systems.dart';
 import '../world_gen.dart';
+import 'falconry.dart';
 import 'rush.dart';
 
 /// Applies one command. Validation and effects live together per command;
@@ -61,6 +62,20 @@ Result handle(Sim sim, Command cmd) {
     SignVetContract() => signVet(sim, p, cmd),
     CancelVetContract() => cancelVet(sim, p, cmd),
     TreatAll() => treatAll(sim, p),
+    BuyPermit() => buyPermit(sim, p, cmd),
+    OrderGear() => orderGear(sim, p, cmd),
+    BuyFalcon() => buyFalcon(sim, p, cmd),
+    StartTrip() => startTrip(sim, p, cmd),
+    EndTrip() => endTrip(sim, p, cmd),
+    MoveCamp() => moveCamp(sim, p, cmd),
+    SpotFalcon() => spotFalcon(sim, p, cmd),
+    ReleaseLure() => releaseLure(sim, p, cmd),
+    EnterTrapAuction() => enterTrapAuction(sim, p, cmd),
+    KeepBird() => keepBird(sim, p, cmd),
+    ReleaseFalcon() => releaseFalcon(sim, p, cmd),
+    CastFalcon() => castFalcon(sim, p, cmd),
+    SearchFalcon() => searchFalcon(sim, p, cmd),
+    CareFalcons() => careFalcons(sim, p, cmd),
   };
 }
 

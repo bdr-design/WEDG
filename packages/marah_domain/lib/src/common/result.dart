@@ -125,6 +125,13 @@ enum ErrorCode {
   /// being told ({'reason'}).
   cannotJump,
 
+  /// The hunting season refuses it ({'reason'}: a HuntRefusal's name, and
+  /// what its words need): out of its season or hours, off its ground,
+  /// without its permit, no room, a lot gone (task T18). The words are
+  /// FalconLines.refusal's; nothing happens, and no fine follows (the
+  /// owner's decision 4: the button warns and does not act).
+  huntRefused,
+
   /// The engine hit a bug; the game was restored from the last save.
   internalError,
 

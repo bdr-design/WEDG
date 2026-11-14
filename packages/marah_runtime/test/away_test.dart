@@ -300,4 +300,40 @@ void main() {
     expect(c.acquiredOn, g.today);
     await e.close();
   });
+
+  test('a night at camp (T18): one away call to tomorrow, landing at first '
+      'light; the hunt\'s minute is the engine\'s', () async {
+    final e = core();
+    await e.newGame(params);
+    final g = e.game!, me = g.me.id;
+    await e.dispatch(SetTestMoney(me, on: true));
+    expect((await e.dispatch(BuyPermit(me, PermitKind.trapping))).ok, isTrue);
+    await e.dispatch(OrderGear(me, Gear.supplies, 10));
+    await e.dispatch(OrderGear(me, Gear.pigeon, 6));
+    await e.dispatch(OrderGear(me, Gear.pigeonNet, 1));
+    await playTo(e, g.today + 1, 400);
+    expect(g.me.hunt.has(Gear.supplies), 10);
+    final start = g.today;
+    expect(
+      (await e.dispatch(StartTrip(me, TripKind.trapping, Ground.hamad, 3))).ok,
+      isTrue,
+    );
+    final r = await e.tripNight();
+    expect(r.refused, isNull);
+    expect(r.run!.stop!.kind, AwayStopKind.target);
+    expect(g.today, start + 1);
+    expect(e.minuteOfDay(), HuntSun.dawn(g.today));
+    expect(g.me.hunt.has(Gear.supplies), 9);
+    // a page that says midnight is not believed: the minute is the clock's
+    final s = await e.dispatch(
+      SpotFalcon(me, const HuntAt.ground(Ground.hamad), minute: 0),
+    );
+    expect(s.ok, isTrue, reason: '$s');
+    final card = await e.tripCard(TripKind.trapping, Ground.hamad, 3);
+    expect(card!['groundName'], 'الحماد');
+    expect((await e.falconCatalog())!['grounds'], isNotEmpty);
+    await e.dispatch(EndTrip(me));
+    expect((await e.tripNight()).refused!.params['reason'], 'notOnTrip');
+    await e.close();
+  });
 }

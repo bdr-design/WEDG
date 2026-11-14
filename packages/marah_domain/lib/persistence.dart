@@ -4,6 +4,7 @@ library;
 
 export 'src/model/camel.dart';
 export 'src/model/contest.dart';
+export 'src/model/falconry.dart';
 export 'src/model/game_state.dart';
 export 'src/model/market.dart';
 export 'src/model/player.dart';

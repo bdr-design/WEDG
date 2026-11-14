@@ -17,6 +17,9 @@ void main() {
   )) {
     print(line);
   }
+  for (final line in huntLines()) {
+    print(line);
+  }
   print('--save--');
   print(save);
 }

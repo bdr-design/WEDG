@@ -107,6 +107,41 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
       'markFindingsTold' => MarkFindingsTold(me, _int(j['count'])),
       // (sent only by the test meter, #fps: TestMoney)
       'setTestMoney' => SetTestMoney(me, on: _bool(j['on'])),
+      // the hunting season (T18)
+      'buyPermit' => BuyPermit(me, PermitKind.values.byName(_str(j['kind']))),
+      'orderGear' => OrderGear(
+        me,
+        Gear.values.byName(_str(j['gear'])),
+        _int(j['units']),
+      ),
+      'buyFalcon' => BuyFalcon(me, _str(j['lot']), _int(j['upTo'])),
+      'startTrip' => StartTrip(
+        me,
+        TripKind.values.byName(_str(j['kind'])),
+        Ground.values.byName(_str(j['ground'])),
+        _int(j['nights']),
+      ),
+      'endTrip' => EndTrip(me),
+      'moveCamp' => MoveCamp(me, Ground.values.byName(_str(j['ground']))),
+      // (the minute is the engine's: EngineCore stamps it)
+      'spotFalcon' => SpotFalcon(me, _at(j['at'])),
+      'releaseLure' => ReleaseLure(
+        me,
+        _at(j['at']),
+        Lure.values.byName(_str(j['lure'])),
+      ),
+      'enterTrapAuction' => EnterTrapAuction(me, FalconId(_str(j['falcon']))),
+      'keepBird' => KeepBird(me, FalconId(_str(j['falcon']))),
+      'releaseFalcon' => ReleaseFalcon(me, FalconId(_str(j['falcon']))),
+      'castFalcon' => CastFalcon(
+        me,
+        FalconId(_str(j['falcon'])),
+        _at(j['at']),
+        inCar: _bool(j['inCar']),
+        moving: _bool(j['moving']),
+      ),
+      'searchFalcon' => SearchFalcon(me, FalconId(_str(j['falcon']))),
+      'careFalcons' => CareFalcons(me),
       _ => null,
     };
   } on Object {
@@ -126,6 +161,16 @@ int _int(Object? v) {
 }
 
 String _str(Object? v) => v! as String;
+
+/// Where a hunting button was pressed: a ground's name, or one of HuntOff's
+/// ('farm', 'coast', 'reserve', 'open').
+HuntAt _at(Object? v) {
+  final s = _str(v);
+  final g = Ground.values.where((g) => g.name == s).firstOrNull;
+  return g != null ? HuntAt.ground(g) : HuntAt.off(HuntOff.values.byName(s));
+}
+
+String _atName(HuntAt a) => a.ground?.name ?? a.off!.name;
 
 /// An optional flag: absent is false; anything but a bool is malformed.
 bool _bool(Object? v) => v == null ? false : v as bool;
@@ -239,4 +284,50 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'count': count,
   },
   SetTestMoney(:final on) => {'type': 'setTestMoney', 'on': on},
+  BuyPermit(:final kind) => {'type': 'buyPermit', 'kind': kind.name},
+  OrderGear(:final gear, :final units) => {
+    'type': 'orderGear',
+    'gear': gear.name,
+    'units': units,
+  },
+  BuyFalcon(:final lot, :final upTo) => {
+    'type': 'buyFalcon',
+    'lot': lot,
+    'upTo': upTo,
+  },
+  StartTrip(:final kind, :final ground, :final nights) => {
+    'type': 'startTrip',
+    'kind': kind.name,
+    'ground': ground.name,
+    'nights': nights,
+  },
+  EndTrip() => {'type': 'endTrip'},
+  MoveCamp(:final ground) => {'type': 'moveCamp', 'ground': ground.name},
+  SpotFalcon(:final at) => {'type': 'spotFalcon', 'at': _atName(at)},
+  ReleaseLure(:final at, :final lure) => {
+    'type': 'releaseLure',
+    'at': _atName(at),
+    'lure': lure.name,
+  },
+  EnterTrapAuction(:final falcon) => {
+    'type': 'enterTrapAuction',
+    'falcon': falcon.value,
+  },
+  KeepBird(:final falcon) => {'type': 'keepBird', 'falcon': falcon.value},
+  ReleaseFalcon(:final falcon) => {
+    'type': 'releaseFalcon',
+    'falcon': falcon.value,
+  },
+  CastFalcon(:final falcon, :final at, :final inCar, :final moving) => {
+    'type': 'castFalcon',
+    'falcon': falcon.value,
+    'at': _atName(at),
+    if (inCar) 'inCar': true,
+    if (moving) 'moving': true,
+  },
+  SearchFalcon(:final falcon) => {
+    'type': 'searchFalcon',
+    'falcon': falcon.value,
+  },
+  CareFalcons() => {'type': 'careFalcons'},
 };
