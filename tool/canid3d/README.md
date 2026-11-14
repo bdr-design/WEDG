@@ -35,8 +35,8 @@ corners, the toes out of the paw) and meshed as one closed surface, as `tool/cam
 | `assets_src/canids/wolf_alert.glb`, `wolf_stalk.glb`, `wolf_run.glb` | the wolf, close: one skin | 7,000 each | 1 | 512 px |
 | `wolf_*_lod1.glb` | the wolf, far: the same skin decimated | 1,300 each | 1 | 256 px |
 | `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, its collar and the collar's ring (3 pieces); barking, also the four canines | 7,616 / 7,616 / 7,760 | 1 | 512 px |
-| `dog_*_lod1.glb` | the guard dog, far: the skin and the collar (2 pieces) | 1,420 each | 1 | 256 px |
-| `stray_alert.glb`, `stray_bark.glb` | the stray, close: one skin (the barking file adds the canines) | 7,000 / 7,142 | 1 | 512 px |
+| `dog_*_lod1.glb` | the guard dog, far: the skin and the collar (2 pieces) | 1,418 / 1,418 / 1,420 | 1 | 256 px |
+| `stray_alert.glb`, `stray_bark.glb` | the stray, close: one skin (the barking file adds the canines) | 7,000 / 7,144 | 1 | 512 px |
 | `stray_*_lod1.glb` | the stray, far | 1,300 each | 1 | 256 px |
 
 - **One mesh and one material per file, one-sided:** the skin and every extra piece are closed. The collar is in the
@@ -320,8 +320,8 @@ CANID_VOLUME=1 ...                          # also the standing model's volume
 **Requirements:** Blender as the `bpy` module (the project's `blendenv`), with numpy, SciPy, scikit-image (marching
 cubes) and Pillow in the same environment.
 
-**Time:** the whole set (16 GLBs) takes about 17 minutes on this machine (4 cores shared with other agents), the
-pictures much longer. Each pose's field is voxelised piece by piece in Python (a ray parity per voxel column), each
+**Time:** the whole set (16 GLBs) took 4 min 48 s in my last run on this machine (4 cores shared with other agents,
+load about 25) and about 17 minutes in the reviewer's run; the full picture set takes about an hour and a half. Each pose's field is voxelised piece by piece in Python (a ray parity per voxel column), each
 texel of two textures is found on the skin, on the nearest piece and on the standing animal, and the occlusion casts
 48 rays from every vertex; the overlap check rasterises every triangle at 2048 px. The GLB files are copied to `assets_src/canids/` and the
 pictures to `design/canids/`.
