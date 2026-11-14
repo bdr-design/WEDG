@@ -24,3 +24,13 @@ or his own words where he wrote them.
 
 Not yet asked: the falcon festival's date (interim until the club's page can be read); releasing a wild-caught
 falcon in spring; aiming with the air rifle; cheating in falcon contests; what «العرض» in inches measures.
+
+## 14 Nov 2026: the outing may be days
+
+Told that we had read his decision 7 («طلعة ساعات وترجع نفس اليوم») as staying for the falcon outing, with the camp
+of days for trapping only, he wrote: «خل الطلعة ايام مافي مشكلة».
+
+Read as: the falcon outing (الطلعة للمقناص) is a trip of days too, like the trapping camp; decision 7's "a few hours,
+back the same day" no longer binds it. The rest of decision 7 stands as he chose it («العزبة تمشي مثل كل يوم»: the
+farm runs as on any day while he is away). Whether a short outing of one day stays possible beside the trip of
+days is not in his words: the design shows it and he chooses.

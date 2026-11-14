@@ -81,6 +81,8 @@ All of it goes into the design he is shown, not straight into a build.
    to choose later, with the wolf danger.
 8. **Our reading that decision 7 (a few hours, back the same day) stays for falcon outings and the camp of days is
    trapping only.** Answer: keep it, marked as ours, for him to confirm.
+   **Overturned by the owner himself (14 Nov): «خل الطلعة ايام مافي مشكلة»: the falcon outing may be days too
+   (docs/agents/hunting_owner_decisions.md).**
 9. **Trapping shown as lawful, with the rules' clash unresolved.** Answer: yes, inside its own ground (a pin), its
    season and a trapping permit (the issuer and terms were not found: price and terms a marked game choice);
    everywhere else the hunting rules hold as he decided (a net there is a 100,000 fine; the button warns and does
@@ -94,5 +96,5 @@ All of it goes into the design he is shown, not straight into a build.
 - Batch 1, item 5: whether a buyer who knew may sell declared.
 - Batch 2: the birds' look (his eye: design/birds on the session branch once the reviewer confirms); the 1024 px
   texture for the falcon on the fist, after he tries 512 on his phone.
-- Batch 3: every item, when the trapping design is shown; above all item 8 (our reading of his words), item 6's
+- Batch 3: every item, when the trapping design is shown; above all item 6's
   open point (resale of a kept bird) and item 9's gap (the trapping regulation's text was not found).
