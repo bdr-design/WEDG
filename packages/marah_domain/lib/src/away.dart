@@ -288,11 +288,11 @@ class AwayRun {
     final full = _accountFull(game);
     if (full && !_wasFull) at(AwayStopKind.account);
     _wasFull = full;
-    final crowded = _crowded(game);
+    final herd = game.state.world.aliveOwnedBy(me.id).toList();
+    final crowded = herd.length > me.farm.capacity;
     if (crowded && !_wasCrowded) at(AwayStopKind.crowded);
     _wasCrowded = crowded;
     // the festivals: his round's day; a registration closing he could make
-    final herd = game.state.world.aliveOwnedBy(me.id).toList();
     for (final f in game.state.world.festivals.values) {
       if (f.done) continue;
       for (final r in f.rounds) {
@@ -352,15 +352,19 @@ class AwayRun {
         r.size == 1 &&
         herd.any(
           (c) =>
+              // (the cheap tests first: a herd of thousands is not put to the
+              // full rules for every round)
+              (r.category == null || r.category == c.category) &&
+              (r.sex == null || r.sex == c.sex) &&
               Eligibility.canEnter(
-                g.state.world,
-                f,
-                r,
-                [c],
-                g.me.id,
-                g.today,
-              ) ==
-              null,
+                    g.state.world,
+                    f,
+                    r,
+                    [c],
+                    g.me.id,
+                    g.today,
+                  ) ==
+                  null,
         ),
   );
 

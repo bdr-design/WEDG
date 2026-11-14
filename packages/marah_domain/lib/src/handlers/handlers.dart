@@ -564,7 +564,11 @@ Result treatCamel(Sim sim, PlayerState p, Camel camel) {
     rng.range(illness.treatMin, illness.treatMax).toDouble(),
   );
   // a sick camel's treatment goes on account like feed (the owner, 13 Nov)
-  final short = Account.canPay(p, cost.value, accountLimit(sim, p));
+  // (the limit walks the whole herd: worked out only when the money does not
+  // cover it, as the vet's contract treats many a day at 10,000 head)
+  final short = Account.shortfall(p, cost.value) == 0
+      ? null
+      : Account.canPay(p, cost.value, accountLimit(sim, p));
   if (short != null) return Err(short, sim.drain());
   Account.book(p, cost.value);
   sim.pay(p, -cost, LedgerCategory.vet, ref: camel.id.value);
@@ -667,7 +671,11 @@ Result placeOrder(
   final cost = Riyal((unit * cmd.units).round());
   // what the money does not cover goes on account, up to its limit (the
   // owner, 13 Nov 2026: the herd does not go hungry for want of riyals)
-  final short = Account.canPay(p, cost.value, accountLimit(sim, p));
+  // (the limit walks the whole herd: worked out only when the money does not
+  // cover it, as the vet's contract treats many a day at 10,000 head)
+  final short = Account.shortfall(p, cost.value) == 0
+      ? null
+      : Account.canPay(p, cost.value, accountLimit(sim, p));
   if (short != null) return Err(short, sim.drain());
   Account.book(p, cost.value);
   sim.pay(
