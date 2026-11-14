@@ -3,7 +3,7 @@
 // a second business by trapping (الطرح), the trapping research (docs/proposals/hunting.md section 9, research section
 // 8 "Trapping wild passage falcons", sources 184-223) and the proxy's provisional answers (docs/agents/
 // proxy_decisions.md, batch 3: marked "proxy" below; his to overturn). Two apps, «نادي الصقور» and «تصريح الصيد» (his
-// generic names), sixteen views at the owner's screen (956 x 440, the phone enlarged), in the phone's own CSS and pieces:
+// generic names), eighteen views at the owner's screen (956 x 440, the phone enlarged), in the phone's own CSS and pieces:
 //   1 home          the home screen: the six apps, المزاين and المحادثات (being built), and the two new ones: ten
 //   2 auctions      the auctions told apart: the trapping auction (1 Oct - 30 Nov, only the passage peregrine of the
 //                   year, where the player SELLS his trapped bird or buys one), the falcons exhibition (1-10 Oct,
@@ -24,7 +24,13 @@
 //  11 race_result, 12 beauty_result   the sample falcon: 12th of 31 in the race; out of the prizes in المزاين
 //  13 permit, 14 permit_mid, 15 permit_end   the hunting permit and the trapping permit (top, middle, end): seasons, where each is banned, what is
 //                   released, the fines in words
-//  16 fine          a violation told after (the fine after; the button warned before: the owner's decision 4)
+//  16 away_card, 17 away_card_end   the card before leaving for a camp: the calendar's own card (task T15,
+//                   /home/user/wt/t15 design/ui/phone_calendar.cjs and docs/proposals/rush_and_calendar.md section 5: the
+//                   days «تقريبًا», what falls due on the way, the standing order and the vet's contract, its stops, «يمشي
+//                   لقدام بس») with the trip's own lines (distance, gear, camp supplies) and the camp's own stops added
+//  18 away_summary  the calendar's summary view with the trip's lines above its own; the bird marked «مثال»
+// (Round 2's view of a fine is dropped: the owner's decision 4 makes the falcon's and the net's buttons warn and not act,
+// so no fine for hunting or trapping in a banned place can follow; the fines stay listed on the permit. None is shown.)
 // No hunting or trapping engine exists, so no figure here is the game's own. REAL figures (research section 8; all of
 // it search-result text or pages read on spa.gov.sa, no regulation text): the hunting season 1 Sep - 31 Jan, autumn to
 // 30 Nov, winter from 1 Dec [127][128][167]; by day only [135] (one source); the trapping season and the trapping
@@ -37,7 +43,7 @@
 // 50,000": 2022 sales down to 50,000 [200]; sizes like 15 x 15½ in and 1,010 g as the sale pages give them [187][216]
 // (what the width measures is not known); 112,000 on the hammer view: about the median of the 18 sales of 2025 read
 // [185][209][211][216][217][219] (an example, not an expectation); the exhibition's two sakers 700,000 and 100,000
-// [184]; a farm-bred saker about 19,000 [158]; the 2026 exhibition 1-10 Oct [157]; the الملواح race 400 m [169][171];
+// [184] (the year of that exhibition not confirmed: the view says «بالمعرض» only); a farm-bred saker about 19,000 [158]; the 2026 exhibition 1-10 Oct [157]; the الملواح race 400 m [169][171];
 // its classes [169][171]; فرخ / قرناس [169]; «الحر عرضه 16 إنش وفوق» [169] (the club's words, what it measures unknown);
 // المزاين's classes [172][188]; at most five falcons a round [175] (one source); the first prizes 300,000 [177] (one
 // round's split extended to the four classes: game choice); three judges [173]; the owners' round's first two times
@@ -45,11 +51,19 @@
 // game is never sold [166]; night and lights banned in the hunting rules [135][136].
 // DISAGREEING: the 2026 falcon festival 17-30 Nov [157] or 25 Dec - 10 Jan [181]: drawn with the 2025 dates (interim);
 // entries 8 / 6 / 12 [169][174]: 8 a game choice.
-// PROXY (provisional): the saker and the قرناس released (item 4: the قرناس's release a game choice, no ban found); the
+// THE GAME'S CHOICE, NOT A RULE: «إلا أرض طرح بموسمها» on the coast line: the hunting rules close the coast to 20 km
+// [195], yet the auction takes birds trapped on the coast [197][217]; the research leaves the clash unresolved, and the
+// game lets a trapping ground on the coast stand in its season (a game choice, told in the note as a gap).
+// PROXY (provisional), its lines word for word: «طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع» (item 3); «طلقته: الحر
+// مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري» and «طلقته: المزاد ما يقبل إلا الفرخ» (item 4); the saker and the قرناس released (item 4: the قرناس's release a game choice, no ban found); the
 // three routes (item 5); keeping a trapped bird, resale not offered (item 6); trapping lawful only on a trapping ground,
 // in its season, with a trapping permit (item 9: the issuer and terms NOT found; its 500-riyal fee a game choice); a net
 // off the ground is the hunting fine of 100,000, the button warns and does not act (item 9).
-// GAME CHOICES: the gear's prices (pigeon 50, the second net 1,200, binoculars 900, the mobile tent 6,500, supplies 150
+// GAME CHOICES: سهيل bought at the trapping auction for 71,000 (the lowest 2025 sale read [217]); the card before
+// leaving's water 14 and feed 7 days, the milk's 450 riyals, 7 hours' drive, 9 days (on a built game: the engine's, as
+// the calendar's card reads them; its fill of 2 bags and 12 bales at 452 riyals for 48 days and the vet's contract at
+// 1,000 a month and 20 a head are T15's); the summary's lines (the one bird across the sample is براق, marked «مثال»);
+// the gear's prices (pigeon 50, the second net 1,200, binoculars 900, the mobile tent 6,500, supplies 150
 // a day: no source prices any of it) and that gear is bought in the club's app (the owner's question); the lots, their
 // places and sizes (inside the real ranges); the bidders and their bids; the falcons' room holding 4; the falcons' names,
 // dates and results; الدعو's steps; the race times past the first two; the ملواح prizes by place, paid to 7th (1,012
@@ -97,6 +111,14 @@ const CSS = `
   .sbar .clk { font-size: 0; } .sbar .clk::after { content: "9:41"; font-size: 14px; }
   .it .ph img { height: 56px; width: auto; display: block; } .it.big .ph img { height: 82px; }
   .it.two { grid-template-columns: 58px 1fr; }
+  .it.lot { grid-template-columns: 58px 1fr 76px; } .it.lot .pr { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  /* the calendar's card and summary (task T15, design/ui/phone_calendar.cjs in /home/user/wt/t15), copied as they are */
+  .row .lead.fest { background: #fbefd2; color: #a8730c; } .row .lead.me { background: #fde6e4; color: var(--red); }
+  .row .lead.milk { background: #e6eef8; color: #2f7fcf; } .row .lead.brd { background: var(--acc-soft); color: var(--acc); }
+  .span { background: var(--card); border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .span b { font: 700 15px/1.3 "Alexandria", sans-serif; } .span small { font-size: 12px; color: var(--ink2); }
+  .stops { font-size: 12px; line-height: 1.55; background: var(--card); border-radius: 16px; padding: 10px 12px; color: var(--ink); }
+  .row .act .btn.sm { height: 34px; padding-inline: 12px; font-size: 12.5px; } .row.two2 { grid-template-columns: 36px 1fr auto; } .btn.wide { width: 100%; }
   .apps .app .ic.new { box-shadow: 0 0 0 2px #e8b46c, 0 3px 8px rgba(70,50,20,.14); }
 `;
 // the saker's picture: task T11's render (awaiting the owner's approval), cut out by design/hunt/cut_bird.py; the
@@ -166,16 +188,16 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
       <div class="open"><span class="tag">مفتوح الحين</span><b>مزاد الطرح</b><small>ملهم · من 1 أكتوبر لين 30 نوفمبر، كل ليلة</small><small>فروخ الشاهين البحري المطروحة بالمملكة بس</small><small>تبيع فيه طيرك اللي طرحته، أو تشتري</small></div>
       <div class="sec">وصقرك له ثلاث طرق، كل وحدة بشهرها</div>
       <div class="group">${row('gavel', 'مزاد الطرح', 'فرخ شاهين بحري · من حوالي 50,000', 'الحين')}${row('star', 'معرض الصقور', 'حر مستورد، وأسعاره عالية', 'لين 10 أكتوبر')}${row('falcon', 'مزاد صقور المزارع', 'ملهم · حر فرخ إنتاج مزارع', 'أغسطس')}</div>
-      <div class="tank"><small>مزاد الطرح ما يقبل الحر ولا القرناس</small><div class="kind"><span>حرين بمعرض 2026</span><span class="d">700,000 و100,000 ريال</span></div><div class="kind"><span>حر المزارع</span><span class="d">حوالي 19,000 ريال</span></div></div></div>`;
+      <div class="tank"><small>مزاد الطرح ما يقبل الحر ولا القرناس</small><div class="kind"><span>حرين مستوردة بالمعرض</span><span class="d">700,000 و100,000 ريال</span></div><div class="kind"><span>حر المزارع</span><span class="d">حوالي 19,000 ريال</span></div></div></div>`;
 
     // ------------------------------------------------ 3 the trapping auction tonight: what the bidders see
-    const lot = (name, line, bid, left) => `<div class="it">${pp}<b>${name}</b><small>${line}</small><span class="pr"><span class="price num">${bid}</span><small>الافتتاح</small></span><small>${left}</small></div>`;
+    const lot = (name, line, bid, left) => `<div class="it lot">${pp}<b>${name}</b><small>${line}</small><span class="pr"><span class="price num">${bid}</span><small>الافتتاح</small></span><small>${left}</small></div>`;
     const tonight = `<div class="body">${nav()}<div class="title">مزاد الليلة</div>
       <div class="note" style="margin-top:-4px">مزاد الطرح · ملهم · كل طير بطوله وعرضه ووزنه ومكان طرحه</div>
       <div class="lst">
-        ${lot('فرخ شاهين بحري', 'الحماد · 15 × 15½ إنش · 1,010 غرام', '70,000', 'طرح قبل يومين')}
-        ${lot('فرخ شاهين بحري', 'الخفجي · 15¼ × 15¼ إنش · 960 غرام', '50,000', 'طرح أمس')}
-        ${lot('فرخ شاهين بحري', 'الليث · 15½ × 15½ إنش · 1,040 غرام', '150,000', 'طرح أمس')}</div>
+        ${lot('فرخ شاهين', 'الحماد · 15 × 15½ إنش · 1,010 غرام', '70,000', 'شاهين بحري · طرح قبل يومين')}
+        ${lot('فرخ شاهين', 'الخفجي · 15¼ × 15¼ إنش · 960 غرام', '50,000', 'شاهين بحري · طرح أمس')}
+        ${lot('فرخ شاهين', 'الليث · 15½ × 15½ إنش · 1,040 غرام', '150,000', 'شاهين بحري · طرح أمس')}</div>
       <div class="group">${row2('eye', 'وش يسوي بالصيد ما ينعرف', 'ولا قيمته قبل المزاد: المزاد يقولها')}${row2('rule', 'ما فيه رسوم', 'لا على البايع ولا على المشتري')}</div></div>`;
 
     // ------------------------------------------------ 4 الطرح: the permit, the gear (bought here: a question), the grounds
@@ -195,7 +217,7 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
 
     // ------------------------------------------------ 5 entering a trapped bird
     const sell = `<div class="body">${nav()}<div class="title" style="font-size:22px">اعرض طيرك</div>
-      <div class="it big">${pp}<b>براق · فرخ شاهين بحري</b><small>طرحته بالحماد 12 أكتوبر</small><small>15 × 15½ إنش · 1,010 غرام</small><small>بالبرقع بغرفة الصقور</small></div>
+      <div class="it big">${pp}<b>براق · فرخ شاهين بحري</b><small>طرحته بالحماد 12 أكتوبر</small><small>15 × 15½ إنش · 1,010 غرام</small><small>بالبرقع بغرفة الصقور</small></div>
       <div class="group">${row2('check', 'فريق النادي يفحصه ويوثّق الطرح', 'ويعطيك وثيقة تسجيل طرح')}${row2('box', 'النقل والسكن لملهم عليهم', 'وما فيه رسوم على البيع')}</div>
       <div class="tank"><small>يدخل مزاد الليلة</small>
         <div class="kind"><span>سوم الافتتاح</span><span class="d">70,000 ريال</span></div>
@@ -215,9 +237,9 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
     const mine = `<div class="body">${nav()}<div class="title">نادي الصقور</div>${seg(1)}
       <div class="note" style="margin-top:-4px">بغرفة الصقور · صقرين من 4</div>
       <div class="lst">
-        <div class="it two">${pp}<b>سهيل · شاهين بحري فرخ</b><small>طرحته أنت بالخفجي 20 أكتوبر، وخليته لك</small><small>جوازه باسمك · الطلعات: صاد حبارى مرة</small></div>
+        <div class="it two">${pp}<b>سهيل · شاهين بحري فرخ</b><small>اشتريته من مزاد الطرح 20 أكتوبر بـ 71,000</small><small>جوازه باسمك · الطلعات: صاد حبارى مرة</small></div>
         <div class="it two">${ph}<b>غيث · حر فرخ</b><small>اشتريته من مزاد المزارع بأغسطس</small><small>جوازه باسمك · الملواح 18.906 ثانية</small></div></div>
-      <div class="group">${row2('rule', 'الطير اللي تخليه لك ما ينعرض للبيع بعدين', 'ما لقينا له طريق نظامي')}</div>
+      <div class="group">${row2('rule', 'الطير اللي تطرحه وتخليه لك ما ينعرض للبيع بعدين', 'ما لقينا له طريق نظامي')}</div>
       <button class="btn pri" style="width:100%">ادعهم اليوم</button></div>`;
 
     // ------------------------------------------------ 8 الدعو
@@ -270,20 +292,52 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
       <div class="group">${row2('falcon', 'المقناص بالصقر', 'الكروان بالبر، والحبارى بالمحازة المرخصة بس')}${row2('net', 'الطرح', 'فرخ الشاهين البحري، بأرض طرح، بشبك على الحمام')}${row2('user', 'شخصي', 'ما ينعطى لغيرك، وتشيله معك')}</div>
       <div class="sec">ممنوع الصيد فيه</div>
       <div class="group">${row2('ban', 'المدن والقرى والمزارع', 'يعني عزبتك وحولها، والاستراحات')}${row2('ban', 'المحميات والمشاريع الكبرى', 'والمحميات الملكية كلها')}${row2('ban', 'الساحل', 'لين 20 كيلو داخل البر، إلا أرض طرح بموسمها')}</div>
-      <div class="sec">بالطرح</div>
-      <div class="group">${row2('ban', 'ممنوع طرحه أبد', 'الشاهين الجبلي والوكري: طيور مقيمة')}${row2('falcon', 'ينطلق على طول', 'الحر والقرناس: المزاد ما يقبل إلا فرخ الشاهين البحري')}${row2('ban', 'بالليل وبالضو', 'ما فيه طرح')}</div>
+      <div class="sec">بالطرح: لو جا بالشبك</div>
+      <div class="group">${row2('ban', 'الشاهين الجبلي', 'طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع')}${row2('ban', 'الوكري', 'ممنوع طرحه: طير مقيم')}${row2('falcon', 'الحر', 'طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري')}${row2('falcon', 'القرناس', 'طلقته: المزاد ما يقبل إلا الفرخ')}${row2('ban', 'بالليل وبالضو', 'ما فيه طرح')}</div>
       <div class="sec">الغرامات</div>
       <div class="group">${row2('alert', 'صيد بدون تصريح', 'غرامته 10,000 ريال')}${row2('alert', 'صيد بمكان أو وقت ممنوع', 'غرامته 5,000 ريال')}${row2('alert', 'الشبك برا أرض الطرح', 'غرامته 100,000 ريال')}${row2('alert', 'الصيد من سيارة تمشي', 'غرامته 100,000 ريال')}</div>
       <div class="note">والصيد نفسه ما ينباع: بيع الصيد ممنوع. اللي ينباع فرخ الشاهين البحري المطروح، بمزاد الطرح بس.</div></div>`;
 
-    // ------------------------------------------------ 15 the fine after
-    const fine = `<div class="body">${nav()}<div class="title">مخالفة</div>
-      ${alertCard('صيد بمكان ممنوع', 'قريب من المزارع، جنوب عزبتك')}
-      <div class="tank"><small>الغرامة</small><div class="v">5,000<span>ريال</span></div><div class="ln">انخصمت من رصيدك</div></div>
-      <div class="note">وقفتك الدورية وانت ترسل الصقر جنب العزب. تصريحك باقي، بس المرة الجاية بعيد عن المزارع والقرى.</div>
-      <div class="group">${row2('rule', 'الصيد بالنهار بس، وبعيد عن المزارع والقرى', 'والصقر ما ينرسل إلا والسيارة واقفة')}</div></div>`;
+    // ------------------------------------------------ 16, 17 the card before leaving: the calendar's card (task T15, its words and
+    // layout as phone_calendar.cjs draws them), with the trip's own lines added under its own (gear, camp supplies, distance)
+    const away_card = `<div class="body">${nav()}<div class="title">قبل ما تمشي</div>
+      <div class="span"><b>مخيم طرح بالحماد · لين 10 أكتوبر</b><small>9 أيام · من الخميس 1 أكتوبر · 600 كم، حوالي 7 ساعات سواقة</small></div>
+      <div class="sec">يكفي 9 أيام؟</div>
+      <div class="group">
+        <div class="row two2"><span class="lead">${svg('scale')}</span><b>الماء · يكفي 14 يوم</b><span class="act"><button class="btn sm ghost">عبّه</button></span><small>يكفي الأيام كلها تقريبًا: <span class="pos">يكفي</span></small></div>
+        <div class="row two2"><span class="lead me">${svg('box')}</span><b>العلف · يكفي 7 أيام</b><span class="act"><button class="btn sm ghost">عبّه</button></span><small>كيسين و12 ربطة بـ 452 ريال، يصير يكفي 48 يوم تقريبًا</small></div></div>
+      <div class="sec">اللي يجي بالطريق</div>
+      <div class="group">
+        <div class="row two"><span class="lead fest">${svg('cup')}</span><b>مزاين حائل · التسجيل يقفل 11 أكتوبر</b><small>ما سجلت بشي</small></div>
+        <div class="row two"><span class="lead milk">${svg('user')}</span><b>ما عليك رواتب</b><small>ما عندك رعاة</small></div></div>
+      <div class="sec">مخيمك</div>
+      <div class="group">
+        <div class="row two"><span class="lead">${svg('pigeon')}</span><b>عدتك: 6 حمامات وشبك الحمام</b><small>ناقصك: الدربيل، الخيمة المتنقلة، شبك الطيور</small></div>
+        <div class="row two"><span class="lead">${svg('box')}</span><b>مؤونة المخيم · تكفي 10 أيام</b><small>ماء وأكل وبنزين</small></div></div></div>`;
+    const away_card_end = `<div class="body">${nav()}<div class="title">قبل ما تمشي</div>
+      <div class="sec">تقدر تجهّز قبل</div>
+      <div class="group">
+        <div class="row two2"><span class="lead">${svg('box')}</span><b>طلب ثابت للماء والعلف</b><span class="act"><button class="btn sm ghost">شغّله</button></span><small>لما يبقى 3 أيام يجيك الطلب بنفسه، وتدفعه مثل أي طلب</small></div>
+        <div class="row two2"><span class="lead">${svg('user')}</span><b>عقد البيطري</b><span class="act"><button class="btn sm ghost">اتعاقد</button></span><small>1,040 ريال بالشهر لحلالك، ويعالج اللي يمرض بيومه</small></div></div>
+      <div class="sec">يوقف ويرجع لك لو</div>
+      <div class="stops">مرض شي من حلالك، أو مات من مرض أو عطش · قرب العلف أو الماء يخلص (باقي 3 أيام) · نزل رصيدك تحت الصفر، أو وصل حساب التاجر حده · انكتبت عليك غرامة · جاك سوم على إعلان · جا يوم شوطك · باقي 3 أيام على قفل تسجيل مهرجان تقدر تدخله · بدا وقت الضراب وعندك ناقة تنلقح · ضاقت الشبوك على حلالك · خلصت مؤونة المخيم · خلص موسم الطرح</div>
+      <div class="note">وكل يوم بالمخيم يرجع لك من الفجر لين الساعة 10، وبالمسا ساعة: الشغل بيدك. وتقدر تفك المخيم وترجع أي وقت.</div>
+      <button class="btn pri wide">اطلع للمخيم</button>
+      <div class="note">التقويم يمشي لقدام بس: الأيام اللي تمضي ما ترجع.</div></div>`;
+    // ------------------------------------------------ 18 the summary: the calendar's summary view with the trip's lines above its own
+    const away_summary = `<div class="body">${nav()}<div class="title">اللي صار</div>
+      <div class="span"><b>9 أيام · مخيم الحماد</b><small>من الخميس 1 أكتوبر لين السبت 10 أكتوبر</small></div>
+      <div class="group">
+        <div class="row two"><span class="lead">${svg('net')}</span><b>طرحت فرخ شاهين بحري (مثال)</b><small>اليوم الثامن · بغرفة الصقور</small></div>
+        <div class="row two"><span class="lead">${svg('falcon')}</span><b>طلقت حر</b><small>اليوم الرابع: المزاد ما يقبله</small></div>
+        <div class="row two"><span class="lead">${svg('box')}</span><b>المؤونة والبنزين</b><small>صرفت 1,350 ريال</small></div></div>
+      <div class="group">
+        <div class="row two"><span class="lead milk">${svg('scale')}</span><b>الحليب دخلك 450 ريال</b><small>ينباع كل يوم</small></div>
+        <div class="row two"><span class="lead me">${svg('alert')}</span><b>قرب العلف يخلص</b><small>اليوم السادس: طلبته من الجوال ووصل</small></div>
+        <div class="row two"><span class="lead brd">${svg('check')}</span><b>ما مرض شي</b><small>وما مات شي</small></div></div>
+      <div class="note">هذا مثال: أغلب المواسم ما ينطرح فيها طير. والتفاصيل بالبنك والعزبة.</div></div>`;
 
-    return { home: homeHtml, auctions, tonight, trap, sell, hammer, mine, train, fest, fest_end: fest, race_result, beauty_result, permit, permit_mid: permit, permit_end: permit, fine };
+    return { home: homeHtml, auctions, tonight, trap, sell, hammer, mine, train, fest, fest_end: fest, race_result, beauty_result, permit, permit_mid: permit, permit_end: permit, away_card, away_card_end, away_summary };
   }, [SAKER, PERE]);
 
 
@@ -314,6 +368,11 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
       await p.addScriptTag({ path: process.env.AUDIT });
       const a = await p.evaluate(() => window.__audit());
       console.log(k, 'audit', JSON.stringify({ clipped: a.clipped, ellipsis: a.ellipsis, outside: a.outside, split: a.split, scroll: a.scroll }));
+      // (the audit's own pattern misses a size such as «15 × 15½ إنش»: this one keeps a whole size with its unit)
+      const half = await p.evaluate(() => { const scr = R().querySelector('.scr'), out = []; const w = document.createTreeWalker(scr, NodeFilter.SHOW_TEXT); const re = /\d[\d,.]*[½¼]?(?:[\u00a0 ]×[\u00a0 ]\d[\d,.]*[½¼]?)?[\u00a0 ][\u0600-\u06ff]+/g;
+        for (let n; (n = w.nextNode());) { let m; re.lastIndex = 0; while ((m = re.exec(n.nodeValue))) { const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); if (new Set([...r.getClientRects()].filter((q) => q.width > 0.5).map((q) => Math.round(q.top))).size > 1) out.push(m[0]); } }
+        return out; });
+      if (half.length) console.log(k, 'sizes split from their unit', JSON.stringify(half));
       fs.appendFileSync(path.join(OUT, 'falcon_texts.txt'), `## ${k}\n` + a.texts.filter((t) => !t.includes('{')).join('\n') + '\n');
     }
   }
