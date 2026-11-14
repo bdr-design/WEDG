@@ -1117,6 +1117,74 @@ void main() {
       expect(found / checked, closeTo(Balance.vetCheckChance, 0.35));
     });
 
+    test('the vet\'s look: once a day (a second the same day is refused and '
+        'costs nothing), from the money only, never on account; the next day '
+        'a fresh one', () {
+      final g = newGame(3);
+      final l = g.state.world.listings.values.firstWhere(
+        (x) => !sim(g).isPlayer(x.sellerId),
+      );
+      final c = g.state.world.camels[l.camelId]!;
+      var v = GameView(g.state, g.me.id);
+      expect(v.listingOf(c.id)!.checkedToday, isFalse);
+      expect(g.dispatch(CheckListing(g.me.id, l.id)).ok, isTrue);
+      v = GameView(g.state, g.me.id);
+      expect(v.listingOf(c.id)!.checkedToday, isTrue);
+      final cash = g.me.cash.value;
+      expect(
+        refused(g, CheckListing(g.me.id, l.id)).error.code,
+        ErrorCode.checkedToday,
+      );
+      expect(g.me.cash.value, cash);
+      expect(GameView(g.state, g.me.id).listingOf(c.id)!.timesChecked, 1);
+      g.advanceDays(1);
+      if (!g.state.world.listings.containsKey(l.id)) return;
+      expect(GameView(g.state, g.me.id).listingOf(c.id)!.checkedToday, isFalse);
+      // short of the fee: refused, and not put on the merchant's account
+      grant(g, -g.me.cash.value + Balance.vetCheckFee - 1);
+      final owed = g.me.onAccount;
+      expect(
+        refused(g, CheckListing(g.me.id, l.id)).error.code,
+        ErrorCode.insufficientFunds,
+      );
+      expect(g.me.onAccount, owed);
+      grant(g, 1);
+      expect(g.dispatch(CheckListing(g.me.id, l.id)).ok, isTrue);
+      expect(GameView(g.state, g.me.id).listingOf(c.id)!.timesChecked, 2);
+    });
+
+    test('a camel he treated himself: the engine refuses her declared sale '
+        'and says why; one bought treated unknowing and told may be', () {
+      final g = newGame(4);
+      final f = grand(g);
+      final c = camelFor(g, roundOf(f, RoundKind.fardiJil), mean: 70);
+      final v0 = GameView(g.state, g.me.id);
+      expect(v0.declareRefusal(c.id), isNull);
+      g.dispatch(Tamper(g.me.id, c.id, TamperKind.dye, 1));
+      expect(
+        GameView(g.state, g.me.id).declareRefusal(c.id)?.code,
+        ErrorCode.ownTreatment,
+      );
+      final other = camelFor(g, roundOf(f, RoundKind.fardiJil), mean: 70);
+      other.treatments.add(
+        Tampering(
+          kind: TamperKind.botox,
+          strength: 1,
+          on: g.today,
+          until: g.today + 60,
+          by: g.state.world.owners.keys.first,
+          knownBy: [g.me.id],
+        ),
+      );
+      final v = GameView(g.state, g.me.id);
+      expect(v.declareRefusal(other.id), isNull);
+      expect(v.cannotDeclare(other.id), isNull);
+      expect(
+        v.quickSalePrice(other.id, declared: true)!.value,
+        lessThan(v.quickSalePrice(other.id)!.value),
+      );
+    });
+
     test('a fine larger than the money: the balance below zero, no camel '
         'bought and nothing built, feed and water still come', () {
       final g = newGame();

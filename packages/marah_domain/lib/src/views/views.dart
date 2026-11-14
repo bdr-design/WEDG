@@ -145,6 +145,7 @@ class ListingView {
     this.sellerName,
     this.transport,
     this.knownTreatments,
+    this.checkedToday,
   ) : id = listing.id,
       declared = listing.declared,
       timesChecked = listing.checks[camel._viewer.value] ?? 0,
@@ -173,6 +174,9 @@ class ListingView {
   /// How many times the viewer's vet has looked at her (so the phone can
   /// say "checked N times, nothing found").
   final int timesChecked;
+
+  /// His vet looked at her today (another look is another day's).
+  final bool checkedToday;
 
   /// Offered as treated: [knownTreatments] then shows every buyer what is
   /// in her (the owner's decision 15).
@@ -242,7 +246,18 @@ class GameView {
               (l.declared || t.knownBy.contains(viewer) || t.by == viewer))
             t.kind,
       ],
+      handlers.checkedToday(_state, viewer, l.id),
     );
+  }
+
+  /// Why the viewer cannot sell [id] declared when he knows of a treatment
+  /// in her: she was treated by him (ownTreatment), or null.
+  DomainError? declareRefusal(CamelId id) {
+    final c = _w.camels[id];
+    // (most camels carry none: no work for them, a herd of thousands)
+    if (c == null || c.ownerId != viewer || c.treatments.isEmpty) return null;
+    final e = handlers.cannotDeclare(_sim, me, c);
+    return e?.code == ErrorCode.ownTreatment ? e : null;
   }
 
   /// Bargaining attempts the viewer has left on a listing.

@@ -127,6 +127,10 @@ enum ErrorCode {
 
   /// The engine hit a bug; the game was restored from the last save.
   internalError,
+
+  /// The player's vet looked at this listing today already: the same day's
+  /// looks agree (a fresh look is another day's).
+  checkedToday,
 }
 
 class DomainError {

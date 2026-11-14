@@ -274,6 +274,7 @@ class SnapshotJson {
     'onTheWay': c.onTheWay,
     'quickSale': c.quickSale,
     if (c.declaredSale != null) 'declaredSale': c.declaredSale,
+    if (c.declareRefused != null) 'declareRefused': c.declareRefused!.name,
   };
 
   static Map<String, Object?> listing(ListingCard l) => {
@@ -290,6 +291,7 @@ class SnapshotJson {
     if (l.knownTreatments.isNotEmpty)
       'treatments': [for (final k in l.knownTreatments) k.name],
     if (l.timesChecked > 0) 'checked': l.timesChecked,
+    if (l.checkedToday) 'checkedToday': true,
     if (l.declared) 'declared': true,
     'offers': [
       for (final o in l.offers)

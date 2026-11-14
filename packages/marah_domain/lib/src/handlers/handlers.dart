@@ -9,6 +9,7 @@ import '../common/rng.dart';
 import '../events.dart';
 import '../model/camel.dart';
 import '../model/contest.dart';
+import '../model/game_state.dart';
 import '../model/market.dart';
 import '../model/player.dart';
 import '../model/tampering.dart';
@@ -991,6 +992,17 @@ Result _tamper(Sim sim, PlayerState p, Tamper cmd) {
 /// Nov 2026): paid, and each treatment in her found with the vet's chance;
 /// what he finds the buyer knows from then on. Nothing is reported: he is
 /// the buyer's vet.
+/// The player's vet looked at listing [l] today (his news of the day).
+bool checkedToday(GameState s, OwnerId p, ListingId l) {
+  final box = s.inboxOf(p);
+  final today = s.world.day;
+  for (var i = box.length - 1; i >= 0 && box[i].day == today; i--) {
+    final e = box[i];
+    if (e is ListingChecked && e.listing == l) return true;
+  }
+  return false;
+}
+
 Result _checkListing(Sim sim, PlayerState p, CheckListing cmd) {
   final l = sim.world.listings[cmd.listing];
   final c = l == null ? null : sim.world.camels[l.camelId];
@@ -998,6 +1010,11 @@ Result _checkListing(Sim sim, PlayerState p, CheckListing cmd) {
     return _err(sim, ErrorCode.notFound);
   }
   if (l.sellerId == p.id) return _err(sim, ErrorCode.ownListing);
+  // the same day's looks agree: a second one would be paid for nothing
+  if (checkedToday(sim.state, p.id, l.id)) {
+    return _err(sim, ErrorCode.checkedToday);
+  }
+  // (the vet's look is no necessity: paid from the money, never on account)
   if (p.cash.value < Balance.vetCheckFee) {
     return _err(sim, ErrorCode.insufficientFunds, {
       'needed': Balance.vetCheckFee,

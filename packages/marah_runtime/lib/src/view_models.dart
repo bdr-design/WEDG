@@ -31,6 +31,7 @@ class CamelCard {
     this.onTheWay = false,
     this.quickSale,
     this.declaredSale,
+    this.declareRefused,
     this.suckling = false,
   });
 
@@ -67,6 +68,10 @@ class CamelCard {
   /// only when the player knows of a treatment in her (decision 15).
   final int? declaredSale;
 
+  /// One's own camel he knows is treated but may not sell declared: the
+  /// engine's reason (ownTreatment: he treated her himself).
+  final ErrorCode? declareRefused;
+
   /// A calf still suckling its mother: named حوار whatever its age class.
   final bool suckling;
 
@@ -95,6 +100,7 @@ class CamelCard {
       other.onTheWay == onTheWay &&
       other.quickSale == quickSale &&
       other.declaredSale == declaredSale &&
+      other.declareRefused == declareRefused &&
       other.suckling == suckling;
 
   @override
@@ -164,6 +170,7 @@ class ListingCard {
     required this.offers,
     this.knownTreatments = const [],
     this.timesChecked = 0,
+    this.checkedToday = false,
     this.declared = false,
   });
 
@@ -189,6 +196,9 @@ class ListingCard {
   /// How many times the player's vet has looked at her.
   final int timesChecked;
 
+  /// The viewer's vet looked at her today.
+  final bool checkedToday;
+
   /// Offered declared as treated (knownTreatments shows what is in her).
   final bool declared;
 
@@ -208,6 +218,7 @@ class ListingCard {
       _listEquals(other.offers, offers) &&
       _listEquals(other.knownTreatments, knownTreatments) &&
       other.timesChecked == timesChecked &&
+      other.checkedToday == checkedToday &&
       other.declared == declared;
 
   @override

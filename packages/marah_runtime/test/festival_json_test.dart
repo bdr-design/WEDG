@@ -227,4 +227,31 @@ void main() {
       expect(row.toJson()['ownerName'], row.ownerName);
     }
   });
+
+  test('الحراج: a look today and a camel he treated himself, as sent', () {
+    final g = Game.create(
+      seed: 4242,
+      playerName: 'p',
+      farmName: 'f',
+      region: Region.qassim,
+      favourite: ColorCategory.wodh,
+      startedAt: DateTime.utc(2026, 10),
+    );
+    final l = g.state.world.listings.values.first;
+    g.dispatch(CheckListing(g.me.id, l.id));
+    final dam = g.state.world
+        .aliveOwnedBy(g.me.id)
+        .firstWhere((c) => c.sex == Sex.female);
+    g.dispatch(Tamper(g.me.id, dam.id, TamperKind.dye, 1));
+    final s = SnapshotJson.snapshot(Presenter(g.state, g.me.id).snapshot(1));
+    final m = (s['market']! as List).cast<Map<String, Object?>>().firstWhere(
+      (x) => x['id'] == l.id.value,
+    );
+    expect((m['checked'], m['checkedToday']), (1, true));
+    final y = (s['yard']! as List).cast<Map<String, Object?>>().firstWhere(
+      (x) => x['id'] == dam.id.value,
+    );
+    expect(y['declareRefused'], 'ownTreatment');
+    expect(y.containsKey('declaredSale'), isFalse);
+  });
 }

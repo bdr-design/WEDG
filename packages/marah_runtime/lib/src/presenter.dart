@@ -43,6 +43,7 @@ class Presenter {
       crossbred: c.crossbred,
       onTheWay: c.onTheWay,
       suckling: v.suckling(c.id),
+      declareRefused: c.isMine ? v.declareRefusal(c.id)?.code : null,
       declaredSale: c.isMine && sell == null && v.cannotDeclare(c.id) == null
           ? v.quickSalePrice(c.id, declared: true)?.value
           : null,
@@ -65,6 +66,7 @@ class Presenter {
     isMine: l.sellerId == viewer,
     knownTreatments: l.knownTreatments,
     timesChecked: l.timesChecked,
+    checkedToday: l.checkedToday,
     declared: l.declared,
     offers: l.sellerId == viewer
         ? [
