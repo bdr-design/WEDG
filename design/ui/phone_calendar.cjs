@@ -2,21 +2,27 @@
 // موجود اختياري»): a DESIGN awaiting the owner's approval (through his proxy), not built, not in phone.js. The year at a
 // glance from the engine's own calendar, and the game moved forward to a day or a season the player picks, with a
 // card that says what the stretch needs before he goes, stops that hand the game back when something needs him, and
-// what happened at the end. Nine views at the owner's screen (956 x 440, the phone enlarged), in the phone's CSS and
-// pieces (design/prototype3d/phone.js):
-//   1 home      the home screen with the apps approved or being built (the six, المزاين and المحادثات from wt/t10)
-//               and التقويم, the ninth
-//   2 year      the year: twelve months as strips, from this month (past days pale, today marked), with the breeding
-//               season, each festival's registration and its days, the player's own dated things (a calving, the end
-//               of a milking)
-//   3 year_end  the year scrolled: what is coming, by its day, each a row to pick
-//   4 picked    a season picked (المربعانية, 7 December): its month, the day ringed, what is on it, «امشِ لين»
-//   5 card      before going: will the water and the feed last the stretch (the days each lasts against the days
-//               asked), filled before leaving with the phone's own orders, and what falls due on the way
-//   6 card_end  the card scrolled: what stops the jump, the go button (two taps), forward only
-//   7 going     the jump under way: the day it has reached, the days of the stretch, what has come in, «وقّف هنا»
-//   8 stopped   the jump handed back early: why (the first stop the engine's events gave), what to do, «كمّل»
-//   9 summary   what happened over the stretch, by the engine's events and ledger
+// what happened at the end. Revised after the design's review and the proxy's answers (batches 4 and 4b of
+// docs/agents/proxy_decisions.md, provisional). Fourteen views at the owner's screen (956 x 440, the phone enlarged),
+// in the phone's CSS and pieces (design/prototype3d/phone.js):
+//   1 home        the home screen as built (the six, المزاين, المحادثات) and التقويم, the ninth
+//   2 year        the year: twelve month strips read right to left (past pale, today marked), the breeding season,
+//                 each festival's registration and days, a calving, a milking's end
+//   3 year_end    what is coming, by its day, each a row to pick
+//   4 picked      a season picked (المربعانية, 7 December): its month, the day ringed, «امشِ لين»
+//   5 card        before going: will the water and the feed last (filled by the phone's orders; the tanker's rest
+//                 goes back), what falls due on the way
+//   6 card_end    what he can set before leaving (the standing order, the vet's contract), what stops the jump, the
+//                 go button (two taps), forward only
+//   7 standing    الوايت's standing order row (off)
+//   8 treat       العزبة's «يبي علاج»: a sick calf (the engine's save), the vet's price today (the engine's own Treat on a
+//                 copy), on account if the cash is short; the vet's contract
+//   9 card_sick   the card that waits: the go button off until she is treated (no vet's contract)
+//  10 going       the jump under way, «وقّف هنا»
+//  11 stopped     a store's stop (the fast game's first: barley at 3 days, on the day the card foretold)
+//  12 summary     what happened, by the engine's events and ledger
+//  13 round_stop  the jump stopped on his round's day at 6:00, before the first stage at 7:00
+//  14 round_day   then المزاين's own day screen as built, no stage told yet
 // The games (seed 4242, 1 October 2026): one at the real clock, its first day, where the screens are drawn; and one
 // on a fast clock (a game day in about 0.6 s) that does what the card offers (fills the tank and the feed shade on
 // the first day) and then runs on untouched to the target, held at the first day that one of the design's stops
@@ -25,9 +31,11 @@
 // things the engine has (a calving's due day, a milking's end) worked out from the snapshot as phone.js does, and the
 // days the stores last, reckoned from today's need (the card says «تقريبًا»: the herd's need moves with the season
 // and its calves, and the card never runs the future to tell it: that would tell an illness before it came).
+// The saves (tool/proto_engine/bin/t15_design_saves.dart, written within the hour before drawing: their clocks start
+// when written, so the round's day is still before 7:00): round.json and sick.json, with sick_quote.json.
 // What is a proposal (the calendar is not built): the stops, the card's words, the app. The hunting season is left
 // out on purpose (not built; the year's strips have room for its band).
-// To draw again: build the prototype (THREE_DIR=<three@0.170.0 package> python3 tool/proto_app/assemble.py), serve
+// To draw again: write the saves (`dart run bin/t15_design_saves.dart <folder>` in tool/proto_engine; SAVES=<folder>), build the prototype (THREE_DIR=<three@0.170.0 package> python3 tool/proto_app/assemble.py), serve
 // tool/proto_app/assets/web on a port (PORT, 8765 by default), and run `NODE_PATH=$(npm root -g) node
 // design/ui/phone_calendar.cjs` from the repository's root; it writes mock_calendar_<n>_<name>.png in OUT (default .)
 // and design/ui/phone_calendar.jpg. AUDIT=<audit.js> runs the layout audit on each view and writes the texts to
@@ -85,7 +93,7 @@ const CSS = `
   .row.two { grid-template-columns: 36px 1fr; }
 `;
 
-async function open(b, fast) {
+async function open(b, fast, save) {
   const ctx = await b.newContext({ viewport: { width: 956, height: 440 }, deviceScaleFactor: 2 });
   const p = await ctx.newPage();
   if (fast) {
@@ -94,8 +102,14 @@ async function open(b, fast) {
       route.fulfill({ response: r, body: (await r.text()).replace('startEngine({ onSnapshot:', 'startEngine({ timeScale: 20000, onSnapshot:') });
     });
   }
+  if (save) {
+    // the save made by the engine (t15_design_saves.dart), kept by the page before the engine starts
+    const v = fs.readFileSync(save, 'utf8');
+    await p.addInitScript(([v]) => { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('marah.proto.marah.save', v); sessionStorage.setItem('seeded', '1'); } }, [v]);
+  }
   await p.goto(`http://127.0.0.1:${PORT}/index.html`);
   await p.waitForFunction(() => window.marahEngine || window.marahEngineError, null, { timeout: 600000 });
+  if (save) { await p.waitForFunction(() => window.marahEngine.snapshot, null, { timeout: 600000 }); return { ctx, p }; }
   await p.evaluate(async () => {
     const e = window.marahEngine;
     await e.startOver({ seed: 4242 });
@@ -247,12 +261,12 @@ const FILL = `window.__fill = (S) => {
     items.sort((a, b) => a.day - b.day);
     const pickRow = (x) => `<div class="row pick"><span class="lead ${x.cls}">${svg(x.icon)}</span><b>${x.b}</b><span class="chev">${svg('chev')}</span><small>${x.s}</small></div>`;
 
-    // ---------------------------------------------------------------- 1 home: the nine apps
+    // ---------------------------------------------------------------- 1 home: the eight apps built and التقويم
     const home = (() => {
       const scr = R().querySelector('.scr');
       const apps = scr.querySelector('.apps');
       const app = (k, n) => `<div class="app"><span class="ic">${svg(k)}</span><span>${n}</span></div>`;
-      apps.insertAdjacentHTML('beforeend', app('cup', 'المزاين') + app('talk', 'المحادثات') + app('cal', 'التقويم'));
+      apps.insertAdjacentHTML('beforeend', app('cal', 'التقويم'));      // (after the eight built: the six, المزاين, المحادثات)
       return null;
     })();
 
@@ -321,7 +335,7 @@ const FILL = `window.__fill = (S) => {
     const stopAt = Math.min(F.water, feedFilled) - 3;      // the stop comes with the warning, three days before a store is out
     const supRow = (icon, name, last, filled, fillWhat, fillCost) => {
       const [cls, word] = verdict(filled);
-      return `<div class="row two2"><span class="lead${last < N ? ' me' : ''}">${svg(icon)}</span><b>${name} · يكفي ${days(last)}</b><span class="act"><button class="btn sm ghost" aria-label="عبّ ${name}">عبّه</button></span><small>${fillWhat} بـ ${n0(fillCost)} ريال، ويصير يكفي ${days(filled)} تقريبًا: <span class="${cls === 'ok' ? 'pos' : ''}" style="${cls === 'bad' ? 'color:var(--red);font-weight:700' : ''}">${word}</span></small></div>`;
+      return `<div class="row two2"><span class="lead${last < N ? ' me' : ''}">${svg(icon)}</span><b>${name} · يكفي ${days(last)}</b><span class="act"><button class="btn sm ghost" aria-label="عبّ ${name}">عبّه</button></span><small>${fillWhat} بـ ${n0(fillCost)} ريال، يصير يكفي ${days(filled)} تقريبًا: <span class="${cls === 'ok' ? 'pos' : ''}" style="${cls === 'bad' ? 'color:var(--red);font-weight:700' : ''}">${word}</span></small></div>`;
     };
     const milkDay = S.farm.milk.sold * S.farm.milk.price;
     const between = fests.filter((f) => f.startsOn > S.today && f.startsOn <= tgt);
@@ -329,7 +343,7 @@ const FILL = `window.__fill = (S) => {
       <div class="span"><b>لين ${dd(tgt)}</b><small>${days(N)} · من ${dd(S.today)}</small></div>
       <div class="sec">يكفي ${days(N)}؟</div>
       <div class="group">
-        ${supRow('water', 'الماء', lastW, F.water, `وايت ${Math.round(F.tanker.litres / 1000)} طن`, F.tanker.price)}
+        ${supRow('water', 'الماء', lastW, F.water, `وايت ${Math.round(F.tanker.litres / 1000)} طن يعبّي الخزان ${n0(S.farm.tankL - w.amount)} لتر والباقي يرجع،`, F.tanker.price)}
         ${supRow('feed', 'العلف', lastFeed, feedFilled, `${count(F.bags, 'bag')} و${count(F.bales, 'bale')}`, F.feedCost)}</div>
       <div class="note">${feedFilled < N ? `حتى لو عبّيت، العلف ما يكفي الأيام كلها: يوقف التقويم حوالي ${dShort(S.today + stopAt)} عشان تطلب، وبعدها تكمل.` : 'لو عبّيت يكفي الأيام كلها.'}</div>
       <div class="sec">اللي يجي بالطريق</div>
@@ -340,8 +354,12 @@ const FILL = `window.__fill = (S) => {
 
     // ---------------------------------------------------------------- 6 the card scrolled: the stops, the go button
     const cardEnd = `<div class="body">${nav()}<div class="title">قبل ما تمشي</div>
+      <div class="sec">تقدر تجهّز قبل</div>
+      <div class="group">
+        <div class="row two2"><span class="lead">${svg('truck')}</span><b>طلب ثابت للماء والعلف</b><span class="act"><button class="btn sm ghost">شغّله</button></span><small>لما يبقى 3 أيام يجيك الطلب بنفسه، وتدفعه مثل أي طلب</small></div>
+        <div class="row two2"><span class="lead">${svg('heart')}</span><b>عقد البيطري</b><span class="act"><button class="btn sm ghost">اتعاقد</button></span><small>${n0(1000 + 20 * S.herd.total)} ريال بالشهر لحلالك، ويعالج اللي يمرض بيومه</small></div></div>
       <div class="sec">يوقف ويرجع لك لو</div>
-      <div class="stops">مرضت ناقة أو ماتت · قرب العلف أو الماء يخلص (باقي 3 أيام) · نزل رصيدك تحت الصفر · جاك سوم على إعلان · جا يوم شوطك · انكشف تجميل بحلالك</div>
+      <div class="stops">مرض شي من حلالك، أو مات من مرض أو عطش · قرب العلف أو الماء يخلص (باقي 3 أيام) · نزل رصيدك تحت الصفر، أو وصل حساب التاجر حده · انكتبت عليك غرامة · جاك سوم على إعلان · جا يوم شوطك · باقي 3 أيام على قفل تسجيل مهرجان تقدر تدخله · بدا وقت الضراب وعندك ناقة تنلقح · ضاقت الشبوك على حلالك</div>
       <div class="note">وكل شي ثاني يمشي بنفسه: الحليب ينباع، والرواتب تنخصم، والولادات تصير، وتلقاها كلها بالآخر.</div>
       <button class="btn pri wide">امشِ لين ${dd(tgt)}</button>
       <div class="note">التقويم يمشي لقدام بس: الأيام اللي تمضي ما ترجع. وتقدر توقفه بنص الطريق.</div></div>`;
@@ -359,7 +377,7 @@ const FILL = `window.__fill = (S) => {
         <div class="row two"><span class="lead milk">${svg('milk')}</span><b>الحليب دخلك ${n0(midMilk)} ريال</b><small>من ${dShort(S.today)}</small></div>
         <div class="row two"><span class="lead">${svg('water')}</span><b>الماء يكفي ${days(mw.daysLeft)}</b><small>والشعير ${days(mb.daysLeft)} والبرسيم ${days(ma.daysLeft)}</small></div></div>
       <button class="btn ghost wide">${svg('stop')}وقّف هنا</button>
-      <div class="note">الأيام تنحسب يوم يوم، ويوقف بنفسه لو صار شي يبيك.</div></div>`;
+      <div class="note">الأيام تنحسب يوم يوم، ويوقف بنفسه لو صار شي يبيك. ولو حلالك كبير ممكن ياخذ ثواني.</div></div>`;
 
     // ---------------------------------------------------------------- 8 the early stop (the fast game's first stop)
     const st = A.stop, sDay = st ? st.day : tgt;
@@ -387,7 +405,7 @@ const FILL = `window.__fill = (S) => {
     const milkAll = A.milkEnd;
     rows.push(`<div class="row two"><span class="lead milk">${svg('milk')}</span><b>الحليب دخلك ${n0(milkAll)} ريال</b><small>ينباع كل يوم</small></div>`);
     const deliv = by('supplyDelivered');
-    if (deliv.length) rows.push(`<div class="row two"><span class="lead">${svg('truck')}</span><b>وصل ${count(deliv.length, 'order')}</b><small>${deliv.map((x) => x.supply === 'water' ? `وايت ${Math.round(x.size / 1000)} طن` : x.supply === 'barley' ? count(x.units, 'bag') + ' شعير' : count(x.units, 'bale') + ' برسيم').join('، ')}</small></div>`);
+    if (deliv.length) rows.push(`<div class="row two"><span class="lead">${svg('truck')}</span><b>وصلت ${count(deliv.length, 'order')}</b><small>${deliv.map((x) => x.supply === 'water' ? `وايت ${Math.round(x.size / 1000)} طن` : x.supply === 'barley' ? count(x.units, 'bag') + ' شعير' : count(x.units, 'bale') + ' برسيم').join('، ')}</small></div>`);
     const sick = by('fellSick'), died = by('died'), born = by('calfBorn');
     rows.push(`<div class="row two"><span class="lead ${sick.length || died.length ? 'me' : 'brd'}">${svg('heart')}</span><b>${sick.length ? `مرض ${count(sick.length, 'camel')}` : 'ما مرض شي'}</b><small>${died.length ? `ماتت ${died.map((x) => x.name).join('، ')}` : 'وما مات شي'}${born.length ? ` · ولد ${born.length}` : ''}</small></div>`);
     const regs = by('registrationOpened');
@@ -428,6 +446,112 @@ const FILL = `window.__fill = (S) => {
       fs.appendFileSync(path.join(OUT, 'calendar_texts.txt'), `== ${k}\n` + a.texts.filter((t) => !t.includes('{')).join('\n') + '\n');
     }
   }
+  // ---------------------------------------------------------------- the views from the engine's saves
+  const SAVES = process.env.SAVES || '.';
+  const shot = async (p, k) => {
+    i++;
+    await p.evaluate((css) => { const st = document.createElement('style'); st.textContent = css; R().querySelector('.scr').appendChild(st); }, CSS);
+    await p.waitForTimeout(400);
+    const file = path.join(OUT, `mock_calendar_${i}_${k}.png`);
+    const box = await p.evaluate(() => { const r = R().querySelector('.dev').getBoundingClientRect(); return { x: r.x, width: r.width }; });
+    await p.screenshot({ path: file, timeout: 600000, clip: { x: Math.max(0, box.x - 4), y: 0, width: box.width + 8, height: 440 } });
+    files.push(file);
+    if (process.env.AUDIT) {
+      await p.addScriptTag({ path: process.env.AUDIT });
+      const a = await p.evaluate(() => window.__audit());
+      console.log(k, 'audit', JSON.stringify({ clipped: a.clipped, ellipsis: a.ellipsis, outside: a.outside, split: a.split, scroll: a.scroll }));
+      fs.appendFileSync(path.join(OUT, 'calendar_texts.txt'), `== ${k}\n` + a.texts.filter((t) => !t.includes('{')).join('\n') + '\n');
+    }
+  };
+  const up = async (p) => {
+    await p.evaluate(() => { window.requestAnimationFrame = () => 0; });
+    await p.evaluate(() => { window.R = () => [...document.querySelectorAll('*')].find((e) => e.shadowRoot && e.shadowRoot.querySelector('.phone')).shadowRoot; window.__phone.toggle(); window.__phone.enlarge(); });
+    await p.waitForTimeout(600);
+  };
+  const tap = async (p, sel) => { await p.evaluate((sel) => R().querySelector(sel).click(), sel); await p.waitForTimeout(500); await p.evaluate(() => { R().activeElement?.blur(); }); };
+  const inject = (p, html) => p.evaluate(([html]) => {
+    const scr = R().querySelector('.scr'), sb = scr.querySelector('.sbar').outerHTML;
+    scr.classList.remove('home');
+    scr.innerHTML = `<span class="pill"></span>${sb}${html.replace(/(\d) (?=[؀-ۿ])/g, '$1\u00a0').replace(/([؀-ۿ]) (?=\d)/g, '$1\u00a0')}<div class="hb"></div>`;
+  }, [html]);
+  const ICON = {
+    alert: '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>', cup: '<path d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.8c0 2.4 1.2 3.8 3.2 4.2M16.5 6h2.7c0 2.4-1.2 3.8-3.2 4.2"/><path d="M12 14v3.5M9.5 17.5h5v3h-5z"/>',
+    heart: '<path d="M12 19.5s-7-4.3-7-9.5a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.2-7 9.5-7 9.5z"/>', back: '<path d="M9 6l6 6-6 6"/>',
+    repeat: '<path d="M4 9.5a6 6 0 0 1 10.5-4l2 2M20 14.5a6 6 0 0 1-10.5 4l-2-2"/><path d="M16.5 3.5v4h-4M7.5 20.5v-4h4"/>',
+  };
+  const ic = (k) => `<svg class="i" viewBox="0 0 24 24">${ICON[k]}</svg>`;
+  const navH = `<div class="nav"><button class="back">${ic('back')}رجوع</button></div>`;
+  const WD = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'], MO = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const ddIso = (iso) => { const d = new Date(iso + 'T00:00:00Z'); return `${WD[d.getUTCDay()]} ${d.getUTCDate()} ${MO[d.getUTCMonth()]}`; };
+  const DAYS = (n) => (n === 1 ? 'يوم واحد' : n === 2 ? 'يومين' : n <= 10 ? n + ' أيام' : n + ' يوم');
+
+  // the round's day: the stop at 6:00, then the phone's own day screen, no stage told yet
+  {
+    const { ctx, p: q } = await open(b, false, path.join(SAVES, 'round.json'));
+    const R0 = await q.evaluate(() => { const S = window.marahEngine.snapshot; const n = S.yard.find((c) => c.sex === 'female'); return { date: S.date, name: n.name }; });
+    await up(q);
+    await tap(q, '.scr .app[data-go="mazayen"]');
+    await tap(q, '.scr [data-go="day"]');
+    const told = await q.evaluate(() => R().querySelector('.scr .body').textContent.replace(/\s+/g, ' ').slice(0, 300));
+    console.log('round day', R0.date, told);
+    await shot(q, 'round_day');
+    await inject(q, `<div class="body">${navH}<div class="title">وقف التقويم</div>
+      <div class="msgc good"><span class="lead">${ic('cup')}</span><b>اليوم شوط ${R0.name}</b><small>مزاين حائل، الفردي جل · الوضح. وقف ${ddIso(R0.date)} الساعة 6 الصبح، قبل أول مرحلة الساعة 7، وتجيك المراحل وحدة وحدة مثل أي يوم.</small></div>
+      <button class="btn pri wide">شوف يوم الشوط</button>
+      <button class="btn ghost wide">كمّل لين ${ddIso(TARGET)}</button>
+      <div class="note">ما يكمّل إلا بعد ما يخلص الشوط، عشان ما يفوتك شي منه.</div></div>`);
+    await shot(q, 'round_stop');
+    await ctx.close();
+  }
+
+  // a sick calf (the engine's save) and the vet's quote (the engine's own Treat on a copy): العزبة's «يبي علاج», and
+  // the card that waits
+  {
+    const Q = JSON.parse(fs.readFileSync(path.join(SAVES, 'sick_quote.json'), 'utf8'));
+    const { ctx, p: q } = await open(b, false, path.join(SAVES, 'sick.json'));
+    await up(q);
+    await tap(q, '.scr .app[data-go="build"]');
+    const C = await q.evaluate((Q) => {
+      const S = window.marahEngine.snapshot, c = S.yard.find((x) => x.id === Q.camel) || {}, she = c.sex !== 'male';
+      const A = S.farm.account, short = Math.max(0, Q.cost - Math.max(0, S.cash));
+      const n0 = (v) => Math.round(v).toLocaleString('en-US');
+      const since = S.today - Q.sickSince, lo = Math.floor(Q.recoverDays / 2), hi = Q.recoverDays;
+      const row = `<div class="row" style="grid-template-columns:36px 1fr auto"><span class="lead" style="background:#fde6e4;color:var(--red)"><svg class="i" viewBox="0 0 24 24"><path d="M12 19.5s-7-4.3-7-9.5a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.2-7 9.5-7 9.5z"/></svg></span><b>${Q.name} · ${Q.illnessName}</b><span class="act"><button class="btn pri" style="height:36px;border-radius:11px;font-size:13px;padding-inline:14px">${she ? 'عالجها' : 'عالجه'}</button></span><small>${since === 0 ? (she ? 'مريضة من اليوم' : 'مريض من اليوم') : ''} · البيطري ${n0(Q.cost)} ريال · ${she ? 'تطيب' : 'يطيب'} بـ ${lo} إلى ${hi} أيام</small></div>`;
+      const vet = `<div class="sec">البيطري</div><div class="group"><div class="row" style="grid-template-columns:36px 1fr auto"><span class="lead"><svg class="i" viewBox="0 0 24 24"><path d="M12 19.5s-7-4.3-7-9.5a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.2-7 9.5-7 9.5z"/></svg></span><b>عقد البيطري</b><span class="act"><button class="btn ghost" style="height:36px;border-radius:11px;font-size:13px;padding-inline:14px">اتعاقد</button></span><small>${n0(1000 + 20 * S.herd.total)} ريال بالشهر (1,000 و20 للراس)، ويعالج اللي يمرض بيومه بسعر العلاج</small></div></div>`;
+      const tank = R().querySelector('.scr .tank');
+      const nb = (h) => h.replace(/(\d) (?=[؀-ۿ])/g, '$1\u00a0').replace(/([؀-ۿ]) (?=\d)/g, '$1\u00a0');
+      tank.insertAdjacentHTML('beforebegin', nb(`<div class="sec">يبي علاج</div><div class="group">${row}</div>
+        <div class="note">${short > 0 ? `على الحساب: ${n0(short)} ريال من حد التاجر ${n0(A.limit)}. ` : ''}لو ${she ? 'تركتها' : 'تركته'} بعد 10 أيام ممكن ${she ? 'تموت' : 'يموت'}.</div>${vet}`));
+      return { date: S.date, cash: S.cash, name: Q.name, she, cost: Q.cost, herd: S.herd.total, lo, hi };
+    }, Q);
+    console.log('sick', JSON.stringify(C));
+    await shot(q, 'treat');
+    await inject(q, `<div class="body">${navH}<div class="title">قبل ما تمشي</div>
+      <div class="span"><b>لين ${ddIso('2027-06-01')}</b><small>من ${ddIso(C.date)}</small></div>
+      <div class="warn"><span class="lead">${ic('alert')}</span><b>${C.name} ${C.she ? 'مريضة' : 'مريض'}</b><small>عالجها أول، وبعدها تمشي. أو اتعاقد مع البيطري ويعالج اللي يمرض وأنت بعيد.</small></div>
+      <div class="group"><div class="row" style="grid-template-columns:36px 1fr auto"><span class="lead" style="background:#fde6e4;color:var(--red)">${ic('heart')}</span><b>${C.name} · ${Q.illnessName}</b><span class="act"><button class="btn pri" style="height:36px;border-radius:11px;font-size:13px;padding-inline:14px">${C.she ? 'عالجها' : 'عالجه'}</button></span><small>البيطري ${C.cost.toLocaleString('en-US')} ريال</small></div></div>
+      <button class="btn wide" disabled>امشِ لين ${ddIso('2027-06-01')}</button>
+      <div class="note">الزر يشتغل بعد العلاج.</div></div>`);
+    await shot(q, 'card_sick');
+    await ctx.close();
+  }
+
+  // the standing order, in الوايت (a fresh first day)
+  {
+    const { ctx, p: q } = await open(b, false);
+    await up(q);
+    await tap(q, '.scr .app[data-go="water"]');
+    await q.evaluate(() => {
+      const g = [...R().querySelectorAll('.scr .group')].pop();
+      g.insertAdjacentHTML('afterend', `<div class="sec">طلب ثابت</div><div class="group"><div class="row" style="grid-template-columns:36px 1fr auto"><span class="lead"><svg class="i" viewBox="0 0 24 24"><path d="M4 9.5a6 6 0 0 1 10.5-4l2 2M20 14.5a6 6 0 0 1-10.5 4l-2-2"/><path d="M16.5 3.5v4h-4M7.5 20.5v-4h4"/></svg></span><b>يجيك وايت بنفسه</b><span class="act"><span style="display:inline-block;width:46px;height:28px;border-radius:14px;background:#e3e3e8;position:relative"><i style="position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></i></span></span><small>لما يبقى بالخزان 3 أيام، الوايت اللي يدخله، وتدفعه مثل أي طلب (على الحساب لو رصيدك ما كفى)</small></div></div>`);
+      const bd = R().querySelector('.scr .body'); bd.scrollTop = bd.scrollHeight;
+    });
+    await shot(q, 'standing');
+    await ctx.close();
+  }
+
   await b.close();
-  execFileSync('convert', [...files, '-background', '#2a2119', '-splice', '6x0', '+append', '-chop', '6x0', '-quality', '86', path.join(__dirname, 'phone_calendar.jpg')]);
+  const order = ['home', 'year', 'year_end', 'picked', 'card', 'card_end', 'standing', 'treat', 'card_sick', 'going', 'stopped', 'summary', 'round_stop', 'round_day'];
+  const sorted = order.map((k) => files.find((f) => new RegExp(`_\\d+_${k}\\.png$`).test(f))).filter(Boolean);
+  execFileSync('convert', [...sorted, '-background', '#2a2119', '-splice', '6x0', '+append', '-chop', '6x0', '-quality', '86', path.join(__dirname, 'phone_calendar.jpg')]);
 })();
