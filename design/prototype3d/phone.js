@@ -869,16 +869,27 @@ function listingScreen() {
   ].join('');
   const why = full ? 'عزبتك مليانة: ابنِ شبك من العزبة.' : G.cash < 0 ? debtLine() : poor ? `رصيدك ${n0(G.cash)} ريال ما يكفي.` : '';
   const canBuy = !full && !poor;
+  // the vet's look before buying (approved 14 Nov 2026: design/ui/phone_haraj_vet.jpg): SAR 500 from the money (never
+  // on account), one a day (the same day's looks agree); what he finds only the buyer knows. Nothing of a treatment shows
+  // before a look finds it (the engine sends only what the player was told: l.treatments)
+  const kinds = l.treatments || [], told = kinds.length > 0, n = l.checked || 0, fee = G.haraj.vetFee;
+  const times = n === 1 ? 'مرة' : n === 2 ? 'مرتين' : `${n} مرات`;
+  const vetPoor = G.cash < fee;
+  const vetRow = told
+    ? alertCard(l.declared ? `${her(c, 'معروضة', 'معروض')} معلن إن ${her(c, 'فيها', 'فيه')} ${tamperNames(kinds)}` : `البيطري لقى ${her(c, 'فيها', 'فيه')} ${tamperNames(kinds)}`, `محد يدري غيرك. لو ${her(c, 'اشتريتها وسجلتها', 'اشتريته وسجلته')} بمزاين وانكشف، الغرامة والحرمان عليك. والتجميل يروح مع الوقت.`)
+    : `<div class="group"><div class="row"><span class="lead">${svg('scope')}</span><b>${n ? `البيطري ${her(c, 'فحصها', 'فحصه')} ${times}` : `${her(c, 'افحصها', 'افحصه')} عند البيطري`}</b><span class="act"><button class="btn ghost" data-act="vet" data-id="${esc(l.id)}" aria-label="${l.checkedToday ? 'البيطري فحصها اليوم، افحص بكرة' : `افحص ${esc(c.name)} عند البيطري بـ ${n0(fee)} ريال`}" ${l.checkedToday || vetPoor ? 'disabled' : ''}>${l.checkedToday ? 'افحص بكرة' : 'افحص'}</button></span><small>${n ? 'ما لقى شي · ' : ''}الفحص بـ ${n0(fee)} ريال، وكل يوم فحص\u00a0جديد${vetPoor && !l.checkedToday ? ' · رصيدك ما يكفي' : ''}</small></div></div>`;
   const bidRow = `<div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} ${her(c, 'عليها', 'عليه')}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
   return `<div class="body">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${msgCard()}${errCard()}
     <div class="it big"><span class="ph">${photo(c)}</span>${facts}</div>
+    ${vetRow}
     <div class="tank"><small>اللي تدفعه</small>
       <div class="kind"><span>${her(c, 'سعرها', 'سعره')}</span><span class="d">${n0(l.askPrice)} ريال</span></div>
       <div class="kind"><span>${her(c, 'نقلها', 'نقله')} لعزبتك</span><span class="d">${n0(l.transport)} ريال</span></div>
       <div class="kind"><span><b>المجموع</b></span><span class="d"><b>${n0(total)} ريال</b></span></div></div>
-    <button class="btn ${canBuy ? 'pri' : ''} wide" data-act="buy" ${canBuy ? '' : 'disabled'}>${her(c, 'اشترها', 'اشتره')} بـ ${n0(l.askPrice)}</button>
+    <button class="btn ${canBuy ? 'pri' : ''} wide" data-act="buy" ${canBuy ? '' : 'disabled'}>${her(c, 'اشترها', 'اشتره')} بـ ${n0(l.askPrice)}${told ? ' وأنت تدري' : ''}</button>
     ${canBuy && G.cash >= total + truckFee(l.transport) ? nowLink(`buyNow:${l.id}`, `data-act="buyNow" style="align-self:center" aria-label="${her(c, 'اشترها وتوصل', 'اشتره ويوصل')} الحين بـ ${n0(total + truckFee(l.transport))} ريال مع النقل"`, `أو ${her(c, 'اشترها وتوصل', 'اشتره ويوصل')} الحين بـ ${n0(total + truckFee(l.transport))} ريال مع النقل`, `اضغط مرة ثانية ${her(c, 'وتوصل', 'ويوصل')} الحين بـ ${n0(total + truckFee(l.transport))} ريال`) : ''}
     ${why ? `<div class="note">${why}</div>` : ''}
+    <div class="note">${told ? `تقدر ${her(c, 'تتركها', 'تتركه')}، أو\u00a0${her(c, 'تشتريها', 'تشتريه')} وتنتظر لين يروح التجميل.` : 'البيطري يدوّر على التجميل قبل لا تشتري، بس ممكن يفوته شي. واللي يلقاه ما يدري عنه غيرك.'}</div>
     <div class="sec">${her(c, 'سوم عليها', 'سوم عليه')}</div>
     ${bidRow}
     <button class="btn ${canBid ? 'ghost' : ''} wide" data-act="bid" ${canBid ? '' : 'disabled'}>سوم بـ ${n0(HJ.bid)}</button>
@@ -917,8 +928,28 @@ function sellScreen() {
   // the asking price against the appraisals: above them, fewer buyers come (Balance.buyerInterest); below, money left
   const hint = HJ.ask > c.estimateHigh * 1.15 ? 'سعرك فوق تقديرهم بواجد: السومات تقل.' : HJ.ask < c.estimateLow ? 'سعرك تحت تقديرهم.' : '';
   const sure = HJ.sure === `quick:${c.id}`;
+  // a camel he knows is treated (approved 14 Nov 2026: design/ui/phone_haraj_vet.jpg): bought so without knowing and
+  // told, she may be sold declared, at her natural price, no examination and no fine (c.declaredSale, the engine's
+  // broker price); treated by himself, the engine refuses it (c.declareRefused) and the page says why
+  if (c.declaredSale != null) {
+    if (HJ.ask == null || HJ.askFor !== `d:${c.id}`) { HJ.ask = Math.max(min, roundTo(c.declaredSale, stepOf(c.declaredSale))); HJ.askFor = `d:${c.id}`; }
+    const kd = stepOf(c.declaredSale);
+    return `<div class="body">${back}<div class="title" style="font-size:22px">بيع ${esc(c.name)}</div>${errCard()}
+    <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small><small>${her(c, 'فيها', 'فيه')} تجميل، وأنت ما دريت لين انقال لك</small></div>
+    <div class="sec">${her(c, 'اعرضها', 'اعرضه')} معلن إن ${her(c, 'فيها', 'فيه')} تجميل</div>
+    <div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سعرك</b><span class="stp"><button data-act="askStep" data-d="-1" aria-label="سعر أقل" ${HJ.ask - kd >= min ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.ask)}</b> <span>ريال</span></span><button data-act="askStep" data-d="1" aria-label="سعر أكثر">${svg('plus')}</button></span><small>المشتري يدري، وما يفحصون ولا تتغرم</small></div></div>
+    <button class="btn pri wide" data-act="list" data-p="declared">${her(c, 'اعرضها', 'اعرضه')} معلن بـ ${n0(HJ.ask)}</button>
+    <div class="sec">أو ${her(c, 'بيعها', 'بيعه')} معلن للدلال الحين</div>
+    <button class="btn ${sure ? 'sure' : 'ghost'} two wide" data-act="quick" data-p="declared"><span>${sure ? her(c, 'اضغط مرة ثانية وتنباع', 'اضغط مرة ثانية وينباع') : her(c, 'بيعها معلن الحين', 'بيعه معلن الحين')}</span><span>${n0(c.declaredSale)} ريال</span></button>
+    <div class="note">${her(c, 'سعرها', 'سعره')} الطبيعي بدون زيادة التجميل، فهو تحت تقديرهم. أو\u00a0${her(c, 'انتظرها', 'انتظره')} لين يروح التجميل.</div></div>`;
+  }
+  if (HJ.askFor && HJ.askFor.startsWith('d:')) { HJ.askFor = null; HJ.ask = Math.max(min, roundTo(c.estimateHigh, k)); }
+  const ownT = c.declareRefused === 'ownTreatment' ? G.tamperings.filter((t) => t.camel === c.id) : [];
+  const own = ownT.length ? ownT.map((t) => `${TAMPER[t.kind]} ${STRENGTH[t.strength - 1]}`) : null, ownKinds = ownT.map((t) => t.kind);
+  const ownCard = own ? alertCard(`ما تقدر ${her(c, 'تعلنها', 'تعلنه')}`, `أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}، والتجميل ممنوع برا المهرجان بعد، وإعلانه اعتراف. ${her(c, 'انتظرها', 'انتظره')} لين يروح ${ownKinds.length === 1 ? theTamper(ownKinds[0]) : 'التجميل'}، أو\u00a0${her(c, 'بيعها', 'بيعه')} ساكت ${her(c, 'ويفحصونها', 'ويفحصونه')} قبل ما يدفعون.`) : '';
   return `<div class="body">${back}<div class="title" style="font-size:22px">بيع ${esc(c.name)}</div>${errCard()}
-    <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small>${what ? `<small>${what}</small>` : ''}</div>
+    <div class="it"><span class="ph">${photo(c)}</span><b>${titleOf(c)}</b><small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)} ريال</small>${own ? `<small>${her(c, 'فيها', 'فيه')} ${own.join(' و')}، أنت اللي ${her(c, 'جمّلتها', 'جمّلته')}</small>` : what ? `<small>${what}</small>` : ''}</div>
+    ${ownCard}
     ${dam ? alertCard(`${cf('حوارتها', 'حوارها')} ${esc(dam.calfName)} ${cf('ترضع', 'يرضع')} منها`, `لو بعتها ${cf('تضعف بدون حليب أمها', 'يضعف بدون حليب أمه')}، خصوصًا قبل 3 شهور.`) : ''}
     <div class="sec">${her(c, 'اعرضها', 'اعرضه')} بالحراج</div>
     <div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سعرك</b><span class="stp"><button data-act="askStep" data-d="-1" aria-label="سعر أقل" ${HJ.ask - k >= min ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.ask)}</b> <span>ريال</span></span><button data-act="askStep" data-d="1" aria-label="سعر أكثر">${svg('plus')}</button></span><small>السعي ${n0(fee)} ريال · يوصلك ${n0(HJ.ask - fee)}</small></div></div>
@@ -940,7 +971,7 @@ function myListings() {
       return `<div class="row"><span class="lead">${svg('user')}</span><b>${esc(o.buyerName)} سام ${n0(o.amount)}</b><span class="act two"><button class="btn ${sure ? 'sure' : 'pri'}" data-act="accept" data-o="${esc(o.id)}" aria-label="اقبل سوم ${esc(o.buyerName)}">${sure ? 'أكّد' : 'اقبل'}</button><button class="btn ghost" data-act="decline" data-o="${esc(o.id)}" aria-label="ارفض سوم ${esc(o.buyerName)}">لا</button></span><small>يوصلك ${n0(o.amount - fee)} بعد السعي · ${when(o.expiresOn - G.today)}</small></div>`;
     };
     const sure = HJ.sure === `unlist:${l.id}`;
-    return `<div class="it"><span class="ph">${photo(c)}</span><b>${esc(c.name)} · ${titleOf(c)}</b><small>${her(c, 'معروضة', 'معروض')} بـ ${n0(l.askPrice)} · الإعلان ${when(left)}</small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${l.offers.length ? count(l.offers.length, 'bid') : `ما ${her(c, 'جاها', 'جاه')} سوم للحين`}</small></div>
+    return `<div class="it"><span class="ph">${photo(c)}</span><b>${esc(c.name)} · ${titleOf(c)}</b><small>${her(c, 'معروضة', 'معروض')}${l.declared ? ' معلن' : ''} بـ ${n0(l.askPrice)} · الإعلان ${when(left)}</small><span class="pr"><span class="price num">${n0(l.askPrice)}</span></span><small>${l.offers.length ? count(l.offers.length, 'bid') : `ما ${her(c, 'جاها', 'جاه')} سوم للحين`}</small></div>
       ${l.offers.length ? `<div class="sec">السومات</div><div class="group">${l.offers.map(offer).join('')}</div>` : ''}
       <button class="btn ${sure ? 'sure' : 'ghost'} wide" data-act="unlist" data-id="${esc(l.id)}">${sure ? 'اضغط مرة ثانية وينشال' : 'شيل الإعلان'}</button>`;
   }).join('') + `<div class="note">السوم يبقى ${days(G.haraj.offerDays)}، وإذا ما قبلته يروح.</div>`;
@@ -2013,7 +2044,7 @@ export function createPhone({ host }) {
     if (kind === 'calPick') { CAL.day = Number(t.dataset.day); done(); return; }
     if (kind === 'calMonth') { CAL.month = Math.max(0, Math.min(12, (CAL.month ?? 0) + Number(t.dataset.d))); done(); return; }
     if (kind === 'bidStep') { const l = listingOf(HJ.listing); if (l) HJ.bid += Number(t.dataset.d) * stepOf(l.askPrice); done(); return; }
-    if (kind === 'askStep') { const c = myCamel(HJ.camel); if (c) HJ.ask += Number(t.dataset.d) * stepOf(c.estimateHigh); done(); return; }
+    if (kind === 'askStep') { const c = myCamel(HJ.camel); if (c) HJ.ask += Number(t.dataset.d) * stepOf(c.declaredSale != null ? c.declaredSale : c.estimateHigh); done(); return; }
     if (twice != null && !ready) {      // (the first tap of a sale: it asks again, and says so)
       done();
       const b = [...scr.querySelectorAll('[data-act]')].find((x) => keyOf(x) === keyOf(t));
@@ -2068,7 +2099,18 @@ export function createPhone({ host }) {
         if (target != null && engine.away) { CAL.day = target; CAL.from = G.today; CAL.progress = null; CAL.running = true; next = 'calGoing'; runAway(target); }
       }
       else if (kind === 'buy' || kind === 'bid') await buy(kind);
-      else if (kind === 'list' || kind === 'quick') await sell(kind);
+      else if (kind === 'list' || kind === 'quick') await sell(kind, t.dataset.p === 'declared');
+      else if (kind === 'vet') {
+        const l = listingOf(t.dataset.id);
+        const r = l ? await engine.dispatch({ type: 'checkListing', listing: l.id }) : null;
+        if (r && r.ok) {
+          const ev = (r.events || []).find((e) => e.type === 'listingChecked'), c = l.camel;
+          HJ.said = ev && ev.found && ev.found.length ? `البيطري لقى ${her(c, 'فيها', 'فيه')} ${tamperNames(ev.found)}` : 'البيطري فحصها وما لقى شي';
+        } else if (r) {
+          const code = r.error?.code;
+          ERR = code === 'checkedToday' ? `البيطري ${her(l.camel, 'فحصها', 'فحصه')} اليوم، افحص بكرة.` : code === 'insufficientFunds' ? `رصيدك ما يكفي للفحص: ${n0(r.error.params?.needed ?? G.haraj.vetFee)} ريال.` : code === 'notFound' ? her(l.camel, 'انباعت قبل لا يفحصها.', 'انباع قبل لا يفحصه.') : 'جرّب مرة ثانية.';
+        } else ERR = 'هالإعلان انباع أو انشال.';
+      }
       else if (kind === 'accept' || kind === 'decline') await answer(kind, t.dataset.o);
       else if (kind === 'unlist' && await send({ type: 'cancelListing', listing: t.dataset.id })) HJ.msg = { good: true, title: 'شلت الإعلان', line: 'الحلال باقي بعزبتك.' };
       else if (kind === 'withdraw') {
@@ -2143,17 +2185,17 @@ export function createPhone({ host }) {
       } else if (!r.ok) ERR = refusal(r, command);
     }
     // one's own camel listed at one's price (to إعلاناتي, where the offers come) or sold to the broker now
-    async function sell(how) {
+    async function sell(how, declared = false) {
       const c = myCamel(HJ.camel);
       if (!c) return;
-      const command = how === 'list' ? { type: 'listForSale', camel: c.id, askPrice: HJ.ask } : { type: 'quickSale', camel: c.id };
+      const command = how === 'list' ? { type: 'listForSale', camel: c.id, askPrice: HJ.ask, ...(declared ? { declared: true } : {}) } : { type: 'quickSale', camel: c.id, ...(declared ? { declared: true } : {}) };
       const r = await engine.dispatch(command);
       if (refusedSale(r, how === 'quick' ? 'الدلال' : null)) { HJ.ask = null; HJ.camel = null; next = 'haraj'; return; }
       if (!r.ok) { ERR = refusal(r, command); return; }
       const sold = (r.events || []).find((e) => e.type === 'camelSold');
       HJ.msg = how === 'list'
-        ? { good: true, title: `عرضت ${esc(c.name)} بـ ${n0(HJ.ask)} ريال`, line: 'السومات تجيك هنا، وتقبل أو ترفض.' }
-        : { good: true, title: `بعت ${esc(c.name)} للدلال بـ ${n0(sold ? sold.price : c.quickSale)} ريال`, line: 'دخلت الفلوس رصيدك.' };
+        ? { good: true, title: `عرضت ${esc(c.name)}${declared ? ' معلن' : ''} بـ ${n0(HJ.ask)} ريال`, line: 'السومات تجيك هنا، وتقبل أو ترفض.' }
+        : { good: true, title: `بعت ${esc(c.name)} للدلال${declared ? ' معلن' : ''} بـ ${n0(sold ? sold.price : declared ? c.declaredSale : c.quickSale)} ريال`, line: 'دخلت الفلوس رصيدك.' };
       HJ.tab = how === 'list' ? 'mine' : 'market'; HJ.ask = null; HJ.camel = null; next = 'haraj';
     }
     // a sale the buyer or the broker refused, a treatment found in her (the owner's decision 12): said on the answer

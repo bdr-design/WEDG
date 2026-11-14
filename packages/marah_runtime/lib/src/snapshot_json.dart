@@ -54,6 +54,8 @@ class SnapshotJson {
       'listingDays': Balance.playerListingDays,
       'offerDays': Balance.offerValidDays,
       'minAsk': Balance.minAskPrice,
+      // the vet's look at a camel for sale before buying (paid from the money)
+      'vetFee': Balance.vetCheckFee,
     },
     'breedingSeason': s.breedingSeason,
     // a place's score is the judges' mark, never announced (hidden)

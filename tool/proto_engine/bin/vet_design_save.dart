@@ -8,7 +8,8 @@
 //  - played: his eldest camel (نورة, the start's she-camel) treated by her owner (Tamper), and the engine's refusal
 //    of her declared sale (ownTreatment).
 // One state is staged (the finding outside the ring called directly); every figure shown is the engine's own.
-// Run `dart run bin/vet_design_save.dart <out.json>` in tool/proto_engine; the page opens it from localStorage.
+// Run `dart run bin/vet_design_save.dart <out.json> [<before.json>]` in tool/proto_engine; the page opens it from
+// localStorage. <before.json>: the same game before the vet's first look (the phone's look is played on it).
 import 'dart:io';
 
 import 'package:marah_data/marah_data.dart';
@@ -51,6 +52,17 @@ void main(List<String> args) {
     days++;
   }
   final first = treated().first;
+  // (a second file, when named: the game as it is now, before any look: the
+  // phone's own look is played on it, T16's page checks)
+  // the game's clock moved with the days played, so a page that opens the
+  // save runs on from its day (not waiting for the clock to catch up)
+  void clockToWorld() => g.state
+    ..clockShiftMs = -g.today.daysSince(g.state.startedOn) * 86400000 ~/ 7
+    ..lastSeenUtcMs = now.millisecondsSinceEpoch;
+  if (args.length > 1) {
+    clockToWorld();
+    File(args[1]).writeAsStringSync(const SaveCodec().encode(g.state));
+  }
   var looks = 0;
   bool found() =>
       w.camels[first.camelId]!.treatments.any((t) => t.knownBy.contains(me));
@@ -80,7 +92,7 @@ void main(List<String> args) {
       .where((x) => x.id != bought)
       .reduce((a, b) => a.ageDays(g.today) >= b.ageDays(g.today) ? a : b);
   g.dispatch(Tamper(me, noura.id, TamperKind.dye, 1));
-  g.state.lastSeenUtcMs = now.millisecondsSinceEpoch;
+  clockToWorld();
   File(args.first).writeAsStringSync(const SaveCodec().encode(g.state));
   stdout.writeln(
     'played $days days, looks $looks, found ${found()}, '
