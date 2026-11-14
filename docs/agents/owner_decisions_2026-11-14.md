@@ -41,7 +41,8 @@ what was asked overnight; this file is his own word.
     اختيار لعب.» (Confirms item 3 as built.)
 12. A buyer who knew of a treatment before buying, selling declared with no fine: «لا: البيع المعلن بدون غرامة للي
     ما درى بس. اللي اشتراها وهو يدري يتركها، أو ينتظر لين يروح التجميل، أو يبيعها ساكت ويتحمل خطر الفحص.»
-    (Confirms item 5.)
+    (Confirms item 5. CORRECTION: this rule was in the design's picture only; the engine at that time still let
+    such a buyer sell declared (found by the reviewer of the build of الحراج's views). It is built with those views.)
 
 ## الحراج's new views, the phone's type, the camels' triangles
 
@@ -55,3 +56,14 @@ what was asked overnight; this file is his own word.
 16. The camels' triangles (now 537k over the pens and 724k at eye height, against the budget's 400k): «النسخة الوسط
     الأخف الحين: نطبق نسخة وسط 4 آلاف مثلث بدل 8 آلاف: أكبر توفير (537 ← 377 ألف فوق الحظاير) ويغيّر حوالي 4% من
     بكسلات النوق.» (The other three options are not adopted now.)
+
+## Hunting's open points and the pregnancy check
+
+17. Cheating in falcon contests: «مو الحين: ما يدخل لين نلقى العقوبة الحقيقية، عشان ما نخترع أرقامها. المسابقات تنبني
+    نظيفة.»
+18. Shooting with the air rifle (الساكتون): «نيشان وأصوّب بنفسي: تطلع نيشان وتصوّب وترمي بيدك. أقرب للعبة رماية، ويزيد
+    شغل وثقل شوي.» (Not the recommended tap on the flock.)
+19. Releasing a trapped peregrine he kept, at the season's end: his own words: «مخير بين الاثنين» (free to choose
+    either: release it from February, or keep it through the year).
+20. The pregnancy check: «21 يوم وفحص مبكر مدفوع: الفحص العادي يبقى على 21 يوم، ولو تبي تعرف بدري تدفع للبيطري سونار
+    من يوم 15. ينبني لما تنبني شاشة الضراب بالجوال.» (Confirms the proxy's batch 4b item 6.)
