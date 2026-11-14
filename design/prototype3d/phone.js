@@ -41,12 +41,12 @@ const CSS = `
   * { box-sizing: border-box; margin: 0; }
   .phone { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; font-size: 13px; line-height: 1.35; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; direction: rtl; text-align: start; text-wrap: pretty; --bg: #f2f2f7; --card: #ffffff; --ink: #111114; --ink2: #6e6e73; --line: #e5e5ea; --acc: #087a51; --acc-soft: #e3f4ec; --red: #d42f25; --amber: #a3660e; }      /* (each a little darker than approved, to 4.5:1 or better where it writes text, WCAG AA: green 4.37 → 5.37 under white and 3.83 → 4.71 on its pale chip, red 4.27 → 4.96, amber 3.45 → 4.70 on white, the proxy's T-B) */
   b.fit { font: inherit; }
-  .num { font-family: "Alexandria", "IBM Plex Sans Arabic", sans-serif; }
+  .num { font-family: "Marah Figures", "Alexandria", "IBM Plex Sans Arabic", sans-serif; }
   svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
   .scr { position: relative; width: 100%; height: 100%; border-radius: 42px; overflow: hidden; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; }
   .scr .pill { position: absolute; top: 9px; left: 50%; translate: -50% 0; width: 92px; height: 27px; border-radius: 14px; background: #000; z-index: 5; }
-  .sbar { height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 26px 0; font: 600 14px/1 "Alexandria", sans-serif; }
+  .sbar { height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 26px 0; font: 600 14px/1 "Marah Figures", "Alexandria", sans-serif; }
   .sbar .r { display: flex; gap: 5px; align-items: center; direction: ltr; }
   .sbar .bat { width: 22px; height: 11px; border-radius: 3.5px; border: 1.3px solid currentColor; position: relative; opacity: .85; }
   .sbar .bat::after { content: ""; position: absolute; inset: 1.3px; width: 60%; border-radius: 1.5px; background: currentColor; }
@@ -58,7 +58,7 @@ const CSS = `
   .nav .back { display: flex; align-items: center; gap: 2px; color: var(--acc); font-size: 14px; font-weight: 500; }
   .nav .back svg { width: 18px; height: 18px; stroke-width: 2.2; }
   .nav .end { margin-inline-start: auto; color: var(--acc); }
-  .title { font: 700 27px/1.1 "Alexandria", sans-serif; }      /* (no tracking: letter-spacing pulls Arabic's joined letters apart, the audit) */
+  .title { font: 700 27px/1.1 "Marah Figures", "Alexandria", sans-serif; }      /* (no tracking: letter-spacing pulls Arabic's joined letters apart, the audit) */
   .group { background: var(--card); border-radius: 16px; overflow: hidden; }
   .row { display: grid; grid-template-columns: 36px 1fr auto; column-gap: 11px; align-items: center; padding: 9px 12px; min-height: 52px; position: relative; }
   .row + .row::before { content: ""; position: absolute; top: 0; inset-inline: 59px 0; height: .5px; background: var(--line); }
@@ -66,7 +66,7 @@ const CSS = `
   .row .lead svg { width: 18px; height: 18px; }
   .row b { font-size: 13.5px; font-weight: 600; }
   .row small { font-size: 11.5px; color: var(--ink2); }
-  .row .qty { grid-row: span 2; font: 600 14px/1 "Alexandria", "IBM Plex Sans Arabic", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }      /* (tabular after the font shorthand, which resets the phone's tabular-nums: the column's figures line up, the audit) */
+  .row .qty { grid-row: span 2; font: 600 14px/1 "Marah Figures", "Alexandria", "IBM Plex Sans Arabic", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }      /* (tabular after the font shorthand, which resets the phone's tabular-nums: the column's figures line up, the audit) */
   .pos { color: var(--acc); }
   .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
   .sec { font-size: 12px; font-weight: 600; color: var(--ink2); padding-inline: 4px; margin-bottom: -6px; }
@@ -79,14 +79,14 @@ const CSS = `
   .widgets { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .wg { border-radius: 22px; padding: 12px 13px; background: rgba(255,255,255,.78); -webkit-backdrop-filter: none; height: 136px; display: flex; flex-direction: column; box-shadow: 0 4px 14px rgba(70,50,20,.10); }
   .wg small { font-size: 11.5px; font-weight: 600; color: var(--ink2); }
-  .wg .big2 { font: 700 21px/1.1 "Alexandria", sans-serif; margin-top: 8px; }
+  .wg .big2 { font: 700 21px/1.1 "Marah Figures", "Alexandria", sans-serif; margin-top: 8px; }
   .wg .big2.bad { color: var(--red); }      /* (a balance under zero: «عليك», what the player owes) */
   .wg .ln { font-size: 11.5px; font-weight: 500; margin-top: auto; }
   .apps { display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 14px; }
   .app { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #2b2116; position: relative; }
   .app .ic { width: 56px; height: 56px; border-radius: 15px; display: grid; place-items: center; background: #fff; color: var(--acc); box-shadow: 0 3px 8px rgba(70,50,20,.14); }
   .app .ic svg { width: 27px; height: 27px; stroke-width: 1.8; }
-  .app .bd { position: absolute; top: -5px; left: 2px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px "Alexandria", sans-serif; text-align: center; padding: 0 5px; }
+  .app .bd { position: absolute; top: -5px; left: 2px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px "Marah Figures", "Alexandria", sans-serif; text-align: center; padding: 0 5px; }
   /* ---------- the segmented control (العلف's ration) ---------- */
   .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 2px; border-radius: 10px; background: #e3e3e8; }
   .seg span { text-align: center; padding: 6px 0; border-radius: 8px; font-weight: 600; font-size: 12.5px; color: #3a3a3f; }
@@ -98,7 +98,7 @@ const CSS = `
   .body > * { flex-shrink: 0; }
   .tank { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
   .tank small { font-size: 12px; color: var(--ink2); font-weight: 500; }
-  .tank .v { font: 700 30px/1.1 "Alexandria", sans-serif; letter-spacing: -.01em; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; }
+  .tank .v { font: 700 30px/1.1 "Marah Figures", "Alexandria", sans-serif; letter-spacing: -.01em; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; }
   .tank .v span { font-size: 14px; font-weight: 600; color: var(--ink2); letter-spacing: normal; }      /* (the figure's tracking kept off its Arabic unit) */
   .tank .ln { font-size: 12px; font-weight: 500; }
   .bar { height: 8px; border-radius: 4px; background: #e8eef3; overflow: hidden; margin-block: 4px 2px; white-space: nowrap; }
@@ -121,37 +121,37 @@ const CSS = `
   .stp button[disabled] { background: #eeeef1; color: #b8b8bd; cursor: default; }
   .stp button svg { width: 16px; height: 16px; stroke-width: 2.6; }
   .stp .n { min-width: 54px; text-align: center; font-weight: 700; font-size: 13px; }
-  .stp .n b { font: 700 15px/1 "Alexandria", sans-serif; font-variant-numeric: tabular-nums; }
+  .stp .n b { font: 700 15px/1 "Marah Figures", "Alexandria", sans-serif; font-variant-numeric: tabular-nums; }
   .row.ord .lead { grid-column: 1; grid-row: 1 / span 2; }
   .row.ord b { grid-column: 2; grid-row: 1; }
   .row.ord small { grid-column: 2; grid-row: 2; }
   .row.ord .stp { grid-column: 3; grid-row: 1 / span 2; }
   .order { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; background: var(--card); border-radius: 16px; padding: 10px 12px; }
   .order > span > small { font-size: 11.5px; color: var(--ink2); display: block; }
-  .order .t { font: 700 18px/1.1 "Alexandria", sans-serif; }
+  .order .t { font: 700 18px/1.1 "Marah Figures", "Alexandria", sans-serif; }
   .order .t small { font-size: 11.5px; color: var(--ink2); }
   .order .btn { padding-inline: 26px; }
   .note { font-size: 11.5px; color: var(--ink2); padding-inline: 4px; margin-top: -6px; }
   .way .row { grid-template-columns: 36px 1fr; }
   .way .lead { background: #e6eef8; color: #2f7fcf; }
   .cmp { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; font-size: 11px; color: var(--ink2); margin-top: -4px; }
-  .cmp b { display: block; font: 700 12px/1.3 "Alexandria", sans-serif; color: var(--ink); }
+  .cmp b { display: block; font: 700 12px/1.3 "Marah Figures", "Alexandria", sans-serif; color: var(--ink); }
   .seg span { cursor: pointer; }
   .hs .datebar { align-self: center; font-size: 12px; font-weight: 700; color: #2b2116; background: rgba(255,255,255,.7); border-radius: 12px; padding: 4px 12px; text-align: center; }
   .datebar span { white-space: nowrap; }
   /* ---------- البنك (approved 13 Nov 2026: design/ui/phone_bank.jpg, its styles from design/ui/phone.html) ---------- */
   .balance { background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
   .balance small { font-size: 12px; color: var(--ink2); font-weight: 500; }
-  .balance .v { font: 700 30px/1.1 "Alexandria", sans-serif; margin-top: 2px; letter-spacing: -.01em; white-space: nowrap; }
+  .balance .v { font: 700 30px/1.1 "Marah Figures", "Alexandria", sans-serif; margin-top: 2px; letter-spacing: -.01em; white-space: nowrap; }
   .balance .v span { font-size: 15px; font-weight: 600; color: var(--ink2); margin-inline-start: 4px; letter-spacing: normal; }
   .balance .ln { font-size: 12px; font-weight: 500; }
   .balance .v.bad { color: var(--red); }      /* (a balance under zero: what the player owes, «عليك») */
-  .row .amt { grid-row: span 2; font: 600 14px/1 "Alexandria", sans-serif; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
+  .row .amt { grid-row: span 2; font: 600 14px/1 "Marah Figures", "Alexandria", sans-serif; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
   .row .amt.pos { color: var(--acc); }
   .row .lead.out { background: #f1f1f4; color: #55555b; }
   /* ---------- الحراج (approved 13 Nov 2026: design/ui/phone_haraj.jpg, its list styles from design/ui/phone.html) ---------- */
   .seg.two { grid-template-columns: 1fr 1fr; }
-  .seg .dot { display: inline-block; min-width: 17px; height: 17px; border-radius: 9px; background: var(--red); color: #fff; font: 700 10.5px/17px "Alexandria", sans-serif; text-align: center; padding: 0 4px; margin-inline-start: 3px; font-style: normal; vertical-align: 1px; }
+  .seg .dot { display: inline-block; min-width: 17px; height: 17px; border-radius: 9px; background: var(--red); color: #fff; font: 700 10.5px/17px "Marah Figures", "Alexandria", sans-serif; text-align: center; padding: 0 4px; margin-inline-start: 3px; font-style: normal; vertical-align: 1px; }
   .lst { display: flex; flex-direction: column; gap: 8px; padding-bottom: 56px; }
   .lst.flat { padding-bottom: 0; }
   .it { display: grid; grid-template-columns: 70px 1fr; column-gap: 11px; padding: 8px; border-radius: 16px; background: var(--card); align-items: center; }
@@ -161,7 +161,7 @@ const CSS = `
   .it b { font-size: 13.5px; font-weight: 700; }
   .it small { font-size: 11.5px; color: var(--ink2); }
   .it .pr { display: flex; align-items: center; }
-  .it .pr .price { font: 700 15px/1 "Alexandria", sans-serif; font-variant-numeric: tabular-nums; margin-inline-end: auto; }
+  .it .pr .price { font: 700 15px/1 "Marah Figures", "Alexandria", sans-serif; font-variant-numeric: tabular-nums; margin-inline-end: auto; }
   .it.big { grid-template-columns: 96px 1fr; }
   .it.big .ph { width: 96px; height: 96px; grid-row: span 5; }
   .it.off { opacity: .55; }
@@ -187,21 +187,21 @@ const CSS = `
   .row.next .lead { background: #eeeef1; color: #a5a5ab; }
   .row.next b { color: var(--ink2); font-weight: 500; }
   .row.bad .lead { background: #fde6e4; color: var(--red); }
-  .row .lead.rk { font: 700 15px/1 "Alexandria", sans-serif; }
+  .row .lead.rk { font: 700 15px/1 "Marah Figures", "Alexandria", sans-serif; }
   .row .lead.rk.g1 { background: #fbefd2; color: #8f620a; }
   .row.later .lead { background: #eeeef1; color: #8e8e93; }
   .row.two { grid-template-columns: 36px 1fr; }
-  .row .qty .dot { display: inline-block; min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px "Alexandria", sans-serif; text-align: center; padding: 0 5px; font-style: normal; }
-  .row .lead.av2 { border-radius: 50%; background: #d9cbb4; color: #4a3720; font: 700 15px/1 "Alexandria", sans-serif; }
+  .row .qty .dot { display: inline-block; min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px "Marah Figures", "Alexandria", sans-serif; text-align: center; padding: 0 5px; font-style: normal; }
+  .row .lead.av2 { border-radius: 50%; background: #d9cbb4; color: #4a3720; font: 700 15px/1 "Marah Figures", "Alexandria", sans-serif; }
   .it small.bad, .row small.bad { color: var(--red); font-weight: 600; }
   .it.no .ph, .it.no b { opacity: .55; }
   .it.sel { box-shadow: inset 0 0 0 2px var(--acc); }
   .open { background: var(--card); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; box-shadow: inset 0 0 0 1.5px #bfe3d2; }
   .open .tag { align-self: flex-start; font-size: 11px; font-weight: 700; color: var(--acc); background: var(--acc-soft); border-radius: 8px; padding: 2px 8px; }
-  .open b { font: 700 17px/1.3 "Alexandria", sans-serif; }
+  .open b { font: 700 17px/1.3 "Marah Figures", "Alexandria", sans-serif; }
   .open small { font-size: 12px; color: var(--ink2); }
   .chathd { display: flex; align-items: center; gap: 9px; }
-  .chathd .av { width: 34px; height: 34px; border-radius: 50%; background: #d9cbb4; display: grid; place-items: center; font: 700 15px/1 "Alexandria", sans-serif; color: #4a3720; }
+  .chathd .av { width: 34px; height: 34px; border-radius: 50%; background: #d9cbb4; display: grid; place-items: center; font: 700 15px/1 "Marah Figures", "Alexandria", sans-serif; color: #4a3720; }
   .chathd b { font-size: 14.5px; display: block; line-height: 1.2; }
   .chathd small { font-size: 11px; color: var(--ink2); }
   .strip { display: flex; align-items: center; gap: 10px; padding: 7px; border-radius: 14px; background: var(--card); }
@@ -210,7 +210,7 @@ const CSS = `
   .strip b { font-size: 13px; display: block; }
   .strip small { font-size: 11px; color: var(--ink2); }
   .strip .lim { margin-inline-start: auto; text-align: end; font-size: 11px; color: var(--ink2); }
-  .strip .lim span { display: block; font: 700 14px/1.1 "Alexandria", sans-serif; color: var(--ink); }
+  .strip .lim span { display: block; font: 700 14px/1.1 "Marah Figures", "Alexandria", sans-serif; color: var(--ink); }
   .chat { display: flex; flex-direction: column; gap: 6px; }
   .msg { max-width: 82%; padding: 7px 11px; border-radius: 17px; font-size: 13px; line-height: 1.4; }
   .msg.them { align-self: flex-start; background: #e9e9eb; border-end-start-radius: 5px; }
