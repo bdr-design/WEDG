@@ -68,7 +68,8 @@ All of it goes into the design he is shown, not straight into a build.
 2. **Partners.** Answer: build alone first, with the gear he named; partners (the real practice: groups who share
    the price) drawn in the design as the next step, for him to pull forward with one word.
 3. **A banned bird in the net (الشاهين الجبلي، الوكري).** Answer: the game releases it at once with a line saying
-   why: «طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع».
+   why: «طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع»؛ and for the lanner «طلقته: الوكري طير مقيم، وطرحه ممنوع»
+   (both lines are the proxy's own; the second was left out of this record at first: the director's omission).
 4. **A saker (حر) or an adult (قرناس) in the net.** Answer: released. The saker is endangered, the club campaigns
    against trapping it and the auction refuses it; no ban was found for the قرناس, so its release is a marked
    game choice, cheap to change. «طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري»؛ «طلقته: المزاد ما يقبل
