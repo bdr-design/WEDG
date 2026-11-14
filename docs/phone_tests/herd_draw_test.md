@@ -38,6 +38,14 @@ owner's iPhone with the page's frame meter, which the app always shows. The labe
 8. **إذا خلصت:** افتح العداد واضغط «قطيع تجربة: شغّال» لين يرجع «طافي» (أو سكّر اللعبة وافتحها). خل «رسم القطيع» على
    «مزج إطارين»، إلا إذا قلنا لك غير كذا.
 
+## What the shots draw now (14 Nov)
+
+Since the owner chose the lighter middle level (4k triangles), the two fixed shots draw the same camels with fewer
+triangles: the map shot 85 draws in the picture and 27 in the shadow map, about 378k triangles (518k with the 8k level);
+the walking shot 77 and 27 draws, about 358k triangles (486k). The camels wander, so these vary by a few thousand. The
+steps above are unchanged, and the three variants still differ only in how the bones are read, so they compare the same
+way.
+
 ## Reading his numbers
 
 For each variant and view there are three numbers. The first is the frames a second over the last 2 s («N لقطة/ث»).

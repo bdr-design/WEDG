@@ -141,7 +141,8 @@ in the code, and the numbers are in
   - Objects smaller than 30 cm cast none.
   - The map is redrawn every other frame.
 
-Each page loads its models as `lod0.json`, `lod1.json` and `lod2.json`. Each
+The farm loads its camel as `lod0.json` (40k triangles), `lod1_4k.json` (4k, the middle level since the owner's
+choice of 14 Nov 2026) and `lod2.json` (1.5k); `lod1.json` (8k, the middle level before) is kept. Each
 file holds `{"glb": "<base64>"}` from `assets_src/camels/*.glb`, because
 artifacts do not serve `.glb`. The ground is `sand.jpg`, a 1024 px copy of
 the owner's Najd terrain tile.

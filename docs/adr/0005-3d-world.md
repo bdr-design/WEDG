@@ -735,6 +735,67 @@ the closed meter names the variant.
   the rest is the yard and the player's car in play. Not the herd's work;
   left for its own task.
 
+## The middle level: the owner's choice (2026-11-14)
+
+The owner, shown the options above with pictures, chose the lighter middle
+level: «النسخة الوسط الأخف الحين» (docs/agents/owner_decisions_2026-11-14.md,
+item 16). The farm's camels between 8 and 48 m are now drawn with a 4k-triangle
+mesh instead of the 8k one, and the full level's shadow casters use it too. The
+other three options (the full level only within 5 m, the middle level only to
+30 m, the near camels' shadows from the 1.5k mesh) are not adopted and stay
+open; the 24 m option was not offered.
+
+- **The asset:** `tool/camel3d/lods.py` makes it beside the 8k and 1.5k levels
+  (`assets_src/camels/camel_wodh_female_lod1_4k.glb`, 4,000 triangles, 3,427
+  vertices, 1K textures, 468 KB; the page's `models/lod1_4k.json`). It is
+  Blender's collapse decimation of the same 40k mesh, the same way as the
+  others. Run twice from the rigged source, it comes out the same to the byte,
+  and the same run rebuilds the shipped 8k and 1.5k files to the byte. Same
+  skeleton (38 joints), the same inverse bind matrices and clips as the 8k
+  level, so the baked clip texture, the three drawing variants, the coats (by
+  instance) and the calves' sizes (by instance) work unchanged. The 8k file is
+  kept (`models/lod1.json`, and the engine bench's).
+- **The switch distances are unchanged** (8 m and 48 m). One camel at the
+  switch distance, eye height, 956 x 440, the camel's outline compared (pixels
+  in one outline and not the other):
+
+  | Switch | Front | Side | Three-quarter |
+  |---|---|---|---|
+  | Full to 8k at 8 m (before) | 22 of 4,980 | 40 of 12,648 | 38 of 10,791 |
+  | Full to 4k at 8 m (now) | 28 | 75 | 74 |
+  | 8k to 1.5k at 48 m (before) | 2 of 83 | 4 of 289 | 6 of 275 |
+  | 4k to 1.5k at 48 m (now) | 1 | 4 | 2 |
+
+  The switch at 8 m changes about twice the outline it did (0.6 to 0.7% of the
+  camel's outline pixels instead of 0.3 to 0.4%), and its shading more (9 to
+  20% of the camel's pixels change by more than 8 levels in 255, against 5 to
+  12%). The switch at 48 m is as small as before or smaller.
+- **Measured, one page load each way** (956 x 440; draws main / shadow,
+  triangles main / shadow):
+
+  | View | Before (8k) | Now (4k) |
+  |---|---|---|
+  | The phone test's map shot (test herd on, all built) | 85 / 27, 413k / 105k = 518k | 85 / 27, 273k / 105k = 378k |
+  | The phone test's walking shot | 77 / 27, 381k / 105k = 486k | 77 / 27, 253k / 105k = 358k |
+  | 40 camels pinned, near view | 64 / 28, 534k / 125k = 658k | 65 / 28, 391k / 112k = 503k |
+  | 40 camels pinned, over the pens | 69 / 27, 435k / 105k = 540k | 70 / 27, 279k / 105k = 384k |
+  | 40 camels pinned, eye height | 86 / 28, 584k / 144k = 728k | 87 / 28, 463k / 120k = 583k |
+
+  The draws are the same (the one more in the pinned views is the two loads'
+  ground cover: without camels their frames differ in 5 to 349 pixels). The
+  camels' pixels changed in the pinned frames: 4.3% near, 5.6% over the pens,
+  2.1% at eye height. The three drawing variants are still the same picture
+  (variant 2 equal to variant 0; variant 1, the nearest frame, differs as
+  before). The middle level's geometry is 197 KB instead of 355 KB; texture
+  memory is unchanged (the levels share the full one's maps), and so are the
+  renderer's counts (88 geometries, 24 textures, 31 programs). The page's
+  bundle grows by 0.6 MB (26.0 to 26.6 MB), as the 8k file stays in it. The
+  middle level's file to fetch and read at the start is 639 KB instead of 854
+  KB; the start times measured here (in the software renderer, on a shared
+  machine: 25 s and 15 s) say nothing either way.
+- **Pictures:** a camel at 8 m (full, 8k and 4k, enlarged 3x), and the phone
+  test's two fixed shots before and after (the session's panels folder).
+
 ## Spike (must pass before this is accepted)
 
 The spike is a throwaway app, outside the repo. It must show:
