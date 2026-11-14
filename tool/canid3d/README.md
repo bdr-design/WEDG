@@ -15,28 +15,39 @@ These scripts build, in Blender's Python, at their real sizes:
   stalking walk near the pens, and running off;
 - the guard dog (كلب الحراسة): the local pariah type (the Bedouin dog; see "The guard dog's type"), a male with a
   leather collar, standing alert, lying at rest by the pen, and barking;
-- the stray dog (الكلب الضال): **the same body as the guard dog**, with another coat (a leaner, dusty dog, its ribs
-  showing) and no collar, standing wary and barking.
+- the stray dog (الكلب الضال): **the guard dog's build in poor condition** (the same code and numbers with a body
+  condition setting: the loin and belly tucked up, the neck thinner, the hip bones and the spine showing), another
+  coat (dull, dusty) and no collar, standing wary and barking.
 
 No mesh or picture is downloaded: every shape comes from the numbers below and every colour is painted with numpy
 from the descriptions below. There is no rig yet. The poses are separate meshes; the rig comes after the owner
 approves the look (plan at the end).
 
+**Each animal is one skin** (the second round, after the reviewer found the first round's 17–24 pieces stuck into
+one another reading as toys): the build's pieces are only its skeleton of shapes. They are turned into distance
+fields, joined by smooth unions (the legs grow out of the trunk, the neck into the skull, the ears out of the skull's
+corners, the toes out of the paw) and meshed as one closed surface, as `tool/camel3d/shape.py` builds the camel.
+
 ## Files
 
 | File | What | Triangles | Draws | Texture pair |
 |---|---|---|---|---|
-| `assets_src/canids/wolf_alert.glb`, `wolf_stalk.glb`, `wolf_run.glb` | the wolf, close | 6,216 each | 1 | 512 px |
-| `wolf_*_lod1.glb` | the wolf, far | 1,300 each | 1 | 256 px |
-| `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog with its collar, close | 6,832 / 6,832 / 6,976 (the open mouth's four canines) | 1 | 512 px |
-| `dog_*_lod1.glb` | the guard dog, far (the collar without its ring) | 1,420 each | 1 | 256 px |
-| `stray_alert.glb`, `stray_bark.glb` | the stray, close | 6,216 / 6,360 | 1 | 512 px |
+| `assets_src/canids/wolf_alert.glb`, `wolf_stalk.glb`, `wolf_run.glb` | the wolf, close: one skin | 5,600 each | 1 | 512 px |
+| `wolf_*_lod1.glb` | the wolf, far: the same skin decimated | 1,300 each | 1 | 256 px |
+| `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, its collar and the collar's ring (3 pieces); barking, also the four canines | 6,216 / 6,216 / 6,360 | 1 | 512 px |
+| `dog_*_lod1.glb` | the guard dog, far: the skin and the collar (2 pieces) | 1,420 each | 1 | 256 px |
+| `stray_alert.glb`, `stray_bark.glb` | the stray, close: one skin (the barking file adds the canines) | 5,600 / 5,744 | 1 | 512 px |
 | `stray_*_lod1.glb` | the stray, far | 1,300 each | 1 | 256 px |
 
-- **One mesh and one material per file, one-sided:** every piece is closed. The collar is in the same mesh and the
-  same atlas.
-- **The texture pair:** colour plus occlusion/roughness. 512 px close is 2.67 MiB uncompressed with mipmaps (both
-  textures, RGBA8, counted as ADR 0005 counts them), about 0.67 MiB as ASTC 4×4. 256 px far is 0.67 MiB uncompressed.
+- **One mesh and one material per file, one-sided:** the skin and every extra piece are closed. The collar is in the
+  same mesh and the same texture.
+- **The texture pair:** colour (the occlusion baked into it: 48 rays from each vertex) and a tangent-space normal
+  map (the fur's grain: fine streaks along the hair's run and the coat's coarser lie); roughness is one value
+  (0.85). 512 px close is 2.67 MiB uncompressed with mipmaps (both textures, RGBA8, counted as ADR 0005 counts them),
+  about 0.67 MiB as ASTC 4×4. 256 px far is 0.67 MiB uncompressed.
+- **The texture layout:** Blender's smart projection of the skin, packed, the head given 1.8 times the texture per
+  millimetre (the unwrap is made on a copy whose head is swollen, then copied back). The texture covers about 60% of
+  its square.
 - **Reproducible:** the same code writes the same GLB files byte for byte. The exporter's triangle order is settled
   after writing (`common.settle`, as in `tool/weapon3d/akm.py` and `tool/bird3d`). Checked by building every file
   twice and comparing checksums (the report gives the result).
@@ -47,7 +58,9 @@ The pictures are in `design/canids/` (JPEG):
 - **Each animal and pose:** from the side (orthographic, with a centimetre ruler along the ground) and from three
   quarters.
 - **Standing and barking poses:** a close view of the head.
-- **Standing:** the front view.
+- **Standing:** the front view; **every pose:** the view from above.
+- `canids_far_15m.jpg`: the far models (standing) from the game's camera at 15 m in the game's light, as the phone
+  shows them, with a ×4 enlargement.
 - `canids_scale.jpg`: all of them beside the player's figure and a calf a few days old.
 - `wolf_night_20m.jpg`, `wolf_night_46m.jpg`, `wolf_day_46m.jpg`: the wolf where the game will show it (below).
 - `wolf_summer_winter.jpg`: the coats compared (question 2).
@@ -63,7 +76,7 @@ The budget is ADR 0005's: 200 draws and 400k triangles a frame with shadows, and
   are mostly seen far. The guard dog may be near the camera at the pens.
 - **A night scene:**
   - two wolves far: 2 × 1,300;
-  - the guard dog close: 6,832;
+  - the guard dog close: 6,216;
   - three strays far: 3 × 1,300;
   - total about 13k triangles in 6 draws, 12 with each casting a live shadow;
   - that is 3% of the triangle budget (7% counting the shadow pass) and 3% of the draws.
@@ -78,12 +91,23 @@ The budget is ADR 0005's: 200 draws and 400k triangles a frame with shadows, and
   - At 20 m the wolf covers about 1,000 screen pixels, so its 1,300 triangles are about one to a pixel.
   - Beyond about 30 m a third level of about 300 triangles would do, and that is cheap to add. Not built: at most
     five canids in a scene make 6.5k far triangles, under 2% of the budget.
-- **Why the close model is about 6k:**
-  - The silhouette takes the triangles: the head, the big ears, the cupped ear fronts, the jaw that opens, the four
-    paws, the thick thigh tapering to the hock, the tail.
-  - Under one more skinned mesh, this is cheap next to the camels' 8–40k.
-- **Fur is texture and silhouette only:** no shells and no alpha cards. The ruff, the brush of the tail and the
-  thigh's breeches are in the outline. The grizzle of the guard hairs is in the paint.
+- **Why the close model is 5.6k:**
+  - The skin before decimation has about 300k triangles; collapse decimation keeps them where the shape turns (the
+    head, the ears, the toes, the hocks) and thins them on the flanks.
+  - As one skinned mesh this is cheap next to the camels' 8–40k.
+- **Fur is texture and silhouette only:** no shells and no alpha cards. The brush of the tail and the thigh's
+  breeches are in the outline; the grizzle of the guard hairs in the colour; the hair's grain in the normal map.
+
+## The poses
+
+- **Standing (all three animals):** the femur about 20° from upright (21° the wolf, 17° the dog: the reviewer's
+  20–30°), the stifle at about 116–120°, the hock at about 126°, every paw flat on the ground.
+- **The wolf's run:** the right fore alone on the ground, the left reaching, the hind legs stretched back after their
+  push with the hocks at about 152° and 164° (not dead straight), the back bent (10° per withers height along it),
+  the tail streaming back and a little down. Muybridge's dog gallop (plate 707), the reviewer's reference, could not
+  be opened from my tools; the pose follows the reviewer's description of it.
+- **The dog lying:** on its chest, the elbows and forearms resting on the ground (the skin is pressed flat where it
+  touches: its lowest point is at 0), the hind legs folded beside it, the tail along the ground.
 
 ## The Arabian wolf
 
@@ -191,16 +215,12 @@ middle toes are fused):
   ended poisoned baits (research [151]).
 - **What they look like:** no Saudi survey of their coat or condition was found *(search)*. Two Saudi studies of
   stray dogs (Riyadh, Asir, Qassim) report parasites, not looks *(search)*.
-- **Why the same body:** they are the same pariah stock as the herders' dogs, so the honest model is the guard dog's
-  body with another coat. It is the same mesh: the same numbers, built by the same code. The poses differ, as the rig's
-  will.
-- **The coat:**
-  - a dull ginger-tan with a darker, mottled back;
-  - off-white below, dusty on the belly and legs;
-  - the ribs, the hip bones and the hollow of the flank painted as a thin dog's;
-  - no collar. The colour is a game choice.
-- **The lean body:** the outline is the guard dog's. A thinner outline would need a girth blend shape in the rig
-  (about one extra vertex stream), which I did not add.
+- **Why the guard dog's build:** they are the same pariah stock as the herders' dogs, so the honest model is the
+  guard dog's numbers and code with a body condition setting (`condition` 0.86 in `species.py`, a game choice of how
+  thin): the loin and belly tucked up, the loin's girth about 12% under the dog's (measured below), the neck thinner,
+  the hip bones' points and the spine's processes showing. The poses differ, as the rig's will.
+- **The coat:** a dull ginger-tan with a darker, mottled back; off-white below, dusty on the belly and legs; no
+  collar. The colour is a game choice.
 
 ## Where the night pictures stand
 
@@ -226,7 +246,7 @@ case [168] is a calf three days old, so the pictures use the same.
 
 ## Named points
 
-In the GLB, metres, under each close file's root (the far files carry none). The animal faces +X; the origin is on
+In the GLB, metres, under each file's root (the close and the far file of a pose carry the same points). The animal faces +X; the origin is on
 the ground under the body's middle.
 - `foot_fl`, `foot_fr`, `foot_hl`, `foot_hr`: the sole's point under each paw, with its forward and up.
 - `shoulder_l` / `_r`, `elbow_*`, `wrist_*` (the carpus).
@@ -240,23 +260,35 @@ the ground under the body's middle.
 
 ## How it is built
 
-- `common.py`: copied from `tool/bird3d` (the loft, the atlas painter, the files, the studio, the GLB settling).
-- `canid.py`: one animal from its numbers.
-  - The torso is lofted along the body, its lower half narrowing to a keel at the chest and the belly.
-  - The neck runs on into the back of the skull. The head is lofted along its axis, with a separate lower jaw hinged
-    under the cheek, and a nose pad.
-  - The eyes are short lofts along their look. The ears are cupped blades, splayed and tipped by the pose.
-  - The legs are tubes through their joints. Each leg is solved by two-bone inverse kinematics from the shoulder or
-    hip joint to the carpus or hock, which is placed from the paw's spot and the metapodial's lean. The elbow always
-    bends back and the stifle forward.
-  - The paws, the tail and the collar.
+- `common.py`: copied from `tool/bird3d` (the loft, the files, the studio, the GLB settling).
+- `canid.py`: the shapes of one animal from its numbers, in groups (the trunk, the neck, the head, each ear, each
+  leg, each paw, the tail).
+  - The torso is lofted along the body, its lower half narrowing to a keel at the chest and the belly; the back can
+    bend (the run).
+  - The neck runs on into the back of the skull. The head is lofted along its axis as a wedge, with a lower jaw hinged
+    under the cheek, and a nose pad; the eyes are small bulges on the skull's sides.
+  - The ears are cupped blades with rounded tips, set on the skull's corners, splayed and tipped by the pose.
+  - The legs are tubes through their joints, the forearm and gaskin flattened sideways. Each leg is solved by two-bone
+    inverse kinematics from the shoulder or hip joint to the carpus or hock, which is placed from the paw's spot and
+    the metapodial's lean: the elbow always bends back and the stifle forward. The kneecap and the heel bone's point
+    are small bulges, so the stifle and the hock show.
+  - Each paw: its pad and four toe bulges; the carpal pad behind each wrist.
+  - The tail; the collar and its ring; in an open mouth, the canines.
+  - A thin animal's hip bones and spinal processes as small bulges (the stray's condition).
+- `skin.py`: the one skin.
+  - Each group's occupancy on a voxel grid (H / 220: 2.95 mm for the wolf), by the parity of vertical rays through its
+    closed pieces; its signed distance by distance transforms.
+  - The groups joined by smooth unions (the camel's `smin`), each with its own radius (the neck 0.045 H, the legs
+    0.034–0.040 H, the head 0.040 H, the tail 0.018 H, the paws 0.012 H, the ears 0.008 H).
+  - Marching cubes (scikit-image) on the lightly blurred field; hollows left inside dropped; pressed flat where it
+    touches the ground; smoothed twice; decimated (Blender's collapse) to 5,600 and 1,300 triangles.
+  - Unwrapped (smart projection, packed, the head given more texture).
+- `texture.py`: the texture pair. Each texel is found on the skin, then on the nearest piece of the posed build, then
+  at the same place on the standing build, where the coat is laid out; the skin's normal is turned back the same way.
+- `paint.py`: the coats, by mark, blended across the joins (a leg into the trunk, the head into the neck, an ear into
+  the skull, the tail into the rump), so the skin shows no seam; the fur's relief for the normal map.
 - `species.py`: the animals' numbers (in units of the withers height) and poses.
-- `paint.py`: the coats.
-  - Each texel is found on the standing animal (its place and outward direction, from the sections it was lofted
-    from).
-  - The marks are painted where they lie on the body, so they run on across pieces.
-  - The same texture fits every pose of the same animal.
-- `scene.py`: the scale, night and winter pictures.
+- `scene.py`: the scale, night, winter and far pictures.
 - `build.py`: runs everything, writes the files and pictures, and prints the measures.
 
 ```
@@ -264,7 +296,7 @@ python build.py OUT                         # every GLB, with triangles, sizes a
 python build.py OUT wolf quick              # quick pictures of one animal (wolf, dog, stray)
 python build.py OUT wolf,dog,stray render   # the full picture set
 python build.py OUT wolf_winter             # the winter coat (only for the comparison)
-python build.py OUT scale,night,winter render
+python build.py OUT scale,night,winter,far render
 CANID_VOLUME=1 ...                          # also the standing model's volume
 ```
 

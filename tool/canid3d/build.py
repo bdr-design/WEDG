@@ -184,17 +184,17 @@ def measures(m, o):
     band = V[(V[:, 0] > wx + 0.03 * H) & (V[:, 0] < wx + 0.12 * H) & (np.abs(V[:, 1]) < 0.05 * H)]
     if len(band):
         out.append(f'the neck just ahead of the withers rises {band[:, 2].max() - wh:+.0f} mm over them')
+    def width_at(q, dz):
+        seg = section(V, Fv, 0, q.x)
+        if not len(seg):
+            return 0.0
+        pts = seg.reshape(-1, 3)
+        pts = pts[np.abs(pts[:, 2] - q.z) < dz]
+        return float(np.ptp(pts[:, 1])) if len(pts) else 0.0
     occ = o_
-    nk = V[(np.abs(V[:, 0] - (occ.x - 0.04 * H)) < 4) & (np.abs(V[:, 2] - occ.z) < 0.06 * H)]
-    cx = occ + hd * (0.24 * Lh)
-    ck = V[(np.abs(V[:, 0] - cx.x) < 4) & (np.abs(V[:, 2] - cx.z) < 0.05 * H)]
-    if len(nk) and len(ck):
-        out.append(f'neck width just behind the skull {np.ptp(nk[:, 1]):.0f} mm, across the cheeks {np.ptp(ck[:, 1]):.0f} mm')
-    for t in (0.62, 0.76):
-        q = occ + hd * (t * Lh)
-        mz = V[(np.abs(V[:, 0] - q.x) < 3) & (np.abs(V[:, 2] - q.z) < 0.06 * H)]
-        if len(mz):
-            out.append(f'muzzle width at {t:.2f} of the head {np.ptp(mz[:, 1]):.0f} mm')
+    out.append(f'neck width just behind the skull {width_at(occ - hd * (0.04 * H), 0.05 * H):.0f} mm, across the cheeks '
+               f'{width_at(occ + hd * (0.24 * Lh), 0.04 * H):.0f} mm; the muzzle at 0.62 and 0.76 of the head '
+               f'{width_at(occ + hd * (0.62 * Lh), 0.03 * H):.0f} and {width_at(occ + hd * (0.76 * Lh), 0.025 * H):.0f} mm')
     lx = -0.16 * H
     seg = section(V, Fv, 0, lx)
     trunk = seg[seg[:, :, 2].min(1) > 0.3 * H] if len(seg) else seg
@@ -266,11 +266,11 @@ def finish(png, ruler=None):
 
 
 def pictures(kind, pose, o, m):
-    st = common.Studio(OUT, samples=10 if QUICK else 32)
+    st = common.Studio(OUT, samples=10 if QUICK else 14)
     lo, hi = bounds(o)
     mid = (lo + hi) / 2000
     ext = (hi - lo) / 1000
-    res = (720, 540) if QUICK else (1200, 900)
+    res = (720, 540) if QUICK else (1000, 750)
     st.rig_lights(V3(mid), dist=max(ext[0] * 2.0, 1.2))
     tag = f'{kind}_{pose}'
     ortho = max(ext[0], ext[2] * 1.33) * 1.25
@@ -291,7 +291,7 @@ def pictures(kind, pose, o, m):
         cam = hd + (fwd * 0.55 + V3((0, 1, 0)) * 0.75 + V3((0, 0, 0.15))).normalized() * 0.55
         png = st.shot(tag + '_head', cam, hd, lens=70, res=res)
         finish(png)
-    if want('top'):
+    if want('top') and pose == 'alert':
         png = st.shot(tag + '_top', (mid[0], mid[1] + 0.001, 5), mid, ortho=max(ext[0], ext[1] * 1.33) * 1.2, res=res)
         finish(png)
     if want('front') and pose == 'alert':
