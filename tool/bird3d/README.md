@@ -289,29 +289,59 @@ python build.py OUT saker,houbara,curlew,scale render    # the full picture set
 Blender is the `bpy` module (the project's `blendenv`). The GLB files are copied to `assets_src/birds/`, and the
 pictures to `design/birds/`.
 
-## The rig and clips to come (not built)
+## The rig and clips (task T17, in progress: the saker first)
 
-- **Bones:** about 30 a bird.
-  - Body 3, neck 3, head 1, tail 2 with a fan, each wing 5 (humerus, forearm, hand, two primary groups), each leg 5
-    (thigh, shank, tarsus, front toes, hind toe).
-  - The hood and jesses ride on the head and tarsus bones.
-- **Mesh cost:** one skinned 5–6k mesh close, and the 1.1–1.5k far mesh with a baked animation texture, as the camels
-  will have (ADR 0005).
-- **The folded wing and the spread wing are different meshes now.** For the rig there are two options:
-  - fold the spread wing with the bones (one mesh, the feathers sliding under each other: harder to get clean);
-  - swap a folded mesh for a spread one at take-off and landing, the way many games do.
+**Status: awaiting the owner's approval of the motion.** The owner approved the look on 14 Nov 2026 and asked for the
+bones and the motion: the flight, the landing, the catch. `rig.py` builds them; `assets_src/birds/saker_rig.glb` is
+the saker with its skeleton and its first three clips. The static GLBs above stay as they are until every clip of
+a bird is done; then the rigged file replaces them.
 
-  I recommend the swap. It costs one more mesh in memory, not in the frame.
+**One skeleton, two meshes.** The saker is built in a rest pose (the body level, the legs down, the toes flat) twice:
+with the wings folded (5,896 triangles) and spread (6,232). Both are skinned to the same 41 bones; the game shows
+the folded mesh while she sits and the spread one while she flies, and swaps them at the frame each clip names
+below. Folding the spread wing by bones was tried (the landing clip's frames 29 to 38 show it): from about two
+thirds folded the feathers cross the body and the hand pokes out past the tail, so the close view of the cuff
+needs the folded mesh. The swap costs memory, not frame time: a second mesh of 6,232 triangles (about 4,000
+vertices, some 0.2 MB) loaded, never both drawn.
 
-| Clip | Real reference | Source |
+**The bones (41)** and why each is there:
+
+| Bones | Count | Why |
 |---|---|---|
-| Saker perched idle, rouse (the feather shake), head turns | – | to film or watch: no figure found |
-| Cast off from the fist, flapping flight | wingbeat about 4.3–4.8 Hz for a 0.97–1.3 kg female with this model's span and wing area (0.183 m², aspect ratio 7.9) | Pennycuick 1996, *J. Exp. Biol.* 199:1613, f = m^3/8 g^1/2 b^-23/24 S^-1/3 ρ^-3/8 (the paper found by search; its formula as he gives it, not opened) |
-| Level flight to the lure | 400 m in 16.5–18.1 s, so 22–24 m/s (80–87 km/h) on average from the release | research [182], [183] *(search)* |
-| Glide, stoop | a peregrine's stoop over 200 km/h; the saker hunts more by level chase than stoop | thewire.in, Lund University *(search)*; en.wikipedia saker *(opened)* |
-| Bind to the quarry | – | to film or watch |
-| Houbara run, take-off, flight | relies on running and flies when pressed; wingbeat about 4.2–4.7 Hz predicted for 1.8–2.4 kg; speeds not found | Encyclopaedia Iranica *(search)*; Pennycuick 1996 |
-| Stone-curlew run, flight | wingbeat about 6–7 Hz predicted for 0.29–0.54 kg; speeds not found | Pennycuick 1996 |
+| root | 1 | where she stands; moves her through the world |
+| body | 1 | the torso's pitch, roll and bob |
+| neck1, neck2, head | 3 | keep the head level as the body tilts (two neck bones so the neck bends smoothly); the head looks around |
+| hood | 1 | the hood lifted off and set on (scaled to nothing when she is unhooded) |
+| tail | 1 | lifts, drops and fans (its width scale) |
+| fold.L/R | 2 | the folded mesh's wings: lift, droop, open a little before the swap |
+| wing_up, wing_fore, wing_hand (each side) | 6 | the wingbeat at the shoulder, the fold at the elbow and wrist, the hand's flick on the upstroke |
+| shank, tarsus (each side) | 4 | the legs: reach, tuck, and hold the foot planted |
+| two per toe, four toes (each side) | 16 | each toe lies on the rounded cuff its own way and its talon hooks in (one bone for all the front toes put the inner talons 28 mm into the cuff) |
+| three per jess (each side) | 6 | the jesses bend and trail as soft cords |
+
+At most two bones a vertex (four allowed by glTF and the game's skinning).
+
+**Clips so far** (30 frames a second; glTF animations in the same file; the clip data is sampled every frame):
+
+| Clip | Frames | Seconds | Mesh shown | Reference |
+|---|---|---|---|---|
+| `cast_off` | 0–40 | 1.33 | folded 0–12, spread from 13 | the crouch and the wings raised before the jump, the feet leave the cuff at frame 16 and the jesses leave the fist with them; the forward acceleration (4.6 m/s², about 4 m/s at the end) is a game choice; wingbeat as below |
+| `flight` (loop) | 0–14 | 0.47 | spread | two wingbeats of 7 frames: 4.3 Hz, inside the 4.3–4.8 Hz Pennycuick's (1996) formula predicts for this span, wing area and a 0.97–1.3 kg female; the feet clenched and drawn up into the feathers; the jesses trailing in the 20 m/s air of the ملواح's measured speeds (22–24 m/s, research [182], [183]) |
+| `land_cuff` | 0–45 | 1.5 | spread 0–38, folded from 39 | a glide in, the flare (body up to 55°, the wings forward and beating to brake, the tail fanned and dropped), the legs thrown forward, contact at frame 28, the wings folded and the body settled to the perched 66° by frame 45; the approach speed (about 6 m/s at the start) is a game choice |
+
+**Measured** (by `rig.py OUT saker measure`): while a foot is on the cuff it stays within 0.00 mm of its place
+(the legs are solved each frame); the deepest toe or talon vertex goes 0.3 mm under the cuff's surface in
+`cast_off` and 0.2 mm in `land_cuff` (each toe is laid joint by joint on the cuff's own surface,
+`gear.dass_top`). The file: 41 bones, the four meshes above plus the hood (724) and the jesses (580); the clips'
+keys 66 KB, 24 KB and 74 KB; 1.2 MB in all. The same code writes the same file twice (checked).
+
+**Pictures** (`design/birds/motion/`): a contact sheet of each clip (`saker_cast_off_sheet.jpg`,
+`saker_flight_sheet.jpg`, `saker_land_cuff_sheet.jpg`), the feet on the cuff close (`saker_cast_off_feet_sheet.jpg`),
+and two small GIFs (`saker_cast_off.gif`, `saker_flight.gif`, under 300 KB each).
+
+**Still to come in this task:** the saker's perched idle, rouse, hood off and on, glide, stoop, binding, mantling
+and the landing on the perch; the houbara's and the stone-curlew's skeletons and clips; the far level; then the
+peregrine of the year and the trapping pigeon.
 
 ## What is unsure
 

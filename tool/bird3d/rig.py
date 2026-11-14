@@ -431,8 +431,8 @@ class SakerClips:
         open_k = ramp(f, 12, 17)       # from the raised, swept-back pose at the swap to the full beat
         start = {'up': 55, 'sweep': 35, 'fore': -40, 'hand': 40, 'twist': 0}
         w = {k: lerp(start[k], w[k], open_k) for k in w}
-        tuck = ramp(f, 26, 34)
-        return {'pitch': pitch, 'tb': tb, 'feet': 'cuff' if f < 16 else ('free', tuck), 'mesh': 'open', 'wing': w,
+        tuck = ramp(f, 22, 32)
+        return {'pitch': pitch, 'tb': tb, 'feet': 'cuff' if f < 16 else ('push', tuck), 'mesh': 'open', 'wing': w,
                 'tail_spread': lerp(1.25, 1.1, ramp(f, 14, 30)), 'jess_hold': f < 16, 'clench': tuck}
 
     def flight(self, f):
@@ -472,7 +472,8 @@ CLIPS = {'cast_off': (41, 'cast_off', False), 'flight': (14, 'flight', True), 'l
 # ------------------------------------------------------------------ applying a pose
 REST_FOOT = (75.0, 22.0, -125.0)        # the rest pose's foot, body frame (the tail base at the origin)
 TUCK_FOOT = (24.0, 9.0, -10.0)          # drawn up under the tail coverts (as saker.POSES['flight'])
-REACH_FOOT = (150.0, 26.0, -120.0)      # thrown forward to take the cuff when landing
+REACH_FOOT = (150.0, 26.0, -120.0)
+PUSH_FOOT = (-10.0, 20.0, -95.0)        # straight back and down at the end of the kick      # thrown forward to take the cuff when landing
 FIST_JESS = (36.0, 2.0, -26.0)          # where the falconer's fist holds the jesses (saker_fist)
 TALON_LIFT = 7.0                        # the distal joint's end held this far above the cuff so the curved talon's tip meets it
 
@@ -570,6 +571,8 @@ class Applier:
                 reach = V3(REACH_FOOT) * V3((1, side, 1))
                 if mode == 'free':
                     bf = hang.lerp(tuck, kf)
+                elif mode == 'push':      # after the kick off the cuff the legs trail back, then tuck
+                    bf = (V3(PUSH_FOOT) * V3((1, side, 1))).lerp(tuck, kf)
                 else:
                     bf = tuck.lerp(reach, kf)
                 target = self.to_world(W, bf)
@@ -644,6 +647,10 @@ def build_saker(out, sheets=False):
         if loop:      # settle the cords over two loops before recording
             for f in range(2 * n):
                 A.apply(spec_fn(f % n), 0)
+        else:         # let the cords settle in the first frame's pose (its air included) before recording
+            for _ in range(20):
+                A.apply(spec_fn(0), 0)
+            A.prev_root = None
         frames_mesh[name] = []
         for f in range(n + (1 if loop else 0)):
             sp = spec_fn(f % n)
@@ -651,10 +658,12 @@ def build_saker(out, sheets=False):
             frames_mesh[name].append(sp['mesh'])
         log += [(name,) + e for e in A.log]
         act.use_fake_user = True
+        arm.animation_data.action = None
+    # the tracks only once every clip is keyed: a track playing while the next clip is posed would leak into it
+    for name in CLIPS:
         tr = arm.animation_data.nla_tracks.new()
         tr.name = name
-        tr.strips.new(name, 0, act)
-        arm.animation_data.action = None
+        tr.strips.new(name, 0, bpy.data.actions[name])
     # the measures: foot slide on the cuff
     for name in CLIPS:
         sl = [e[4] for e in log if e[0] == name and e[1] == 'slide']
@@ -672,6 +681,18 @@ def build_saker(out, sheets=False):
     t, imgs, nbytes = common.glb_report(path)
     print(f'saker_rig.glb: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {len(B)} bones; {nbytes / 1024:.0f} KB')
     return arm, meshes, frames_mesh, B, clips
+
+
+def use_clip(arm, name):
+    """Show one clip: its action played directly, every NLA track muted (so nothing else blends in)."""
+    for t in arm.animation_data.nla_tracks:
+        t.mute = True
+    act = bpy.data.actions[name]
+    arm.animation_data.action = act
+    try:
+        arm.animation_data.action_slot = act.slots[0]
+    except (AttributeError, IndexError):
+        pass
 
 
 def toe_vertex_sets(o):
@@ -692,10 +713,7 @@ def talon_depths(arm, meshes, frames_mesh, name, n):
     """Per frame, how deep any toe or talon vertex goes under the cuff's surface (mm)."""
     import gear
     sc = bpy.context.scene
-    tr = arm.animation_data.nla_tracks[name]
-    for t in arm.animation_data.nla_tracks:
-        t.mute = t.name != name
-    arm.animation_data.action = None
+    use_clip(arm, name)
     out = []
     for f in range(n):
         sc.frame_set(f)
@@ -722,13 +740,40 @@ def talon_depths(arm, meshes, frames_mesh, name, n):
     return out
 
 
+def strip_gif(arm, meshes, frames_mesh, name, frames, out, cam, res=(240, 180), samples=6, repeat=1):
+    """A small looping GIF of a clip (every frame), for the chat."""
+    from PIL import Image
+    sc = bpy.context.scene
+    use_clip(arm, name)
+    st = contact_sheet.studio
+    st.sc.cycles.samples = samples
+    ims = []
+    for f in frames:
+        sc.frame_set(f + 1)
+        sc.frame_set(f)
+        for k, o in meshes.items():
+            if k in ('fold', 'open'):
+                o.hide_render = frames_mesh[name][f] != k
+        bpy.context.view_layer.update()
+        root = arm.pose.bones['root'].matrix.translation
+        loc, at, ortho = cam(f, root)
+        st.rig_lights(V3(at), dist=1.6)
+        png = st.shot(f'_g_{name}_{f:03d}', loc, at, ortho=ortho, res=res, lens=50)
+        ims.append(Image.open(png).convert('RGB').quantize(colors=96, method=Image.Quantize.MEDIANCUT))
+        os.remove(png)
+    ims = ims * repeat
+    path = os.path.join(out, f'saker_{name}.gif')
+    ims[0].save(path, save_all=True, append_images=ims[1:], duration=int(1000 / FPS), loop=0, optimize=True)
+    print('gif', path, f'{os.path.getsize(path) / 1024:.0f} KB')
+    return path
+
+
 def contact_sheet(arm, meshes, frames_mesh, name, frames, out, view='side', res=(320, 240), samples=8, cam=None,
                   with_cuff=True, label=''):
     """Renders the frames of a clip and tiles them into one JPEG with the frame numbers."""
     from PIL import Image, ImageDraw
     sc = bpy.context.scene
-    for t in arm.animation_data.nla_tracks:
-        t.mute = t.name != name
+    use_clip(arm, name)
     st = getattr(contact_sheet, 'studio', None)
     if st is None:
         st = common.Studio(out, samples=samples, ground=False)
@@ -736,6 +781,7 @@ def contact_sheet(arm, meshes, frames_mesh, name, frames, out, view='side', res=
     st.sc.cycles.samples = samples
     tiles = []
     for f in frames:
+        sc.frame_set(f + 1)
         sc.frame_set(f)
         for k, o in meshes.items():
             if k in ('fold', 'open'):
@@ -780,7 +826,7 @@ if __name__ == '__main__':
         side = lambda f, r, d=1.1: ((r.x, r.y + 4, r.z + 0.15), (r.x, r.y, r.z + 0.15), d)
         fixed = lambda cx, cz, d: (lambda f, r: ((cx, 4, cz), (cx, 0, cz), d))
         follow = lambda d, dz=0.2: (lambda f, r: ((r.x + 0.15, r.y + 4, r.z + dz), (r.x + 0.15, r.y, r.z + dz), d))
-        which = os.environ.get('SHEETS', 'cast_off,flight,land_cuff,feet').split(',')
+        which = os.environ.get('SHEETS', 'cast_off,flight,land_cuff,feet,gif').split(',')
         if 'cast_off' in which:
             contact_sheet(arm, meshes, frames_mesh, 'cast_off', [0, 6, 10, 12, 14, 16, 18, 21, 24, 28, 34, 40], OUT,
                           res=res, samples=6 if q else 16, cam=follow(1.0))
@@ -791,6 +837,12 @@ if __name__ == '__main__':
             bpy.data.objects['dass'].hide_render = True
             contact_sheet(arm, meshes, frames_mesh, 'flight', list(range(0, 14, 1)), OUT, res=res, samples=6 if q else 16,
                           cam=lambda f, r: ((r.x + 1.6, r.y - 1.3, r.z + 0.8), (r.x + 0.15, r.y, r.z + 0.05), None))
+            bpy.data.objects['dass'].hide_render = False
+        if 'gif' in which:
+            strip_gif(arm, meshes, frames_mesh, 'cast_off', list(range(0, 41)), OUT, cam=follow(1.0))
+            bpy.data.objects['dass'].hide_render = True
+            strip_gif(arm, meshes, frames_mesh, 'flight', list(range(0, 14)), OUT, repeat=3,
+                      cam=lambda f, r: ((r.x + 1.6, r.y - 1.3, r.z + 0.8), (r.x + 0.15, r.y, r.z + 0.05), None))
             bpy.data.objects['dass'].hide_render = False
         if 'land_cuff' in which:
             contact_sheet(arm, meshes, frames_mesh, 'land_cuff', [0, 8, 14, 18, 22, 26, 28, 30, 33, 36, 39, 45], OUT,
