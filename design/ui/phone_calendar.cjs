@@ -2,7 +2,7 @@
 // موجود اختياري»): a DESIGN awaiting the owner's approval (through his proxy), not built, not in phone.js. The year at a
 // glance from the engine's own calendar, and the game moved forward to a day or a season the player picks, with a
 // card that says what the stretch needs before he goes, stops that hand the game back when something needs him, and
-// what happened at the end. Ten views at the owner's screen (956 x 440, the phone enlarged), in the phone's CSS and
+// what happened at the end. Nine views at the owner's screen (956 x 440, the phone enlarged), in the phone's CSS and
 // pieces (design/prototype3d/phone.js):
 //   1 home      the home screen with the apps approved or being built (the six, المزاين and المحادثات from wt/t10)
 //               and التقويم, the ninth
