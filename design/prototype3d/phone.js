@@ -264,6 +264,20 @@ const CSS = `
   .calnav { display: flex; justify-content: space-between; align-items: center; }
   .calnav button { color: var(--acc); font-weight: 700; font-size: 13px; padding: 4px 6px; }
   .calnav button[disabled] { color: #c4c4c9; }
+  /* ---------- the camel's page in الحراج, compact with no scroll (the owner, 14 Nov 2026, item 21: every block, word
+     and type size kept; the spaces between the blocks a little tighter and the camel's photo 84 instead of 96) ---------- */
+  .body.hjl { gap: 8px; }
+  .hjl .tank { padding: 10px 14px; gap: 2px; }
+  .hjl .kind { margin-top: 2px; }
+  .hjl .row { min-height: 46px; padding-block: 6px; }
+  .hjl .it.big { grid-template-columns: 84px 1fr; }
+  .hjl .it.big .ph { width: 84px; height: 84px; }
+  .hjl .btn { height: 40px; }
+  .hjl .warn { padding-block: 8px; }
+  .hjl .sec { margin-bottom: -4px; }
+  .hjl .row.vet .act { grid-row: 1; }
+  .hjl .row.vet .act .btn { white-space: nowrap; }      /* («افحص بكرة» on one line: the note under it gave the button no more room) */
+  .hjl .row.vet small { grid-column: 2 / 4; }      /* (the vet's note on its own line under the title and the button, not three short lines beside it) */
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }      /* (what is said after an order, for a screen reader: outside the screen the redraws replace) */
 `;
 
@@ -849,7 +863,7 @@ function listingScreen() {
   const back = nav('', 'haraj');
   if (!G) return `<div class="body">${back}<div class="title">الحراج</div>${waiting()}</div>`;
   const l = listingOf(HJ.listing);
-  if (!l) return `<div class="body">${back}<div class="title">الحراج</div>${msgCard()}<div class="note" style="margin-top:6px">هالإعلان انباع أو انشال.</div></div>`;
+  if (!l) return `<div class="body hjl">${back}<div class="title">الحراج</div>${msgCard()}<div class="note" style="margin-top:6px">هالإعلان انباع أو انشال.</div></div>`;
   const c = l.camel, total = l.askPrice + l.transport, k = stepOf(l.askPrice);
   const full = G.herd.total >= G.farm.capacity, poor = G.cash < total;
   // the haggle starts at the low end of their appraisal (at 90% of the asking price the first bid was over the seller's
@@ -878,9 +892,9 @@ function listingScreen() {
   const vetPoor = G.cash < fee;
   const vetRow = told
     ? alertCard(l.declared ? `${her(c, 'معروضة', 'معروض')} معلن إن ${her(c, 'فيها', 'فيه')} ${tamperNames(kinds)}` : `البيطري لقى ${her(c, 'فيها', 'فيه')} ${tamperNames(kinds)}`, `محد يدري غيرك. لو ${her(c, 'اشتريتها وسجلتها', 'اشتريته وسجلته')} بمزاين وانكشف، الغرامة والحرمان عليك. والتجميل يروح مع الوقت.`)
-    : `<div class="group"><div class="row"><span class="lead">${svg('scope')}</span><b>${n ? `البيطري ${her(c, 'فحصها', 'فحصه')}\u00a0${times}` : `${her(c, 'افحصها', 'افحصه')} عند البيطري`}</b><span class="act"><button class="btn ghost" data-act="vet" data-id="${esc(l.id)}" aria-label="${l.checkedToday ? `البيطري ${her(c, 'فحصها', 'فحصه')} اليوم، افحص بكرة` : `افحص ${esc(c.name)} عند البيطري بـ ${n0(fee)} ريال`}" ${l.checkedToday || vetPoor ? 'disabled' : ''}>${l.checkedToday ? 'افحص بكرة' : 'افحص'}</button></span><small>${l.checkedToday ? 'ما لقى شي · ' : ''}الفحص بـ ${n0(fee)} ريال، وكل يوم فحص\u00a0جديد${vetPoor && !l.checkedToday ? ' · رصيدك ما يكفي' : ''}</small></div></div>`;
+    : `<div class="group"><div class="row vet"><span class="lead">${svg('scope')}</span><b>${n ? `البيطري ${her(c, 'فحصها', 'فحصه')}\u00a0${times}` : `${her(c, 'افحصها', 'افحصه')} عند البيطري`}</b><span class="act"><button class="btn ghost" data-act="vet" data-id="${esc(l.id)}" aria-label="${l.checkedToday ? `البيطري ${her(c, 'فحصها', 'فحصه')} اليوم، افحص بكرة` : `افحص ${esc(c.name)} عند البيطري بـ ${n0(fee)} ريال`}" ${l.checkedToday || vetPoor ? 'disabled' : ''}>${l.checkedToday ? 'افحص بكرة' : 'افحص'}</button></span><small>${l.checkedToday ? 'ما لقى شي · ' : ''}الفحص بـ ${n0(fee)} ريال، وكل يوم فحص\u00a0جديد${vetPoor && !l.checkedToday ? ' · رصيدك ما يكفي' : ''}</small></div></div>`;
   const bidRow = `<div class="group"><div class="row ord full"><span class="lead">${svg('haraj')}</span><b>سومك</b><span class="stp"><button data-act="bidStep" data-d="-1" aria-label="سوم أقل" ${HJ.bid > k ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(HJ.bid)}</b> <span>ريال</span></span><button data-act="bidStep" data-d="1" aria-label="سوم أكثر" ${HJ.bid < top ? '' : 'disabled'}>${svg('plus')}</button></span><small>${left > 0 ? `باقي لك ${count(left, 'bid')} ${her(c, 'عليها', 'عليه')}` : `${esc(l.sellerName)} ما عاد يقبل منك سوم`}</small></div></div>`;
-  return `<div class="body">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${msgCard()}${errCard()}
+  return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${titleOf(c)}</div>${msgCard()}${errCard()}
     <div class="it big"><span class="ph">${photo(c)}</span>${facts}</div>
     ${vetRow}
     <div class="tank"><small>اللي تدفعه</small>
