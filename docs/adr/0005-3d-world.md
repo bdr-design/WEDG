@@ -702,14 +702,17 @@ the closed meter names the variant.
   (frames drawn by hand at the phone's 2x, the same poses, the far level
   shaded):
 
-  | Option | Over the pens | At eye height | Camels' pixels changed |
-  |---|---|---|---|
-  | Now | 544k | 735k | - |
-  | The 8k level to 24 m, not 48 | 349k | 696k | 6.3% over the pens |
-  | The 8k level to 30 m | 427k | 735k | 2.0% over the pens |
-  | The full level within 5 m, not 8 | 544k | 613k | 1.0% at eye height |
-  | A 4k middle level instead of the 8k | 384k | 587k | 4.5% over the pens, 1.8% at eye height |
-  | Full-level camels' shadows from the 1.5k mesh | 544k | 696k | 0.7% at eye height |
+  | Option | Over the pens | At eye height | Near view | Camels' pixels changed |
+  |---|---|---|---|---|
+  | Now | 544k | 735k | 656k | - |
+  | The 8k level to 24 m, not 48 | 349k | 696k | 624k | 6.3% over the pens |
+  | The 8k level to 30 m | 427k | 735k | 656k | 2.1% over the pens |
+  | The full level within 5 m, not 8 | 544k | 613k | 547k | 1.0% at eye height, 2.1% near |
+  | A 4k middle level instead of the 8k | 377k | 576k | 496k | 5.6% over the pens, 4.1% near, 1.9% at eye height |
+  | Full-level camels' shadows from the 1.5k mesh | 544k | 696k | 643k | 0.7% at eye height and near |
+
+  (The 4k level's frames come from a second page load, whose ground cover
+  differed a little: its changed pixels include some of that.)
 
   The 4k level was made with `tool/camel3d/lods.py`'s steps from the same
   rigged source (its clips and skeleton bit for bit the shipped ones'); it is
