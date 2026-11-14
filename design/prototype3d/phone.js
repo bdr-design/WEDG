@@ -266,7 +266,7 @@ const CSS = `
   .calnav button[disabled] { color: #c4c4c9; }
   /* ---------- the camel's page in الحراج, compact with no scroll (the owner, 14 Nov 2026, item 21: every block, word
      and type size kept; the spaces between the blocks a little tighter and the camel's photo 84 instead of 96) ---------- */
-  .body.hjl { gap: 8px; }
+  .body.hjl { gap: 6px; }
   .hjl .tank { padding: 10px 14px; gap: 2px; }
   .hjl .kind { margin-top: 2px; }
   .hjl .row { min-height: 46px; padding-block: 6px; }
@@ -278,6 +278,7 @@ const CSS = `
   .hjl .row.vet .act { grid-row: 1; }
   .hjl .row.vet .act .btn { white-space: nowrap; }      /* («افحص بكرة» on one line: the note under it gave the button no more room) */
   .hjl .row.vet small { grid-column: 2 / 4; }      /* (the vet's note on its own line under the title and the button, not three short lines beside it) */
+  .hjl .lnk { margin-top: -4px; }      /* (T15's buy-now link kept close under the buy button it belongs to) */
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }      /* (what is said after an order, for a screen reader: outside the screen the redraws replace) */
 `;
 
