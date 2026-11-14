@@ -873,14 +873,15 @@ function bankMonthScreen() {
   if (!G || !ym || !m) return `<div class="body">${nav('', 'bank')}<div class="title">${ym ? monthName(ym) : 'البنك'}</div>${waiting()}</div>`;
   const cur = ym === G.date.slice(0, 7), net = m.in - m.out;
   const line = (l) => { const k = kindOf(l.kind); return `<div class="row"><span class="lead${l.amount < 0 ? ' out' : ''}">${svg(k.icon)}</span><b>${k.name}</b><span class="amt${l.amount > 0 ? ' pos' : ''}">${signed(l.amount)}</span><small>${k.line(l, cur)}</small></div>`; };
-  const ins = m.lines.filter((l) => l.amount > 0), outs = m.lines.filter((l) => l.amount <= 0);
+  const ins = m.lines.filter((l) => l.amount > 0 && l.kind !== 'testMoney'), outs = m.lines.filter((l) => l.amount <= 0 && l.kind !== 'testMoney'), test = m.lines.filter((l) => l.kind === 'testMoney');      // (money for testing apart: the net is the farm's, the engine's)
   // a month without milk says so
   const noMilk = m.lines.some((l) => l.kind === 'milk') ? '' : `<div class="row"><span class="lead out">${svg('milk')}</span><b>الحليب</b><span class="amt"></span><small>ما فيه حليب ${cur ? 'هالشهر' : `في ${monName(ym)}`}</small></div>`;
   return `<div class="body">${nav('', 'bank')}<div class="title">${monthName(ym)}</div>
     <div class="balance"><small>${cur ? 'الصافي لين اليوم' : 'الصافي'}</small><div class="v${net > 0 ? ' pos' : ''}"><bdi dir="ltr">${signed(net)}</bdi><span>ريال</span></div>
       <div class="ln ink2">${inOut(m.in, m.out)}</div></div>
     <div class="sec">الدخل</div><div class="group">${ins.map(line).join('')}${noMilk}</div>
-    ${outs.length ? `<div class="sec">المصروف</div><div class="group">${outs.map(line).join('')}</div>` : ''}</div>`;
+    ${outs.length ? `<div class="sec">المصروف</div><div class="group">${outs.map(line).join('')}</div>` : ''}
+    ${test.length ? `<div class="sec">فلوس تجربة</div><div class="group">${test.map(line).join('')}</div>` : ''}</div>`;
 }
 
 // ---------------------------------------------------------------- المزاين (approved 13 Nov 2026: design/ui/phone_mazayen.jpg)

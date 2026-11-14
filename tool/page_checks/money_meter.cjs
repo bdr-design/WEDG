@@ -61,8 +61,13 @@ const LAUNCH = { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-u
   await p.evaluate(() => { const R = [...document.querySelectorAll('*')].find((x) => x.shadowRoot && x.shadowRoot.querySelector('.phone')).shadowRoot; R.querySelector('[data-go="bank"]').click(); });
   await p.waitForTimeout(1500);
   const bank = await p.evaluate(() => [...document.querySelectorAll('*')].find((x) => x.shadowRoot && x.shadowRoot.querySelector('.phone')).shadowRoot.querySelector('.scr').innerText);
-  ok(/فلوس تجربة/.test(bank), 'the bank shows «فلوس تجربة»');
   ok(!/دخل اليوم 9|دخل اليوم 1\d,/.test(bank), 'today\'s net leaves the test money out');
+  ok(!/\+9,|\+10,|أكبرها: فلوس تجربة/.test(bank), 'the month\'s net and its biggest line are the farm\'s (no +9,7…, no «أكبرها: فلوس تجربة»)');
+  // the month opened: «فلوس تجربة» listed apart, under its own heading
+  await p.evaluate(() => [...document.querySelectorAll('*')].find((x) => x.shadowRoot && x.shadowRoot.querySelector('.phone')).shadowRoot.querySelector('[data-go="bankMonth"]')?.click());
+  await p.waitForTimeout(2500);
+  const month = await p.evaluate(() => [...document.querySelectorAll('*')].find((x) => x.shadowRoot && x.shadowRoot.querySelector('.phone')).shadowRoot.querySelector('.scr').innerText);
+  ok(/فلوس تجربة/.test(month) && !/\+9,7/.test(month.split('الدخل')[0]), 'the month opened lists «فلوس تجربة» apart, its net the farm\'s');
   if (SHOTS) { const box = await p.evaluate(() => { const r = [...document.querySelectorAll('*')].find((x) => x.shadowRoot && x.shadowRoot.querySelector('.phone')).shadowRoot.querySelector('.dev').getBoundingClientRect(); return { x: r.x - 4, y: 0, width: r.width + 8, height: 440 }; }); await p.screenshot({ path: path.join(SHOTS, 'bank_test_money.png'), clip: box, timeout: 600000 }); }
   await setOpen(true);
   await p.waitForFunction(() => document.querySelector('#meter [data-money]'), null, { timeout: 120000 }).catch(() => {});

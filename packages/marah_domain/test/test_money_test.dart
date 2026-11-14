@@ -172,4 +172,30 @@ void main() {
     expect(GameView(g.state, me.id).todayNet, net);
     expect(Money.kindOf(LedgerCategory.testMoney), MoneyKind.testMoney);
   });
+
+  test('the bank\'s month: its net and its biggest line are the farm\'s, the '
+      'test money listed apart', () {
+    final g = newGame();
+    final me = g.me;
+    g.advanceDays(3);
+    final before = GameView(g.state, me.id).moneyMonths.first;
+    g.dispatch(SetTestMoney(me.id, on: true));
+    g.advanceDays(2);
+    final v = GameView(g.state, me.id);
+    final m = v.moneyMonths.first;
+    expect(m.testMoney, greaterThan(9000000));
+    expect(
+      m.lines.where((l) => l.kind == MoneyKind.testMoney).single.amount,
+      m.testMoney,
+    );
+    expect(m.top.kind, isNot(MoneyKind.testMoney));
+    expect(m.net.abs(), lessThan(100000)); // (two days of the farm)
+    expect(m.income, lessThan(before.income + 100000));
+    final total = v.moneyMonths.fold(
+      v.openingBalance.value,
+      (n, x) => n + x.net + x.testMoney,
+    );
+    expect(total, me.cash.value);
+    expect(v.moneyMonth(m.month)!.testMoney, m.testMoney);
+  });
 }

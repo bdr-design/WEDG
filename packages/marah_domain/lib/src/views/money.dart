@@ -128,22 +128,38 @@ class MonthMoney {
     required this.income,
     required this.spent,
     required this.lines,
+    this.testMoney = 0,
   });
 
   /// 'YYYY-MM'.
   final String month;
+
+  /// The farm's money in and out, money for testing not in either.
   final int income;
   final int spent;
+
+  /// Money for the owner's testing that came in this month (TestMoney): its
+  /// own line, never in [income], [net] or [top], so a tested month reads
+  /// what the farm made and, apart, what was added.
+  final int testMoney;
 
   /// Money in first (the biggest first), then money out (the biggest first).
   final List<MoneyLine> lines;
 
+  /// The farm's net: the opening balance plus every month's net and
+  /// [testMoney] is the cash.
   int get net => income - spent;
 
-  /// The kind that moved the most money, in or out (the main screen's line).
+  /// The kind that moved the most money, in or out (the main screen's line),
+  /// money for testing passed over while there is any other.
   MoneyLine get top {
-    var best = lines.first;
-    for (final l in lines) {
+    final farm = [
+      for (final l in lines)
+        if (l.kind != MoneyKind.testMoney) l,
+    ];
+    final from = farm.isEmpty ? lines : farm;
+    var best = from.first;
+    for (final l in from) {
       if (l.amount.abs() > best.amount.abs()) best = l;
     }
     return best;
@@ -151,7 +167,8 @@ class MonthMoney {
 }
 
 /// The player's ledger read for the bank. Every figure is the ledger's own
-/// sum: the opening balance plus every month's net is the cash.
+/// sum: the opening balance plus every month's net (and money for testing,
+/// MonthMoney.testMoney) is the cash.
 class Money {
   const Money._();
 
@@ -374,10 +391,12 @@ class Money {
         ref == null ? null : w.camels[CamelId(ref)]?.name;
     String? festivalName(String? ref) =>
         ref == null ? null : w.festivals[FestivalId(ref)]?.name;
-    var income = 0, spent = 0;
+    var income = 0, spent = 0, test = 0;
     final lines = <MoneyLine>[];
     for (final k in m.kinds) {
-      if (k.amount > 0) {
+      if (k.kind == MoneyKind.testMoney) {
+        test += k.amount; // (money for testing: listed, never the farm's income, TestMoney)
+      } else if (k.amount > 0) {
         income += k.amount;
       } else {
         spent -= k.amount;
@@ -414,6 +433,7 @@ class Money {
       month: m.month,
       income: income,
       spent: spent,
+      testMoney: test,
       lines: lines,
     );
   }

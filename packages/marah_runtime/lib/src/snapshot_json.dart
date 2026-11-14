@@ -114,6 +114,8 @@ class SnapshotJson {
     'month': m.month,
     'in': m.income,
     'out': m.spent,
+    // (money for testing that came in, apart from the farm's in and out)
+    if (m.testMoney != 0) 'test': m.testMoney,
     'lines': [for (final l in m.lines) moneyLine(l)],
   };
 
