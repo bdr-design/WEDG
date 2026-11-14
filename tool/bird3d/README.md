@@ -24,18 +24,18 @@ end).
 
 | File | What | Triangles (parts) | Draws |
 |---|---|---|---|
-| `assets_src/birds/saker_hooded.glb` | perched, hooded, jessed, the swivel ready for the leash | 5,896 body + 724 hood + 560 jesses = 7,180 | 3 |
-| `saker_fist.glb` | the same bird hooded on the fist, her jesses running into the falconer's grip | 5,896 + 724 + 400 = 7,020 | 3 |
+| `assets_src/birds/saker_hooded.glb` | perched, hooded, jessed, the swivel ready for the leash | 5,352 body + 724 hood + 560 jesses = 6,636 | 3 |
+| `saker_fist.glb` | the same bird hooded on the fist, her jesses running into the falconer's grip | 5,352 + 724 + 400 = 6,476 | 3 |
 | `saker_alert.glb` | perched, unhooded, alert | 5,896 + 560 jesses = 6,456 | 2 |
 | `saker_flight.glb` | cast off: wings spread, feet drawn up under the tail, jesses trailing | 6,232 + 400 = 6,632 | 2 |
 | `saker_*_lod1.glb` | the far model of each pose: no jesses, brow, tooth or eye ring (under a pixel at tens of metres) | 1,334 (hooded, with the hood) / 1,204 / 1,300 | 1–2 |
-| `houbara_alert.glb`, `houbara_flight.glb` | | 5,284 / 6,340 | 1 |
+| `houbara_alert.glb`, `houbara_flight.glb` | | 5,428 / 6,484 | 1 |
 | `houbara_*_lod1.glb` | | 1,084 / 1,468 | 1 |
 | `curlew_alert.glb`, `curlew_flight.glb` | | 5,084 / 5,420 | 1 |
 | `curlew_*_lod1.glb` | | 1,120 / 1,216 | 1 |
 | `wakr.glb` | the perch and the leash | 1,228 + 168 = 1,396 | 2 |
-| `dass.glb` | the cuff | 864 | 1 |
-| `wakr_lod1.glb`, `dass_lod1.glb` | | 436 / 140 | 2 / 1 |
+| `dass.glb` | the cuff | 944 | 1 |
+| `wakr_lod1.glb`, `dass_lod1.glb` | | 436 / 160 | 2 / 1 |
 
 Each bird file has one material, one-sided, and one texture pair: colour plus occlusion/roughness. The pair is 512 px
 for the close model and 256 px for the far one. That is 2.67 MiB uncompressed with mipmaps (0.67 MiB far), counted as
@@ -56,7 +56,7 @@ The budget is ADR 0005's: 200 draws and 400k triangles a frame with shadows, and
 
 - **What a hunt scene shows:** one falcon close (on the fist, the perch or just cast off), at most a few quarry, and
   the falcon far off while it chases.
-  - Close falcon with hood and jesses, the cuff and a perch: 7.2k + 0.9k + 1.4k = about 9.5k triangles, 6 draws
+  - Close falcon with hood and jesses, the cuff and a perch: 6.6k + 0.9k + 1.4k = about 9k triangles, 6 draws
     (12 with the shadow pass).
   - Three quarry far off: 3 × 1.1–1.5k triangles, 3 draws.
   - All together that is about 2–3% of the triangle budget, and 4 texture pairs (about 11 MiB uncompressed, about 3
@@ -126,7 +126,7 @@ Sexes: the male is about a third smaller (the tiercel). Its figures are above; i
 | Dark primaries, each darker at its overlapped edge, with narrow pale tips staggered on the folded wing | wing | the same |
 | Tail brown with pale oval spots in bars, the central pair plainer, a pale tip; paler and barred below | tail | the same |
 | Dark, pale-spotted underwing coverts against paler, barred flight feathers with a thin dusky trailing edge | underwing in flight | a saker field mark *(search; reviewer)* |
-| Dark brown iris (never yellow) in a ring of bare skin; a brow ridge over the eye (the falcon's frown) | eye | the same |
+| Dark brown iris (never yellow) in a ring of bare skin; a brow ridge over the eye (the falcon's frown); both left off under the hood | eye | the same |
 | Bluish-grey cere, eye ring and feet; a short, deep, strongly hooked bluish horn bill with a black hook and the tomial tooth; long curved black talons | bare parts | juvenile, the same |
 
 The sakers of the Kingdom's markets come in shades (أشقر، أحمر، أدهم). This one is a mid brown bird. The other shades
