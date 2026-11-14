@@ -17,12 +17,24 @@
 //   The average prize a falcon: more than 38 million [170][176] over more than 5,200 falcons [157], about 7,300 (an
 //   estimate from two sources). The third place's 100,000 is one round's split [177]. No auction runs from December to
 //   August, so the falcon is sold at the next autumn's national auction, after eight months of feed through the moult.
-//   Money: a farm-bred saker about 19,000 and top birds over a million [158]; المزاين's first three 300,000, 175,000,
-//   100,000 [177] (one source); 1,012 prizes [170][176] for more than 5,200 falcons [157] in 2025, so about one falcon
-//   in five wins anything (an estimate from two sources); selling game is an offence [166]. Everything else is a game
-//   choice and marked so: the wild-caught falcon's price 32,000, eight months' feed through the moult 4,800, feed 20 riyals a day, the kit 2,500, the permit 100
-//   (a weak source gives 100 [160]), passport and club nothing (no fee found), each outing's fuel 60, the trip to Malham
-//   1,500, the entry fee nothing (not found), the ملواح prizes by place, the resale prices (35,000; up to 60,000 with results).
+//   The trapping lane: the trapping season 1 Oct - 30 Nov [184][185][186]; the passage from September, the peregrine's
+//   peak in October, to December [198][202][205]; the three routes to a falcon (the proxy's batch 3 item 5): the
+//   breeders' auction in August [158], the exhibition's imported sakers 1-10 Oct [157][184], the trapping auction
+//   1 Oct - 30 Nov where the player sells or buys [184].
+//   Money, round 2 (no single "expected profit" anywhere: the range only):
+//   - trapping, a season alone: chance 0.08 to 0.34 (40 birds in 2025 over 119 trappers [213], or «مئات» [211]: the
+//     proxy's range, a game choice inside the sources), shown as about one season in 13 (1/0.08 = 12.5, rounded against
+//     the player) to one in 3 (1/0.34 = 2.9); mean price 88,000 [200] to 160,000 [213]; the season's cost 20,000
+//     INVENTED; expected about -13,000 (0.08 x 88,000 - 20,000 = -12,960) to about +34,000 (0.34 x 160,000 - 20,000 =
+//     +34,400), rounded against the player; a bird of 300,000 or more: one season in about 83 (1 / (0.08 x 6/40) =
+//     83.3) to 20 (1 / (0.34 x 6/40) = 19.6), at least 6 of the 40 birds of 2025 that dear [213][185] (a floor);
+//     partners raise the chance and divide the price, groups of 2 to 9 [184][190][200] (the next step: proxy item 2);
+//     the gear's 8,600 is the phone's game-choice prices;
+//   - falconry: a farm-bred saker about 19,000 [158] or a peregrine of the year from about 50,000 [200]; game choices:
+//     the falcons' room 18,000 holding 4, feed 20 riyals a day (3,060), kit 2,500, permit 100 (a weak source gives 100
+//     [160]), four trips of days at 1,500 each; game is never sold [166]; no lawful resale route found for a kept falcon
+//     (proxy item 6); contest prizes: about one falcon in five wins anything, average about 7,300 a falcon (more than
+//     38 million [170][176] over more than 5,200 falcons [157]: an estimate), a third place in المزاين 100,000 [177].
 // To draw again: `NODE_PATH=$(npm root -g) node design/hunt/season.cjs` from the repository's root (no server needed:
 // the fonts come from Google Fonts); it writes both JPEGs here (or OUT=<folder>).
 const { chromium } = require('playwright');
@@ -40,10 +52,10 @@ const MONTHS = ['أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', '�
 // [label, from [y,m,d], to [y,m,d] (inclusive), class, source]
 const FALCON = [
   ['المقيض (يبي مصدر)', [2026, 8, 1], [2026, 8, 31], 'moult tiny', ''],
-  ['مزاد صقور المزارع · ملهم', [2026, 8, 5], [2026, 8, 25], 'auc', '[158]'],
+  ['مزاد المزارع (طريق 1) [158]', [2026, 8, 5], [2026, 8, 25], 'auc tiny', ''],
   ['الدعو', [2026, 9, 1], [2026, 10, 10], 'train', '[155]'],
-  ['مزاد الطرح', [2026, 10, 1], [2026, 11, 30], 'auc', '[157]'],
-  ['معرض الصقور', [2026, 10, 1], [2026, 10, 10], 'ev', '[157]'],
+  ['مزاد الطرح (طريق 3)', [2026, 10, 1], [2026, 11, 30], 'auc2', '[184]'],
+  ['معرض الصقور: حر مستورد (طريق 2)', [2026, 10, 1], [2026, 10, 10], 'ev', '[157][184]'],
   ['سباق ملواح', [2026, 10, 4], [2026, 10, 9], 'ev', '[157]'],
   ['المقيض (يبي مصدر)', [2027, 3, 1], [2027, 7, 31], 'moult', ''],
 ];
@@ -71,32 +83,35 @@ const calendar = () => {
   for (let i = 0; i <= 12; i++) { const yy = 2026 + ((7 + i) >= 12 ? 1 : 0), mm = ((7 + i) % 12) + 1; h += `<div class="grid" style="left:${x(yy, mm, 1)}px"></div>`; }
   h += `<div class="lane" style="top:84px">الصقور</div>`;
   h += bar(80, 28, FALCON[0]) + bar(80, 28, FALCON[6]) + bar(80, 28, FALCON[2]) + bar(112, 28, FALCON[1]) + bar(112, 28, FALCON[3]) + bar(144, 24, FALCON[4]) + bar(172, 24, FALCON[5]);
-  h += `<div class="lane" style="top:218px">موسم الصيد</div>`;
-  h += bar(212, 34, SEASON[0]) + bar(212, 34, SEASON[1]);
-  h += `<div class="lane" style="top:270px">مهرجان الصقور</div>`;
-  h += bar(264, 28, FEST[0]) + bar(298, 28, FEST[1]);
-  h += `<div class="note" style="top:266px;left:${x(2027, 6, 30)}px;width:${x(2027, 2, 1) - x(2027, 6, 30)}px">المصادر مختلفة على نسخة 2026 ([157] أو [181])، ونسخة 2025 كانت 25 ديسمبر–10 يناير [169][157]</div>`;
-  h += `<div class="lane" style="top:352px">الإبل</div>`;
-  h += bar(346, 26, ['الضراب', [2026, 11, 1], [2027, 4, 30], 'mate', 'GDD 4']);
-  h += `<div class="tick" style="left:${x(2026, 10, 16)}px;top:378px">الوسم من 16 أكتوبر</div>`;
-  const row0 = 404, rh = 30;
+  h += `<div class="lane" style="top:210px">الطرح</div>`;
+  h += bar(206, 24, ['عبور الصقور: الشمال من سبتمبر، والشاهين أكثره بأكتوبر، لين ديسمبر', [2026, 9, 1], [2026, 12, 31], 'pass', '[198][202][205]']);
+  h += bar(234, 30, ['موسم الطرح', [2026, 10, 1], [2026, 11, 30], 'trap', '[184][185][186]']);
+  h += `<div class="lane" style="top:282px">موسم الصيد</div>`;
+  h += bar(276, 34, SEASON[0]) + bar(276, 34, SEASON[1]);
+  h += `<div class="lane" style="top:334px">مهرجان الصقور</div>`;
+  h += bar(328, 28, FEST[0]) + bar(362, 28, FEST[1]);
+  h += `<div class="note" style="top:330px;left:${x(2027, 6, 30)}px;width:${x(2027, 2, 1) - x(2027, 6, 30)}px">المصادر مختلفة على نسخة 2026 ([157] أو [181])، ونسخة 2025 كانت 25 ديسمبر–10 يناير [169][157]</div>`;
+  h += `<div class="lane" style="top:416px">الإبل</div>`;
+  h += bar(410, 26, ['الضراب', [2026, 11, 1], [2027, 4, 30], 'mate', 'GDD 4']);
+  h += `<div class="tick" style="left:${x(2026, 10, 16)}px;top:442px">الوسم من 16 أكتوبر</div>`;
+  const row0 = 468, rh = 30;
   CAMEL_F.forEach(([n, a, z, ra, rz], i) => { const t = row0 + i * rh; h += bar(t, 24, ['', ra, rz, 'reg', '']) + bar(t, 24, [n, a, z, n === 'المهرجان الكبير' ? 'big' : 'cf', '']); });
   h += `<div class="lane small" style="top:${row0 + 2}px">مزاين اللعبة<br><span>الفاتح: التسجيل</span></div>`;
   // collisions: a band from the festival's option down to the camel festival it meets
   const clash = (a, z, top, bottom, t) => { const x0 = x(...z) - SPAN / 365, x1 = x(...a); return `<div class="clash" style="left:${x0 - 2}px;width:${x1 - x0 + 4}px;top:${top}px;height:${bottom - top}px"></div><div class="ct" style="left:${x0 - 236}px;top:${bottom - 22}px">${t}</div>`; };
-  h += clash([2026, 11, 29], [2026, 11, 30], 262, row0 + 2 * rh + 26, 'لو بنوفمبر: آخره يصادف الجوف');
-  h += clash([2026, 12, 25], [2027, 1, 3], 296, row0 + 3 * rh + 26, 'لو بديسمبر: داخل المهرجان الكبير');
+  h += clash([2026, 11, 29], [2026, 11, 30], 326, row0 + 2 * rh + 26, 'لو بنوفمبر: آخره يصادف الجوف');
+  h += clash([2026, 12, 25], [2027, 1, 3], 360, row0 + 3 * rh + 26, 'لو بديسمبر: داخل المهرجان الكبير');
   h += `<div class="start" style="left:${x(2026, 10, 1)}px"></div><div class="startt" style="left:${x(2026, 10, 1) - 1}px">بداية اللعبة: 1 أكتوبر</div>`;
   return `<!doctype html><meta charset="utf-8">${FONT}<style>
-    body { margin: 0; width: ${W}px; height: 820px; background: #f6f1e7; font-family: "IBM Plex Sans Arabic", sans-serif; direction: rtl; color: #1c1712; position: relative; overflow: hidden; }
+    body { margin: 0; width: ${W}px; height: 900px; background: #f6f1e7; font-family: "IBM Plex Sans Arabic", sans-serif; direction: rtl; color: #1c1712; position: relative; overflow: hidden; }
     h1 { font: 700 24px/1 Alexandria, sans-serif; margin: 0; position: absolute; right: 24px; top: 12px; } h1 small { font: 500 14px "IBM Plex Sans Arabic"; color: #6e6457; margin-right: 10px; }
     .mon { position: absolute; top: 46px; text-align: center; font: 600 13px Alexandria; color: #6e6457; }
-    .grid { position: absolute; top: 64px; height: 600px; width: 1px; background: #e2d8c6; }
+    .grid { position: absolute; top: 64px; height: 664px; width: 1px; background: #e2d8c6; }
     .lane { position: absolute; right: 18px; width: 170px; font: 700 15px Alexandria; color: #4a3f33; } .lane.small span { font: 500 12px "IBM Plex Sans Arabic"; color: #6e6457; }
     .bar { position: absolute; border-radius: 7px; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 12px; font-weight: 600; white-space: nowrap; }
     .bar span { padding: 0 6px; } .bar.out { overflow: visible; justify-content: flex-start; } .bar.out span { position: absolute; right: calc(100% + 2px); color: #1c1712; padding: 0 2px; } .bar i { font-style: normal; font-weight: 500; opacity: .75; font-size: 11px; }
-    .auc { background: #f2d7a6; color: #5a3d0f; } .train { background: #cfe6d6; color: #1f5a37; } .ev { background: #e7e0f2; color: #45366b; }
-    .moult.tiny span { font-size: 10.5px; white-space: normal; line-height: 1.05; text-align: center; } .moult { background: repeating-linear-gradient(-45deg, #e9e2d6 0 6px, #ddd3c2 6px 12px); color: #6e6457; }
+    .auc { background: #f2d7a6; color: #5a3d0f; } .auc2 { background: #e9c27c; color: #4a300a; } .pass { background: #e6ddf0; color: #4a3d63; font-size: 11px; } .trap { background: #6b4f9e; color: #fff; } .train { background: #cfe6d6; color: #1f5a37; } .ev { background: #e7e0f2; color: #45366b; }
+    .bar.tiny span { font-size: 10.5px; white-space: normal; line-height: 1.05; text-align: center; } .moult { background: repeating-linear-gradient(-45deg, #e9e2d6 0 6px, #ddd3c2 6px 12px); color: #6e6457; }
     .hunt { background: #0b8a5c; color: #fff; } .hunt2 { background: #2f7fcf; color: #fff; }
     .fa, .fb { background: #fff; border: 2px dashed #c27a12; color: #8a560b; }
     .mate { background: #f3d5cf; color: #7a2a1d; } .reg { background: #e9e5dc; color: #6e6457; font-size: 10.5px; } .cf { background: #c8402f; color: #fff; } .big { background: #8e2b1f; color: #fff; }
@@ -104,13 +119,13 @@ const calendar = () => {
     .ct { position: absolute; width: 230px; font: 700 12px "IBM Plex Sans Arabic"; color: #e5372b; text-align: left; }
     .note { position: absolute; font-size: 12px; color: #8a560b; line-height: 1.4; }
     .tick { position: absolute; font-size: 11.5px; font-weight: 600; color: #2f6e9e; border-right: 2px solid #2f6e9e; padding-right: 4px; }
-    .start { position: absolute; top: 64px; height: 600px; width: 0; border-left: 3px solid #111; }
-    .startt { position: absolute; top: 664px; transform: translateX(-100%); font: 700 13px "IBM Plex Sans Arabic"; background: #111; color: #fff; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+    .start { position: absolute; top: 64px; height: 664px; width: 0; border-left: 3px solid #111; }
+    .startt { position: absolute; top: 728px; transform: translateX(-100%); font: 700 13px "IBM Plex Sans Arabic"; background: #111; color: #fff; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
     .box { position: absolute; bottom: 14px; right: 24px; left: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; font-size: 13px; line-height: 1.55; }
     .box div { background: #fff; border-radius: 12px; padding: 10px 14px; } .box b { font-family: Alexandria; }
   </style><h1>موسم القنيص وسنة الإبل<small>من أغسطس 2026 لين يوليو 2027 · الأرقام بين [ ] مصادر البحث، والباقي اختيار لعب</small></h1>${h}
-  <div class="box"><div><b>أول موسم بلعبة جديدة (تبدأ 1 أكتوبر):</b> الموسم صار له شهر، ومزاد ملهم راح، ومزاد الطرح مفتوح لين 30 نوفمبر. تشتري صقر طرح، تطلع جوازه وتصريحك، وتدعيه 4 أسابيع (اختيار لعب)، فأول طلعة حوالي آخر أكتوبر أو أول نوفمبر، والمهرجان الكبير للإبل يطلب تسجيل حلالك بنفس الوقت.</div>
-  <div><b>وين يتصادم:</b> لو مهرجان الصقور 17–30 نوفمبر يصادف آخره مزاين الجوف (29 نوفمبر–2 ديسمبر) وآخر أيام تسجيل المهرجان الكبير. ولو 25 ديسمبر–10 يناير يصير داخل المهرجان الكبير للإبل (لين 3 يناير): يختار اللاعب وش يحضر، والراعي يمسك الحلال.</div></div>`;
+  <div class="box"><div><b>أول موسم بلعبة جديدة (تبدأ 1 أكتوبر):</b> الطرح يفتح نفس اليوم، ومزاد الطرح يبدأ معه، ومعرض الصقور مفتوح لين 10 أكتوبر، ومزاد المزارع راح لين أغسطس الجاي. تطلّع تصريح الطرح وتشتري عدتك وتطلع للمخيم؛ أو تشتري صقرك من المعرض أو مزاد الطرح وتدعيه 4 أسابيع (اختيار لعب). والمهرجان الكبير للإبل يطلب تسجيل حلالك بنفس الوقت.</div>
+  <div><b>وين يتصادم:</b> الطرح كله (أكتوبر ونوفمبر) فوق تسجيل المهرجان الكبير ومزاين حائل والقصيم والجوف وأول الضراب، والمخيم أيام. ولو مهرجان الصقور 17–30 نوفمبر يصادف آخره الجوف، ولو 25 ديسمبر–10 يناير يصير داخل المهرجان الكبير. والعزبة تمشي مثل كل يوم وانت غايب.</div></div>`;
 };
 
 // ---------------------------------------------------------------- the money
@@ -118,41 +133,43 @@ const money = () => {
   const r = (a, b, c, d, cls = '') => `<tr class="${cls}"><td>${a}</td><td>${b}</td><td>${c}</td><td class="src">${d}</td></tr>`;
   return `<!doctype html><meta charset="utf-8">${FONT}<style>
     body { margin: 0; width: 1300px; background: #f6f1e7; font-family: "IBM Plex Sans Arabic", sans-serif; direction: rtl; color: #1c1712; padding: 18px 24px 20px; box-sizing: border-box; }
-    h1 { font: 700 24px/1.2 Alexandria, sans-serif; margin: 0 0 4px; } p.s { margin: 0 0 12px; color: #6e6457; font-size: 13.5px; }
+    h1 { font: 700 24px/1.2 Alexandria, sans-serif; margin: 0 0 4px; } h2 { font: 700 18px Alexandria; margin: 16px 0 6px; } p.s { margin: 0 0 10px; color: #6e6457; font-size: 13.5px; }
     table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; font-size: 14px; }
     th { background: #2a2119; color: #f6f1e7; font: 600 14px Alexandria; padding: 9px 12px; text-align: right; }
-    td { padding: 7px 12px; border-top: 1px solid #eee5d6; } td:nth-child(2), td:nth-child(3) { font-family: Alexandria; font-weight: 600; white-space: nowrap; }
-    td.src { font-size: 12px; color: #6e6457; } tr.h td { background: #f1ebe0; font: 700 13px Alexandria; color: #4a3f33; }
-    tr.tot td { background: #fbf6ec; font-weight: 700; } .neg { color: #c4362b; } .pos { color: #0b8a5c; }
+    td { padding: 7px 12px; border-top: 1px solid #eee5d6; } td:nth-child(2), td:nth-child(3) { font-family: Alexandria; font-weight: 600; }
+    td.src { font-size: 12px; color: #6e6457; } tr.tot td { background: #fbf6ec; font-weight: 700; } .neg { color: #c4362b; } .pos { color: #0b8a5c; }
     .q { margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 16px; font-size: 14px; line-height: 1.6; box-shadow: inset 0 0 0 2px #e8b46c; }
-  </style><h1>موسم واحد: وش يكلّف ووش يجيب (بالريال)</h1>
-  <p class="s">صقر طرح واحد من مزاد الطرح، موسم كامل، ويبيعه بمزاد الخريف الجاي (أول مزاد بعد الموسم). الأرقام بين [ ] من البحث (كله من نصوص نتايج البحث، ما فتحنا صفحة رسمية)، والباقي اختيار لعب.</p>
-  <table><tr><th></th><th>هواية: طلعات بس</th><th>مسابقات بعد</th><th>من وين الرقم</th></tr>
-  ${r('اللي تصرفه', '', '', '', 'h')}
-  ${r('الصقر: حر فرخ طرح من مزاد الخريف', '32,000', '32,000', 'اختيار لعب. صقر المزارع حوالي 19,000 والكبار فوق المليون [158]')}
-  ${r('أكله بالموسم، 5 شهور', '3,060', '3,060', 'اختيار لعب: 20 ريال باليوم')}
-  ${r('أكله بالمقيض لين يبيعه بالخريف الجاي، 8 شهور', '4,800', '4,800', 'اختيار لعب. ما فيه مزاد من ديسمبر لين أغسطس (التقويم)')}
-  ${r('عدته: البرقع والدس والوكر والميزان وجهاز التتبع', '2,500', '2,500', 'اختيار لعب')}
-  ${r('الجواز والتسجيل بالنادي', '0', '0', 'ما لقينا رسوم')}
-  ${r('تصريح الصيد', '100', '100', 'اختيار لعب (مصدر ضعيف يقول 100 [160])')}
-  ${r('10 طلعات: بنزين', '600', '600', 'اختيار لعب: 60 للطلعة')}
-  ${r('رسوم التسجيل والنقل لملهم', '', '1,500', 'التسجيل ما لقيناه (ببلاش)، والنقل اختيار لعب')}
-  ${r('اللي يجيك', '', '', '', 'h')}
-  ${r('بيع الصيد', '0', '0', 'ممنوع: بيع الصيد مخالفة [166]')}
-  ${r('جوايز، اللي يصير أغلب المرات', '', '0', 'تقريبًا صقر من كل خمسة يفوز بشي: 1,012 جايزة [170][176] لأكثر من 5,200 صقر [157] (تقدير من مصدرين)')}
-  ${r('جوايز، المعدل لكل صقر', '', '7,300', 'تقدير: أكثر من 38 مليون جوايز [170][176] على أكثر من 5,200 صقر [157]')}
-  ${r('جوايز، لو جا ثالث بالمزاين', '', '100,000', '[177] مصدر واحد، لشوط واحد (300,000 و175,000 و100,000)؛ جوايز أول الفئات الثانية ممدودة منه، اختيار لعب')}
-  ${r('بيعه بمزاد الطرح بالخريف الجاي (قرناس)', '35,000', '35,000 – 60,000', 'اختيار لعب: يغلى بالنتايج')}
-  ${r('آخر الموسم لين يبيعه', '<span class="neg">−8,060</span>', 'أغلب المرات <span class="neg">−9,560</span> · بالمعدل <span class="neg">−2,260</span> · لو جا ثالث <span class="pos">+115,440</span>', 'ولو أطلقه بالربيع مثل ما يسوون صقارين كثير بالطرح: ما فيه أكل المقيض ولا بيع، والهواية −38,260 (سؤال للمالك)', 'tot')}
+  </style><h1>الصقور تجارة ثانية: وش يكلّف ووش يجيب (بالريال)</h1>
+  <p class="s">الأرقام بين [ ] من البحث (نصوص نتايج بحث وصفحات وكالة الأنباء، ما لقينا نص نظام الطرح)، و«الوكيل» جواب مؤقت لين يرد المالك، والباقي اختيار لعب. ما فيه رقم «ربح متوقع» واحد: المدى بس.</p>
+  <h2>موسم طرح واحد، لحالك</h2>
+  <table><tr><th></th><th>مبتدي عدته قليلة</th><th>عدته كاملة وأرضه زينة</th><th>من وين الرقم</th></tr>
+  ${r('حظه بطير ينباع بالموسم', 'حوالي موسم من 13', 'حوالي موسم من 3', '40 طير بموسم 2025 على 119 طاروح [213]، أو «مئات» [211]: المدى 0.08 لين 0.34، والعدة تحركك داخله وما تطلعك فوقه (الوكيل، اختيار لعب)')}
+  ${r('سعر الطير بالمتوسط', '88,000', '160,000', '2022: 7.125 مليون على 81 طير [200]؛ 2025 حوالي 160,000 [213]')}
+  ${r('مصروف الموسم: المخيم والبنزين والحمام والشبك', '20,000', '20,000', 'مخترع: ما لقينا له رقم، وباللعبة يتبع العدة')}
+  ${r('العدة تشتريها مرة', '0', '8,600', 'اختيار لعب: أسعار عدة الطاروح بالجوال')}
+  ${r('اللي يصير أغلب المواسم', 'ما ينطرح طير', 'ما ينطرح طير', 'وتخسر مصروف المخيم')}
+  ${r('المتوقع بالموسم (حظ × سعر − مصروف)', '<span class="neg">حوالي −13,000</span>', '<span class="pos">حوالي +34,000</span>', '0.08 × 88,000 − 20,000 و0.34 × 160,000 − 20,000، مقرّب ضد اللاعب')}
+  ${r('طير بـ 300,000 وفوق', 'موسم من 83 تقريبًا', 'موسم من 20 تقريبًا', 'على الأقل 6 من 40 طير بموسم 2025 [213][185]: 1 ÷ (0.08 × 6/40) و1 ÷ (0.34 × 6/40) = 83.3 و19.6، مقرّب لأقرب رقم')}
+  ${r('مع شركاء (الخطوة الجاية)', '', '', 'يزيد الحظ ويتقسم السعر: أغلب الطيور طرحها ربع من 2 لين 9 [184][190][200] (الوكيل: لحالك أول)', 'tot')}
   </table>
-  <div class="q"><b>قرارك:</b> الصقور تبقى هواية تصرف عليها ومعها فرصة نادرة بجايزة كبيرة، ولا تصير تجارة ثانية؟ <b>نقترح الأولى:</b> الجوايز حقيقية وكبيرة بس نادرة مثل الواقع (صقر من خمسة يفوز بشي، والمعدل حوالي 7,300 للصقر، والأوائل أقل بكثير)، فما تصير الصقور طريق مضمون للفلوس، والإبل تبقى الأساس.</div>`;
+  <h2>المقناص بصقرك (هواية تصرف عليها)</h2>
+  <table><tr><th></th><th>بالموسم</th><th></th><th>من وين الرقم</th></tr>
+  ${r('صقرك', '19,000 أو من 50,000', '', 'حر فرخ من مزاد المزارع حوالي 19,000 [158]؛ أو فرخ شاهين بحري من مزاد الطرح من حوالي 50,000 [200]؛ أو طير طرحته وخليته لك (الوكيل)')}
+  ${r('غرفة الصقور (تبنيها مرة)', '18,000', '', 'اختيار لعب: تشيل 4 صقور')}
+  ${r('أكله 5 شهور، وعدته', '3,060 + 2,500', '', 'اختيار لعب: 20 ريال باليوم')}
+  ${r('تصريح الصيد', '100', '', 'اختيار لعب (مصدر ضعيف يقول 100 [160])')}
+  ${r('4 رحلات مقناص، كل رحلة أيام', '6,000', '', 'اختيار لعب: 1,500 للرحلة (مخيم وبنزين)')}
+  ${r('بيع الصيد، وبيع الصقر بعدين', '0', '', 'بيع الصيد ممنوع [166]؛ والصقر ما لقينا له طريق بيع نظامي بعدين (الوكيل)')}
+  ${r('جوايز المسابقات', 'أغلب المرات 0', '', 'تقريبًا صقر من خمسة يفوز بشي، والمعدل حوالي 7,300 للصقر (أكثر من 38 مليون [170][176] على أكثر من 5,200 صقر [157]: تقدير)؛ الثالث بالمزاين 100,000 [177]', 'tot')}
+  </table>
+  <div class="q"><b>قرار المالك:</b> «تجارة ثانية»، وبكلامه «اصيده صيد وفيه طيور بس قيمتها عاليه جدًا»: يعني الطرح. والمدى فوق يوري إن التجارة حقيقية بس صعبة: أغلب المواسم ما فيها طير، والطير الغالي نادر.</div>`;
 };
 
 (async () => {
   const b = await chromium.launch();
-  const p = await b.newPage({ viewport: { width: 1500, height: 820 }, deviceScaleFactor: 1.5 });
+  const p = await b.newPage({ viewport: { width: 1500, height: 900 }, deviceScaleFactor: 1.5 });
   for (const [name, html, w] of [['season_calendar', calendar(), 1500], ['season_money', money(), 1300]]) {
-    await p.setViewportSize({ width: w, height: 820 });
+    await p.setViewportSize({ width: w, height: 900 });
     await p.setContent(html, { waitUntil: 'networkidle' });
     await p.evaluate(() => document.fonts.ready);
     const png = path.join(OUT, name + '.png');
