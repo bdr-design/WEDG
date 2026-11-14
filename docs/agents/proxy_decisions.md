@@ -180,6 +180,16 @@ lining up in columns, fonts loaded from the network) are fixed without asking. T
    checks are green, on two conditions checked first: the long press that enlarges the phone works exactly as
    before; any text field can still be typed in and edited.
 
+## Batch 4c: the vet contract's billing (from the second review of the rushing and calendar design)
+
+1. **When the fee is billed.** Answer: on signing, for the rest of that month pro rata by days, then on each 1st;
+   cancelling takes effect at the month's end, with no refund. The fee is paid from CASH ONLY: if cash does not
+   cover it, signing is refused (a retainer is not treatment; his rule puts the vet's treatment on account, and
+   putting the retainer there too would widen it). His option: the fee on account too.
+2. **A camel already sick at signing.** Answer: signing treats every camel sick at that moment, each at the
+   treatment's usual price, on account as the vet's treatment always may be.
+Under a contract each treatment still goes on account. All figures are marked game choices.
+
 ## Waiting for the owner
 
 - Batch 1, item 1's alternative reading of decision 13 (above).
