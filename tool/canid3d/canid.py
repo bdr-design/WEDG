@@ -367,7 +367,7 @@ class Canid:
         self.group = 'cleft_' + pts_name[-2:]
         for ty in (-0.22, 0.0, 0.22):
             c = sole + fwd * ((0.86 - 0.20) * plen * H) + v * (ty * pw * H) + n * (0.62 * ph * H)
-            self.add('legs', blob(block, c, (0.20 * plen * H, 0.05 * pw * H, 0.30 * ph * H), 8, 5, fwd, n))
+            self.add('legs', blob(block, c, (0.18 * plen * H, 0.065 * pw * H, 0.26 * ph * H), 10, 6, fwd, n))
         self.group = 'paw_' + pts_name[-2:]
         self.points[pts_name] = (sole, fwd, n)
         return sole + n * (0.72 * ph * H) - fwd * (0.06 * plen * H)

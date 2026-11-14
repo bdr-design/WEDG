@@ -52,7 +52,7 @@ def want(shot):
     return not SHOTS or shot in SHOTS.split(',')
 
 
-TARGET = {0: 5600, 1: 1300}       # the skin's triangles, close and far
+TARGET = {0: 7000, 1: 1300}       # the skin's triangles, close and far
 TEX = {0: 512, 1: 256}
 
 
@@ -69,10 +69,10 @@ def build(kind, pose):
     m1 = canid.Canid(spec, poses[pose], canid.Detail(1))
     m1.build()
     H = m.H
-    objs, hi = skin.skin_mesh(f'{kind}_{pose}', m.parts, H, H / 220.0, [TARGET[0], TARGET[1]])
-    out = {}
     o_, hd, hn, hv, Lh = m.head_frame
     head_c = o_ + hd * (0.45 * Lh)
+    objs, hi = skin.skin_mesh(f'{kind}_{pose}', m.parts, H, H / 220.0, [TARGET[0], TARGET[1]], head=(tuple(head_c), 0.75 * Lh))
+    out = {}
     for level in (0, 1):
         o = objs[TARGET[level]]
         src = m if level == 0 else m1
@@ -115,6 +115,8 @@ def build(kind, pose):
         print(f'{rname}.glb: {sum(t.values())} triangles; textures {", ".join(f"{w}x{h}" for _, w, h in imgs)}; '
               f'{nbytes / 1024:.0f} KB; {shells(o)} piece(s); the texture covers {cover * 100:.0f}% of its square')
         out[level] = (root, o)
+        for ch in [c for c in root.children if c.type == 'EMPTY']:
+            bpy.data.objects.remove(ch)          # (so the far file's points take the same names, not 'foot_fl.001')
     print(f'   the skin before decimation: {hi[0]} vertices, {hi[1]} triangles (voxel {H / 220.0:.2f} mm)')
     for line in measures(m, out[0][1]):
         print('   ' + line)
@@ -214,9 +216,14 @@ def measures(m, o):
     for k in ('foot_fl', 'foot_fr', 'foot_hl', 'foot_hr'):
         sole = np.array(tuple(m.points[k][0]))
         L = (S['forepaw'] if k[5] == 'f' else S['hindpaw'])[0] * H
-        sel = (np.linalg.norm((fc - sole)[:, :2], axis=1) < 0.75 * L) & (fc[:, 2] < sole[2] + 1.4 * S['forepaw'][2] * H)
+        sel = (np.linalg.norm((fc - sole)[:, :2], axis=1) < 0.70 * L) & (fc[:, 2] < sole[2] + 1.2 * S['forepaw'][2] * H)
         per.append(int(sel.sum()))
-    out.append('triangles per paw (fl, fr, hl, hr) ' + ', '.join(map(str, per)))
+    a_ = (fc - np.array(tuple(occ))) @ np.array(tuple(hd)) / Lh
+    rad = np.linalg.norm(np.cross(fc - np.array(tuple(occ)), np.array(tuple(hd))), axis=1)
+    headsel = (a_ > -0.08) & (a_ < 1.1) & (rad < 0.20 * H)
+    pawsum = sum(per)
+    out.append('triangles per paw (fl, fr, hl, hr) ' + ', '.join(map(str, per)) +
+               f'; paws {pawsum}, head (with the ears) {int(headsel.sum())}, body {len(Fv) - pawsum - int(headsel.sum())} of {len(Fv)}')
     lx = -0.16 * H
     seg = section(V, Fv, 0, lx)
     trunk = seg[seg[:, :, 2].min(1) > 0.3 * H] if len(seg) else seg

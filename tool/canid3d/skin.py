@@ -141,7 +141,9 @@ def field(parts, H, vox):
 def surface(F, origin, vox, blur=0.9, sharp=None):
     """Marching cubes on the lightly blurred field (kept sharp where [sharp] is 1): vertices (mm) and triangles."""
     Fb = ndimage.gaussian_filter(F, blur)
-    F = Fb if sharp is None else Fb * (1 - sharp) + F * sharp
+    # the paws less blurred (not raw: an unblurred field steps with the voxels, and the decimation spends its
+    # triangles on the steps)
+    F = Fb if sharp is None else Fb * (1 - sharp) + ndimage.gaussian_filter(F, PAW_BLUR) * sharp
     verts, faces, _, _ = measure.marching_cubes(F, 0.0, spacing=(vox, vox, vox))
     verts = verts + origin
     # drop the small shells: hollows left inside the body where pieces meet (never seen)
@@ -188,10 +190,12 @@ def apply_mods(o, mods):
     return o
 
 
-PAW_SPARE = 0.15          # the close skin's decimation spares the paws (their weight 1 - this)
+PAW_SPARE = 0.06          # the close skin's decimation spares the paws a little (their weight 1 - this) ...
+HEAD_SPARE = 0.04         # ... and the head more: the face matters more than the paws at every distance
+PAW_BLUR = 0.5
 
 
-def skin_mesh(name, parts, H, vox, targets, ground=True):
+def skin_mesh(name, parts, H, vox, targets, ground=True, head=None):
     """The skin at each target triangle count: {target: Blender object}."""
     F, lo, vox, sharp = field(parts, H, vox)
     verts, faces = surface(F, lo, vox, sharp=sharp)
@@ -203,6 +207,10 @@ def skin_mesh(name, parts, H, vox, targets, ground=True):
     wp = sharp[idx[:, 0], idx[:, 1], idx[:, 2]]
     vg = base.vertex_groups.new(name='body')
     body = 1.0 - PAW_SPARE * np.clip(wp * 1.5, 0, 1)
+    if head is not None:
+        hc, hr = head
+        dh = np.linalg.norm(verts - np.array(hc), axis=1)
+        body -= HEAD_SPARE * np.clip((1.3 * hr - dh) / (0.4 * hr), 0, 1)
     for w in np.unique(np.round(body, 2)):
         sel = np.nonzero(np.round(body, 2) == w)[0].tolist()
         if w > 0:
@@ -290,10 +298,10 @@ def vertex_normals(V, Fv):
     return vn / np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-12)
 
 
-MARGIN = 0.006       # between islands and at the layout's border (a fraction of the layout): 3 texels at 512 px
+MARGIN = 0.006       # the projection's margin between islands; the packer's own is 0.004 of an island's scale
 
 
-def unwrap(o, head_c_mm, head_r_mm, gain=2.4):
+def unwrap(o, head_c_mm, head_r_mm, gain=2.0):
     """Smart projection on a copy whose head is swollen [gain] times (so the head gets that much more texture per
     millimetre), the texture places copied back by loop."""
     tmp = o.copy()
@@ -318,10 +326,10 @@ def unwrap(o, head_c_mm, head_r_mm, gain=2.4):
     tmp.select_set(True)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=MARGIN, area_weight=0.0,
+    bpy.ops.uv.smart_project(angle_limit=math.radians(62), island_margin=MARGIN, area_weight=0.0,
                              correct_aspect=True, scale_to_bounds=False)
     bpy.ops.uv.select_all(action='SELECT')
-    bpy.ops.uv.pack_islands(rotate=True, margin_method='FRACTION', margin=MARGIN)
+    bpy.ops.uv.pack_islands(rotate=True, margin=0.004)
     bpy.ops.object.mode_set(mode='OBJECT')
     uv = np.empty(len(me.loops) * 2, np.float32)
     me.uv_layers.active.data.foreach_get('uv', uv)

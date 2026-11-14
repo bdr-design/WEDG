@@ -81,6 +81,9 @@ class Coat:
         self.hf = (np.array(tuple(o)), np.array(tuple(hd)), np.array(tuple(hn)), np.array(tuple(hv)), Lh)
         self.eyes = []
         self.er = rest.S['eye'][3] * self.H
+        # the almond's height to its length: the dog's eye is set more to the front, so it is opened wider for the
+        # front view to read it as open
+        self.eye_open = 0.52 if kind.startswith('wolf') else 0.78
         for sg, side in ((1, 'l'), (-1, 'r')):
             c = np.array(tuple(rest.points['eye_' + side]))
             out = np.radians(rest.S['eye_out'])
@@ -172,8 +175,6 @@ class Coat:
             for e, look in self.eyes:
                 q = e + self.hf[2] * (0.030 * H) - self.hf[1] * (0.01 * self.hf[4])
                 col = mix(col, pal['pale'], 0.7 * sstep(0.024 * H, 0.010 * H, np.linalg.norm(P - q, axis=-1)))
-                q = e + self.hf[1] * (0.06 * self.hf[4]) - self.hf[2] * (0.010 * H)
-                col = mix(col, pal['dark'], 0.40 * sstep(0.015 * H, 0.005 * H, np.linalg.norm(P - q, axis=-1)))
         else:
             col = mix(col, col * 0.85, sstep(0.75, 0.95, a))                         # the muzzle's end darker
         col = self.eye(P, col)
@@ -186,8 +187,10 @@ class Coat:
         rows = self.rest.S['head']
         ta = np.array([r[0] for r in rows])
         lip = np.array([r[1] - r[3] for r in rows])          # the upper head's lower edge (H)
-        bl = np.interp(a, ta, lip) + 0.004
-        on = sstep(0.0045, 0.0015, np.abs(b - bl)) * sstep(0.44, 0.52, a) * sstep(1.0, 0.95, a)
+        # the line runs straight back to the mouth's corner (a curl up at its end would read as a grin)
+        a0 = 0.62
+        bl = np.interp(np.maximum(a, a0), ta, lip) + 0.004 - 0.02 * np.clip(a0 - a, 0, None)
+        on = sstep(0.0045, 0.0015, np.abs(b - bl)) * sstep(0.50, 0.56, a) * sstep(1.0, 0.95, a)
         return mix(col, C(0.05, 0.045, 0.04), on)
 
     def eye(self, P, col):
@@ -196,9 +199,15 @@ class Coat:
         o, hd, hn, hv, Lh = self.hf
         for (e, look), sg in zip(self.eyes, (1, -1)):
             q = P - e
-            a = q @ hd
+            if self.eye_open > 0.6:
+                # the dog's almond laid out in the plane its eye looks out of, so it reads open from the front
+                across = np.cross(hn, look)
+                across /= np.linalg.norm(across)
+                a = q @ across * sg
+            else:
+                a = q @ hd
             b = q @ hn + 0.22 * a
-            d = np.sqrt(a * a + (b / 0.52) ** 2) / self.er
+            d = np.sqrt(a * a + (b / self.eye_open) ** 2) / self.er
             # painted by its place along and up the head only, on its own side: the eye sits a little into the
             # cheek's fur, so its almond is laid on the surface over it, not on the bulge's own curve
             front = sstep(0.0, 0.3, -(P - o) @ hv * sg / self.er)
@@ -224,7 +233,7 @@ class Coat:
             if self.mouth_open:
                 col = mix(col, black, sstep(0.30, 0.50, top) * sstep(0.80, 0.62, top) * sstep(0.40, 0.50, a))
             else:
-                col = mix(col, black, sstep(0.25, 0.50, top) * sstep(0.40, 0.50, a))      # shut: the lower lip's edge
+                col = mix(col, black, sstep(0.25, 0.50, top) * sstep(0.56, 0.62, a))      # shut: the lower lip's edge
             if self.mouth_open:
                 col = mix(col, C(0.55, 0.28, 0.30), sstep(0.70, 0.90, top))          # the tongue and gums
         else:
@@ -284,7 +293,8 @@ class Coat:
         elif block == 'ear':
             base = self.ears[0] if group.endswith('_l') else self.ears[1]
             h = (P - base) @ self.hf[2] / (self.rest.S['ear'][0] * H)
-            col = mix(self.head(P, N, 'head', Ph), self.ear(P, N), sstep(0.10, 0.30, h))
+            lat = np.abs((P - self.hf[0]) @ self.hf[3]) / H         # (not on the crown between the ears)
+            col = mix(self.head(P, N, 'head', Ph), self.ear(P, N), sstep(0.10, 0.30, h) * sstep(0.025, 0.045, lat))
         elif block == 'tail':
             col = mix(trunk, self.tail(P, N, S), sstep(0.0, 0.15, S))
         else:

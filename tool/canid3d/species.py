@@ -176,6 +176,7 @@ DOG.update(
     ],
     nose=(0.985, -0.020, 0.026),
     eye=(0.53, 0.040, 0.058, 0.0160),
+    eye_out=40.0,
     # erect, broad at the base, rounded tips (the Canaan standard)
     ear=(0.135, 0.125, 0.015),
     ear_base=(0.18, 0.056, 0.085),
@@ -217,7 +218,8 @@ DOG_POSES = {
                           hind_l=dict(x=-0.20, y=0.150, meta=86, paw=4, paw_y=0.0, n=(0, 0, 1), pole=(1, 0.5, 0.1), meta_y=0.0),
                           hind_r=dict(x=-0.22, y=0.150, meta=86, paw=4, n=(0, 0, 1), pole=(1, 0.5, 0.1)))),
     # barking at something: weight forward, forelegs braced ahead, head out level, mouth open, ears forward
-    'bark': dict(drop=0.04, pitch=-5, neck=30, head=2, jaw=26,
+    # (alarm, not play: the ears pricked forward, the mouth's corners drawn back level)
+    'bark': dict(drop=0.04, pitch=-5, neck=30, head=2, jaw=26, ears_back=-10,
                  legs=dict(fore_l=dict(x=0.47, meta=8), fore_r=dict(x=0.44, meta=10),
                            hind_l=dict(x=-0.56, meta=12), hind_r=dict(x=-0.52, meta=10))),
 }
@@ -225,7 +227,7 @@ DOG_POSES = {
 # the stray: the same body as the guard dog, another coat; wary, tail low, no collar
 STRAY_POSES = {
     'alert': dict(neck=40, head=20, tail=[62, 75, 82, 84, 84], collar=False),
-    'bark': dict(DOG_POSES['bark'], tail=[30, 50, 66, 74, 78], collar=False, ears_back=10),
+    'bark': dict(DOG_POSES['bark'], tail=[30, 50, 66, 74, 78], collar=False, ears_back=-6),
 }
 
 # the stray's body: the guard dog's build in poor condition (a game choice of how thin): the loin and belly tucked up,
