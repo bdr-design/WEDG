@@ -248,18 +248,25 @@ class Canid:
         self.add('head', piece('nose', nsecs, 12 if d.level == 0 else 6, shapes=self.shapes))
         self.points['nose'] = nc + hd * (nr * H * 0.8)
 
-        # eyes: each a short loft along its look, the pupil at its end
+        # eyes: their places and looks; the socket, the ball and the lids are made on the skin (skin.carve)
         et, ecz, ey, er = S['eye']
+        self.face = dict(eyes=[], lips=[])
         for side, sg in (('l', 1), ('r', -1)):
             c = o + hd * (et * Lh) + hn * (ecz * H) - hv * (sg * ey * H)
             look = (hd * math.cos(math.radians(S['eye_out'])) - hv * (sg * math.sin(math.radians(S['eye_out'])))).normalized()
             self.points['eye_' + side] = c
-            if d.eye_ring:
-                u, v = frame(look, hn)
-                r = er * H
-                secs = [Sec(c + look * (r * f), u, v, r * k * 0.72, r * k * 0.72, r * k, r * k) for f, k in
-                        ((-0.9, 0.42), (-0.5, 0.86), (0.0, 1.0), (0.5, 0.86), (0.9, 0.42))]
-                self.add('head', piece('eye', secs, d.eye_ring, shapes=self.shapes))
+            out = (-hv * (sg * 0.85) + hd * 0.45 + hn * 0.15).normalized()
+            self.face['eyes'].append(dict(c=tuple(c), out=tuple(out), up=tuple(hn), r=0.9 * er * H, look=tuple(look)))
+        # the mouth's groove: along the upper lip's edge on each side, from the corner to under the nose
+        rows = S['head']
+        ta = [r_[0] for r_ in rows]
+        lip = [r_[1] - r_[3] + 0.004 for r_ in rows]
+        for sg in (1, -1):
+            path = []
+            for t in np.linspace(0.58, 0.95, 9):
+                b = float(np.interp(t, ta, lip))
+                path.append((tuple(o + hd * (t * Lh) + hn * (b * H)), tuple(-hv * sg)))
+            self.face['lips'].append(path)
 
         # ears: each a cupped blade from its base on the skull to the tip, turned by the pose
         self.ears(o, hd, hn, hv, Lh)

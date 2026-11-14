@@ -57,7 +57,7 @@ def tri_frames(V, T):
     return np.stack([e1, e2, n], 1)                 # rows: the triangle's axes
 
 
-def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
+def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H, eyes=()):
     """[obj]: the skin (and any extra pieces after face n_skin_faces, their blocks in [extra_blocks] as
     (first_face, block)). Returns (colour, normal) as [size, size, 3] float arrays, v up (Blender's images)."""
     V, Fv = skin.mesh_arrays(obj)
@@ -105,7 +105,21 @@ def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
         Pr[sel] = P[sel]
         Nr[sel] = N[sel]
         ST[sel] = 0.5
-    coat = paint.Coat(kind, rest, mouth_open=posed.P.get('jaw', 0.0) > 5)
+        if block == 'eyeball' and len(eyes):
+            # on the ball: S how far toward its look (the iris and pupil there), T toward the highlight
+            balls = np.array([e['ball'] for e in eyes])
+            which = np.argmin(np.linalg.norm(P[sel][:, None] - balls[None], axis=-1), axis=1)
+            for i, e in enumerate(eyes):
+                ss = np.nonzero(sel)[0][which == i]
+                look = e['look'] * 0.5 + e['out'] * 0.5
+                look /= np.linalg.norm(look)
+                hl = look + e['up'] * 0.45 + e['across'] * 0.15
+                hl /= np.linalg.norm(hl)
+                dirn = P[ss] - e['ball']
+                dirn /= np.maximum(np.linalg.norm(dirn, axis=1, keepdims=True), 1e-9)
+                ST[ss, 0] = dirn @ look
+                ST[ss, 1] = dirn @ hl
+    coat = paint.Coat(kind, rest, mouth_open=posed.P.get('jaw', 0.0) > 5, eye_balls=bool(len(eyes)) and size >= 512)
     # the skin's own place carried rigidly with the head from the pose to the standing animal: the eyes and the lips
     # are painted by it (the nearest piece's surface would shift them where the cheek's fur covers the eye)
     def axes(m):
@@ -114,6 +128,9 @@ def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
     op, Ap = axes(posed)
     orr, Ar = axes(rest)
     Ph = orr + ((P - op) @ Ap.T) @ Ar
+    if coat.eye_balls:
+        # the painted socket's rim round each modelled ball, the ball's place carried to the standing animal
+        coat.eyes = [(orr + ((e['ball'] - op) @ Ap.T) @ Ar, look) for e, (_, look) in zip(eyes, coat.eyes)]
     import os
     if os.environ.get('CANID_DEBUG'):
         np.savez(os.environ['CANID_DEBUG'], P=P, Pr=Pr, Nr=Nr, blocks=blocks.astype(str), groups=groups.astype(str), ST=ST)

@@ -22,7 +22,7 @@ from mathutils.bvhtree import BVHTree
 from scipy import ndimage
 from skimage import measure
 
-SKIN_GROUPS_EXCLUDED = ('teeth', 'collar')
+SKIN_GROUPS_EXCLUDED = ('teeth', 'collar', 'eyeball', 'lid')
 
 
 def smin(a, b, k):
@@ -90,7 +90,7 @@ def sdf_of(occ, vox):
 
 
 # the blend radius (mm, as a fraction of the withers height) each group joins the rest with
-BLEND = {'cleft': 0.004, 'torso': 0.0, 'neck': 0.045, 'head': 0.040, 'tail': 0.018, 'fore': 0.034, 'hind': 0.040, 'paw': 0.012, 'ear': 0.008}
+BLEND = {'cleft': 0.009, 'torso': 0.0, 'neck': 0.045, 'head': 0.040, 'tail': 0.018, 'fore': 0.034, 'hind': 0.040, 'paw': 0.012, 'ear': 0.008}
 
 
 def groups_of(parts):
@@ -145,7 +145,7 @@ def surface(F, origin, vox, blur=0.9, sharp=None):
     # triangles on the steps)
     F = Fb if sharp is None else Fb * (1 - sharp) + ndimage.gaussian_filter(F, PAW_BLUR) * sharp
     verts, faces, _, _ = measure.marching_cubes(F, 0.0, spacing=(vox, vox, vox))
-    verts = verts + origin
+    verts = verts + origin + 0.5 * vox                  # (a voxel's value is at its centre)
     # drop the small shells: hollows left inside the body where pieces meet (never seen)
     from scipy.sparse import coo_matrix
     from scipy.sparse.csgraph import connected_components
@@ -195,9 +195,116 @@ HEAD_SPARE = 0.04         # ... and the head more: the face matters more than th
 PAW_BLUR = 0.5
 
 
-def skin_mesh(name, parts, H, vox, targets, ground=True, head=None):
-    """The skin at each target triangle count: {target: Blender object}."""
+def sample(F, lo, vox, P):
+    idx = ((np.atleast_2d(P) - lo) / vox - 0.5).T
+    return ndimage.map_coordinates(F, idx, order=1, mode='nearest')
+
+
+def to_surface(F, lo, vox, start, direction, reach):
+    """The first point outward from [start] along [direction] where the field turns positive (the skin)."""
+    t = np.arange(0.0, reach, 0.4)
+    pts = np.array(start)[None] + np.array(direction)[None] * t[:, None]
+    v = sample(F, lo, vox, pts)
+    out = np.nonzero(v > 0)[0]
+    k = out[0] if len(out) else len(t) - 1
+    return pts[k]
+
+
+def crop(F, lo, vox, centre, half):
+    g0 = np.maximum(np.floor((np.array(centre) - half - lo) / vox).astype(int), 0)
+    g1 = np.minimum(np.ceil((np.array(centre) + half - lo) / vox).astype(int), np.array(F.shape))
+    sl = tuple(slice(a, b) for a, b in zip(g0, g1))
+    grids = np.meshgrid(*[lo[i] + (np.arange(g0[i], g1[i]) + 0.5) * vox for i in range(3)], indexing='ij')
+    return sl, np.stack(grids, -1)
+
+
+def carve(F, lo, vox, H, face):
+    """The face's modelled details cut into the field: each eye's socket (an almond opening, the eyeball set into
+    it) and the groove along each side of the mouth. Returns the eyes' places: (ball centre, radius, axes)."""
+    eyes = []
+    for e in face.get('eyes', []):
+        c, out, up, r = (np.array(e[k]) if k != 'r' else e[k] for k in ('c', 'out', 'up', 'r'))
+        surf = to_surface(F, lo, vox, c, out, 0.12 * H)
+        ball = surf - out * (0.82 * r)                  # the ball's front just proud of the skin
+        up = up - out * (up @ out)
+        up /= np.linalg.norm(up)
+        across = np.cross(up, out)
+        sl, Q = crop(F, lo, vox, ball, 2.5 * r)
+        q = Q - ball
+        rad = np.array([1.02 * r, 0.62 * r, 0.80 * r])  # the opening: long across, low, shallower than the ball
+        k3 = np.stack([q @ across / rad[0], q @ up / rad[1], q @ out / rad[2]], -1)
+        d = (np.linalg.norm(k3, axis=-1) - 1.0) * rad.min()
+        F[sl] = -smin(-F[sl], d, 0.25 * r)
+        eyes.append(dict(ball=ball, r=r, out=out, up=up, across=across, look=np.array(e['look'])))
+    for path in face.get('lips', []):
+        pts = np.array([to_surface(F, lo, vox, a, d, 0.10 * H) for a, d in path])
+        rg = 0.0042 * H
+        cen = pts.mean(0)
+        half = np.abs(pts - cen).max(0).max() + 4 * rg
+        sl, Q = crop(F, lo, vox, cen, half)
+        dmin = np.full(Q.shape[:-1], 1e9)
+        for a, b in zip(pts, pts[1:]):
+            ab = b - a
+            t = np.clip(((Q - a) @ ab) / max(ab @ ab, 1e-9), 0, 1)
+            dmin = np.minimum(dmin, np.linalg.norm(Q - (a + t[..., None] * ab), axis=-1))
+        F[sl] = -smin(-F[sl], dmin - rg, 0.5 * rg)
+    return eyes
+
+
+def eye_pieces(eyes, n=10):
+    """Each eye: the ball (lofted along its look so its texture runs from the back to the pupil) and the lids, a
+    thin almond rim along the opening with a dark edge."""
+    from common import Piece, Sec, loft
+    out = []
+    for e in eyes:
+        c, r = e['ball'], e['r']
+        look = e['look'] * 0.5 + e['out'] * 0.5
+        look /= np.linalg.norm(look)
+        u = e['up'] - look * (e['up'] @ look)
+        u /= np.linalg.norm(u)
+        v = np.cross(look, u)
+        secs = []
+        for f in (-0.92, -0.6, -0.2, 0.25, 0.6, 0.85, 0.97):
+            k = math.sqrt(max(1 - f * f, 0.0))
+            secs.append(Sec(tuple(c + look * (f * r)), tuple(u), tuple(v), k * r, k * r, k * r, k * r))
+        pc = loft('eyeball', secs, n)
+        pc.group = 'eyeball'
+        out.append(pc)
+        # the lids: an almond ring a little outside the ball, along the opening's rim
+        o_, up, ac = e['out'], e['up'], e['across']
+        ring = []
+        m = 16
+        for j in range(m):
+            ph = 2 * math.pi * j / m
+            ring.append(c + o_ * (0.74 * r) + ac * (math.cos(ph) * 0.80 * r) + up * (math.sin(ph) * 0.50 * r))
+        lid = Piece('lid')
+        rr = 0.13 * r
+        rings = []
+        for j in range(m):
+            p0, p1 = ring[j - 1], ring[(j + 1) % m]
+            t = (p1 - p0) / np.linalg.norm(p1 - p0)
+            a1 = o_ - t * (o_ @ t)
+            a1 /= np.linalg.norm(a1)
+            a2 = np.cross(t, a1)
+            rings.append([lid.vert(tuple(ring[j] + (a1 * math.cos(2 * math.pi * k / 4) + a2 * math.sin(2 * math.pi * k / 4)) * rr))
+                          for k in range(4)])
+        for j in range(m):
+            j1 = (j + 1) % m
+            for k in range(4):
+                k1 = (k + 1) % 4
+                s0, s1 = j / m, (j + 1) / m
+                lid.tri(rings[j][k], rings[j1][k], rings[j1][k1], (s0, k / 4), (s1, k / 4), (s1, k1 / 4))
+                lid.tri(rings[j][k], rings[j1][k1], rings[j][k1], (s0, k / 4), (s1, k1 / 4), (s0, k1 / 4))
+        lid.outward()
+        lid.group = 'lid'
+        out.append(lid)
+    return out
+
+
+def skin_mesh(name, parts, H, vox, targets, ground=True, head=None, face=None):
+    """The skin at each target triangle count: {target: Blender object}; and the eyes' pieces."""
     F, lo, vox, sharp = field(parts, H, vox)
+    eyes = carve(F, lo, vox, H, face or {})
     verts, faces = surface(F, lo, vox, sharp=sharp)
     if ground:
         verts[:, 2] = np.maximum(verts[:, 2], 0.0)      # pressed flat where it touches the ground
@@ -245,7 +352,7 @@ def skin_mesh(name, parts, H, vox, targets, ground=True, head=None):
             me.update()
         out[t] = o
     bpy.data.objects.remove(base)
-    return out, (len(verts), len(faces))
+    return out, (len(verts), len(faces)), eyes
 
 
 def add_pieces(o, pieces):

@@ -71,13 +71,17 @@ def build(kind, pose):
     H = m.H
     o_, hd, hn, hv, Lh = m.head_frame
     head_c = o_ + hd * (0.45 * Lh)
-    objs, hi = skin.skin_mesh(f'{kind}_{pose}', m.parts, H, H / 220.0, [TARGET[0], TARGET[1]], head=(tuple(head_c), 0.75 * Lh))
+    objs, hi, eyes = skin.skin_mesh(f'{kind}_{pose}', m.parts, H, H / 220.0, [TARGET[0], TARGET[1]], head=(tuple(head_c), 0.75 * Lh),
+                                    face=m.face)
+    eye_pcs = skin.eye_pieces(eyes)
     out = {}
     for level in (0, 1):
         o = objs[TARGET[level]]
         src = m if level == 0 else m1
         extras = [pc for k in sorted(src.parts) for pc in src.parts[k] if getattr(pc, 'group', '') in skin.SKIN_GROUPS_EXCLUDED]
-        if level == 1:
+        if level == 0:
+            extras = extras + eye_pcs
+        else:
             extras = [pc for pc in extras if pc.block == 'collar']
         n_skin = len(o.data.polygons)
         blocks, first = [], n_skin
@@ -103,7 +107,7 @@ def build(kind, pose):
         print(f'   texel size: body {np.sqrt(a3[~nearhead].sum() / a2[~nearhead].sum()):.1f} mm, head '
               f'{np.sqrt(a3[nearhead].sum() / a2[nearhead].sum()):.1f} mm ({TEX[level]} px)')
         print(f'   texture layout level {level}: no overlapping triangles (checked at 2048 px); {edge} faces touch its border')
-        col, nrm, cover = texture.bake(coat, m, rest, o, UV, n_skin, blocks, TEX[level], H)
+        col, nrm, cover = texture.bake(coat, m, rest, o, UV, n_skin, blocks, TEX[level], H, eyes)
         if level == 0 and os.environ.get('CANID_ATLAS'):
             from PIL import Image
             Image.fromarray((np.clip(col[::-1], 0, 1) * 255).astype('uint8')).save(os.path.join(OUT, f'atlas_{kind}_{pose}.png'))

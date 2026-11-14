@@ -71,9 +71,10 @@ PALETTES['wolf_winter'] = PALETTES['wolf']
 class Coat:
     """One animal's coat. [rest]: the standing animal (canid.Canid, alert pose)."""
 
-    def __init__(self, kind, rest, mouth_open=False):
+    def __init__(self, kind, rest, mouth_open=False, eye_balls=False):
         self.kind = kind
         self.mouth_open = mouth_open
+        self.eye_balls = eye_balls       # the close model has modelled eyes: the skin gets only the socket's shadow
         self.pal = PALETTES[kind]
         self.rest = rest
         self.H = rest.H
@@ -135,8 +136,10 @@ class Coat:
             col = mix(col, pal['dark'], pal['bar'] * bar * (0.5 + 0.5 * streak))
         if pal['dust']:
             col = mix(col, C(0.66, 0.58, 0.47), pal['dust'] * 0.7 * sstep(-0.2, -0.7, up))
-            mott = noise3(P, 40.0, 5)
-            col = mix(col, pal['dark'], 0.30 * sstep(0.1, 0.5, mott) * sstep(-0.1, 0.5, up))
+            # a dusty, uneven coat: small soft patches of darker hair, not spots
+            mott = 0.6 * noise3(P, 16.0, 5) + 0.4 * noise3(P, 7.0, 6)
+            col = mix(col, pal['dark'], 0.22 * sstep(-0.1, 0.6, mott) * sstep(-0.2, 0.5, up))
+            col = mix(col, C(0.70, 0.62, 0.50), 0.18 * sstep(0.2, 0.7, noise3(P, 25.0, 8)))   # dust caught in the coat
         return col
 
     def leg(self, P, N, hind):
@@ -152,7 +155,7 @@ class Coat:
         if pal['white_feet']:
             col = mix(col, pal['pale'], sstep(0.17, 0.11, z))
         if pal['dust']:
-            col = mix(col, C(0.62, 0.55, 0.44), pal['dust'] * 1.2 * sstep(0.30, 0.06, z))
+            col = mix(col, C(0.64, 0.57, 0.46), pal['dust'] * 1.6 * sstep(0.34, 0.05, z) * (0.75 + 0.25 * noise3(P, 9.0, 9)))
         return col
 
     def toes(self, col, S, N):
@@ -190,7 +193,7 @@ class Coat:
         # the line runs straight back to the mouth's corner (a curl up at its end would read as a grin)
         a0 = 0.62
         bl = np.interp(np.maximum(a, a0), ta, lip) + 0.004 - 0.02 * np.clip(a0 - a, 0, None)
-        on = sstep(0.0045, 0.0015, np.abs(b - bl)) * sstep(0.50, 0.56, a) * sstep(1.0, 0.95, a)
+        on = 0.85 * sstep(0.0034, 0.0010, np.abs(b - bl)) * sstep(0.56, 0.62, a) * sstep(1.0, 0.95, a)
         return mix(col, C(0.05, 0.045, 0.04), on)
 
     def eye(self, P, col):
@@ -211,6 +214,8 @@ class Coat:
             # painted by its place along and up the head only, on its own side: the eye sits a little into the
             # cheek's fur, so its almond is laid on the surface over it, not on the bulge's own curve
             front = sstep(0.0, 0.3, -(P - o) @ hv * sg / self.er)
+            if self.eye_balls:
+                continue                     # (the modelled ball and its dark lids are the eye: nothing painted here)
             iris = sstep(0.86, 0.70, d) * front
             col = mix(col, C(0.06, 0.05, 0.045), sstep(1.10, 0.95, d) * front)                   # the lids' dark rim
             col = mix(col, self.pal['iris'] * 0.9, iris)
@@ -222,7 +227,9 @@ class Coat:
         o, hd, hn, hv, Lh = self.hf
         nose = np.array(tuple(self.rest.points['nose']))
         nr = self.rest.S['nose'][2] * self.H
-        col = mix(col, black * 1.2, sstep(nr * 1.6, nr * 1.3, np.linalg.norm(P - nose, axis=-1)))
+        col = mix(col, black * 0.9, sstep(nr * 1.6, nr * 1.3, np.linalg.norm(P - nose, axis=-1)))
+        sheen = nose + hn * (nr * 0.55) - hd * (nr * 0.3)
+        col = mix(col, C(0.30, 0.30, 0.32), 0.6 * sstep(nr * 0.45, nr * 0.1, np.linalg.norm(P - sheen, axis=-1)))   # the wet nose's sheen
         for sg in (1, -1):                                   # the nostrils: two dark commas on the pad's front
             q = nose - hv * (sg * nr * 0.45) - hn * (nr * 0.1) - hd * (nr * 0.2)
             col = mix(col, C(0.0, 0.0, 0.0), sstep(nr * 0.38, nr * 0.22, np.linalg.norm(P - q, axis=-1)))
@@ -233,23 +240,33 @@ class Coat:
             if self.mouth_open:
                 col = mix(col, black, sstep(0.30, 0.50, top) * sstep(0.80, 0.62, top) * sstep(0.40, 0.50, a))
             else:
-                col = mix(col, black, sstep(0.25, 0.50, top) * sstep(0.56, 0.62, a))      # shut: the lower lip's edge
+                col = mix(col, black, sstep(0.25, 0.50, top) * sstep(0.56, 0.60, a) * sstep(0.70, 0.64, a))      # shut: the lower lip's edge near the corner
             if self.mouth_open:
                 col = mix(col, C(0.55, 0.28, 0.30), sstep(0.70, 0.90, top))          # the tongue and gums
         else:
             under = sstep(-0.45, -0.80, N[..., 2] * 0.85 + 0.15 * N[..., 0])
-            mouth = under * sstep(0.56, 0.62, a)
+            mouth = under * sstep(0.56, 0.62, a) * sstep(0.97, 0.90, a)
             col = mix(col, black, sstep(0.05, 0.25, mouth) * sstep(0.55, 0.35, mouth))   # the lips' thin dark line
             if self.mouth_open:
                 col = mix(col, C(0.42, 0.22, 0.22), sstep(0.55, 0.9, mouth))         # the roof of the mouth
         return col
 
-    def ear(self, P, N):
+    def ear(self, P, N, S=None, T=None):
         pal = self.pal
         fwd = N[..., 0]
         col = mix(pal['tawny'] * 0.96, pal['pale'], sstep(-0.05, 0.40, fwd))           # pale fur inside
         e = sstep(0.60, 0.88, np.abs(N[..., 1]) + 0.2 * np.abs(N[..., 2]))
-        return mix(col, pal['dark'], 0.5 * e * sstep(0.2, -0.2, fwd))                    # the dark edge behind
+        col = mix(col, pal['dark'], 0.5 * e * sstep(0.2, -0.2, fwd))                     # the dark edge behind
+        if S is not None:
+            # on the ear's own blade: T round it (0.75 its front face), S up it
+            front = sstep(0.0, 0.6, -np.sin(2 * np.pi * T))
+            edge = np.abs(np.cos(2 * np.pi * T))
+            hollow = front * sstep(0.55, 0.15, edge) * sstep(0.75, 0.35, S)
+            col = mix(col, pal['dark'] * 1.3, 0.75 * hollow)                              # dark deep in the hollow
+            tuft = front * sstep(0.45, 0.80, edge) * sstep(0.05, 0.18, S) * sstep(0.75, 0.55, S)
+            n = noise3(P / np.array([1.0, 1.0, 3.0], np.float32), 1.2, 41)
+            col = mix(col, C(0.93, 0.91, 0.87), tuft * sstep(-0.2, 0.4, n))               # pale hair tufts at the rim
+        return col
 
     def tail(self, P, N, S):
         pal = self.pal
@@ -276,6 +293,18 @@ class Coat:
             return np.broadcast_to(C(0.55, 0.55, 0.57), P.shape).copy()
         if block == 'teeth':
             return np.broadcast_to(C(0.88, 0.85, 0.76), P.shape).copy()
+        if block == 'eyeball':
+            # the iris (the wolf's amber, the dog's dark brown) round a dark round pupil, a rim of darker iris, the
+            # rest of the ball dark (a canid shows almost no white); a painted catch-light (one material: no gloss)
+            col = np.broadcast_to(C(0.10, 0.07, 0.05), P.shape).copy()
+            iris = sstep(0.62, 0.70, S)
+            col = mix(col, self.pal['iris'] * 0.75, iris)
+            col = mix(col, self.pal['iris'], sstep(0.74, 0.84, S))
+            col = mix(col, C(0.02, 0.02, 0.02), sstep(0.90, 0.93, S))
+            col = mix(col, C(0.95, 0.95, 0.92), sstep(0.975, 0.99, T))
+            return col
+        if block == 'lid':
+            return np.broadcast_to(C(0.05, 0.04, 0.035), P.shape).copy()
         trunk = self.trunk(P, N)
         if block == 'body':
             col = trunk
@@ -294,7 +323,7 @@ class Coat:
             base = self.ears[0] if group.endswith('_l') else self.ears[1]
             h = (P - base) @ self.hf[2] / (self.rest.S['ear'][0] * H)
             lat = np.abs((P - self.hf[0]) @ self.hf[3]) / H         # (not on the crown between the ears)
-            col = mix(self.head(P, N, 'head', Ph), self.ear(P, N), sstep(0.10, 0.30, h) * sstep(0.025, 0.045, lat))
+            col = mix(self.head(P, N, 'head', Ph), self.ear(P, N, S, T), sstep(0.10, 0.30, h) * sstep(0.025, 0.045, lat))
         elif block == 'tail':
             col = mix(trunk, self.tail(P, N, S), sstep(0.0, 0.15, S))
         else:
@@ -307,7 +336,7 @@ class Coat:
 
     def height(self, P, block):
         """The fur's relief (mm) for the normal map: fine streaks along the hair's run and a coarser lie of the coat."""
-        if block in ('collar', 'ring', 'teeth'):
+        if block in ('collar', 'ring', 'teeth', 'eyeball', 'lid'):
             return np.zeros(P.shape[:-1], np.float32)
         run = RUN_DOWN if block in LEG_BLOCKS or block == 'tail' else RUN_TRUNK
         q = P / run
