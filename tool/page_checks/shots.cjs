@@ -51,7 +51,7 @@ fs.mkdirSync(OUT, { recursive: true });
     await p.evaluate(() => { document.querySelector('#pop .x')?.click(); if (window.__phone.state === 'closed') window.__phone.toggle(); window.__phone.enlarge(); });
     await p.evaluate(async () => { for (let i = 0; i < 6; i++) { const b = R().querySelector('.back'); if (!b) break; b.click(); await new Promise((r) => setTimeout(r, 150)); } });
     let ok = true;
-    for (const step of sc.split('>')) {
+    for (const step of sc === 'home' ? [] : sc.split('>')) {
       ok = await p.evaluate((s) => { const e = s.startsWith('tab ') ? R().querySelector(`[data-act="tab"][data-p="${s.slice(4)}"]`) : R().querySelector(`[data-go="${s}"]`); if (!e) return false; e.click(); return true; }, step);
       if (!ok) break;
       await p.waitForFunction(() => !/يجهّز/.test(window.T()), null, { timeout: 30000 }).catch(() => {});

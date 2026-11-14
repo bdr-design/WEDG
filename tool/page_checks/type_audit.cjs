@@ -7,6 +7,8 @@
 //          treatment man's chat has its message; the map's cards; the meter
 //   short  the save scratchpad/t10/saves/short.json (feed and water short, on account) if SAVES names its folder
 //   found  the save found.json (a treatment found: الحراج's card)
+//   day    a new game on the fast clock, the start's camel entered and played to her round's day, past it and to its
+//          result (the round-day and result screens)
 // Output: OUT/audit_<phase>.json (every surface's findings) and a table on stdout (tool/page_checks/type_table.cjs
 // prints the before/after table from two OUT folders).
 //
@@ -17,15 +19,17 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 8940, OUT = process.env.OUT || '.', SAVES = process.env.SAVES || '';
-const PHASES = (process.env.PHASES || 'new,short,found').split(',');
+const PHASES = (process.env.PHASES || 'new,short,found,day').split(',');
 const LAUNCH = { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] };
 const AUDIT = path.join(__dirname, 'type_audit.js');
 fs.mkdirSync(OUT, { recursive: true });
 const log = (...a) => console.log(...a);
 
-async function openPage(b, save) {
+async function openPage(b, save, timeScale = 0) {
   const ctx = await b.newContext({ viewport: { width: 956, height: 440 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
+  // (the fast clock for the round's day: a game day in about 4 s)
+  if (timeScale) await p.route('**/index.html', async (route) => { const r = await route.fetch(); route.fulfill({ response: r, body: (await r.text()).replace('startEngine({ onSnapshot:', `startEngine({ timeScale: ${timeScale}, onSnapshot:`) }); });
   p.on('pageerror', (e) => log('PAGE ERROR', e.message));
   if (save) await p.addInitScript(([v]) => { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('marah.proto.marah.save', v); sessionStorage.setItem('seeded', '1'); } }, [fs.readFileSync(save, 'utf8')]);
   await p.goto(`http://127.0.0.1:${PORT}/index.html#fps`, { waitUntil: 'domcontentloaded' });
@@ -105,8 +109,8 @@ async function crawlMap(p, tag, res) {
   const res = {};
   for (const phase of PHASES) {
     const save = phase === 'new' ? null : SAVES && path.join(SAVES, phase + '.json');
-    if (phase !== 'new' && !(save && fs.existsSync(save))) { log('no save for', phase); continue; }
-    const { ctx, p, loading } = await openPage(b, save);
+    if (phase !== 'new' && phase !== 'day' && !(save && fs.existsSync(save))) { log('no save for', phase); continue; }
+    const { ctx, p, loading } = await openPage(b, phase === 'day' ? null : save, phase === 'day' ? 20000 : 0);
     if (loading) res[`${phase} loading line`] = loading;
     if (phase === 'new') {
       // a new game, a camel with a round at the open festival bought and entered (the chat's message comes of it)
@@ -124,6 +128,46 @@ async function crawlMap(p, tag, res) {
       }));
       await p.waitForTimeout(800);
       await crawlMap(p, phase, res);
+      // the play screen's letters (the gear's D, 4L and the rest): in the car, its buttons unfolded
+      await p.waitForFunction(() => window.__play, null, { timeout: 300000 }).catch(() => {});
+      if (await p.evaluate(() => { if (!window.__play) return false; window.__play.start(); window.__play.debug.enter(); return true; })) {
+        await p.waitForTimeout(1500);
+        await p.evaluate(() => document.querySelector('.pl-car [data-c="more"]')?.click());
+        await p.waitForTimeout(500);
+        res[`${phase} play: the car's buttons`] = await audit(p, '.play');
+        await p.evaluate(() => window.__play.stop());
+        await p.waitForTimeout(800);
+      }
+    }
+    if (phase === 'day') {
+      // نورة entered at the open festival, the clock run fast to her round's day and past it (every stage told) and
+      // to its result, then held: the day's screen and the result's are among the screens the crawl reaches
+      log('day', await p.evaluate(async () => {
+        const e = window.marahEngine;
+        await e.startOver({ seed: 4242 });
+        for (let i = 0; i < 400 && !(e.snapshot && e.snapshot.herd.total === 2); i++) await new Promise((r) => setTimeout(r, 25));
+        const S = e.snapshot, f = S.festivals.find((x) => !x.done && S.today >= x.opensOn && S.today <= x.closesOn);
+        const d = (await e.festival(f.id)).festival, row = d.register.find((x) => x.round && !x.error);
+        const r = await e.dispatch({ type: 'enterRound', festival: f.id, round: row.round, camels: [row.camel.id] });
+        return JSON.stringify(r.ok) + ' ' + row.camel.name;
+      }));
+      const entry = () => p.evaluate(() => window.marahEngine.snapshot.festivals.flatMap((f) => f.entries || [])[0] || null);
+      log('entry', JSON.stringify(await entry()));
+      // (held while the day is being told, two stages in: the day's own screen)
+      await p.waitForFunction(() => { const e = window.marahEngine.snapshot.festivals.flatMap((f) => f.entries || [])[0]; return !e || e.told >= 2; }, null, { timeout: 1800000, polling: 20 });
+      await p.evaluate(() => window.marahEngine.worker.postMessage(JSON.stringify({ op: 'pause', id: 999003 })));
+      await p.evaluate(() => { if (window.__phone.state === 'closed') window.__phone.toggle(); window.__phone.enlarge(); });
+      await home(p);
+      if (await p.evaluate(() => { R().querySelector('[data-go="mazayen"]')?.click(); return true; })) {
+        await settle(p);
+        if (await p.evaluate(() => { const d = R().querySelector('[data-go="day"]'); if (!d) return false; d.click(); return true; })) { await settle(p); res['day phone: day (told 2+)'] = await audit(p, 'phone'); log('day screen', await p.evaluate(() => window.T().slice(0, 120))); }
+      }
+      await home(p); await p.evaluate(() => window.__phone.close());
+      await p.evaluate(() => window.marahEngine.worker.postMessage(JSON.stringify({ op: 'resume', id: 999004 })));
+      await p.waitForFunction(() => { const e = window.marahEngine.snapshot.festivals.flatMap((f) => f.entries || [])[0]; return !e || e.told >= 6 || e.removedAt; }, null, { timeout: 1800000, polling: 500 });
+      await p.waitForFunction(() => { const e = window.marahEngine.snapshot.festivals.flatMap((f) => f.entries || [])[0]; return !e || e.rank || e.removedAt || !e.announceOn || window.marahEngine.snapshot.today > e.announceOn; }, null, { timeout: 1800000, polling: 500 });
+      await p.evaluate(() => window.marahEngine.worker.postMessage(JSON.stringify({ op: 'pause', id: 999001 })));
+      log('entry after', JSON.stringify(await entry()));
     }
     await crawlPhone(p, phase, res);
     res[`${phase} faces`] = await p.evaluate(() => window.__faces());
