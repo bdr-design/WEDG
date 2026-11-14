@@ -281,14 +281,14 @@ const FILL = `window.__fill = (S) => {
       <div class="yr">${months.join('')}</div>${key}
       <div class="sec">اللي جاي</div>
       <div class="group">${items.slice(0, 6).map(pickRow).join('')}</div>
-      <div class="note">اضغط أي شي أو أي يوم وتقدر تمشي له. التقويم يمشي لقدام بس، واللي يمضي ما يرجع.</div></div>`;
+      <div class="note">اختار أي يوم أو أي شي جاي، وتمشي له. التقويم يمشي لقدام بس، واللي يمضي ما يرجع.</div></div>`;
 
     // ---------------------------------------------------------------- 3 the year scrolled (same screen)
     const yearEnd_ = `<div class="body">${nav()}<div class="title">التقويم</div>
       <div class="note" style="margin-top:-4px">${todayLine}</div>
       <div class="sec">اللي جاي</div>
       <div class="group">${items.slice(0, 16).map(pickRow).join('')}</div>
-      <div class="note">اضغط أي شي أو أي يوم وتقدر تمشي له. التقويم يمشي لقدام بس، واللي يمضي ما يرجع.</div></div>`;
+      <div class="note">اختار أي يوم أو أي شي جاي، وتمشي له. التقويم يمشي لقدام بس، واللي يمضي ما يرجع.</div></div>`;
 
     // ---------------------------------------------------------------- 4 a season picked: its month, the day ringed
     const tgt = dayOf(A.target), td = dateOf(tgt), N = tgt - S.today;
