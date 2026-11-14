@@ -179,9 +179,56 @@ class EngineCore {
 
   // ------------------------------------------------------------- actions
 
-  Future<Result> dispatch(Command c) => _serial(() async {
+  /// The game's minute of the day by the engine's own clock.
+  int minuteOfDay() {
+    final g = _game;
+    return g == null ? 0 : g.state.clock(now: _now).minuteOfDay();
+  }
+
+  /// A rushed truck's hour, stamped from the engine's own clock (the second
+  /// review's N2): a command's hour is accepted if it is this hour or the
+  /// one before (the price shown is the price paid), refused after it (a
+  /// stale confirm after the day turned too), and stamped when it has none.
+  (Command?, Err?) _stampHour(Command c) {
+    final now = minuteOfDay() ~/ 60;
+    int? asked;
+    switch (c) {
+      case RushTruck(:final hour):
+        asked = hour;
+      case BuyListing(now: true, :final hour):
+        asked = hour;
+      default:
+        return (c, null);
+    }
+    if (asked != null && asked != now && asked != now - 1) {
+      return (null, Err(DomainError(ErrorCode.priceChanged, {'hour': now})));
+    }
+    final h = asked ?? now;
+    return (
+      switch (c) {
+        RushTruck(:final actor, :final camel) => RushTruck(
+          actor,
+          camel,
+          hour: h,
+        ),
+        BuyListing(:final actor, :final listing) => BuyListing(
+          actor,
+          listing,
+          now: true,
+          hour: h,
+        ),
+        _ => c,
+      },
+      null,
+    );
+  }
+
+  Future<Result> dispatch(Command c0) => _serial(() async {
     final g = _game;
     if (g == null) return const Err(DomainError(ErrorCode.notFound));
+    final (stamped, refused) = _stampHour(c0);
+    if (refused != null) return refused;
+    final c = stamped!;
     final Result r;
     try {
       r = g.dispatch(c);
@@ -223,6 +270,79 @@ class EngineCore {
   /// Catches up with the clock: the days, and the stages of today's rounds
   /// whose hour has come; a snapshot only when something changed.
   Future<void> catchUp() => _serial(() => _catchUpNow(always: false));
+
+  // ------------------------------------------------------------- away
+
+  bool _cancelAway = false;
+
+  /// Ends a stretch away at the day it is on («وقّف هنا»). Not an operation:
+  /// it is set at once, outside the queue, and the loop reads it between its
+  /// slices (the worker hands it over beside 'stored').
+  void stopAway() => _cancelAway = true;
+
+  /// Goes away to [target] (the one mechanism: docs/proposals/
+  /// rush_and_calendar.md section 5): the days simulated one by one on the
+  /// same pipeline as any played day, yielding every slice, the stops read
+  /// after each day, [extra] conditions a caller adds; at the first stop,
+  /// the target, or «وقّف هنا», the clock's anchor is moved so that now is
+  /// [landingMinute] of the day reached, the game saved once and that save
+  /// marked good (a jump cannot be undone by opening the save before it).
+  /// Returns the stretch (where it stopped, what happened), or the refusal.
+  Future<({AwayRun? run, DomainError? refused})> away(
+    GameDay target, {
+    int landingMinute = 360,
+    List<AwayCondition> extra = const [],
+  }) => _serial(() async {
+    final g = _game;
+    if (g == null || _halted) {
+      return (run: null, refused: const DomainError(ErrorCode.notFound));
+    }
+    final no = AwayRun.refusal(g, target);
+    if (no != null) return (run: null, refused: no);
+    _cancelAway = false;
+    _nextDay?.cancel();
+    final run = AwayRun(g, AwayPlan(target, extra: extra));
+    final watch = Stopwatch()..start();
+    var lastPush = Stopwatch()..start();
+    while (!run.done) {
+      try {
+        run.step();
+      } on Object catch (e) {
+        await _recover(e);
+        return (run: null, refused: const DomainError(ErrorCode.internalError));
+      }
+      if (watch.elapsed >= sliceBudget) {
+        if (lastPush.elapsedMilliseconds >= 250) {
+          emit(AwayProgress(run.doneDays, run.total, g.today));
+          lastPush = Stopwatch()..start();
+        }
+        await _yield();
+        watch.reset();
+      }
+      if (!run.done && _cancelAway) run.cancel();
+    }
+    _cancelAway = false;
+    emit(AwayProgress(run.doneDays, run.total, g.today));
+    land(g.state, g.today, landingMinute);
+    await _saveNow();
+    if (_saveOk && !await store.markGood()) emit(const BackupWarning());
+    _publish();
+    _scheduleNextDay();
+    return (run: run, refused: null);
+  });
+
+  /// Moves [s]'s clock anchor so that now is [minute] of [day], in the
+  /// clock's own microseconds (a game day is 86,400,000,000 / 7 µs, whole
+  /// by integer division; in milliseconds it is not whole).
+  void land(GameState s, GameDay day, int minute) {
+    final dayUs = Duration.microsecondsPerDay ~/ 7;
+    final elapsedUs =
+        day.daysSince(s.startedOn) * dayUs + (minute * dayUs + 1439) ~/ 1440;
+    final nowUs = _now().toUtc().microsecondsSinceEpoch;
+    s
+      ..clockShiftMs = (nowUs - elapsedUs) ~/ 1000 - s.startedAtUtcMs
+      ..lastSeenUtcMs = nowUs ~/ 1000;
+  }
 
   /// A bug left the in-memory game half-changed: throw it away and reload
   /// the last save, which is always consistent. If the same day keeps

@@ -80,7 +80,8 @@ mixin PushStreams {
         if (!_snapshots.isClosed) _snapshots.add(snapshot);
       case CatchUpProgress():
         if (!_progress.isClosed) _progress.add(p);
-      case SaveStatus() ||
+      case AwayProgress() ||
+          SaveStatus() ||
           CatchUpCapped() ||
           EngineDown() ||
           StateRecovered() ||

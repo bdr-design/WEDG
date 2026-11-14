@@ -106,6 +106,12 @@ class WorkerHost {
       return _send({'type': 'error', 'id': null, 'error': 'badMessage'});
     }
     if (m['op'] == 'stored') return _stored(m);
+    // «وقّف هنا»: handed over at once, outside the queue, which a jump holds
+    // until it ends (EngineCore.stopAway; the loop reads it between slices)
+    if (m['op'] == 'stopAway') {
+      _core?.stopAway();
+      return _reply(m['id'], {'ok': true});
+    }
     _tail = _tail.then((_) => _handle(m));
   }
 
@@ -172,6 +178,31 @@ class WorkerHost {
           _reply(id, {
             'ok': d != null,
             'festival': d == null ? null : SnapshotJson.festivalDetail(d),
+          });
+        case 'away':
+          // the calendar's jump (EngineCore.away): to a day, landing at a
+          // minute of it (06:00 unless asked)
+          final to = m['target'];
+          final minute = m['landingMinute'] ?? 360;
+          if (to is! num || minute is! num || minute < 0 || minute >= 1440) {
+            return _reply(id, {'ok': false, 'error': 'badAway'});
+          }
+          _ticker?.cancel();
+          final res = await core.away(
+            GameDay(to.toInt()),
+            landingMinute: minute.toInt(),
+          );
+          _startTicker();
+          final run = res.run;
+          _reply(id, {
+            'ok': run != null,
+            'error': res.refused == null
+                ? null
+                : {
+                    'code': res.refused!.code.name,
+                    'params': res.refused!.params,
+                  },
+            'away': run?.toJson(),
           });
         case 'flush':
           await core.flush();
@@ -390,6 +421,12 @@ class WorkerHost {
       'type': 'save',
       'ok': ok,
       'error': error,
+    },
+    AwayProgress(:final done, :final total, :final day) => {
+      'type': 'away',
+      'done': done,
+      'total': total,
+      'day': day.value,
     },
     CatchUpProgress(:final done, :final total) => {
       'type': 'catchUp',

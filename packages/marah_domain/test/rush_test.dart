@@ -3,7 +3,6 @@
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/persistence.dart';
 import 'package:marah_domain/src/handlers/handlers.dart' as handlers;
-import 'package:marah_domain/src/model/market.dart';
 import 'package:marah_domain/src/rules/eligibility.dart';
 import 'package:marah_domain/src/rules/milk.dart';
 import 'package:marah_domain/src/sim.dart';
