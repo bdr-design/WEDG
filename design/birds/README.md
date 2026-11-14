@@ -14,6 +14,9 @@ Side pictures carry a centimetre ruler; flight pictures are seen from the side, 
 ## Known gaps, in plain words
 
 - No rig or movement yet: every pose is a still model. It comes after the look is approved.
+- On the fist the falcon's toes are thinner and straighter than a real falcon's (which are thick, knuckled, slightly
+  curved, with the talons hooking in); they stay so until the rig.
+- In flight the trailing jesses are stiff, straight cords.
 - The man's fingers cannot curl yet, so on the fist his hand is hidden inside the cuff; the leash is not drawn on the
   fist.
 - A faint dark line where the saker's face meets the cere, seen only in the close head picture.
