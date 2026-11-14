@@ -97,6 +97,15 @@ photo.
     the forefeet.
 - **Budget:** 40k triangles, 37 bones, 2K textures, 2.1 MB GLB.
 
+## Where the inputs are (durability)
+
+The camel's source inputs live only in the session's scratch folder (`$SC/camel/`: `mask.png`, `ref_fill.png`,
+`camel_hi.npz`, `joints.json`, `feet.json`, `camel_lod0.blend`, `camel_rigged.blend`, and the two 2048 px maps
+`camel_albedo_2048.png` and `camel_normal_2048.png`; about 12 MB). The game works without them (its levels are in
+`assets_src/camels` and the page's `models/`), but the levels, the rig, the clips and the textures cannot be rebuilt
+if that folder is cleared. Some of them derive from the owner's photograph and the repository is public, so whether
+they are kept in it is the owner's decision.
+
 ## Running it
 
 ```

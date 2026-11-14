@@ -738,8 +738,9 @@ the closed meter names the variant.
 ## The middle level: the owner's choice (2026-11-14)
 
 The owner, shown the options above with pictures, chose the lighter middle
-level: «النسخة الوسط الأخف الحين» (docs/agents/owner_decisions_2026-11-14.md,
-item 16). The farm's camels between 8 and 48 m are now drawn with a 4k-triangle
+level (docs/agents/owner_decisions_2026-11-14.md, item 16): «النسخة الوسط الأخف
+الحين: نطبق نسخة وسط 4 آلاف مثلث بدل 8 آلاف: أكبر توفير (537 ← 377 ألف فوق
+الحظاير) ويغيّر حوالي 4% من بكسلات النوق.» The farm's camels between 8 and 48 m are now drawn with a 4k-triangle
 mesh instead of the 8k one, and the full level's shadow casters use it too. The
 other three options (the full level only within 5 m, the middle level only to
 30 m, the near camels' shadows from the 1.5k mesh) are not adopted and stay
@@ -769,7 +770,14 @@ open; the 24 m option was not offered.
   The switch at 8 m changes about twice the outline it did (0.6 to 0.7% of the
   camel's outline pixels instead of 0.3 to 0.4%), and its shading more (9 to
   20% of the camel's pixels change by more than 8 levels in 255, against 5 to
-  12%). The switch at 48 m is as small as before or smaller.
+  12%). The switch at 48 m is as small as before or smaller. What remains his
+  to decide is moving the full level's bound out from 8 m, which softens that
+  switch at about +36k triangles for each camel moved from the 4k level to the
+  40k one (and 2.5k more in the shadow map: a full-level camel casts with the
+  4k mesh, the others with the 1.5k one). In the phone test's walking shot (its camels placed by index)
+  the bound at 10 m draws 1 camel more at the full level (+41k triangles,
+  462k to 503k), at 12 m 2 more (+82k, to 544k); the map shot has no camel
+  within 12 m (no change).
 - **Measured, one page load each way** (956 x 440; draws main / shadow,
   triangles main / shadow):
 
