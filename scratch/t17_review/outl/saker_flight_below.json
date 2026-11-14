@@ -1,0 +1,4 @@
+{"image": "ref/hi/ccede0a3.jpg", "mask": "outl/saker_flight_mask.png",
+ "source": "Commons: Saker Falcon - Hortobagy - Hungary CS4E5044 (15341661488).jpg (1280 px thumbnail); from below and a little in front, wings slightly forward, tail fanned (braking)",
+ "scale": {"p1": [284, 300], "p2": [836, 300], "mm": 1000, "what": "wing tip to wing tip as flown (~0.9 x a span of about 1.1 m; HBW 97-126 cm; sex unknown)"},
+ "notes": "use 'shape alone --fit width'; the tail is fanned, a gliding bird's is closed"}

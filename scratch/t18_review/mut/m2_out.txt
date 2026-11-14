@@ -1,0 +1,40 @@
+N1: SURVIVED | net out of season | 00:02 +61: All tests passed!
+N2: KILLED | trap a minute before first light | 
+N3: KILLED | trap a minute after sunset | 
+N4: KILLED | cast a minute early | 
+N5: KILLED | cast a minute late | 
+N6: SURVIVED | net without permit | 00:02 +61: All tests passed!
+N7: SURVIVED | net on a hunting ground | 00:01 +61: All tests passed!
+N8: KILLED | cast from a moving car | 
+N9: KILLED | cast on the coast | 
+N10: KILLED | cast by the farm | 
+N11: KILLED | stone-curlew into December | 
+N12: KILLED | houbara from 31 Oct | 
+N13: KILLED | houbara in open land | 
+N14: SURVIVED | mountain peregrine kept | 00:01 +61: All tests passed!
+N15: KILLED | lanner line comma | 
+N16: KILLED | 1% fee at sale | 
+N17: KILLED | unsold not freed at close | 
+N18: KILLED | keep with no room | 
+N19: KILLED | release from 31 Jan | 
+N20: KILLED | release to 1 May | 
+N21: KILLED | passage x1.1 | 
+N22: SURVIVED | 4 tries | 00:02 +61: All tests passed!
+N23: KILLED | hold 0.9 | 
+N24: KILLED | lost x10 | 
+N25: KILLED | tracker worse than none | 
+N26: KILLED | step back after 15 | 
+N27: KILLED | 3 weeks of dau | 
+N28: KILLED | dau in the moult | 
+N29: SURVIVED | 4 flights | 00:01 +61: All tests passed!
+N30: KILLED | supplies not used | 
+N31: KILLED | no supplies-out stop | 
+N32: KILLED | no season-end stop | 
+N33: KILLED | falconCare a day early | 
+N34: KILLED | landing 30 min late | 
+N35: KILLED | exact ceiling loses | 
+N36: SURVIVED | November as October | 00:01 +61: All tests passed!
+N37: KILLED | bought falcon freed | 
+N38: SURVIVED | enter after close | 00:02 +61: All tests passed!
+N39: KILLED | day outing to a far ground | 
+N40: SURVIVED | falconry trip with no ready falcon | 00:02 +61: All tests passed!

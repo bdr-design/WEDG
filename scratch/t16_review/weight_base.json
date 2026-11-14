@@ -1,0 +1,47 @@
+{
+ "start": {
+  "snapMs": 27020
+ },
+ "drawsClosed": {
+  "frames": 5,
+  "draws": 96,
+  "tris": 137516,
+  "shadowDraws": 20,
+  "shadowTris": 20117
+ },
+ "drawsListing": {
+  "frames": 30,
+  "draws": 0,
+  "tris": 0,
+  "shadowDraws": 0,
+  "shadowTris": 0
+ },
+ "errs1": [],
+ "rate": {
+  "haraj": {
+   "title": "الحراج",
+   "days": 0,
+   "snapshots": 0,
+   "rebuilds": 0
+  },
+  "listing": {
+   "title": "مخلول صفر",
+   "days": 0,
+   "snapshots": 0,
+   "rebuilds": 0
+  },
+  "pick": {
+   "title": "اعرض للبيع",
+   "days": 0,
+   "snapshots": 0,
+   "rebuilds": 0
+  },
+  "sell": {
+   "title": "بيع نورة",
+   "days": 0,
+   "snapshots": 0,
+   "rebuilds": 0
+  }
+ },
+ "errs3": []
+}

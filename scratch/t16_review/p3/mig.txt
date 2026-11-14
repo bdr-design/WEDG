@@ -1,0 +1,12 @@
+v9_states.json: from v9 day 277 cash 563035 herd 6 | knew_m null/null told_f null/null own_f ownTreatment/ownTreatment
+   +7 d: day 284 cash 563175 herd 6 invariants [] events 2
+   look Ok, again checkedToday; listing treated false
+   round trip ok v12
+v10_t14fixture.json: from v10 day 329 cash 103458 herd 3 | knew_m - told_f - own_f -
+   +7 d: day 336 cash 81176 herd 3 invariants [] events 9
+   look Ok, again checkedToday; listing treated false
+   round trip ok v12
+v11_states.json: from v11 day 277 cash 563035 herd 6 | knew_m null/null told_f null/null own_f ownTreatment/ownTreatment
+   +7 d: day 284 cash 563175 herd 6 invariants [] events 2
+   look Ok, again checkedToday; listing treated false
+   round trip ok v12

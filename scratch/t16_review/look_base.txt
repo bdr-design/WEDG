@@ -1,0 +1,5 @@
+before: null checked null declared null quality 45.401105 est 5200-6400 | events []
+look 1 (Ok) day 273: [botox] checked 1 declared null quality 45.401105 est 5200-6400 | events {"type":"listingChecked","day":273,"owner":"w-000039u-p","camel":"c-000039u-1o","name":"نجمة","listing":"l-000039u-1r","found":["botox"]}
+clean after a look: null checked 1 declared null quality 50.53176499999999 est 6300-7700 | events {"type":"listingChecked","day":273,"owner":"w-000039u-p","camel":"c-000039u-1w","name":"هدلا","listing":"l-000039u-1z","found":[]}
+cash 300: ErrorCode.insufficientFunds
+cash -1000: ErrorCode.insufficientFunds

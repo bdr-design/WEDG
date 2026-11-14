@@ -1,0 +1,43 @@
+{
+ "start": {
+  "snapMs": 21680
+ },
+ "drawsClosed": {
+  "frames": 3,
+  "draws": 96,
+  "tris": 136016,
+  "shadowDraws": 20,
+  "shadowTris": 18617
+ },
+ "drawsListing": {
+  "frames": 0
+ },
+ "errs1": [],
+ "rate": {
+  "haraj": {
+   "title": "الحراج",
+   "days": 10,
+   "snapshots": 10,
+   "rebuilds": 10
+  },
+  "listing": {
+   "title": "حوارة شعلاء",
+   "days": 10,
+   "snapshots": 10,
+   "rebuilds": 10
+  },
+  "pick": {
+   "title": "اعرض للبيع",
+   "days": 10,
+   "snapshots": 10,
+   "rebuilds": 10
+  },
+  "sell": {
+   "title": "بيع نورة",
+   "days": 10,
+   "snapshots": 10,
+   "rebuilds": 10
+  }
+ },
+ "errs3": []
+}

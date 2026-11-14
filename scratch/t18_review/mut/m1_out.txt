@@ -1,0 +1,36 @@
+M1: KILLED | hunting season opens 1 Aug | For example, 'dart test --chain-stack-traces'.
+M2: KILLED | hunting season to end Feb | For example, 'dart test --chain-stack-traces'.
+M3: KILLED | trapping season into Dec | For example, 'dart test --chain-stack-traces'.
+M4: KILLED | trapping season loses Oct | For example, 'dart test --chain-stack-traces'.
+M5: KILLED | breeders from 4 Aug | For example, 'dart test --chain-stack-traces'.
+M6: KILLED | breeders to 26 Aug | For example, 'dart test --chain-stack-traces'.
+M7: KILLED | exhibition to 11 Oct | For example, 'dart test --chain-stack-traces'.
+M8: KILLED | trapping auction ends 29 Nov | For example, 'dart test --chain-stack-traces'.
+M9: KILLED | every route loses its first day | For example, 'dart test --chain-stack-traces'.
+M10: KILLED | hunting permit without a falcon | For example, 'dart test --chain-stack-traces'.
+M11: KILLED | permit bought twice | For example, 'dart test --chain-stack-traces'.
+M12: SURVIVED | upkeep 21 | 00:00 +28: All tests passed!
+M13: KILLED | room holds 5 | For example, 'dart test --chain-stack-traces'.
+M14: KILLED | room 18,001 | For example, 'dart test --chain-stack-traces'.
+M15: KILLED | falcon with no room | For example, 'dart test --chain-stack-traces'.
+M16: KILLED | hammer + 1000 | For example, 'dart test --chain-stack-traces'.
+M17: SURVIVED | exact cash loses the lot | 00:00 +28: All tests passed!
+M18: KILLED | same lot bought twice | For example, 'dart test --chain-stack-traces'.
+M19: KILLED | purchase ledger kind | For example, 'dart test --chain-stack-traces'.
+M20: KILLED | gear on the way not counted | For example, 'dart test --chain-stack-traces'.
+M21: KILLED | gear a day late | For example, 'dart test --chain-stack-traces'.
+M22: KILLED | opening above 150k | For example, 'dart test --chain-stack-traces'.
+M23: KILLED | dear share 0.20 | For example, 'dart test --chain-stack-traces'.
+M24: KILLED | قرناس from 1 Aug | For example, 'dart test --chain-stack-traces'.
+M25: KILLED | permit on no money | For example, 'dart test --chain-stack-traces'.
+M26: KILLED | pigeon 55 | For example, 'dart test --chain-stack-traces'.
+M27: SURVIVED | two pigeon nets | 00:00 +28: All tests passed!
+M28: KILLED | breeders' saker ringed | For example, 'dart test --chain-stack-traces'.
+M29: KILLED | lot worth leaked under another key | For example, 'dart test --chain-stack-traces'.
+M30: SURVIVED | falcon skill leaked under another key | 00:00 +28: All tests passed!
+M31: KILLED | no upkeep | For example, 'dart test --chain-stack-traces'.
+M32: KILLED | buy falcon in debt | For example, 'dart test --chain-stack-traces'.
+M33: SURVIVED | 3 trapping lots every night | 00:01 +28: All tests passed!
+M34: SURVIVED | yesterday's lot key buyable today | 00:00 +28: All tests passed!
+M35: SURVIVED | one-day outing to 600 km | 00:00 +28: All tests passed!
+M36: KILLED | trapping permit bought in Dec is for this year | For example, 'dart test --chain-stack-traces'.

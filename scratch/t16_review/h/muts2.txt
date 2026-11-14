@@ -1,0 +1,2 @@
+E12b declareRefusal drops knewWhenBought~packages/marah_domain/lib/src/views/views.dart~            e\?\.code == ErrorCode\.knewWhenBought~            false
+P0 snapshot drops declareRefused~packages/marah_runtime/lib/src/snapshot_json.dart~    if \(c\.declareRefused != null\) .declareRefused.: c\.declareRefused!\.name,~

@@ -1,0 +1,11 @@
+Running build hooks...Running build hooks...1 look then buy same day: cannotDeclare ErrorCode.knewWhenBought / declareRefusal ErrorCode.knewWhenBought | list declared: knewWhenBought, broker declared: knewWhenBought
+2 look earlier, buy later: cannotDeclare ErrorCode.knewWhenBought / declareRefusal ErrorCode.knewWhenBought | list declared: knewWhenBought, broker declared: knewWhenBought
+3 bargain at ask after look (Ok): cannotDeclare ErrorCode.knewWhenBought / declareRefusal ErrorCode.knewWhenBought
+4 bought a declared listing: cannotDeclare ErrorCode.knewWhenBought / declareRefusal ErrorCode.knewWhenBought
+5 bought unknowing, told after: cannotDeclare null / declareRefusal null
+6a knew A, told B after: cannotDeclare ErrorCode.knewWhenBought / declareRefusal ErrorCode.knewWhenBought
+6b after A wore off (only B, told after): cannotDeclare null / declareRefusal null treatments [dye]
+7 second look same day: Ok then checkedToday; charged 0
+  next day: notFound
+8 clean own camel: cannotDeclare ErrorCode.nothingToDeclare / declareRefusal null
+9 bot 10 y: boughtKnowing flags 0, invariants []

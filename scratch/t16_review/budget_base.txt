@@ -1,0 +1,2 @@
+10k head: day 19.0 ms, snapshot 158.9 ms, page 30.8 ms, festival 230.4 ms
+00:05 +6: All tests passed!

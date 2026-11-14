@@ -1,0 +1,15 @@
+== bare beginner: حائل, 30 days from 15 October, dawn
+   target: about 1 in 6 (0.167); sources 1 in 12.5 (0.08)
+   seasons 20000 | with a sellable bird 0.1598 (1 in 6.26) | with a dear one 0.0247 | birds a season 0.173
+   price mean 148381 median 102000 | dear share of birds 0.145
+   season net mean 20623 median -5000
+== middle: رفحاء, 45 days from 1 October, dawn
+   target: between
+   seasons 20000 | with a sellable bird 0.3543 (1 in 2.82) | with a dear one 0.0637 | birds a season 0.432
+   price mean 149154 median 103000 | dear share of birds 0.152
+   season net mean 57052 median -7250
+== well equipped, well placed: الليث, 61 days from 1 October, dawn+midday+evening
+   target: about 2 in 3 (0.667), never beyond; sources 1 in 2.98 (0.336)
+   seasons 20000 | with a sellable bird 0.6468 (1 in 1.55) | with a dear one 0.1436 | birds a season 1.040
+   price mean 148573 median 102000 | dear share of birds 0.149
+   season net mean 144667 median 79300

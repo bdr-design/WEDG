@@ -1,0 +1,7 @@
+  .market[33].camel.quality: 51.976420000000005 -> 52.08142
+== look day 273 missed: 1
+  .market[33].camel.quality: 51.976420000000005 -> 52.08142
+== look day 274 FOUND: 3
+  .market[33].camel.quality: 51.976420000000005 -> 52.08142
+  .market[33].treatments: null -> ["dye"]
+  .recentEvents[2].found: [] -> ["dye"]

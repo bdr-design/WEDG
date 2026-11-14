@@ -1,0 +1,2 @@
+E12b declareRefusal drops knewWhenBought: CAUGHT in marah_domain (For example, 'dart test --chain-stack-traces'.)
+P0 snapshot drops declareRefused: CAUGHT in marah_runtime (For example, 'dart test --chain-stack-traces'.)

@@ -1,0 +1,4 @@
+base: 10k head, 1,000 sick: snapshot 60921 characters 10k head: day 10.2 ms, snapshot 107.8 ms, page 5.6 ms, festival 69.1 ms 00:03 +7: All tests passed! 
+new: 10k head, 1,000 sick: snapshot 60934 characters 10k head: day 12.5 ms, snapshot 120.0 ms, page 10.9 ms, festival 53.4 ms 00:03 +7: All tests passed! 
+base: 10k head, 1,000 sick: snapshot 60921 characters 10k head: day 10.8 ms, snapshot 155.0 ms, page 7.5 ms, festival 86.8 ms 00:03 +7: All tests passed! 
+new: 10k head, 1,000 sick: snapshot 60934 characters 10k head: day 8.3 ms, snapshot 90.0 ms, page 6.0 ms, festival 52.7 ms 00:03 +7: All tests passed! 

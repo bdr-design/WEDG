@@ -1,0 +1,716 @@
+{
+ "date": "2026-10-01",
+ "cash": 998622,
+ "falcons": {
+  "open": [
+   "exhibition",
+   "trapping"
+  ],
+  "permits": [
+   {
+    "kind": "hunting",
+    "season": 2026,
+    "opens": 243,
+    "closes": 395,
+    "open": true,
+    "held": null,
+    "valid": false,
+    "cannot": "needsFalcon"
+   },
+   {
+    "kind": "trapping",
+    "season": 2026,
+    "opens": 273,
+    "closes": 333,
+    "open": true,
+    "held": 2026,
+    "valid": true,
+    "cannot": "permitHeld"
+   }
+  ],
+  "gear": {
+   "pigeon": [
+    6,
+    0,
+    14
+   ],
+   "pigeonNet": [
+    1,
+    0,
+    0
+   ],
+   "birdNet": [
+    0,
+    0,
+    1
+   ],
+   "binoculars": [
+    0,
+    1,
+    0
+   ],
+   "mobileTent": [
+    0,
+    0,
+    1
+   ],
+   "supplies": [
+    10,
+    0,
+    50
+   ],
+   "tracker": [
+    0,
+    0,
+    4
+   ]
+  },
+  "room": {
+   "built": true,
+   "building": [],
+   "held": 0,
+   "moult": false,
+   "wantCare": [],
+   "cannot": null
+  },
+  "falcons": [],
+  "held": [],
+  "trip": null,
+  "today": {
+   "huntFrom": 422,
+   "huntTo": 997,
+   "trapFrom": 339,
+   "trapTo": 1057,
+   "quarry": {
+    "nafudEdge": "كروان",
+    "estate": "كروان",
+    "open": "كروان"
+   }
+  },
+  "lots": [
+   {
+    "lot": "exhibition:273:0",
+    "route": "exhibition",
+    "species": "حر",
+    "female": false,
+    "age": "قرناس",
+    "size": "13¾ × 14",
+    "weight": 971,
+    "opening": 65000,
+    "gone": false
+   },
+   {
+    "lot": "exhibition:273:1",
+    "route": "exhibition",
+    "species": "حر",
+    "female": false,
+    "age": "قرناس",
+    "size": "14¼ × 14",
+    "weight": 791,
+    "opening": 60000,
+    "gone": false
+   },
+   {
+    "lot": "trapping:273:0",
+    "route": "trapping",
+    "species": "شاهين بحري",
+    "female": true,
+    "age": "فرخ",
+    "size": "16 × 15¾",
+    "weight": 1025,
+    "opening": 50000,
+    "ground": "ينبع",
+    "trappedDaysAgo": 2,
+    "gone": false
+   },
+   {
+    "lot": "trapping:273:1",
+    "route": "trapping",
+    "species": "شاهين بحري",
+    "female": true,
+    "age": "فرخ",
+    "size": "15¼ × 15¼",
+    "weight": 1057,
+    "opening": 40000,
+    "ground": "العويقيلة",
+    "trappedDaysAgo": 5,
+    "gone": false
+   }
+  ]
+ },
+ "hunt": [
+  {
+   "type": "permitBought",
+   "day": 267,
+   "owner": "w-000039u-p",
+   "camel": null,
+   "kind": "trapping",
+   "season": 2026,
+   "fee": 500
+  },
+  {
+   "type": "gearOrdered",
+   "day": 267,
+   "owner": "w-000039u-p",
+   "camel": null,
+   "gear": "pigeon",
+   "units": 6,
+   "cost": 300,
+   "arrivesOn": 268
+  },
+  {
+   "type": "gearOrdered",
+   "day": 267,
+   "owner": "w-000039u-p",
+   "camel": null,
+   "gear": "pigeonNet",
+   "units": 1,
+   "cost": 300,
+   "arrivesOn": 268
+  },
+  {
+   "type": "gearOrdered",
+   "day": 267,
+   "owner": "w-000039u-p",
+   "camel": null,
+   "gear": "supplies",
+   "units": 10,
+   "cost": 1500,
+   "arrivesOn": 268
+  },
+  {
+   "type": "gearDelivered",
+   "day": 268,
+   "owner": "w-000039u-p",
+   "camel": null,
+   "gear": "pigeon",
+   "units": 6
+  },
+  {
+   "type": "gearDelivered",
+   "day": 268,
+   "owner": "w-000039u-p",
+   "camel": null,
+   "gear": "pigeonNet",
+   "units": 1
+  },
+  {
+   "type": "gearDelivered",
+   "day": 268,
+   "owner": "w-000039u-p",
+   "camel": null,
+   "gear": "supplies",
+   "units": 10
+  },
+  {
+   "type": "gearOrdered",
+   "day": 273,
+   "owner": "w-000039u-p",
+   "camel": null,
+   "gear": "binoculars",
+   "units": 1,
+   "cost": 900,
+   "arrivesOn": 274
+  }
+ ],
+ "catalog": {
+  "routes": [
+   {
+    "route": "breeders",
+    "name": "مزاد صقور المزارع",
+    "from": [
+     8,
+     5
+    ],
+    "to": [
+     8,
+     25
+    ]
+   },
+   {
+    "route": "exhibition",
+    "name": "معرض الصقور",
+    "from": [
+     10,
+     1
+    ],
+    "to": [
+     10,
+     10
+    ]
+   },
+   {
+    "route": "trapping",
+    "name": "مزاد الطرح",
+    "from": [
+     10,
+     1
+    ],
+    "to": [
+     11,
+     30
+    ]
+   }
+  ],
+  "permits": [
+   {
+    "kind": "hunting",
+    "name": "تصريح صقار",
+    "fee": 100
+   },
+   {
+    "kind": "trapping",
+    "name": "تصريح الطرح",
+    "fee": 500
+   }
+  ],
+  "gear": [
+   {
+    "gear": "pigeon",
+    "name": "الحمام",
+    "price": 50,
+    "most": 20
+   },
+   {
+    "gear": "pigeonNet",
+    "name": "شبك الحمام",
+    "price": 300,
+    "most": 1
+   },
+   {
+    "gear": "birdNet",
+    "name": "شبك الطيور والجربوع",
+    "price": 1200,
+    "most": 1
+   },
+   {
+    "gear": "binoculars",
+    "name": "الدربيل",
+    "price": 900,
+    "most": 1
+   },
+   {
+    "gear": "mobileTent",
+    "name": "الخيمة المتنقلة",
+    "price": 6500,
+    "most": 1
+   },
+   {
+    "gear": "supplies",
+    "name": "مؤونة المخيم",
+    "price": 150,
+    "most": 60
+   },
+   {
+    "gear": "tracker",
+    "name": "جهاز التتبع",
+    "price": 2500,
+    "most": 4
+   }
+  ],
+  "deliveryDays": 1,
+  "grounds": [
+   {
+    "ground": "nafudEdge",
+    "name": "طرف النفود",
+    "use": "hunting",
+    "km": 14,
+    "hours": 0.2,
+    "oneDay": true,
+    "quarry": [
+     "كروان"
+    ]
+   },
+   {
+    "ground": "estate",
+    "name": "المحازة",
+    "use": "hunting",
+    "km": 17,
+    "hours": 0.2,
+    "oneDay": true,
+    "quarry": [
+     "حبارى",
+     "كروان"
+    ]
+   },
+   {
+    "ground": "hamad",
+    "name": "الحماد",
+    "use": "trapping",
+    "km": 843,
+    "hours": 9.9,
+    "oneDay": false,
+    "quarry": [],
+    "north": true
+   },
+   {
+    "ground": "ummKhunsur",
+    "name": "أم خنصر",
+    "use": "trapping",
+    "km": 698,
+    "hours": 8.2,
+    "oneDay": false,
+    "quarry": [],
+    "north": true
+   },
+   {
+    "ground": "uwayqilah",
+    "name": "العويقيلة",
+    "use": "trapping",
+    "km": 596,
+    "hours": 7,
+    "oneDay": false,
+    "quarry": [],
+    "north": true
+   },
+   {
+    "ground": "rafha",
+    "name": "رفحاء",
+    "use": "trapping",
+    "km": 462,
+    "hours": 5.4,
+    "oneDay": false,
+    "quarry": [],
+    "north": true
+   },
+   {
+    "ground": "hail",
+    "name": "حائل",
+    "use": "trapping",
+    "km": 327,
+    "hours": 3.8,
+    "oneDay": false,
+    "quarry": [],
+    "north": true
+   },
+   {
+    "ground": "dibdibah",
+    "name": "الدبدبة",
+    "use": "trapping",
+    "km": 388,
+    "hours": 4.6,
+    "oneDay": false,
+    "quarry": [],
+    "north": true
+   },
+   {
+    "ground": "khafji",
+    "name": "الخفجي",
+    "use": "trapping",
+    "km": 630,
+    "hours": 7.4,
+    "oneDay": false,
+    "quarry": [],
+    "coast": true,
+    "north": true
+   },
+   {
+    "ground": "jubail",
+    "name": "الجبيل",
+    "use": "trapping",
+    "km": 713,
+    "hours": 8.4,
+    "oneDay": false,
+    "quarry": [],
+    "coast": true
+   },
+   {
+    "ground": "sulayyil",
+    "name": "السليل",
+    "use": "trapping",
+    "km": 841,
+    "hours": 9.9,
+    "oneDay": false,
+    "quarry": []
+   },
+   {
+    "ground": "sharurah",
+    "name": "شرورة",
+    "use": "trapping",
+    "km": 1296,
+    "hours": 15.2,
+    "oneDay": false,
+    "quarry": []
+   },
+   {
+    "ground": "lith",
+    "name": "الليث",
+    "use": "trapping",
+    "km": 980,
+    "hours": 11.5,
+    "oneDay": false,
+    "quarry": [],
+    "coast": true
+   },
+   {
+    "ground": "qunfudhah",
+    "name": "القنفذة",
+    "use": "trapping",
+    "km": 1067,
+    "hours": 12.6,
+    "oneDay": false,
+    "quarry": [],
+    "coast": true
+   },
+   {
+    "ground": "mujayrimah",
+    "name": "المجيرمة",
+    "use": "trapping",
+    "km": 950,
+    "hours": 11.2,
+    "oneDay": false,
+    "quarry": [],
+    "coast": true
+   },
+   {
+    "ground": "jazan",
+    "name": "جازان",
+    "use": "trapping",
+    "km": 1324,
+    "hours": 15.6,
+    "oneDay": false,
+    "quarry": [],
+    "coast": true
+   },
+   {
+    "ground": "yanbu",
+    "name": "ينبع",
+    "use": "trapping",
+    "km": 806,
+    "hours": 9.5,
+    "oneDay": false,
+    "quarry": [],
+    "coast": true
+   },
+   {
+    "ground": "wajh",
+    "name": "الوجه",
+    "use": "trapping",
+    "km": 935,
+    "hours": 11,
+    "oneDay": false,
+    "quarry": [],
+    "coast": true
+   }
+  ],
+  "quarry": [
+   {
+    "quarry": "stoneCurlew",
+    "name": "كروان",
+    "from": [
+     9,
+     1
+    ],
+    "to": [
+     11,
+     30
+    ]
+   },
+   {
+    "quarry": "houbara",
+    "name": "حبارى",
+    "from": [
+     11,
+     1
+    ],
+    "to": [
+     1,
+     31
+    ]
+   }
+  ],
+  "room": {
+   "price": 18000,
+   "holds": 4
+  },
+  "upkeepPerDay": 20,
+  "dauDaysNeeded": 28,
+  "stepBackDays": 14,
+  "mostNights": 60,
+  "release": [
+   2,
+   1,
+   4,
+   30
+  ],
+  "sun": {
+   "1": {
+    "dawn": 388,
+    "sunrise": 413,
+    "sunset": 1052
+   },
+   "2": {
+    "dawn": 377,
+    "sunrise": 401,
+    "sunset": 1076
+   },
+   "3": {
+    "dawn": 352,
+    "sunrise": 375,
+    "sunset": 1093
+   },
+   "4": {
+    "dawn": 318,
+    "sunrise": 342,
+    "sunset": 1107
+   },
+   "5": {
+    "dawn": 293,
+    "sunrise": 318,
+    "sunset": 1123
+   },
+   "6": {
+    "dawn": 285,
+    "sunrise": 311,
+    "sunset": 1137
+   },
+   "7": {
+    "dawn": 295,
+    "sunrise": 320,
+    "sunset": 1139
+   },
+   "8": {
+    "dawn": 312,
+    "sunrise": 336,
+    "sunset": 1122
+   },
+   "9": {
+    "dawn": 326,
+    "sunrise": 349,
+    "sunset": 1090
+   },
+   "10": {
+    "dawn": 339,
+    "sunrise": 362,
+    "sunset": 1057
+   },
+   "11": {
+    "dawn": 358,
+    "sunrise": 383,
+    "sunset": 1035
+   },
+   "12": {
+    "dawn": 379,
+    "sunrise": 404,
+    "sunset": 1034
+   }
+  },
+  "lines": {
+   "refusals": {
+    "routeClosed": "مزاد الطرح من 1 أكتوبر لين 30 نوفمبر بس",
+    "lotGone": "هالطير انباع، شوف طيور اليوم",
+    "notALot": "هالطير مو من طيور اليوم",
+    "noRoom": "ابنِ غرفة الصقور أول: الصقر يبي مكانه بالعزبة",
+    "roomFull": "غرفة الصقور مليانة: تاخذ 4 صقور بس",
+    "permitHeld": "عندك هالتصريح لهالموسم",
+    "needsFalcon": "تصريح الصقار يبي صقر جوازه باسمك",
+    "gearFull": "ما تقدر تطلب أكثر منها",
+    "onTrip": "أنت طالع الحين: ارجع أول",
+    "notOnTrip": "ما أنت بمخيم هنا",
+    "tooFar": "بعيدة على طلعة يوم: ما ترجع نفس اليوم",
+    "noSupplies": "ما عندك مؤونة للمخيم",
+    "noTent": "تنقل المخيم بالخيمة المتنقلة بس",
+    "offGround": "الطرح بأرض طرح بس وبموسمه، والشبك برا أرض الطرح غرامته 100,000 ريال.",
+    "nearFarm": "الصيد بالمزارع وحولها ممنوع، وغرامته 5,000 ريال لو انمسكت. ابعد عن العزب والقرى وأرسله.",
+    "coast": "الساحل ممنوع الصيد فيه لين 20 كيلو داخل البر",
+    "reserve": "المحميات ممنوع الصيد فيها",
+    "notHuntingGround": "هذي أرض طرح، مو أرض مقناص",
+    "outOfSeason": "المقناص من 1 سبتمبر لين 31 يناير بس",
+    "noPermit": "ما عندك تصريح صقار لهالموسم",
+    "night": "بالليل وبالضو ما فيه طرح",
+    "notByDay": "الصيد بالنهار بس، من بعد الشروق بساعة لين قبل الغروب بساعة",
+    "noQuarry": "ما فيه طريدة مسموحة هنا بهالوقت",
+    "movingCar": "الصيد من سيارة تمشي ممنوع: وقّف أول",
+    "notReady": "صقرك ما خلص الدعو",
+    "falconAway": "صقرك مو معك",
+    "flownOut": "صقرك طار كفايته اليوم",
+    "noLure": "ما عندك حمام وشبك الحمام",
+    "notHeld": "هالطير مو للبيع",
+    "auctionClosed": "مزاد الطرح من 1 أكتوبر لين 30 نوفمبر بس",
+    "notKept": "تطلق بس الشاهين اللي طرحته وخليته لك",
+    "releaseMonths": "تطلقه من أول فبراير لين آخر أبريل",
+    "notLost": "صقرك مو ضايع",
+    "moult": "بالمقيض ما فيه دعو",
+    "outOfSeason.trapping": "الطرح من 1 أكتوبر لين 30 نوفمبر بس",
+    "noPermit.trapping": "ما عندك تصريح طرح لهالموسم",
+    "noLure.birdNet": "ما عندك شبك الطيور والجربوع",
+    "routeClosed.breeders": "مزاد صقور المزارع بأغسطس بس، من 5 لين 25",
+    "routeClosed.exhibition": "معرض الصقور من 1 لين 10 أكتوبر بس",
+    "routeClosed.trapping": "مزاد الطرح من 1 أكتوبر لين 30 نوفمبر بس"
+   },
+   "release": {
+    "saker.farkh": "طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري",
+    "saker.qarnas": "طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري",
+    "passagePeregrine.qarnas": "طلقته: المزاد ما يقبل إلا الفرخ",
+    "mountainPeregrine.farkh": "طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع",
+    "mountainPeregrine.qarnas": "طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع",
+    "lanner.farkh": "طلقته: الوكري طير مقيم، وطرحه ممنوع",
+    "lanner.qarnas": "طلقته: الوكري طير مقيم، وطرحه ممنوع",
+    "freedAtClose": "طلقته: خلص مزاد الطرح وما بعته ولا خليته لك"
+   },
+   "trap": {
+    "inSight": "فيه صقر",
+    "nothingInSight": "ما فيه شي",
+    "nothingCame": "ما جا شي",
+    "refused": "ما بغى الطعم",
+    "refusedAndWent": "ما بغى الطعم وراح",
+    "stooped": "نزل على الطعم وما علق",
+    "netted": "طاح بالشبك"
+   },
+   "summary": {
+    "caught": "طرحت فرخ شاهين بحري",
+    "released": "طلقت",
+    "stooped": "نزل على الطعم وما علق",
+    "flights": "طلعات الصقر",
+    "taken": "صاد",
+    "suppliesUsed": "المؤونة والبنزين",
+    "nights": "ليالي"
+   },
+   "moneyKinds": {
+    "falcons": "الصقور وأجهزة التتبع",
+    "falconSale": "بيع الطرح",
+    "permits": "التصاريح",
+    "gear": "عدة الطرح",
+    "falconUpkeep": "أكل الصقور"
+   }
+  }
+ },
+ "catalogChars": 6721,
+ "card": {
+  "kind": "trapping",
+  "ground": "hamad",
+  "groundName": "الحماد",
+  "km": 843,
+  "hours": 9.9,
+  "nights": 9,
+  "oneDay": false,
+  "oneDayPossible": false,
+  "from": 273,
+  "to": 282,
+  "pigeons": 6,
+  "has": [
+   "الحمام",
+   "شبك الحمام",
+   "مؤونة المخيم"
+  ],
+  "lacks": [
+   "شبك الطيور والجربوع",
+   "الدربيل",
+   "الخيمة المتنقلة"
+  ],
+  "supplyDays": 10,
+  "suppliesEnough": true,
+  "refused": null
+ },
+ "snapshotChars": 38052,
+ "facilities": [
+  "pen",
+  "tank",
+  "store",
+  "caravan",
+  "tent",
+  "room"
+ ],
+ "hiddenSearch": [],
+ "errs": []
+}

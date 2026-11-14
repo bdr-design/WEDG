@@ -1,0 +1,34 @@
+T17 phase1 start Sat Nov 14 06:34:40 UTC 2026
+Phase 1 tools: anim.py (skin/weights/clips/loop, CPU skinning; rest pose == raw verified on camel lod2 to 0.0004 mm),
+motion.py (stretch, slide+talon depth, tuck), mixer/ (three.js 0.170 GLTFLoader+AnimationMixer via Playwright, one-sided; tested on camel lod2: 1 call 1500 tris),
+plus T11 tools (bird_check, bird_sil, pieces, contact, swrender, repro).
+Refs opened: en.wiki Peregrine falcon (sizes, juvenile), List of birds by flight speed (peregrine 40-55 cruise, 112 level, 160 out of dive; saker 36-51, 111), Rock dove (30-35 cm, 62-68 span, 238-380 g, wing 22.3, tail 9.5-11, tarsus 2.6-3.5), Bal-chatri (nooses 4-12 cm nylon), Asian houbara (spirals, dung claim).
+Summaries: pigeon 8.6 Hz level (Dial&Biewener 1993), take-off +20% (Dial 1992); Eleonora's falcon 4.68 Hz climbing; houbara slow deep beats, <150 ft, run first (ENHG 1977); stone-curlew crouch/freeze -> run -> fly; rouse/mantle/bate glossaries.
+Photos named: Commons Juvenile Peregrine Falcon.jpg (fist), Peregrine Falcon (juvenile) (42017229951).jpg, (48451681366).jpg, A mantling falcon - geograph 6665891, Muybridge 'Pigeon flying (rbm-QP301M8-1887-755a..757b)'; T11: Hortobagy saker flight, Saker (4) flight, RWD3 on fist.
+phase2 part1 start Sat Nov 14 07:29:07 UTC 2026 d388bcd
+part1 (d388bcd) results: repro identical x2 == committed, no network; 41 bones, <=2 infl (mean 1.13);
+swap f12->13 span 655->919->1152 by f15 (pop); toes outside body: cast_off f13-28 all 864, flight ~300/864 every frame;
+upstroke shoulder-tip 635->611 mm (-4%), elbow<=14.5, wrist<=43 deg, wrist tris collapse to 1-4% area;
+land_cuff f29-38 bone-fold: droop below cuff, 54 wing verts in body, tris 5.4x / 0.7%; pop at 39;
+toe depth in cuff: 45 verts, exact max 4.33 mm (worker 0.3); toe slide cast_off f0-12 5.1 mm;
+perched frame vs saker_fist static: side IoU in place 0.825, nearest-vertex 95% 13.7 mm, max 72 (tail ~10 deg lower, head);
+swap frame not in the file (no extras); hood hidden by zero-scale bone still drawn; jesses straight rods;
+flight 4.29 Hz, bob 16 mm, loop seamless; body never below fist top (min 105 mm above).
+renders p2/*.jpg; mixer p2/mixer_sheet.jpg (three.js plays clips, 2 calls/6.5-6.8k tris with one mesh visible)
+phase2 part2 start Sat Nov 14 10:05:38 UTC 2026 ad76074
+part2 (ad76074): repro identical x2 == committed (rig + far), no network.
+MUST: hidden morph LINEAR between swap keys (13->14, 37->38): at t=13.5 both meshes half-collapsed (p2/b_swap_co.jpg, b_swap_lc.jpg) -> STEP.
+MUST: land_cuff f19-24 bird flies through the cuff (464 verts inside at f19; toes 34 mm deep f21) p2/d_lc_thru.jpg; land_perch f20-24 through the wakr top (p2/d_lp_thru.jpg).
+MUST: cast_off f20-23 tail slices through the cuff during the drop (p2/d_co_cuff.jpg).
+SHOULD: hood_off/on hood levitates (no hand) p2/c_hoodoff.jpg; perch_idle/rouse/other clips key hood scale 0.001 -> no hooded idle; hood 'hidden' = scale 0.001 not 0.
+three.js: as-is 4 draws/13,432 tris; with convention 3/7,200 (perched) 2+.. ; morph texture ok.
+OK: toes in cuff <=1.04 mm; feet hidden in flight (only one talon speck f3); perched frame vs approved = toes only; swap 0.893 not a pop with STEP; wrist kink visible close front f5-6 (listable); stoop slivers of hand through flank from below (polish).
+far file duplicates the 401 KB of clips, separate skeleton (ADR: share one skeleton/mixer).
+round3 start Sat Nov 14 12:38:16 UTC 2026
+round3 (28b0cae): repro: saker/houbara/curlew rigs identical x2 == committed; no network.
+STEP on all morph + hood channels (verified JSON). Landing remade: clean of cuff/perch/forearm before contact (land_check.txt); reads right (p3/lc_side, lc_front).
+Remaining: perched/landed left tarsus 4 verts 3.2 mm in cuff; tail on forearm when perched (known); hood clips 385 mm off the cuff pose (held back);
+perch_idle/perch_hooded toes 4-5 mm in turf, 16-41 mm jump from land_perch/land_cuff end; hood not keyed => page must own hood state (README rule says <0.01 only).
+QUARRY MUST: flight loops (houbara, curlew) key only wings: neck and legs at rest = standing pose while flapping (p3/h_fl_side.jpg, c_fl.jpg, three_houbara.jpg).
+SHOULD: wingtips through ground at take-off (houbara f21 -153 mm, curlew f20 -45 mm); houbara run toes -28 mm (f3,7,11,15); houbara swap f14 colour flash (dark primaries).
+Statics: saker no visible change (bill), houbara crest fuller: not worse (p3/statics.jpg, statics2.jpg).

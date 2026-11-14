@@ -1,0 +1,101 @@
+{
+ "start": {
+  "snapMs": 18864,
+  "readyMs": 18873
+ },
+ "drawsClosed": {
+  "frames": 3,
+  "draws": 96,
+  "tris": 136016,
+  "shadowDraws": 0,
+  "shadowTris": 0
+ },
+ "drawsSmall": {
+  "frames": 0
+ },
+ "drawsBig": {
+  "frames": 1,
+  "draws": 96,
+  "tris": 136016,
+  "shadowDraws": 0,
+  "shadowTris": 0
+ },
+ "snapshot": {
+  "chars": 34398,
+  "falconsChars": 1375,
+  "keys": 35,
+  "today": "2026-10-01"
+ },
+ "ops1": {
+  "start": 1,
+  "stored": 3
+ },
+ "errs1": [],
+ "rate": {
+  "home": {
+   "title": "home",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 8
+  },
+  "water": {
+   "title": "الوايت",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 8
+  },
+  "feed": {
+   "title": "العلف",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 8
+  },
+  "milk": {
+   "title": "الحليب",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 8
+  },
+  "build": {
+   "title": "العزبة",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 8
+  },
+  "haraj": {
+   "title": "الحراج",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 8
+  },
+  "bank": {
+   "title": "البنك",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 8
+  },
+  "mazayen": {
+   "title": "المزاين",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 0
+  },
+  "chats": {
+   "title": "المحادثات",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 0
+  },
+  "cal": {
+   "title": "التقويم",
+   "days": 8,
+   "snapshots": 8,
+   "rebuilds": 8
+  }
+ },
+ "ops3": {
+  "start": 1,
+  "stored": 112
+ },
+ "errs3": []
+}

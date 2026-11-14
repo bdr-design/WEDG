@@ -1,0 +1,2 @@
+A knew before buying (looks 1, bought Ok): cannotDeclare = null (MAY declare); quickSale declared -> Ok
+B told after buying: cannotDeclare = null (may declare)

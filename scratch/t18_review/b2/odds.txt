@@ -1,0 +1,7 @@
+ROD beginner السليل days 20 seasons 20000 withBird 0.0874 birds/season 0.091 withDear 0.0125 dearShare 0.138 priceMean 145545 median 101000 max 543000 netMean 3121 (40s)
+ROD middle حائل days 40 seasons 20000 withBird 0.3281 birds/season 0.396 withDear 0.0581 dearShare 0.153 priceMean 149630 median 104000 max 649000 netMean 47953 (63s)
+ROD top الليث days 61 seasons 20000 withBird 0.6540 birds/season 1.051 withDear 0.1461 dearShare 0.151 priceMean 148508 median 101000 max 643000 netMean 136698 (113s)
+ROD remake الليث days 61 seasons 20000 withBird 0.6540 birds/season 1.051 withDear 0.1461 dearShare 0.151 priceMean 148508 median 101000 max 643000 netMean 136513 (115s)
+ROD spam الليث days 61 seasons 20000 withBird 0.6540 birds/season 1.051 withDear 0.1461 dearShare 0.151 priceMean 148508 median 101000 max 643000 netMean 136698 (156s)
+ROD hop الليث days 61 seasons 2000 withBird 1.0000 birds/season 13.947 withDear 0.8785 dearShare 0.150 priceMean 148854 median 102000 max 649000 netMean 2054794 (94s)
+ODDS-DONE

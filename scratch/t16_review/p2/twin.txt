@@ -1,0 +1,8 @@
+== before any look: 1 differences
+  .market[33].camel.quality: 51.976420000000005 -> 52.08142
+== after look on day 273 (treated twin missed): 1 differences
+  .market[33].camel.quality: 51.976420000000005 -> 52.08142
+== after look on day 274 (treated twin FOUND): 3 differences
+  .market[33].camel.quality: 51.976420000000005 -> 52.08142
+  .market[33].treatments: null -> ["dye"]
+  .recentEvents[2].found: [] -> ["dye"]

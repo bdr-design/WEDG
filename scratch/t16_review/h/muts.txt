@@ -1,0 +1,12 @@
+E3 knewWhenBought refusal removed~packages/marah_domain/lib/src/handlers/handlers.dart~  if \(showing\.any\(\(t\) => t\.boughtKnowing\.contains\(p\.id\)\)\) \{\n    return const DomainError\(ErrorCode\.knewWhenBought\);\n  \}~
+E4a boughtKnowing never recorded~packages/marah_domain/lib/src/handlers/handlers.dart~      t\.boughtKnowing\.add\(p\.id\);~      {}
+E4b boughtKnowing recorded for every buyer~packages/marah_domain/lib/src/handlers/handlers.dart~        t\.knownBy\.contains\(p\.id\) &&\n        !t\.boughtKnowing~        !t.boughtKnowing
+E5 second look same day allowed~packages/marah_domain/lib/src/handlers/handlers.dart~  if \(checkedToday\(sim\.state, p\.id, l\.id\)\) \{~  if (false) {
+E6 declared broker price with the treatment share~packages/marah_domain/lib/src/handlers/handlers.dart~Valuation\.value\(c, sim\.today, natural: declared\)~Valuation.value(c, sim.today, natural: false)
+E9 own and knew swapped~packages/marah_domain/lib/src/handlers/handlers.dart~    return const DomainError\(ErrorCode\.ownTreatment\);~    return const DomainError(ErrorCode.knewWhenBought);
+E10 a look's finding shown to all~packages/marah_domain/lib/src/views/views.dart~\(l\.declared \|\| t\.knownBy\.contains\(viewer\) \|\| t\.by == viewer\)~(true)
+E14 look allowed short of cash~packages/marah_domain/lib/src/handlers/handlers.dart~  if \(p\.cash\.value < Balance\.vetCheckFee\) \{~  if (p.cash.value < 0) {
+E15 checkedToday never true~packages/marah_domain/lib/src/handlers/handlers.dart~    if \(e is ListingChecked && e\.listing == l\) return true;~    if (false) return true;
+E16 checkedToday in the view off~packages/marah_domain/lib/src/views/views.dart~      handlers\.checkedToday\(_state, viewer, l\.id\),~      false,
+E17 migration v12 step dropped~packages/marah_data/lib/src/save_codec.dart~    11: _v11ToV12,\n~
+E12 declareRefusal always null~packages/marah_domain/lib/src/views/views.dart~    if \(c == null \|\| c\.ownerId != viewer \|\| c\.treatments\.isEmpty\) return null;~    if (true) return null;

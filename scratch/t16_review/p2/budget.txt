@@ -1,0 +1,4 @@
+base 10k head: day 25.5 ms, snapshot 88.2 ms, page 5.4 ms, festival 110.4 ms
+base 00:04 +6: All tests passed!
+new 10k head: day 17.9 ms, snapshot 169.8 ms, page 22.9 ms, festival 73.7 ms
+new 00:04 +6: All tests passed!

@@ -1,0 +1,8 @@
+Base b079dce, 14 Nov 2026 10:28 UTC, load average 7.4-7.5 on 4 shared cores.
+r_timing_test.dart (bigFarm of budget_test, 10,000 head), two runs:
+RTIME day ms fastest 6.7 median 7.1 mean 8.8 | snapshot ms fastest 26.7 median 45.1 mean 75.6 | snapshot json 62927 chars
+RTIME day ms fastest 6.8 median 7.2 mean 8.9 | snapshot ms fastest 28.6 median 41.2 mean 71.2 | snapshot json 62928 chars
+budget_test.dart --concurrency=1: all 7 pass; "10k head: day 11.6 ms, snapshot 50.8 ms, page 4.6 ms, festival 55.3 ms"; 1,000 sick snapshot 60,920 chars
+Test counts at base (dart test): marah_domain 215, marah_data 39, marah_store 14, tool/proto_engine 29, marah_runtime 44 (+1 = my r_timing_test copy).
+Same seed (my driver scripts/r_same_seed.dart, seeds 7/11/4242, weeks 0..52, base bot + extras): VM and JS lines identical (baseline/vm_base.txt = js_base.txt) except the save's byte count (VM writes doubles with ".0": 196,665/191,179/187,625 VM vs 196,635/191,157/187,599 JS).
+CI's own same-seed (seed 7, 104 weeks): week 104 day 1003 length 221658 hash 213733673 (baseline/same_seed_ci_vm.txt); its save 227,933 bytes (baseline/save_base_seed7_104w.txt, version 11).

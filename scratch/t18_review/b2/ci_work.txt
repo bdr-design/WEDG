@@ -1,0 +1,25 @@
+== format
+📎
+Formatted 102 files (0 changed) in 0.96 seconds.
+== analyze
+No issues found!
+No issues found!
+No issues found!
+No issues found!
+No issues found!
+== domain node
+01:17 +279: All tests passed!
+== proto vm,node
+00:35 +56: All tests passed!
+== same seed diff
+diff rc 0
+VM: length 221658 hash 213733673 / JS: length 221658 hash 213733673
+SAME
+extras away 1, buildFacility 1, buyListing 2, cancelListing 40, cancelVetContract 1, declineOffer 270, listForSale 13, markFindingsTold 2, mateWithOwnBull 2, readMessages 11, renameCamel 26, rushTruck 2, setCalfShare 17, setFeedPlan 13, setStandingOrder 3, signVetContract 1, tamper 5, tellTo 5, withdrawEntry 5
+worker smoke: ok (43 messages, save 95990 chars)
+engine page: ok (snapshot 34526 chars, 7 writes, 1 failed and retried)
+== simulate
+seed 2: ok | cash 23303 | herd 13 | placings 25 | commands 740 (4 refused) | registry 71 | entries 83 in 10 seasons, caught 0 | 1433 ms
+seed 3: ok | cash 153027 | herd 24 | placings 78 | commands 805 (18 refused) | registry 75 | entries 112 in 10 seasons, caught 0 | 1468 ms
+seed 4: ok | cash 311965 | herd 18 | placings 44 | commands 781 (19 refused) | registry 76 | entries 88 in 10 seasons, caught 0 | 1655 ms
+CI-DONE
