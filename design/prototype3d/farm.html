@@ -1741,11 +1741,12 @@ function view(kind) {
     controls.target.set(12, 1.4, 5);
     camera.position.set(25, 6, -17);
   } else {
-    // (with the meter's test herd on, the near view is one fixed view of the big pen, the test herd in it: the phone test's
-    // map shot, the same every time; a normal game's near view is as it was)
+    // (with the meter's test herd on, the near view is one fixed view over the pens from the south, 15 m up: the phone
+    // test's map shot, the same every time, with the test herd in sight (39 of the 40 at the 8k level, about 544k
+    // triangles with everything built); a normal game's near view is as it was)
     const testNear = kind === 'near' && demoHerd && !follow && !(pop && pop.camel);
-    const tgt = follow ? follow.root.position : pop && pop.camel ? pop.camel.root.position : testNear ? tmpAway.set(-14, 0, -32) : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
-    const off = kind === 'near' ? tmpTo.set(7, 3.2, 9) : scr.w > scr.h ? tmpTo.set(-104, 40, 66) : tmpTo.set(-150, 78, 112);
+    const tgt = follow ? follow.root.position : pop && pop.camel ? pop.camel.root.position : testNear ? tmpAway.set(-14, 0, -30) : (kind === 'near' || followHerd) ? herdCenter() : tmpAway.set(30, 0, -18);
+    const off = testNear ? tmpTo.set(6, 15, 30) : kind === 'near' ? tmpTo.set(7, 3.2, 9) : scr.w > scr.h ? tmpTo.set(-104, 40, 66) : tmpTo.set(-150, 78, 112);
     controls.target.copy(tgt).setY(1);
     camera.position.copy(controls.target).add(off);
   }
@@ -1904,7 +1905,9 @@ vehiclesReady.then(async () => {
   window.__play = play;
   onFacilities = () => play.facilities(facVisible); onFacilities();      // (what stands blocks the walker and the car; nothing else)
 }).catch((e) => console.error(e));
-$('cam-play').addEventListener('click', () => { if (play) { closePop(); play.start(); } });
+// (with the meter's test herd on, the walk starts at one fixed place, 8 m south of the pens, looking over them: the phone
+// test's walking shot, the same every time, the test herd in sight; a normal game starts where the walker was)
+$('cam-play').addEventListener('click', () => { if (play) { closePop(); if (demoHerd) { play.debug.man.pos.set(-6, 0, -4); play.debug.man.heading = Math.atan2(-10, -30); } play.start(); } });
 
 view('drone');
 const clock = new THREE.Clock();
