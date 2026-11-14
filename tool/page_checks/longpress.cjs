@@ -133,6 +133,23 @@ const LAUNCH = { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-u
   const fieldOk = field.userSelect !== 'none' && field.selectstart && field.selected === 2;
   rows.push(`${fieldOk ? 'ok  ' : 'FAIL'}  a text field keeps its selection (${JSON.stringify(field)})`);
   if (!fieldOk) fails.push('a text field lost its selection: ' + JSON.stringify(field));
+  // and inside the phone's shadow tree: focused, typed in, its text selected (the phone has no field today: one is
+  // put in its screen for the check and taken out)
+  await p.evaluate(() => { window.__phone.toggle(); window.__phone.enlarge(); });
+  await p.waitForTimeout(600);
+  await p.evaluate(() => { const i = document.createElement('input'); i.id = 'lp-field'; i.style.cssText = 'position:absolute;left:20px;top:60px;z-index:9;font-size:16px;width:200px'; R().querySelector('.scr').appendChild(i); });
+  const fb = await centre('#lp-field', true);
+  if (fb) await p.touchscreen.tap(fb.x, fb.y);
+  await p.waitForTimeout(300);
+  await p.keyboard.type('نص 12');
+  const inPhone = await p.evaluate(() => {
+    const i = R().querySelector('#lp-field');
+    const r = { focused: R().activeElement === i, value: i.value, userSelect: getComputedStyle(i).userSelect, selectstart: i.dispatchEvent(new Event('selectstart', { bubbles: true, cancelable: true })) };
+    i.select(); r.selected = i.selectionEnd - i.selectionStart; i.remove(); return r;
+  });
+  const phoneOk = inPhone.focused && inPhone.value === 'نص 12' && inPhone.userSelect !== 'none' && inPhone.selectstart && inPhone.selected === 5;
+  rows.push(`${phoneOk ? 'ok  ' : 'FAIL'}  a text field in the phone is focused, typed in and selected (${JSON.stringify(inPhone)})`);
+  if (!phoneOk) fails.push('a text field in the phone: ' + JSON.stringify(inPhone));
   await b.close();
   console.log(rows.join('\n'));
   if (fails.length) { console.log('\nFAILED:\n' + fails.join('\n')); process.exit(1); }
