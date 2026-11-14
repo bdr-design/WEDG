@@ -17,7 +17,7 @@ class Species:
 
     def build(self, pose_name, level):
         pose = self.POSES[pose_name]
-        det = bird.Detail(level)
+        det = bird.Detail(level, self.SPEC.get('near_detail'))
         st = [(d * self.SPEC.get('scale', 1.0), au, ad, b) for (d, au, ad, b) in self.STATIONS]
         body = bird.Body(st, pose, det, head_weight=self.head_weight)
         parts = {'body': [body.piece(det)]}

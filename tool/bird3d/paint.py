@@ -29,7 +29,11 @@ BLOCKS_BIRD = {
 
 
 def atlas(name):
-    return Atlas(dict(BLOCKS_BIRD))
+    b = dict(BLOCKS_BIRD)
+    if name == 'pigeon':      # no hood: its two blocks carry the noose harness instead
+        b['strap'] = b.pop('hood')
+        b['line'] = b.pop('hood_knot')
+    return Atlas(b)
 
 
 def paint(name, at, size, body):

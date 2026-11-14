@@ -327,14 +327,25 @@ skeleton, so the near and far meshes share the clips and one mixer (ADR 0005's l
 the far file's copy of the clips (401 KB for the saker, 109 / 88 KB for the houbara and the stone-curlew) and a
 second skeleton and mixer per bird. The build checks there is one skin.
 
-**The hood is game state.** Only `hood_off` and `hood_on` key the hood bone (STEP, the build checks no other clip
-does); every other clip leaves it as the game set it, so a hooded falcon idles, rouses or sits in the car with the
-same clips. `perch_hooded` is a quieter idle for the hooded bird.
+**The hood is game state.** Only `hood_off` and `hood_on` move the hood bone (STEP; the build checks no other clip
+does). Every other clip holds it at rest (scale 1), so the page, not the clip, decides whether the hood is drawn,
+from its own hooded or unhooded state; the two hood clips only animate taking it off and putting it on. A hooded
+falcon idles, rouses or sits in the car with the same clips. `perch_hooded` is a quieter idle for the hooded bird.
+
+**Every clip animates every bone** (the build checks the file): a bone a clip left out would show its rest pose
+(the standing pose for the quarry, which flew with the neck upright and the legs down until this was found).
+
+**One perched pose.** Every clip that starts or ends perched starts or ends in the same pose (`perched_rest`),
+the jesses in one settled shape on the perch and one held in the fist on the cuff, and the spread mesh's hidden
+wing kept in the swap's fold while she sits. The build prints each hand-over: a transition's last frame against
+the first frame of the clip it hands to, beside the largest step inside that clip.
 
 ### For the game page (not built here)
 
-- **What to draw.** Hide a mesh whose `hidden` weight is 0.5 or more, and the hood when its bone's scale is under
-  0.01 (it is keyed to 0.001, not 0). Show the near or the far pair by distance. As the file is, everything drawn:
+- **What to draw.** Hide a mesh whose `hidden` weight is 0.5 or more. The hood: drawn when the page's own state
+  says the falcon is hooded; during `hood_off` and `hood_on`, hidden while its bone's scale is under 0.01 (keyed to
+  0.001, not 0). Near and far: the file holds both and three.js draws every mesh it holds, so the page picks one
+  pair by distance, by name (the far meshes end in `_far`), and sets the other pair not visible. As the file is, everything drawn:
   4 draws, 13.4k triangles; with this rule a perched saker is 3 draws, 7.2k (folded body, hood, jesses), a flying
   one 2 draws, 6.8k (spread body, jesses).
 - **Bounds.** three.js culls a skinned mesh by its rest-pose bounds, and `cast_off` and the landings move the root
@@ -371,7 +382,7 @@ hind toe) and no hood or jesses. At most two bones a vertex.
 | saker | `perch_hooded` (loop) | 150 | hooded: quieter than unhooded (breathing, one slow small turn of the head toward a sound), since the hood is there to keep her calm: game choice from that purpose |
 | saker | `rouse` | 36 | every contour feather raised at once (the morph `fluff`, up to 7 mm on the body), the whole bird shaken through for about half a second (7 shakes a second), the plumage laid smooth again: game choice |
 | saker | `hood_off`, `hood_on` | 30 each | on the fist; the hood lifted (the hand not drawn). **Held back from the owner's motion sheet: they come with the man's hand rig**, which will carry the hood; the hood's path here is a placeholder |
-| saker | `cast_off` | 41 | the lean and crouch, the wings opening to the swap at 14, the push with the legs, the feet off the fist at 20, trailing two frames, drawn up by 24; the tail raised clear of the fist (17-30), and only then she drops (her tail base about 220 mm below where it sat, at frame 35), then climbs (the drop and the speeds are game choices) |
+| saker | `cast_off` | 39 | the lean and crouch, the wings opening to the swap at 14, the push with the legs, the feet off the fist at 20, trailing two frames, drawn up by 24; the tail raised clear of the fist (17-30), and only then she drops (her tail base about 220 mm below where it sat, at frame 35), then climbs (the drop and the speeds are game choices) |
 | saker | `flight` (loop) | 14 | two beats of 7 frames: 4.3 Hz, inside the 4.3–4.8 Hz Pennycuick's (1996) formula predicts (the formula from a search summary, not opened); the wing flexes at the elbow and wrist on the upstroke (shoulder to tip 73% of its spread length), the hand twists; the body bobs against the beat |
 | saker | `glide` (loop) | 60 | the wings held, a slow roll |
 | saker | `stoop` | 40 | the spread mesh's wings drawn in by its bones to the tightest outline that still reads right, the body tipped 55° down, the head in line; no swap here (the folded mesh matched at best 0.69 at this angle); `bind` starts from the same outline |
@@ -459,6 +470,9 @@ flight). `hood_off` and `hood_on` are held back: they come with the man's hand r
 - **The wrist on the upstroke.** At the most flexed frames of `flight` (5-6 and 12-13) some wrist triangles fall
   to 7-9% of their rest area (a crease seen close from the front); in the swaps' folds, for one to four frames,
   to under 1%. An extra weight ring or a corrective shape would cost a morph target; not done, listed.
+- **The houbara's swap colour.** At the take-off's swap (frame 14) the wing changes colour for a frame: the folded
+  mesh's sandy closed wing gives way to the spread mesh folded, which shows its dark primaries and the white bar.
+  Matching the folded mesh's painted wing to it would change the approved standing look; listed, not done.
 - **Hand slivers in the stoop.** Seen from below, a few forearm and hand vertices pass inside the flank in the
   drawn-in wing (58 at most, frame 12, after turning the wing 10°; 75 before); the same outline at the swaps (70).
 
@@ -476,10 +490,11 @@ says otherwise.
    trapping research found the trapping auction sells only that bird; started only after he approves the saker. The
    gyr (الجير) later, as a real مزاين class. (My recommendation had been the الجير بيور first.)
 4. **512 or 1024 px for the falcon on the fist.** Not decided: 512 px stays until he tries it on his phone.
-5. **The falcon's place on the fist.** The approved pose faces along the forearm, so its tail falls across a level
-   forearm. My recommendation: keep the pose and give the man's arm the falconer's carry (the fist raised above
-   the elbow, the forearm a little out), checked by the same build test when the man's rig is made; the other way
-   is to turn her to sit across the fist, which changes the approved look.
+5. **The falcon's place on the fist.** Settled with the reviewer: the approved pose stays. **Requirement on the
+   man's rig:** the falconer's carry, the elbow bent and close to the body, the fist at or a little above the
+   elbow's height, the forearm sloping up to the fist, so the hanging tail clears it. When the man's rig exists, run
+   the build's support check (`support_checks`) with his posed forearm in place of the level 45 mm cylinder: no
+   vertex of the bird inside it in any frame on the fist.
 
 ## Not done yet
 

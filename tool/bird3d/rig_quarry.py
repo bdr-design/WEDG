@@ -27,9 +27,14 @@ from common import V3  # noqa: E402
 from rig import FPS, MM, blend, keys, lerp, ramp, smooth01  # noqa: E402
 
 TOES = ('toeM', 'toeI', 'toeO')
+Q_FOOT_LIFT = 6.5      # mm: the foot's centre above the ground, so the tarsus' end stays above it (4 left it 2 mm under)
+IN_AIR = ('flight',)   # loops played in place in the air: no ground under them
 
 
 def species(name):
+    if name == 'pigeon':
+        import pigeon
+        return pigeon.PIGEON
     import quarry
     return quarry.HOUBARA if name == 'houbara' else quarry.CURLEW
 
@@ -40,7 +45,7 @@ def rest(name, wings, level=0):
     pose = dict(sp.POSES['alert'])
     pose.pop('foot_r_shift', None)
     pose.update({'wings': wings, 'tucked': False, 'tail_droop': 0, 'wing_dihedral': 0.0, 'tail_spread': 1.0})
-    det = bird.Detail(level)
+    det = bird.Detail(level, sp.SPEC.get('near_detail'))
     st = [(d * sp.SPEC.get('scale', 1.0), au, ad, b) for (d, au, ad, b) in sp.STATIONS]
     body = bird.Body(st, pose, det, head_weight=sp.head_weight)
     S = sp.SPEC
@@ -66,12 +71,15 @@ def rest(name, wings, level=0):
             out.append((leg['toes'][i * nt + k], ('toe', side, k)))
             out.append((leg['claws'][i * nt + k], ('claw', side, k)))
     if sp.extras:
-        out += [(p, ('crest',)) for p in sp.extras(body, det, pose)]
+        out += [(p, ('crest' if name == 'houbara' else 'harness',)) for p in sp.extras(body, det, pose)]
     return out, pts, body, pose
 
 
-NECK = {'houbara': ((262, 312), (312, 362), (362, 408)), 'curlew': ((174, 205), (205, 236))}
-HEAD_FROM = {'houbara': 408, 'curlew': 236}
+HANDOVERS = {'houbara': (('take_off', 'flight'), ('escape', 'flight'), ('stand', 'run'), ('run', 'stand')),
+             'curlew': (('take_off', 'flight'), ('stand', 'run'), ('stand', 'crouch'), ('crouch', 'stand')),
+             'pigeon': (('stand', 'flutter'), ('flutter', 'stand'))}
+NECK = {'houbara': ((262, 312), (312, 362), (362, 408)), 'curlew': ((174, 205), (205, 236)), 'pigeon': ((136, 157), (157, 176))}
+HEAD_FROM = {'houbara': 408, 'curlew': 236, 'pigeon': 176}
 
 
 def bones(name, pts, body, pose):
@@ -162,6 +170,8 @@ def weights_for(name, pc, tag, body, B):
         return [{'head': 1.0} for _ in pc.V]
     if kind == 'crest':
         return [{'crest': 1.0} for _ in pc.V]
+    if kind == 'harness':      # the pigeon's straps, pad, nooses and line ride on the body
+        return [{'body': 1.0} for _ in pc.V]
     if kind == 'tail':
         root = B['tail'][0]
         tdir = (B['tail'][1] - root).normalized()
@@ -239,6 +249,21 @@ class QApplier:
         self.rest_root = self.P.rest['root'].translation / MM
         self.log = []
 
+    def toes_low(self, s):
+        """The lowest toe or claw vertex of one foot, as posed (mm above the ground)."""
+        bpy.context.view_layer.update()
+        low = 1e9
+        for nm in TOES:
+            for j in (1, 2):
+                b = f'{nm}{j}.{s}'
+                V = self.toe_verts.get(b)
+                if V is None or not len(V):
+                    continue
+                A = np.array(self.P.pb[b].matrix @ self.P.rest[b].inverted())
+                W = (V @ A[:3, :3].T + A[:3, 3]) / MM
+                low = min(low, float(W[:, 2].min()))
+        return low
+
     def toes_flat(self, s, foot_target):
         """Each toe laid joint by joint on the ground (z = 0), from its rest frame, as on the saker's perch."""
         P = self.P
@@ -256,7 +281,7 @@ class QApplier:
                 flat = yaw @ V3((rest_dir.x, rest_dir.y, 0)).normalized()
                 local = Rr.inverted()
                 best, best_M = None, None
-                for a in np.linspace(-30, 60, 91):
+                for a in np.linspace(-60, 80, 141):
                     ar = math.radians(a)
                     want = flat * math.cos(ar) + V3((0, 0, -1)) * math.sin(ar)
                     r = rest_dir.rotation_difference(want).to_matrix()
@@ -264,7 +289,8 @@ class QApplier:
                     A = np.array(M @ local)
                     W = (V @ A[:3, :3].T + A[:3, 3]) / MM
                     clear = W[:, 2].min()
-                    score = abs(clear - 0.6) + (1000 if clear < 0.4 else 0)
+                    lift = 3.6 if self.name == 'pigeon' else 0.6      # the pigeon's small toes bend at blended joints: 3 mm more
+                    score = abs(clear - lift) + (1000 if clear < lift - 0.2 else 0)
                     if best is None or score < best:
                         best, best_M = score, M
                 p.matrix = best_M
@@ -320,17 +346,26 @@ class QApplier:
                     P.turn(f'{nm}1.{s}', ax, -60)
                     P.turn(f'{nm}2.{s}', ax, -80)
                 continue
-            target = V3(target) + V3((0, 0, rig.FOOT_LIFT))
+            target = V3(target) + V3((0, 0, Q_FOOT_LIFT))
             pole = Matrix.Rotation(math.radians(self.yaw), 3, 'Z') @ V3((-1, 0, -0.1))
             P.leg(s, target, pole)
             if planted:
                 self.toes_flat(s, target)
                 self.log.append(('slide', frame, s, (P.tail_of(f'tarsus.{s}') - target).length))
             else:
-                for nm in TOES:
-                    ax = P.rest[f'{nm}1.{s}'].to_3x3() @ V3((1, 0, 0))
-                    P.turn(f'{nm}1.{s}', ax, -25 * curl)
-                    P.turn(f'{nm}2.{s}', ax, -40 * curl)
+                for attempt in range(4):      # a swinging foot's toes kept above the ground: the foot raised if not
+                    for nm in TOES:
+                        ax = P.rest[f'{nm}1.{s}'].to_3x3() @ V3((1, 0, 0))
+                        P.turn(f'{nm}1.{s}', ax, -25 * curl)
+                        P.turn(f'{nm}2.{s}', ax, -40 * curl)
+                    low = self.toes_low(s)
+                    if low >= 0.5:
+                        break
+                    target = target + V3((0, 0, 0.5 - low))
+                    for nm in TOES:
+                        for j in (1, 2):
+                            P.pb[f'{nm}{j}.{s}'].rotation_quaternion = (1, 0, 0, 0)
+                    P.leg(s, target, pole)
         if key:
             P.key(frame)
 
@@ -363,17 +398,21 @@ class Clips:
     def __init__(self, name):
         self.name = name
         self.S = species(name).SPEC
-        self.hw = 34 if name == 'houbara' else 22
+        self.hw = {'houbara': 34, 'curlew': 22, 'pigeon': 16}[name]
         # wingbeats: 7 frames (4.3 Hz) for the houbara, inside the 4.2-4.7 Hz Pennycuick's formula gives it; 5 frames
         # (6 Hz) for the stone-curlew, inside its 5.9-7.4 Hz
         self.beat = 7 if name == 'houbara' else 5
         self.alert_neck = (0, 0, 0) if name == 'houbara' else (0, 0)
+        # the pigeon's wingbeat: 8.6 Hz in level flight (Dial and Biewener 1993, from a search summary), a fifth
+        # faster at take-off (Dial 1992, the same): a beat every 3 frames (10 Hz) in the tethered flutter
+        self.flutter_beat = 3.0
         self.run_neck = (-28, -18, 10) if name == 'houbara' else (-30, 8)
         self.fly_neck = (-62, -10, 8) if name == 'houbara' else (-60, 20)
         # the body's pitch at the swap: where the two meshes' outlines match best (houbara 0.93 at 0 against 0.86 at
         # -14; stone-curlew 0.91 at -14)
         self.swap_pitch = 0.0 if name == 'houbara' else -14.0
         self.trail = (-70, 30, -45) if name == 'houbara' else (-90, 16, -30)      # torso frame: the feet behind, under the tail
+        self.fly_amp = 52 if name == 'houbara' else 44
 
     def flap(self, ph, amp, mean):
         up = mean + amp * math.cos(2 * math.pi * ph)
@@ -387,7 +426,7 @@ class Clips:
         loops."""
         c = 2 * math.pi * f / 120.0
         yaw = keys(f, [(0, 0), (20, 0), (30, 35), (50, 35), (60, 0), (75, 0), (85, -30), (100, -30), (110, 0), (120, 0)])
-        back = -34 if self.name == 'houbara' else -28
+        back = {'houbara': -34, 'curlew': -28, 'pigeon': -14}[self.name]
         feet = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((back, -self.hw, 0)), True, 0)}
         crest = 6 * max(0.0, math.sin(c * 2)) if self.name == 'houbara' else 0
         return {'feet': feet, 'mesh': 'fold', 'bob': 2 * math.sin(c), 'roll': 1.5 * math.sin(c), 'head_yaw': yaw,
@@ -423,17 +462,26 @@ class Clips:
             if f >= 10:
                 r['feet'] = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((-10, -self.hw, 0)), True, 0)}
             return r
-        k = ramp(f, swap, swap + 4)
+        k = ramp(f, swap, swap + 5)
         raised = {'up': 60, 'sweep': 18, 'fore': -12, 'hand': 14, 'twist': 0}
-        if f < swap + 4:
+        n_total = 40
+        start = n_total - 3 * self.beat      # the beats are timed so the clip's end runs on into the flight loop's frame 0
+        famp, fmean = self.fly_amp, 6.0
+        if f < start:
             w = {kk: lerp(self.swap_open.get(kk, 0.0), raised.get(kk, 0.0), k) for kk in raised}
         else:
-            w = self.flap(((f - swap - 4) / self.beat) % 1.0, 48, 4)
-        t = max(0.0, (f - swap - 2) / FPS)
-        root = V3((1800 * t + 0.5 * 3000 * t * t, 0, 0.5 * 2500 * t * t))
-        sp = {'mesh': 'open', 'wing': w, 'pitch': keys(f, [(swap, self.swap_pitch), (swap + 4, 18), (swap + 12, 8), (40, 4)]),
-              'root': root, 'neck': tuple(lerp(a, b, ramp(f, swap, swap + 10)) for a, b in zip(self.run_neck, self.fly_neck)),
-              'tail_spread': 1.25}
+            # the first beats shallow and high (the wingtips clear of the ground as she climbs), growing into the
+            # flight loop's beat by the clip's end
+            g = ramp(f, start, n_total - 2)
+            w = self.flap(((f - start) / self.beat) % 1.0, lerp(30, famp, g), lerp(26, fmean, g))
+        t = max(0.0, (f - swap - 1) / FPS)
+        root = V3((1800 * t + 0.5 * 3000 * t * t, 0, 0.5 * 4200 * t * t))
+        ph = ((f - start) / self.beat) % 1.0
+        bob0 = self.run(swap - 1)['bob'] - 18      # where the crouch left the body
+        bob = lerp(bob0, 0.0, ramp(f, swap, swap + 8)) + (-10 * math.cos(2 * math.pi * ph)) * ramp(f, n_total - 10, n_total - 1)
+        sp = {'mesh': 'open', 'wing': w, 'pitch': keys(f, [(swap, self.swap_pitch), (swap + 4, 18), (swap + 12, 8), (n_total - 1, 3)]),
+              'root': root, 'bob': bob, 'neck': tuple(lerp(a, b, ramp(f, swap, swap + 10)) for a, b in zip(self.run_neck, self.fly_neck)),
+              'tail_spread': lerp(1.25, 1.05, ramp(f, n_total - 10, n_total - 1))}
         if f < swap + 3:
             sp['feet'] = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((-10, -self.hw, 0)), True, 0)}
         else:
@@ -444,8 +492,7 @@ class Clips:
 
     def flight(self, f):
         ph = (f / self.beat) % 1.0
-        amp = 52 if self.name == 'houbara' else 44
-        return {'mesh': 'open', 'wing': self.flap(ph, amp, 6), 'pitch': 3, 'bob': -10 * math.cos(2 * math.pi * ph),
+        return {'mesh': 'open', 'wing': self.flap(ph, self.fly_amp, 6), 'pitch': 3, 'bob': -10 * math.cos(2 * math.pi * ph),
                 'neck': self.fly_neck, 'feet': {'L': ('trail', False, 1), 'R': ('trail', False, 1)}, 'tail_spread': 1.05}
 
     def escape(self, f):
@@ -460,6 +507,34 @@ class Clips:
             r['feet'] = {s_: (Rz @ p, pl, c) for s_, (p, pl, c) in r['feet'].items()}      # the stride turns with the body
             return r
         return self.take_off(f - 24 + 2)
+
+    def flutter(self, f):
+        """The tethered decoy (game choice from how trappers use it: the pigeon on its line, made to flap where the
+        falcon will see it): standing, it opens its wings (the folded mesh to the swap at 6), beats hard on the
+        spot, the body raised and tipped up, the tail fanned, the feet held to the ground by the line, and folds
+        again (the swap at 54)."""
+        s_in, s_out, n = 6, 54, 60
+        feet = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((-14, -self.hw, 0)), True, 0)}      # as it stands
+        up = ramp(f, 2, 12) * (1 - ramp(f, 46, 56))
+        sp = {'feet': feet, 'pitch': -4 * up, 'bob': 0.0, 'neck': (-10 * up, 14 * up), 'head_pitch': -6 * up,
+              'tail_spread': 1.0 + 0.4 * up, 'tail_drop': 22 * up}
+        if f < s_in or f >= s_out:
+            sp['mesh'] = 'fold'
+            k = ramp(f, 1, s_in - 1) if f < s_in else 1 - ramp(f, s_out, n - 1)
+            sp['fold'] = {kk: v * k for kk, v in self.swap_fold.items()}
+            if f in (s_in - 1, s_out):
+                sp['wing'] = dict(self.swap_open)
+            return sp
+        sp['mesh'] = 'open'
+        beat = self.flap(((f - s_in) / self.flutter_beat) % 1.0, 50, 26)      # high beats: the wingtips clear of the ground
+        k = ramp(f, s_in, s_in + 3) * (1 - ramp(f, s_out - 4, s_out - 1))
+        sp['wing'] = {kk: lerp(self.swap_open.get(kk, 0.0), beat.get(kk, 0.0), k) for kk in set(beat) | set(self.swap_open)}
+        if f in (s_in, s_out - 1):
+            sp['fold'] = dict(self.swap_fold)
+        return sp
+
+    def swap_base(self):
+        return self.flutter(5) if self.name == 'pigeon' else self.take_off(13)
 
     def crouch(self, f):
         """The stone-curlew's crouch: it lies flat with the neck stretched along the ground and stays still, trusting
@@ -476,15 +551,19 @@ CLIPS = {
                 'flight': (14, 'flight', True), 'escape': (62, 'escape', False)},
     'curlew': {'stand': (120, 'stand', True), 'run': (12, 'run', True), 'crouch': (60, 'crouch', False),
                'take_off': (40, 'take_off', False), 'flight': (10, 'flight', True)},
+    'pigeon': {'stand': (120, 'stand', True), 'flutter': (60, 'flutter', False)},
 }
 SWAP = {      # tuned by `tune` (the folded wing's opening and the spread wing's fold that match at the swap)
     'houbara': ({'out': 36, 'up': 56, 'twist': 0, 'tip_out': 1, 'tip_up': -36}, {'up': 0, 'sweep': 70, 'fore': -109, 'hand': 194, 'twist': 0}),
     'curlew': ({'out': 10, 'up': 39, 'twist': 0, 'tip_out': -5, 'tip_up': -31}, {'up': 15, 'sweep': 95, 'fore': -11, 'hand': 195, 'twist': 0}),
+    'pigeon': ({'out': 13, 'up': 31, 'twist': 0, 'tip_out': 5, 'tip_up': -19}, {'up': 10, 'sweep': 56, 'fore': -109, 'hand': 185, 'twist': 0}),
 }
 
 
 def build(name, out, clips_wanted=None):
     import paint
+    global TOES
+    TOES = ('toeM', 'toeI', 'toeO', 'toeH')[:len(species(name).SPEC['toes'])]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = FPS
     tf, pts, body, pose = rest(name, 'fold')
@@ -510,7 +589,7 @@ def build(name, out, clips_wanted=None):
         far[k].hide_render = True
     C = Clips(name)
     C.swap_fold, C.swap_open = SWAP[name]
-    toe_verts = rig.toe_vertex_sets(meshes['fold'])
+    toe_verts = rig.toe_vertex_sets_all(meshes['fold']) if name == 'pigeon' else rig.toe_vertex_sets(meshes['fold'])
     arm.animation_data_create()
     frames_mesh, feet_planted, logs = {}, {}, []
     clips = CLIPS[name] if clips_wanted is None else {k: v for k, v in CLIPS[name].items() if k in clips_wanted}
@@ -564,7 +643,7 @@ def build(name, out, clips_wanted=None):
         o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=False,
                               export_animations=True, export_animation_mode='NLA_TRACKS', export_skins=True,
-                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=False,
+                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=True,
                               export_morph=True, export_morph_animation=True, export_morph_normal=False,
                               export_materials='EXPORT', export_extras=False, export_image_format='AUTO')
     common.settle(path)
@@ -582,7 +661,7 @@ if __name__ == '__main__':
     NAME = sys.argv[2]
     mode = sys.argv[3] if len(sys.argv) > 3 else ''
     os.makedirs(OUT, exist_ok=True)
-    arm, meshes, frames_mesh, B, C, body = build(NAME, OUT)
+    arm, meshes, frames_mesh, B, C, body = build(NAME, OUT, os.environ['BUILD_ONLY'].split(',') if os.environ.get('BUILD_ONLY') else None)
     if mode == 'tunepitch':
         A = QApplier(NAME, arm, B, body, rig.toe_vertex_sets(meshes['fold']))
         A.trail = C.trail
@@ -601,7 +680,7 @@ if __name__ == '__main__':
         import itertools
         A = QApplier(NAME, arm, B, body, rig.toe_vertex_sets(meshes['fold']))
         A.trail = C.trail
-        base = C.take_off(13)
+        base = C.swap_base()
         for o in meshes.values():
             o.data.shape_keys.key_blocks['hidden'].value = 0.0
         best = None
@@ -673,7 +752,7 @@ if __name__ == '__main__':
                               label=f'{NAME} {cname}, three-quarter (30 frames a second): {lab}', tag='tq')
     if mode == 'measure':
         sc = bpy.context.scene
-        for cname, (n, fn, loop) in CLIPS[NAME].items():
+        for cname, (n, fn, loop) in rig.CLIPS.items():
             rig.use_clip(arm, cname)
             fm = frames_mesh[cname]
             for f in range(1, n):
@@ -686,8 +765,28 @@ if __name__ == '__main__':
                         b, tb = rig.evaluated_co(meshes['open'])
                         worst = min(worst, rig.pair_iou(a, ta, b, tb, rig.VIEWS['side']), rig.pair_iou(a, ta, b, tb, rig.VIEWS['three_quarter']))
                     print(f'{cname}: swap {fm[f - 1]} -> {fm[f]} at frame {f}: silhouette overlap {worst:.3f}')
+        # nothing below the ground in any frame of any clip (the shown mesh)
+        for cname, (n, fn, loop) in rig.CLIPS.items():
+            if cname in IN_AIR:
+                continue
+            rig.use_clip(arm, cname)
+            worst, wf, cnt, wb = 0.0, None, 0, None
+            for f in range(n):
+                sc.frame_set(f)
+                o = meshes[frames_mesh[cname][f]]
+                co, _ = rig.evaluated_co(o)
+                z = co[:, 2]
+                below = z < -0.5
+                if below.any() and -z.min() > worst:
+                    worst, wf, cnt = -float(z.min()), f, int(below.sum())
+                    i = int(np.argmin(z))
+                    gi = {g.index: g.name for g in o.vertex_groups}
+                    v = o.data.vertices[i]
+                    wb = gi[max(v.groups, key=lambda g: g.weight).group] if len(v.groups) else '?'
+            print(f'{cname}: vertices below the ground: ' + ('none' if wf is None else f'deepest {worst:.1f} mm ({wb}, frame {wf}, {cnt} vertices)'))
+        rig.handover_checks(arm, HANDOVERS.get(NAME, ()), rig.CLIPS)
         # loops: the last frame must lead back into the first (the bones' heads, frame n against frame 0)
-        for cname, (n, fn, loop) in CLIPS[NAME].items():
+        for cname, (n, fn, loop) in rig.CLIPS.items():
             rig.use_clip(arm, cname)
             if loop:
                 pos = []

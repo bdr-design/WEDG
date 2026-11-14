@@ -15,7 +15,7 @@ from common import (V3, Piece, Sec, angle_profile, bent_line, frame, loft, mirro
 
 
 class Detail:
-    def __init__(self, level):
+    def __init__(self, level, near=None):
         self.level = level
         hi = level == 0
         self.body_ring = 24 if hi else 10
@@ -31,6 +31,9 @@ class Detail:
         self.beak_stations = 9 if hi else 4
         self.eye_ring = 14 if hi else 6
         self.eye_stations = 7 if hi else 3
+        for k, v in (near or {}).items():      # a small bird's near level: fewer rings where they do not show
+            if hi:
+                setattr(self, k, v)
 
 
 class Body:

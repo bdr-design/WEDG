@@ -28,15 +28,20 @@ from common import V3, smooth_path, tube  # noqa: E402
 
 FPS = 30
 MM = 0.001
+# the falcon this run builds: the saker, or the peregrine on the same skeleton and clips (its own numbers in RIG)
+BIRD = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] in ('saker', 'peregrine') else 'saker'
+import importlib  # noqa: E402
+SP = importlib.import_module(BIRD)
+RIG = getattr(SP, 'RIG', {})
 
 
 # ------------------------------------------------------------------ the saker's rest meshes, tagged
 def saker_rest(wings, level=0):
     """The saker in the rest pose: body level (its tail base at the origin), the feet below, toes flat. Returns
     {'body': [(piece, tag)], 'hood': [...], 'jesses': [...]}, the named points (mm) and the body."""
-    import saker
+    saker = SP
     pose = dict(saker.POSES['flight'])
-    pose.update({'wings': wings, 'tucked': False, 'foot': (75, 22, -125), 'foot_turn': 8, 'tail_droop': 0,
+    pose.update({'wings': wings, 'tucked': False, 'foot': RIG.get('rest_foot', (75, 22, -125)), 'foot_turn': 8, 'tail_droop': 0,
                  'tail_spread': 1.0, 'wing_dihedral': 0.0, 'fluff': 1.05})      # as the approved perched birds
     det = bird.Detail(level)
     body = bird.Body(saker.stations(pose), pose, det, head_weight=2.0)
@@ -102,29 +107,34 @@ def saker_bones(pts, body):
     feet = (pts['foot_l'] + pts['foot_r']) / 2
     add('root', feet, feet + V3((0, 0, 40)), None, 'where the bird stands: moves it through the world')
     add('body', tp(80, -10), tp(180, 0), 'root', 'the torso: pitch, roll and bob')
-    add('neck1', body.at(178), body.at(212), 'body', 'the lower neck: with neck2 keeps the head level as the body tilts')
-    add('neck2', body.at(212), body.at(240), 'neck1', 'the upper neck')
-    add('head', body.at(240), body.at(292), 'neck2', 'the head: looks around; carries beak, eyes and hood')
-    add('hood', body.at(252) + V3((0, 0, 20)), body.at(252) + V3((0, 0, 50)), 'head', 'the hood: lifted off and set on')
-    add('tail', tp(20, 3), tp(-205, 3), 'body', 'the tail: lifts and drops')
-    add('tail.L', tp(20, 3, 6), tp(-205, 3, 18), 'tail', 'the tail\'s left feathers: fan out')
-    add('tail.R', tp(20, 3, -6), tp(-205, 3, -18), 'tail', 'the tail\'s right feathers: fan out')
+    n0, n1, n2 = RIG.get('neck', (178, 212, 240))
+    he, hd = RIG.get('head_end', 292), RIG.get('hood_d', 252)
+    tr, tt = RIG.get('tail', (20, -205))
+    add('neck1', body.at(n0), body.at(n1), 'body', 'the lower neck: with neck2 keeps the head level as the body tilts')
+    add('neck2', body.at(n1), body.at(n2), 'neck1', 'the upper neck')
+    add('head', body.at(n2), body.at(he), 'neck2', 'the head: looks around; carries beak, eyes and hood')
+    add('hood', body.at(hd) + V3((0, 0, 20)), body.at(hd) + V3((0, 0, 50)), 'head', 'the hood: lifted off and set on')
+    add('tail', tp(tr, 3), tp(tt, 3), 'body', 'the tail: lifts and drops')
+    add('tail.L', tp(tr, 3, 6), tp(tt, 3, 18), 'tail', 'the tail\'s left feathers: fan out')
+    add('tail.R', tp(tr, 3, -6), tp(tt, 3, -18), 'tail', 'the tail\'s right feathers: fan out')
+    (f0x, f0z, f0y), (f1x, f1z, f1y), (f2x, f2z, f2y) = RIG.get('fold', ((160, 25, 52), (40, 22, 45), (-135, 12, 10)))
+    (w0x, w0z, w0y), (w1x, w1z, w1y), (w2x, w2z, w2y), (w3x, w3z, w3y) = RIG.get('wing', ((130, 8, 30), (130, 8, 120), (125, 8, 215), (40, 0, 600)))
+    kx, kz, ky = RIG.get('knee', (95, -20, 20))
     for side, s in ((1, 'L'), (-1, 'R')):
-        add(f'fold.{s}', tp(160, 25, 52 * side), tp(40, 22, 45 * side), 'body',
+        add(f'fold.{s}', tp(f0x, f0z, f0y * side), tp(f1x, f1z, f1y * side), 'body',
             'the folded wing (folded mesh only): lifts, droops, opens before the swap')
-        add(f'fold_tip.{s}', tp(40, 22, 45 * side), tp(-135, 12, 10 * side), f'fold.{s}',
+        add(f'fold_tip.{s}', tp(f1x, f1z, f1y * side), tp(f2x, f2z, f2y * side), f'fold.{s}',
             'the folded wing\'s primaries (folded mesh only): swing out as the wing opens, so the swap matches')
-        add(f'wing_up.{s}', tp(130, 8, 30 * side), tp(130, 8, 120 * side), 'body', 'the arm (humerus): the wingbeat')
-        add(f'wing_fore.{s}', tp(130, 8, 120 * side), tp(125, 8, 215 * side), f'wing_up.{s}', 'the forearm: the fold at the elbow')
-        add(f'wing_hand.{s}', tp(125, 8, 215 * side), tp(40, 0, 600 * side), f'wing_fore.{s}', 'the hand and primaries: the fold at the wrist, the upstroke flick')
+        add(f'wing_up.{s}', tp(w0x, w0z, w0y * side), tp(w1x, w1z, w1y * side), 'body', 'the arm (humerus): the wingbeat')
+        add(f'wing_fore.{s}', tp(w1x, w1z, w1y * side), tp(w2x, w2z, w2y * side), f'wing_up.{s}', 'the forearm: the fold at the elbow')
+        add(f'wing_hand.{s}', tp(w2x, w2z, w2y * side), tp(w3x, w3z, w3y * side), f'wing_fore.{s}', 'the hand and primaries: the fold at the wrist, the upstroke flick')
         k = 'l' if side > 0 else 'r'
-        knee = tp(95, -20, 20 * side)
+        knee = tp(kx, kz, ky * side)
         add(f'shank.{s}', knee, pts['ankle_' + k], 'body', 'the shank (tibia, the trousers): the leg reaches and tucks')
         add(f'tarsus.{s}', pts['ankle_' + k], pts['foot_' + k], f'shank.{s}', 'the tarsus: with the shank holds the foot planted')
         f = pts['foot_' + k]
-        import saker
-        for ti, (hd, length, r, claw, curl) in enumerate(saker.SPEC['toes']):
-            a = math.radians((hd * side if abs(hd) != 180 else hd) + 8 * side)
+        for ti, (hd_, length, r, claw, curl) in enumerate(SP.SPEC['toes']):
+            a = math.radians((hd_ * side if abs(hd_) != 180 else hd_) + 8 * side)
             dv = V3((math.cos(a), math.sin(a), 0))
             nm = TOE_NAMES[ti]
             j = length * 0.5
@@ -164,14 +174,15 @@ def weights_for(pc, tag, body, B):
         for q in pc.V:
             i = int(np.argmin(((cs - np.array(tuple(q))) ** 2).sum(1)))
             d = d_st[i]
-            if d < 170:
+            b0, b1, b2, b3 = RIG.get('body_bands', (170, 205, 230, 255))
+            if d < b0:
                 W.append({'body': 1.0})
-            elif d < 205:
-                W.append(blend('body', 'neck1', (d - 170) / 35))
-            elif d < 230:
-                W.append(blend('neck1', 'neck2', (d - 205) / 25))
-            elif d < 255:
-                W.append(blend('neck2', 'head', (d - 230) / 25))
+            elif d < b1:
+                W.append(blend('body', 'neck1', (d - b0) / (b1 - b0)))
+            elif d < b2:
+                W.append(blend('neck1', 'neck2', (d - b1) / (b2 - b1)))
+            elif d < b3:
+                W.append(blend('neck2', 'head', (d - b2) / (b3 - b2)))
             else:
                 W.append({'head': 1.0})
         return W
@@ -199,8 +210,9 @@ def weights_for(pc, tag, body, B):
         return out
     if kind == 'wing':
         out = []
+        k_ = RIG.get('wing_scale', 1.0)      # the bands follow the wrist (the saker's at 215 mm)
         for q in pc.V:
-            y = abs(q.y)
+            y = abs(q.y) / k_
             if y < 60:
                 out.append(blend('body', f'wing_up.{s}', (y - 30) / 30))
             elif y < 160:
@@ -432,7 +444,7 @@ def spline(f, pts):
             + (-2 * t ** 3 + 3 * t ** 2) * ys[i + 1] + (t ** 3 - t ** 2) * h * m[i + 1])
 
 
-PERCH_TB = V3((-58, 0, 80))
+PERCH_TB = V3((SP.POSES['hooded']['origin'][0], 0, SP.POSES['hooded']['origin'][1]))      # the tail base when perched (the approved static's)
 STOOP_TWIST = 10.0
 # the landing's path (the body's centre against where it is at contact, mm, by frame): across from the right, low,
 # up past the fist's side, over it, down onto it (game choices, measured clear of the cuff and forearm by the build)
@@ -440,14 +452,15 @@ LAND_Y = [(0, -3000), (12, -900), (18, -420), (22, -300), (25, -150), (28, 0)]
 LAND_Z = [(0, -150), (8, -300), (14, -260), (19, -60), (23, 90), (26, 60), (28, 0)]
 LAND_X = [(0, 0), (28, 0)]
 PLANTED = ('cuff', 'perch', 'ground')
-PERCH_NECK = (14, -32, -40)      # neck1, neck2, head turns that put the perched frame on saker_fist.glb
-PERCH_TAIL = 10                  # the tail's lift, the same fit
-SWAP_FOLD = {'out': 8, 'up': 50, 'twist': 0, 'tip_out': 10, 'tip_up': -28}      # the folded mesh at the swap (tuned at cast_off's frame 13)
-SWAP_OPEN = {'up': -5, 'sweep': 65, 'fore': -80, 'hand': 170, 'twist': 0}      # the spread wing at the swap (overlap 0.898 with SWAP_FOLD, side and three-quarter)
+PERCH_NECK = RIG.get('perch_neck', (14, -32, -40))      # neck1, neck2, head turns that put the perched frame on the static <bird>_fist.glb
+PERCH_TAIL = RIG.get('perch_tail', 10)                  # the tail's lift, the same fit
+SWAP_FOLD = RIG.get('swap_fold', {'out': 8, 'up': 50, 'twist': 0, 'tip_out': 10, 'tip_up': -28})      # the folded mesh at the swap (tuned at cast_off's frame 13)
+SWAP_OPEN = RIG.get('swap_open', {'up': -5, 'sweep': 65, 'fore': -80, 'hand': 170, 'twist': 0})      # the spread wing at the swap (overlap 0.898 with SWAP_FOLD, side and three-quarter)
 STOOP_WING = dict(SWAP_OPEN, twist=STOOP_TWIST)      # the stoop's drawn-in wing: the swap's outline, the wing turned a little leading edge down (fewest forearm and hand vertices inside the flank of those tried)
 FRAMES_FEET = {}
 HIDDEN_FEET = {}      # per frame: the feet meant drawn up out of sight (not reaching for the cuff or the quarry)
 BODY = []
+CUFF_LIFT = 10.0      # on the rounded cuff, higher: the tarsus' end clear of the thumb's bulge
 FOOT_LIFT = 4.0      # mm: the foot's centre held this far above the support under it, so the soles' pads rest on it
 
 
@@ -512,6 +525,10 @@ class SakerClips:
         self.beat = 7          # frames a wingbeat at 30 fps: 4.29 Hz (Pennycuick 1996 predicts 4.3-4.8 Hz)
 
     # the shared pieces of a pose
+    def perched_rest(self, surf):
+        """The one perched pose every clip that starts or ends perched shares."""
+        return {'pitch': 66.0, 'tb': PERCH_TB, 'feet': surf, 'mesh': 'fold', 'jess_hold': surf == 'cuff'}
+
     def perched(self, f, pitch=66.0, crouch=0.0, feet='cuff'):
         """The approved perched pose (the static saker_fist's: body 66 degrees; the neck, head and tail turns fitted
         to it), lowered and leaned forward by [crouch]."""
@@ -544,7 +561,7 @@ class SakerClips:
         if f < 14:
             p = self.perched(f, crouch=crouch)
             k = ramp(f, 7, 13)
-            p.update({'fold': {kk: v * k for kk, v in SWAP_FOLD.items()}, 'jess_hold': True})
+            p.update({'fold': {kk: v * k for kk, v in SWAP_FOLD.items()}, 'jess_hold': True, 'settle': 1 - ramp(f, 1, 5)})
             if f == 13:
                 p['wing'] = dict(SWAP_OPEN)      # the hidden spread mesh already in the same outline
             return p
@@ -552,19 +569,24 @@ class SakerClips:
             k = ramp(f, 14, 18)
             w = {kk: lerp(SWAP_OPEN.get(kk, 0.0), self.RAISED[kk], k) for kk in self.RAISED}
         else:
-            beat = self.wings_flap(((f - 18) / self.beat + 0.0) % 1.0, amp=46, mean=4)
+            # three beats from 18: the clip's end (39) falls on the flight loop's frame 0, and the beat eases into
+            # the loop's (amplitude 40, mean 5) over the last frames
+            g = ramp(f, 30, 38)
+            beat = self.wings_flap(((f - 18) / self.beat + 0.0) % 1.0, amp=lerp(46, 40, g), mean=lerp(4, 5, g))
             w = {kk: lerp(self.RAISED[kk], beat[kk], ramp(f, 18, 19.5)) for kk in self.RAISED}
         push = ramp(f, 16, 20)
         t = max(0.0, (f - 19) / FPS)
         td = max(0.0, t - 0.1)      # she drops only once her tail is clear of the fist
         x = 70 * push + 0.5 * 5.0 * t * t * 1000 + 1100 * t
         z = -10 * push - 0.5 * 3.6 * td * td * 1000 + 0.5 * 7.0 * max(0.0, td - 0.22) ** 2 * 1000
-        pitch = keys(f, [(13, 40), (17, 34), (21, 22), (28, 12), (40, 8)])
+        pitch = keys(f, [(13, 40), (17, 34), (21, 22), (28, 12), (38, 4 + 2 * math.sin(2 * math.pi * (f - 18) / self.beat))])
         tb = PERCH_TB + V3((14, 0, -34)) + V3((x, 0, z))
         feet = 'cuff' if f < 20 else ('push', ramp(f, 21, 24))
         sp = {'pitch': pitch, 'tb': tb, 'feet': feet, 'mesh': 'open', 'wing': w, 'neck': (0, -20, -10) if f < 20 else None,
-              'tail_spread': lerp(1.3, 1.08, ramp(f, 16, 32)), 'jess_hold': f < 20, 'clench': ramp(f, 21, 24),
-              'tail_lift': keys(f, [(15, 0), (18, 26), (27, 26), (33, 0)])}      # the tail raised clear of the fist
+              'tail_spread': lerp(1.3, 1.05, ramp(f, 16, 38)), 'jess_hold': f < 20, 'clench': ramp(f, 21, 24),
+              'tail_lift': keys(f, [(15, 0), (18, 26), (27, 26), (33, 0)]),      # the tail raised clear of the fist
+              'air': V3((-(20000 - (1100 + 5000 * t)) * ramp(f, 24, 36), 0, 0)),
+              'settle_to': 'flight', 'settle': ramp(f, 31, 38)}      # the cords' air eased to the flight loop's
         if sp['neck'] is None:
             del sp['neck']
         if f == 14:
@@ -629,6 +651,11 @@ class SakerClips:
               'tail_drop': 18 * brake, 'open_toes': reach * (1 - ramp(f, 27, 29))}
         if f >= 37:
             sp['fold'] = {kk: v * (1 - ramp(f, 38, 45)) for kk, v in SWAP_FOLD.items()}
+        if surface == 'perch':
+            sp['settle'] = ramp(f, 36, 45)
+        elif f >= 38:
+            sp['jess_take'] = ramp(f, 38, 43)      # on the fist: the falconer takes the jesses as she settles
+            sp['settle'] = ramp(f, 41, 45)
         if f >= 40:
             sp.update({'neck': tuple(lerp(a, b, ramp(f, 40, 45)) for a, b in zip((20 * 42 / 66, -46 * 42 / 66, -40 * 42 / 66), PERCH_NECK)),
                        'tail_lift': PERCH_TAIL * ramp(f, 40, 45)})
@@ -646,7 +673,7 @@ class SakerClips:
         c = 2 * math.pi * f / 120.0
         yaw = keys(f, [(0, 0), (18, 0), (28, 38), (48, 38), (58, 0), (72, 0), (80, -32), (96, -32), (106, 0), (120, 0)])
         return {'pitch': 66 + 1.5 * math.sin(c), 'tb': PERCH_TB + V3((0, 0, 1.5 * math.sin(2 * c))), 'feet': 'perch',
-                'mesh': 'fold', 'head_yaw': yaw, 'head_pitch': 4 * math.sin(3 * c),
+                'mesh': 'fold', 'head_yaw': yaw, 'head_pitch': 4 * math.sin(3 * c), 'settle': 1.0,
                 'tail_drop': -10 * math.exp(-((f - 90) / 2.5) ** 2), 'fold_lift': 2 * max(0.0, math.sin(c))}
 
     def perch_hooded(self, f):
@@ -656,7 +683,7 @@ class SakerClips:
         c = 2 * math.pi * f / 150.0
         yaw = keys(f, [(0, 0), (40, 0), (55, 12), (85, 12), (100, 0), (150, 0)])
         return {'pitch': 66 + 0.8 * math.sin(3 * c), 'tb': PERCH_TB + V3((0, 0, 1.0 * math.sin(3 * c))), 'feet': 'perch',
-                'mesh': 'fold', 'head_yaw': yaw, 'head_pitch': 1.5 * math.sin(c)}
+                'mesh': 'fold', 'head_yaw': yaw, 'head_pitch': 1.5 * math.sin(c), 'settle': 1.0}
 
     def rouse(self, f):
         """The rouse: every contour feather raised at once (the morph 'fluff', 2-6), the whole bird shaken through
@@ -668,19 +695,19 @@ class SakerClips:
         return {'pitch': 66 + 4 * fl, 'tb': PERCH_TB + V3((0, 0, 6 * fl)), 'feet': 'perch', 'mesh': 'fold',
                 'roll': 14 * sh * osc, 'head_yaw': 28 * sh * math.sin(2 * math.pi * (f - 7) * 7.0 / FPS + 0.6),
                 'fold_lift': 12 * fl + 5 * sh * abs(osc), 'tail_spread': 1.0 + 0.12 * fl + 0.25 * sh * abs(osc),
-                'fluff': fl}
+                'fluff': fl, 'settle': 1.0}
 
     def hood_off(self, f):
         """On the fist: the falconer draws the braces and lifts the hood off (the hand is not drawn); she looks round."""
         lift = 70 * ramp(f, 6, 16)
-        yaw = keys(f, [(0, 0), (18, 0), (23, 30), (27, -18), (30, 0)])
+        yaw = keys(f, [(0, 0), (18, 0), (22, 30), (25, -18), (28, 0)])
         return {'pitch': 66, 'tb': PERCH_TB, 'feet': 'cuff', 'mesh': 'fold', 'hood': 1.0 if f < 17 else 0.0,
-                'hood_lift': lift, 'head_yaw': yaw, 'head_pitch': 6 * ramp(f, 16, 20), 'jess_hold': True}
+                'hood_lift': lift, 'head_yaw': yaw, 'head_pitch': 6 * ramp(f, 16, 20) * (1 - ramp(f, 24, 29)), 'jess_hold': True, 'settle': 1.0}
 
     def hood_on(self, f):
         lift = 70 * (1 - ramp(f, 8, 20))
         return {'pitch': 66, 'tb': PERCH_TB, 'feet': 'cuff', 'mesh': 'fold', 'hood': 1.0 if f >= 7 else 0.0,
-                'hood_lift': lift, 'head_pitch': -4 * ramp(f, 4, 8) * (1 - ramp(f, 18, 24)), 'jess_hold': True}
+                'hood_lift': lift, 'head_pitch': -4 * ramp(f, 4, 8) * (1 - ramp(f, 18, 24)), 'jess_hold': True, 'settle': 1.0}
 
     def glide(self, f):
         c = 2 * math.pi * f / 60.0
@@ -730,27 +757,29 @@ class SakerClips:
 
 
 HOOD_CLIPS = ('hood_off', 'hood_on')      # the only clips that key the hood
+HANDOVERS = (('land_perch', 'perch_idle'), ('land_perch', 'perch_hooded'), ('land_perch', 'rouse'), ('rouse', 'perch_idle'),
+             ('perch_idle', 'rouse'), ('perch_hooded', 'perch_idle'), ('land_cuff', 'hood_on'), ('land_cuff', 'cast_off'),
+             ('hood_off', 'cast_off'), ('cast_off', 'flight'), ('flight', 'glide'), ('glide', 'stoop'), ('stoop', 'bind'))
 HOODED_CLIPS = ('perch_hooded',)          # drawn with the hood on (the hood itself is game state)
 
 
 def saker_mod():
-    import saker
-    return saker
+    return SP
 
 
 CLIPS = {      # name: (frames, method, loops)
     'perch_idle': (120, 'perch_idle', True), 'perch_hooded': (150, 'perch_hooded', True), 'rouse': (36, 'rouse', False), 'hood_off': (30, 'hood_off', False),
-    'hood_on': (30, 'hood_on', False), 'cast_off': (41, 'cast_off', False), 'flight': (14, 'flight', True),
+    'hood_on': (30, 'hood_on', False), 'cast_off': (39, 'cast_off', False), 'flight': (14, 'flight', True),
     'glide': (60, 'glide', True), 'stoop': (40, 'stoop', False), 'bind': (24, 'bind', False),
     'mantle': (60, 'mantle', True), 'land_cuff': (46, 'land_cuff', False), 'land_perch': (46, 'land_perch', False),
 }
 
 
 # ------------------------------------------------------------------ applying a pose
-REST_FOOT = (75.0, 22.0, -125.0)        # the rest pose's foot, body frame (the tail base at the origin)
-TUCK_FOOT = (150.0, 8.0, -14.0)         # drawn up into the breast and belly feathers, the toes clenched: out of sight
-REACH_FOOT = (150.0, 26.0, -120.0)
-PUSH_FOOT = (-10.0, 20.0, -95.0)        # straight back and down at the end of the kick      # thrown forward to take the cuff when landing
+REST_FOOT = RIG.get('rest_foot', (75.0, 22.0, -125.0))        # the rest pose's foot, body frame (the tail base at the origin)
+TUCK_FOOT = RIG.get('tuck_foot', (150.0, 8.0, -14.0))         # drawn up into the breast and belly feathers, the toes clenched: out of sight
+REACH_FOOT = RIG.get('reach_foot', (150.0, 26.0, -120.0))
+PUSH_FOOT = RIG.get('push_foot', (-10.0, 20.0, -95.0))        # straight back and down at the end of the kick      # thrown forward to take the cuff when landing
 FIST_JESS = (36.0, 2.0, -26.0)          # where the falconer's fist holds the jesses (saker_fist)
 HOOD_SHOWN = [False]      # the hood's state while posing a clip that does not key it (game state)
 TALON_LIFT = 7.0                        # the distal joint's end held this far above the cuff so the curved talon's tip meets it
@@ -835,7 +864,7 @@ class Applier:
             P.pb['hood'].location = (0, sp.get('hood_lift', 0.0) * MM, 0)      # the bone points up: its Y is up
         else:
             P.pb['hood'].scale = (1, 1, 1) if HOOD_SHOWN[0] else (0.001,) * 3
-        w = sp.get('wing')
+        w = sp.get('wing') or (SWAP_OPEN if sp['mesh'] == 'fold' else None)      # sitting: the hidden spread wing kept in the swap's fold
         for side, s in ((1, 'L'), (-1, 'R')):
             if w:
                 P.turn(f'wing_up.{s}', (side, 0, 0), w['up'])
@@ -862,7 +891,7 @@ class Applier:
             if feet in PLANTED:
                 surf = self.C.cuff if feet == 'cuff' else flat_surface
                 target = V3((0.0, 22.0 * side, 0.0)) + V3(sp.get('foot_shift', (0, 0, 0))) * (1 if side > 0 else 0)
-                target.z = surf(target.x, target.y) + FOOT_LIFT
+                target.z = surf(target.x, target.y) + (CUFF_LIFT if feet == 'cuff' else FOOT_LIFT)
                 P.leg(s, target, V3((-1, 0, -0.25)))
                 self.toes_on(s, side, self.C.cuff if feet == 'cuff' else flat_surface, target)
             else:
@@ -905,7 +934,22 @@ class Applier:
             self.gust += 1
             wob = V3((0, 900 * math.sin(self.gust * 0.9 + side), 1400 * math.sin(self.gust * 0.63 + 2 * side))) if V3(air).length > 2000 else V3((0, 0, 0))
             hold = V3(FIST_JESS) * V3((1, side, 1)) if sp.get('jess_hold') else None
+            if sp.get('jess_take') is not None:      # the falconer's fingers taking the free ends to his fist
+                k = sp['jess_take']
+                hold = self.cords[s].p[-1].lerp(V3(FIST_JESS) * V3((1, side, 1)), k) if k > 0 else None
             pts = self.cords[s].step(anchor, V3(air) + wob, end=hold)
+            st = sp.get('settle', 0.0)
+            key_ = sp.get('settle_to') or (sp['feet'] if isinstance(sp['feet'], str) else None)
+            ref = getattr(self.C, 'perch_cords', {}).get(key_)
+            if st and ref:
+                # perched: the cords' one settled shape, carried by the anklet (so every perched clip starts and
+                # ends with the same cords)
+                a0, p0 = ref[s]
+                want = [q + (anchor - a0) for q in p0]
+                pts = [a.lerp(b, st) for a, b in zip(pts, want)]
+                self.cords[s].p = [q.copy() for q in pts]
+                if st >= 1.0:
+                    self.cords[s].q = [q.copy() for q in pts]
             for j in range(JESS_N):
                 P.aim(f'jess{j + 1}.{s}', pts[j + 1])
         if key:
@@ -915,7 +959,7 @@ class Applier:
             for s in ('L', 'R'):
                 side = 1 if s == 'L' else -1
                 want = V3((0, 22 * side, 0)) + V3(sp.get('foot_shift', (0, 0, 0))) * (1 if side > 0 else 0)
-                want.z = (self.C.cuff if feet == 'cuff' else flat_surface)(want.x, want.y) + FOOT_LIFT
+                want.z = (self.C.cuff if feet == 'cuff' else flat_surface)(want.x, want.y) + (CUFF_LIFT if feet == 'cuff' else FOOT_LIFT)
                 self.log.append(('slide', frame, s, (P.tail_of(f'tarsus.{s}') - want).length))
 
 
@@ -929,15 +973,15 @@ def build_saker(out, sheets=False):
     BODY[:] = [body]
     parts_o, _, _ = saker_rest('open')
     B = saker_bones(pts, body)
-    atlas = paint.atlas('saker')
-    col, orm = paint.paint('saker', atlas, 512, body)
-    mat = common.material('saker', col, orm)
-    arm = make_armature('saker_rig', B)
+    atlas = paint.atlas(BIRD)
+    col, orm = paint.paint(BIRD, atlas, 512, body)
+    mat = common.material(BIRD, col, orm)
+    arm = make_armature(f'{BIRD}_rig', B)
     meshes = {
-        'fold': skinned_mesh('saker_fold', parts_f['body'], body, B, atlas, mat, arm),
-        'open': skinned_mesh('saker_open', parts_o['body'], body, B, atlas, mat, arm),
-        'hood': skinned_mesh('saker_hood', parts_f['hood'], body, B, atlas, mat, arm),
-        'jesses': skinned_mesh('saker_jesses', parts_f['jesses'], body, B, atlas, mat, arm),
+        'fold': skinned_mesh(f'{BIRD}_fold', parts_f['body'], body, B, atlas, mat, arm),
+        'open': skinned_mesh(f'{BIRD}_open', parts_o['body'], body, B, atlas, mat, arm),
+        'hood': skinned_mesh(f'{BIRD}_hood', parts_f['hood'], body, B, atlas, mat, arm),
+        'jesses': skinned_mesh(f'{BIRD}_jesses', parts_f['jesses'], body, B, atlas, mat, arm),
     }
     for k in ('fold', 'open'):
         add_hidden_morph(meshes[k], body)
@@ -946,17 +990,36 @@ def build_saker(out, sheets=False):
     # the far level: the T11 far meshes (256 px) on the same skeleton, the same clips; no hood or jesses at that range
     pf1, _, body1 = saker_rest('fold', level=1)
     po1, _, _ = saker_rest('open', level=1)
-    c1, o1 = paint.paint('saker', atlas, 256, body1)
-    mat1 = common.material('saker_far', c1, o1)
-    far = {'fold': skinned_mesh('saker_fold_far', pf1['body'], body1, B, atlas, mat1, arm),
-           'open': skinned_mesh('saker_open_far', po1['body'], body1, B, atlas, mat1, arm)}
+    c1, o1 = paint.paint(BIRD, atlas, 256, body1)
+    mat1 = common.material(f'{BIRD}_far', c1, o1)
+    far = {'fold': skinned_mesh(f'{BIRD}_fold_far', pf1['body'], body1, B, atlas, mat1, arm),
+           'open': skinned_mesh(f'{BIRD}_open_far', po1['body'], body1, B, atlas, mat1, arm)}
     for k in far:
         add_hidden_morph(far[k], body1)
         far[k].hide_render = True
     add_fluff_morph(far['fold'], body1, eye_x)
     FAR[:] = [far]
     clips = SakerClips()
+    CUFF_TOP[:] = [clips.cuff]
     arm.animation_data_create()
+    # the perched cords' settled shape, on the perch (free) and on the cuff (held in the fist)
+    clips.perch_cords = {}
+    toe_verts0 = toe_vertex_sets(meshes['fold'])
+    for surf in ('perch', 'cuff'):
+        A = Applier(arm, clips)
+        A.toe_verts = toe_verts0
+        spec0 = clips.perched_rest(surf)
+        for _ in range(150):
+            A.apply(spec0, 0, key=False)
+        clips.perch_cords[surf] = {s: (A.P.head_of(f'jess1.{s}'), [q.copy() for q in A.cords[s].p]) for s in ('L', 'R')}
+    # the flight loop's cords at its frame 0, as the loop is recorded (two loops to settle, then frame 0)
+    A = Applier(arm, clips)
+    A.toe_verts = toe_verts0
+    nfl = CLIPS['flight'][0] if 'flight' in CLIPS else 14
+    for f in range(2 * nfl):
+        A.apply(clips.flight(f % nfl), 0, key=False)
+    A.apply(clips.flight(0), 0, key=False)
+    clips.perch_cords['flight'] = {s: (A.P.head_of(f'jess1.{s}'), [q.copy() for q in A.cords[s].p]) for s in ('L', 'R')}
     frames_mesh = {}
     log = []
     toe_verts = toe_vertex_sets(meshes['fold'])
@@ -1022,19 +1085,19 @@ def build_saker(out, sheets=False):
         sl = [e[4] for e in log if e[0] == name and e[1] == 'slide']
         if sl:
             print(f'{name}: a planted foot\'s distance from its place, max {max(sl):.2f} mm over {len(sl) // 2} frames')
-    path = os.path.join(out, 'saker_rig.glb')
+    path = os.path.join(out, f'{BIRD}_rig.glb')
     bpy.ops.object.select_all(action='DESELECT')
     for o in [arm, *meshes.values(), *far.values()]:      # the far level in the same file, on the same skeleton
         o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=False,
                               export_animations=True, export_animation_mode='NLA_TRACKS', export_skins=True,
-                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=False,
+                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True, export_optimize_animation_keep_anim_armature=True,
                               export_morph=True, export_morph_animation=True, export_morph_normal=False,
                               export_materials='EXPORT', export_extras=False, export_image_format='AUTO')
     common.settle(path)
     step_in_file(path)
     t, imgs, nbytes = common.glb_report(path)
-    print(f'saker_rig.glb: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {len(B)} bones; {nbytes / 1024:.0f} KB')
+    print(f'{BIRD}_rig.glb: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {len(B)} bones; {nbytes / 1024:.0f} KB')
     glb_checks(path, hood_clips=HOOD_CLIPS)
     return arm, meshes, frames_mesh, B, clips
 
@@ -1095,7 +1158,7 @@ VIEWS = {'side': (0, -1, 0), 'three_quarter': (-1, -1, -0.5), 'front': (-1, 0, 0
 
 SHAPE_ACTIONS = {}
 FAR = []
-SHEET_PREFIX = ['saker']
+SHEET_PREFIX = [BIRD]
 QTOL, LTOL, STOL = 0.0002, 0.00001, 0.0005      # tight: the chain from the root to a talon must stay within a millimetre
 
 
@@ -1233,7 +1296,8 @@ def step_in_file(path):
 
 def glb_checks(path, hood_clips=()):
     """The build's own checks on the written file; a failure stops the build. Prints: the clips, the clip data,
-    every morph-weight channel's interpolation (must be STEP), which clips key the hood (only [hood_clips])."""
+    every morph-weight channel's interpolation (must be STEP), that every clip animates every bone (a bone a clip
+    leaves out shows its rest pose: the standing pose, not the clip's), and that only [hood_clips] move the hood."""
     import json
     import struct
     with open(path, 'rb') as fh:
@@ -1241,8 +1305,10 @@ def glb_checks(path, hood_clips=()):
     jl = struct.unpack('<I', raw[12:16])[0]
     g = json.loads(raw[20:20 + jl])
     names = [nd.get('name', '') for nd in g.get('nodes', [])]
-    acc, bad, hood, nweights = set(), [], [], 0
+    joints = sorted(set(names[j] for sk in g.get('skins', []) for j in sk['joints']))
+    acc, bad, hood, nweights, missing = set(), [], [], 0, []
     for an in g.get('animations', []):
+        rot = set()
         for ch in an['channels']:
             smp = an['samplers'][ch['sampler']]
             acc.update((smp['input'], smp['output']))
@@ -1251,17 +1317,26 @@ def glb_checks(path, hood_clips=()):
                 nweights += 1
                 if smp.get('interpolation', 'LINEAR') != 'STEP':
                     bad.append((an['name'], node))
+            if ch['target']['path'] == 'rotation':
+                rot.add(node)
             if node == 'hood' and ch['target']['path'] == 'scale':
-                hood.append(an['name'])
+                acc_o = g['accessors'][smp['output']]
+                if acc_o.get('min') != acc_o.get('max'):
+                    hood.append(an['name'])
+        miss = [j for j in joints if j not in rot]
+        if miss:
+            missing.append((an['name'], len(miss), miss[:3]))
     nb = sum(g['bufferViews'][g['accessors'][a]['bufferView']]['byteLength'] for a in acc)
     meshes = [m['name'] for m in g.get('meshes', [])]
     skins = len(g.get('skins', []))
     print(f'{os.path.basename(path)}: meshes {", ".join(meshes)}; {skins} skin(s), {len(g.get("animations", []))} clips, clip data {nb / 1024:.0f} KB')
     print(f'{os.path.basename(path)}: morph-weight channels {nweights}, not STEP {len(bad)}' + (f' {bad[:4]}' if bad else ''))
+    print(f'{os.path.basename(path)}: every clip animates all {len(joints)} bones: ' + ('yes' if not missing else f'NO {missing}'))
     hood = sorted(set(hood))
-    print(f'{os.path.basename(path)}: clips keying the hood: {", ".join(hood) if hood else "none"}')
+    print(f'{os.path.basename(path)}: clips moving the hood: {", ".join(hood) if hood else "none"}')
     assert not bad, 'a morph-weight channel is not STEP'
-    assert set(hood) <= set(hood_clips), f'the hood is keyed outside {hood_clips}: {hood}'
+    assert not missing, 'a clip leaves bones at their rest pose'
+    assert set(hood) <= set(hood_clips), f'the hood is moved outside {hood_clips}: {hood}'
     assert skins == 1, 'the detail levels must share one skeleton'
 
 
@@ -1296,6 +1371,21 @@ def use_clip(arm, name):
             for t in sk.animation_data.nla_tracks:
                 if t.name == name and t.strips:
                     assign(sk.animation_data, t.strips[0].action)
+
+
+def toe_vertex_sets_all(o):
+    """As toe_vertex_sets, but every toe vertex, each under the bone that carries most of it."""
+    out = {}
+    co = np.empty(len(o.data.vertices) * 3)
+    o.data.vertices.foreach_get('co', co)
+    co = co.reshape(-1, 3)
+    names = {g.index: g.name for g in o.vertex_groups if g.name.startswith('toe')}
+    for v in o.data.vertices:
+        gs = [g for g in v.groups if g.group in names]
+        if gs:
+            g = max(gs, key=lambda g: g.weight)
+            out.setdefault(names[g.group], []).append(co[v.index])
+    return {k: np.array(v) for k, v in out.items()}
 
 
 def toe_vertex_sets(o):
@@ -1343,10 +1433,11 @@ def talon_depths(arm, meshes, frames_mesh, name, n, surface=None):
     return out
 
 
+CUFF_TOP = []      # the cuff's Heightmap, set by the build
 FOREARM = (-400.0, 45.0)      # the falconer's forearm behind the cuff: to x = -400 mm, 45 mm round (the cuff's rim 47)
 
 
-def inside_support(Q, kind):
+def inside_support(Q, kind, parts=False):
     """For points Q (n x 3, mm, the clip's world), how deep each lies inside the support (0 outside): the cuff's
     padded loft (its rows, analytic) and the forearm behind it; or the perch's pad and turned head and stake."""
     import gear
@@ -1361,9 +1452,22 @@ def inside_support(Q, kind):
         F = (np.abs(y) / b) ** pp + (np.abs(zz) / a) ** pp
         d = (1.0 - np.minimum(F, 1.0) ** (1.0 / pp)) * np.minimum(a, b)
         depth = np.where(inx & (F < 1.0), d, 0.0)
+        # the thumb and knuckles stand above the loft: the cuff's real top (the heightmap of its faces) above the axis
+        if CUFF_TOP:
+            H = CUFF_TOP[0]
+            ix = np.round((x - H.x0) / H.step).astype(int)
+            iy = np.round((y - H.y0) / H.step).astype(int)
+            ok = (ix >= 0) & (iy >= 0) & (ix < H.H.shape[1]) & (iy < H.H.shape[0])
+            top = np.full(len(x), -1e6)
+            top[ok] = H.H[iy[ok], ix[ok]]
+            hd = np.where((zz > 0) & (top > -1e5) & (z < top), top - z, 0.0)
+            depth = np.maximum(depth, np.minimum(hd, zz))
         rr = np.sqrt(y ** 2 + zz ** 2)
         arm_in = (x < r[0, 0]) & (x > FOREARM[0]) & (rr < FOREARM[1])
-        depth = np.maximum(depth, np.where(arm_in, FOREARM[1] - rr, 0.0))
+        arm_d = np.where(arm_in, FOREARM[1] - rr, 0.0)
+        if parts:
+            return depth, arm_d
+        depth = np.maximum(depth, arm_d)
     else:
         zs = [0.0, -2.5, -6.0, -10.0, -14.0, -30.0, -38.0, -50.0, -66.0, -80.0, -92.0, -400.0]
         rs = [66.0, 73.0, 75.0, 74.0, 75.0, 73.0, 66.0, 48.0, 32.0, 24.0, 22.0, 20.0]
@@ -1380,12 +1484,30 @@ def support_checks(arm, meshes, frames_mesh, name, n, kind):
     sc = bpy.context.scene
     use_clip(arm, name)
     toes = {k: np.array(sorted(group_set(meshes[k], ('toe',))), int) for k in ('fold', 'open')}
+    toes_l = toes
     pre, post, tdeep = [], [], (0.0, None)
+    forearm, cuff_hit = [], []
     for f in range(n):
         sc.frame_set(f)
         m = frames_mesh[name][f]
         co, _ = evaluated_co(meshes[m])
-        d = inside_support(co, kind)
+        if kind == 'cuff':
+            dc, da = inside_support(co, kind, parts=True)
+            d = np.maximum(dc, da)
+            tl = toes_l[m]
+            arm_hit = int((da[np.setdiff1d(np.arange(len(co)), tl)] > 0.5).sum())
+            if arm_hit:
+                forearm.append((f, arm_hit))
+            dcn = dc.copy()
+            dcn[tl] = 0
+            if (dcn > 0.5).any():
+                i = int(np.argmax(dcn))
+                gi = {g.index: g.name for g in meshes[m].vertex_groups}
+                v = meshes[m].data.vertices[i]
+                cuff_hit.append((f, int((dcn > 0.5).sum()), round(float(dcn.max()), 1),
+                                 gi[max(v.groups, key=lambda g: g.weight).group] if len(v.groups) else '?'))
+        else:
+            d = inside_support(co, kind)
         planted = FRAMES_FEET[name][f] in PLANTED
         mask = np.ones(len(co), bool)
         if planted:
@@ -1404,8 +1526,65 @@ def support_checks(arm, meshes, frames_mesh, name, n, kind):
     print(f'{name}: vertices inside the {"cuff or forearm" if kind == "cuff" else "perch"} before the feet take it '
           f'(frame, count, deepest mm, its bone): {pre if pre else "none"}')
     print(f'{name}: once planted, vertices other than the toes inside: {post if post else "none"}; '
-          f'toes at most {tdeep[0]:.1f} mm in (analytic surface; frame {tdeep[1]})')
+          f'toes at most {tdeep[0]:.1f} mm in (frame {tdeep[1]})')
+    if kind == 'cuff':
+        print(f'{name}: inside the cuff itself, vertices other than the toes (frame, count, deepest mm): '
+              f'{cuff_hit if cuff_hit else "none"}; inside the level forearm behind it: '
+              f'{(str(len(forearm)) + " frames, at most " + str(max(c for _, c in forearm)) + " vertices") if forearm else "none"}')
     return pre, post, tdeep
+
+
+def bone_heads(arm, rel_root=True):
+    """Every bone's head and tail (mm, armature space), relative to the root bone's head: the pose, wherever the
+    clip has carried the bird."""
+    bpy.context.view_layer.update()
+    r = arm.pose.bones['root'].head.copy() if rel_root else V3((0, 0, 0))
+    out = {}
+    for b in arm.pose.bones:
+        out[b.name] = ((b.head - r) / MM, (b.tail - r) / MM)
+    return out
+
+
+def pose_gap(a, b, skip=()):
+    """The largest distance between the same bone's head or tail in two poses (mm), and that bone."""
+    worst, wb = 0.0, None
+    for k in a:
+        if any(k.startswith(p) for p in skip):
+            continue
+        d = max((a[k][0] - b[k][0]).length, (a[k][1] - b[k][1]).length)
+        if d > worst:
+            worst, wb = d, k
+    return worst, wb
+
+
+def handover_checks(arm, pairs, clips, skip=()):
+    """Where one clip hands over to another (a transition into a loop, a landing into the perched idle), the first
+    clip's last frame must lead into the second's first: their gap (the pose, against the root) is printed beside
+    the largest step inside the second clip."""
+    sc = bpy.context.scene
+    res = []
+    for a, b in pairs:
+        if a not in clips or b not in clips:
+            continue
+        use_clip(arm, a)
+        sc.frame_set(clips[a][0] - 1)
+        pa = bone_heads(arm)
+        use_clip(arm, b)
+        nb = clips[b][0]
+        prev, inner = None, 0.0
+        for f in range(nb):
+            sc.frame_set(f)
+            p = bone_heads(arm)
+            if f == 0:
+                p0 = p
+            if prev is not None:
+                inner = max(inner, pose_gap(prev, p, skip)[0])
+            prev = p
+        gap, bone = pose_gap(pa, p0, skip)
+        print(f'hand-over {a} (last frame) -> {b} (first): the pose differs by {gap:.1f} mm at most ({bone}); '
+              f'the largest step inside {b} {inner:.1f} mm' + ('' if gap <= max(inner, 2.0) + 0.5 else '  ** too large **'))
+        res.append((a, b, gap, inner))
+    return res
 
 
 def strip_gif(arm, meshes, frames_mesh, name, frames, out, cam, res=(240, 180), samples=6, repeat=1):
@@ -1478,6 +1657,50 @@ def contact_sheet(arm, meshes, frames_mesh, name, frames, out, view='side', res=
     return path
 
 
+def tune_cast_swap(arm, meshes, clips):
+    """The cast-off's and the landings' swap: the folded mesh's opening (SWAP_FOLD) and the spread mesh's fold
+    (SWAP_OPEN) that match best in cast_off's frame 13 (the lower of the side and three-quarter overlaps),
+    searched in alternating rounds on shrinking grids."""
+    A = Applier(arm, clips)
+    A.toe_verts = toe_vertex_sets(meshes['fold'])
+    for o in meshes.values():
+        sk = o.data.shape_keys
+        if sk:
+            sk.key_blocks['hidden'].value = 0.0
+    base = clips.cast_off(13)
+    sf, so = dict(SWAP_FOLD), dict(SWAP_OPEN)
+    step = {'up': 12, 'sweep': 12, 'fore': 20, 'hand': 20, 'out': 10, 'fup': 12, 'tip_out': 12, 'tip_up': 12}
+    best = None
+    for rnd in range(6):
+        if rnd % 2 == 0:
+            c = so
+            grid = [{'up': u, 'sweep': sw, 'fore': fo, 'hand': ha, 'twist': 0}
+                    for u in (c['up'] - step['up'], c['up'], c['up'] + step['up'])
+                    for sw in (c['sweep'] - step['sweep'], c['sweep'], c['sweep'] + step['sweep'])
+                    for fo in (c['fore'] - step['fore'], c['fore'], c['fore'] + step['fore'])
+                    for ha in (c['hand'] - step['hand'], c['hand'], c['hand'] + step['hand'])]
+        else:
+            c = sf
+            grid = [{'out': o_, 'up': u, 'twist': 0, 'tip_out': to, 'tip_up': tu}
+                    for o_ in (c['out'] - step['out'], c['out'], c['out'] + step['out'])
+                    for u in (c['up'] - step['fup'], c['up'], c['up'] + step['fup'])
+                    for to in (c['tip_out'] - step['tip_out'], c['tip_out'], c['tip_out'] + step['tip_out'])
+                    for tu in (c['tip_up'] - step['tip_up'], c['tip_up'], c['tip_up'] + step['tip_up'])]
+        for g in grid:
+            w, fp = (g, sf) if rnd % 2 == 0 else (so, g)
+            A.apply(dict(base, wing=w, fold=fp), 0, key=False)
+            bpy.context.view_layer.update()
+            a, ta = evaluated_co(meshes['fold'])
+            b, tb = evaluated_co(meshes['open'])
+            sc = min(pair_iou(a, ta, b, tb, VIEWS['side']), pair_iou(a, ta, b, tb, VIEWS['three_quarter']))
+            if best is None or sc > best[0]:
+                best = (sc, dict(fp), dict(w))
+        sf, so = best[1], best[2]
+        if rnd % 2 == 1:
+            step = {k: max(3, v * 0.6) for k, v in step.items()}
+        print(BIRD, 'swap round', rnd, 'overlap %.3f' % best[0], best[1], best[2])
+
+
 def tune_swaps(arm, meshes, clips):
     """The stoop's swap: the folded wing's opening that best matches the spread mesh at SWAP_OPEN in that frame."""
     import itertools
@@ -1511,6 +1734,10 @@ def tune(arm, meshes, clips, body):
     and tail turns that put the perched frame on the approved static saker_fist.glb. Prints the best of each."""
     A = Applier(arm, clips)
     A.toe_verts = toe_vertex_sets(meshes['fold'])
+    for o in meshes.values():      # both meshes drawn (the morph 'hidden' at 0) while they are compared
+        sk = o.data.shape_keys
+        if sk:
+            sk.key_blocks['hidden'].value = 0.0
     # the spread mesh folded by its bones as far as it still reads right; the folded mesh opened (shoulder and
     # primaries) to match it
     import itertools
@@ -1533,7 +1760,7 @@ def tune(arm, meshes, clips, body):
     # (2) the perched frame against the approved static model, in place
     import common as _c
     before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=os.path.join(HERE, '..', '..', 'assets_src', 'birds', 'saker_fist.glb'))
+    bpy.ops.import_scene.gltf(filepath=os.environ.get('FIST_GLB') or os.path.join(HERE, '..', '..', 'assets_src', 'birds', f'{BIRD}_fist.glb'))
     new = [o for o in bpy.data.objects if o not in before]
     stat = [o for o in new if o.type == 'MESH' and o.name.endswith('body')][0]
     bpy.context.view_layer.update()
@@ -1710,7 +1937,9 @@ if __name__ == '__main__':
     arm, meshes, frames_mesh, B, clips = build_saker(OUT)
     if mode == 'tune':
         CLIPS.update(CLIPS_KEEP)
-        if os.environ.get('TUNE_SWAPS'):
+        if os.environ.get('TUNE_CAST'):
+            tune_cast_swap(arm, meshes, clips)
+        elif os.environ.get('TUNE_SWAPS'):
             tune_swaps(arm, meshes, clips)
         else:
             tune(arm, meshes, clips, BODY[0])
@@ -1726,12 +1955,16 @@ if __name__ == '__main__':
             bpy.data.objects['wakr'].hide_render = True
             bpy.data.objects['sand'].hide_render = True
             follow = lambda f, r: ((r.x + 0.15, r.y + 4, r.z + 0.2), (r.x + 0.15, r.y, r.z + 0.2), 1.15)
-            strip_gif(arm, meshes, frames_mesh, 'cast_off', list(range(0, 41)), OUT, cam=follow)
+            strip_gif(arm, meshes, frames_mesh, 'cast_off', list(range(0, 39)), OUT, cam=follow)
             bpy.data.objects['dass'].hide_render = True
             strip_gif(arm, meshes, frames_mesh, 'flight', list(range(0, 14)), OUT, repeat=3,
                       cam=lambda f, r: ((r.x + 1.6, r.y - 1.3, r.z + 0.8), (r.x + 0.15, r.y, r.z + 0.05), None))
     if mode == 'measure':
         motion_checks(arm, meshes, frames_mesh, clips, BODY[0])
+        print('hand-overs, the skeleton without the jesses (simulated cords, listed after):')
+        handover_checks(arm, HANDOVERS, CLIPS, skip=('jess', 'hood'))
+        print('hand-overs, the jesses alone:')
+        handover_checks(arm, HANDOVERS, CLIPS, skip=tuple(b.name for b in arm.pose.bones if not b.name.startswith('jess')))
         import gear
         for name, (n, fn, loop) in CLIPS.items():
             on = planted_frames(name, n, FRAMES_FEET)

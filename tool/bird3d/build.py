@@ -100,6 +100,9 @@ def species(name):
         import saker as m
     elif name == 'peregrine':
         import peregrine as m
+    elif name == 'pigeon':
+        import pigeon
+        m = pigeon.PIGEON
     elif name in ('houbara', 'curlew'):
         import quarry
         m = quarry.HOUBARA if name == 'houbara' else quarry.CURLEW
@@ -139,7 +142,7 @@ def build_bird(name, pose, level, pictures=False):
     return root, objs, pts, body
 
 
-MASS = {'saker': (0.97, 1.30), 'peregrine': (0.925, 1.333), 'houbara': (1.8, 2.4), 'curlew': (0.29, 0.535)}      # kg: README.md says from where
+MASS = {'saker': (0.97, 1.30), 'peregrine': (0.925, 1.333), 'pigeon': (0.238, 0.380), 'houbara': (1.8, 2.4), 'curlew': (0.29, 0.535)}      # kg: README.md says from where
 
 
 def measures(name, pose, objs, spec, lo, hi):
@@ -248,6 +251,9 @@ if __name__ == '__main__':
         elif w in ('houbara', 'curlew'):
             import quarry
             quarry.run(w, sys.modules[__name__])
+        elif w == 'pigeon':
+            import pigeon
+            pigeon.run(sys.modules[__name__])
         elif w == 'gear':
             import gear
             gear.run(sys.modules[__name__])

@@ -81,6 +81,15 @@ SPEC = {
     ],
 }
 
+RIG = {      # her skeleton on the saker's (rig.py): the same bones, placed on her own sections, wing and legs
+    'neck': (173, 205, 232), 'head_end': 284, 'hood_d': 244, 'tail': (18, -160),
+    'fold': ((158, 25, 53), (38, 22, 46), (-148, 12, 10)),
+    'wing': ((128, 8, 30), (128, 8, 112), (124, 8, 200), (40, 0, 540)), 'wing_scale': 200 / 215.0,
+    'knee': (95, -22, 21), 'body_bands': (164, 198, 222, 247),
+    'perch_neck': (0, -24, -40), 'perch_tail': 10,      # fitted to peregrine_fist.glb (rig.py tune): overlap 0.835
+    'rest_foot': (73, 22, -119), 'reach_foot': (148, 26, -114), 'push_foot': (-10, 20, -90),
+}
+
 POSES = {
     # hooded on the perch in the tent: upright, relaxed, a little fluffed
     'hooded': {'origin': (-56, 74), 'spine': [(0, 64), (155, 64), (192, 84), (228, 40), (252, 0), (290, 0)],
