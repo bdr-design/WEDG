@@ -106,6 +106,14 @@ def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
         Nr[sel] = N[sel]
         ST[sel] = 0.5
     coat = paint.Coat(kind, rest, mouth_open=posed.P.get('jaw', 0.0) > 5)
+    # the skin's own place carried rigidly with the head from the pose to the standing animal: the eyes and the lips
+    # are painted by it (the nearest piece's surface would shift them where the cheek's fur covers the eye)
+    def axes(m):
+        o_, hd, hn, hv, _ = m.head_frame
+        return np.array(tuple(o_)), np.array([tuple(hd), tuple(hn), tuple(hv)])
+    op, Ap = axes(posed)
+    orr, Ar = axes(rest)
+    Ph = orr + ((P - op) @ Ap.T) @ Ar
     import os
     if os.environ.get('CANID_DEBUG'):
         np.savez(os.environ['CANID_DEBUG'], P=P, Pr=Pr, Nr=Nr, blocks=blocks.astype(str), groups=groups.astype(str), ST=ST)
@@ -115,7 +123,7 @@ def bake(kind, posed, rest, obj, UV, n_skin_faces, extra_blocks, size, H):
     e = 0.5
     for b, g in keys:
         sel = (blocks == b) & (groups == g)
-        col[sel] = coat(Pr[sel], Nr[sel], ST[sel, 0], ST[sel, 1], b, g)
+        col[sel] = coat(Pr[sel], Nr[sel], ST[sel, 0], ST[sel, 1], b, g, Ph[sel])
         q = Pr[sel]
         grad = np.stack([(coat.height(q + np.eye(3)[a] * e, b) - coat.height(q - np.eye(3)[a] * e, b)) / (2 * e)
                          for a in range(3)], 1)

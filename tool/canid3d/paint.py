@@ -158,8 +158,9 @@ class Coat:
         col = mix(col, C(0.11, 0.10, 0.10), sstep(-0.50, -0.80, up))                          # the pads below
         return col
 
-    def head(self, P, N, block):
+    def head(self, P, N, block, Ph=None):
         H, pal = self.H, self.pal
+        P = P if Ph is None else Ph
         a, b, c = self.head_coords(P)
         col = np.broadcast_to(pal['ground'], P.shape).copy()
         n1 = noise3(P / np.array([3.0, 1.2, 1.2], np.float32), 0.9, 21)
@@ -193,17 +194,18 @@ class Coat:
         """The eye on the skin: an almond (longer along the head, its front corner lower, set obliquely), the iris,
         the pupil, the dark-lined lids."""
         o, hd, hn, hv, Lh = self.hf
-        for e, look in self.eyes:
+        for (e, look), sg in zip(self.eyes, (1, -1)):
             q = P - e
             a = q @ hd
             b = q @ hn + 0.22 * a
-            d = np.sqrt(a * a + (b / 0.62) ** 2) / self.er
-            front = sstep(-0.6, -0.2, (q @ look) / self.er)
+            d = np.sqrt(a * a + (b / 0.52) ** 2) / self.er
+            # painted by its place along and up the head only, on its own side: the eye sits a little into the
+            # cheek's fur, so its almond is laid on the surface over it, not on the bulge's own curve
+            front = sstep(0.0, 0.3, -(P - o) @ hv * sg / self.er)
             iris = sstep(0.86, 0.70, d) * front
             col = mix(col, C(0.06, 0.05, 0.045), sstep(1.10, 0.95, d) * front)                   # the lids' dark rim
             col = mix(col, self.pal['iris'] * 0.9, iris)
-            col = mix(col, C(0.03, 0.03, 0.03), sstep(0.42, 0.30, d) * iris)                     # the pupil
-            col = mix(col, self.pal['iris'] * 0.6, sstep(0.55, 0.85, d) * iris * 0.6)            # the iris's darker rim
+            col = mix(col, C(0.03, 0.03, 0.03), sstep(0.46, 0.34, d) * iris)                     # the pupil
         return col
 
     def nose_mouth(self, P, N, a, col, block):
@@ -254,7 +256,7 @@ class Coat:
         return col
 
     # ---------------------------------------------------------------- one colour per texel
-    def __call__(self, P, N, S, T, block, group):
+    def __call__(self, P, N, S, T, block, group, Ph=None):
         """The colour of texels (arrays) lying over one kind of piece ([block]) of one [group]."""
         H = self.H
         x, z = P[..., 0] / H, P[..., 2] / H
@@ -270,7 +272,7 @@ class Coat:
             col = trunk
         elif block == 'neck':
             a, b, c = self.head_coords(P)
-            col = mix(trunk, self.head(P, N, 'head'), sstep(-0.05, 0.15, a))
+            col = mix(trunk, self.head(P, N, 'head', Ph), sstep(-0.05, 0.15, a))
         elif block in LEG_BLOCKS:
             bot = np.interp(x, self.tx, self.tbot)
             col = mix(trunk, self.leg(P, N, block.startswith('hind')), sstep(bot - 0.02, bot - 0.16, z))
@@ -278,11 +280,11 @@ class Coat:
                 col = self.toes(col, S, N)
         elif block in HEAD_BLOCKS:
             a, b, c = self.head_coords(P)
-            col = mix(trunk, self.head(P, N, block), sstep(-0.12, 0.10, a))
+            col = mix(trunk, self.head(P, N, block, Ph), sstep(-0.12, 0.10, a))
         elif block == 'ear':
             base = self.ears[0] if group.endswith('_l') else self.ears[1]
             h = (P - base) @ self.hf[2] / (self.rest.S['ear'][0] * H)
-            col = mix(self.head(P, N, 'head'), self.ear(P, N), sstep(0.10, 0.30, h))
+            col = mix(self.head(P, N, 'head', Ph), self.ear(P, N), sstep(0.10, 0.30, h))
         elif block == 'tail':
             col = mix(trunk, self.tail(P, N, S), sstep(0.0, 0.15, S))
         else:

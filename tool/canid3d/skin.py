@@ -90,7 +90,7 @@ def sdf_of(occ, vox):
 
 
 # the blend radius (mm, as a fraction of the withers height) each group joins the rest with
-BLEND = {'torso': 0.0, 'neck': 0.045, 'head': 0.040, 'tail': 0.018, 'fore': 0.034, 'hind': 0.040, 'paw': 0.012, 'ear': 0.008}
+BLEND = {'cleft': 0.004, 'torso': 0.0, 'neck': 0.045, 'head': 0.040, 'tail': 0.018, 'fore': 0.034, 'hind': 0.040, 'paw': 0.012, 'ear': 0.008}
 
 
 def groups_of(parts):
@@ -115,6 +115,7 @@ def field(parts, H, vox):
     hi = allv.max(0) + margin
     dims = np.ceil((hi - lo) / vox).astype(int)
     F = np.full(tuple(dims), 1e3, np.float32)
+    sharp = np.zeros(tuple(dims), np.float32)      # where the field is kept unblurred (the paws: toes and clefts)
     for g, pcs in groups:
         k = BLEND[g.split('_')[0]] * H
         gv = np.concatenate([piece_arrays(pc)[0] for pc in pcs])
@@ -125,13 +126,22 @@ def field(parts, H, vox):
         occ = voxelize(pcs, sub, vox, tuple(g1 - g0))
         d = sdf_of(occ, vox)
         sl = tuple(slice(a, b) for a, b in zip(g0, g1))
-        F[sl] = np.minimum(F[sl], d) if k == 0 else smin(F[sl], d, k)
-    return F, lo, vox
+        if g.startswith('cleft'):
+            F[sl] = -smin(-F[sl], d, k)                 # cut away: the clefts between the toes
+        else:
+            F[sl] = np.minimum(F[sl], d) if k == 0 else smin(F[sl], d, k)
+        if g.startswith('paw'):
+            c0 = np.maximum(np.floor((gv.min(0) - lo) / vox).astype(int), 0)
+            c1 = np.minimum(np.ceil((gv.max(0) - lo) / vox).astype(int), dims)
+            sharp[tuple(slice(a, b) for a, b in zip(c0, c1))] = 1.0
+    sharp = ndimage.gaussian_filter(sharp, 3.0)
+    return F, lo, vox, sharp
 
 
-def surface(F, origin, vox, blur=0.9):
-    """Marching cubes on the lightly blurred field: vertices (mm) and triangles."""
-    F = ndimage.gaussian_filter(F, blur)
+def surface(F, origin, vox, blur=0.9, sharp=None):
+    """Marching cubes on the lightly blurred field (kept sharp where [sharp] is 1): vertices (mm) and triangles."""
+    Fb = ndimage.gaussian_filter(F, blur)
+    F = Fb if sharp is None else Fb * (1 - sharp) + F * sharp
     verts, faces, _, _ = measure.marching_cubes(F, 0.0, spacing=(vox, vox, vox))
     verts = verts + origin
     # drop the small shells: hollows left inside the body where pieces meet (never seen)
@@ -178,22 +188,53 @@ def apply_mods(o, mods):
     return o
 
 
+PAW_SPARE = 0.15          # the close skin's decimation spares the paws (their weight 1 - this)
+
+
 def skin_mesh(name, parts, H, vox, targets, ground=True):
     """The skin at each target triangle count: {target: Blender object}."""
-    F, lo, vox = field(parts, H, vox)
-    verts, faces = surface(F, lo, vox)
+    F, lo, vox, sharp = field(parts, H, vox)
+    verts, faces = surface(F, lo, vox, sharp=sharp)
     if ground:
         verts[:, 2] = np.maximum(verts[:, 2], 0.0)      # pressed flat where it touches the ground
     base = to_blender(name + '_hi', verts, faces)
-    apply_mods(base, [('SMOOTH', dict(factor=0.5, iterations=2))])
+    # the paws kept out of the smoothing and spared by the decimation (their toes would melt into mittens)
+    idx = np.clip(np.round((verts - lo) / vox).astype(int), 0, np.array(sharp.shape) - 1)
+    wp = sharp[idx[:, 0], idx[:, 1], idx[:, 2]]
+    vg = base.vertex_groups.new(name='body')
+    body = 1.0 - PAW_SPARE * np.clip(wp * 1.5, 0, 1)
+    for w in np.unique(np.round(body, 2)):
+        sel = np.nonzero(np.round(body, 2) == w)[0].tolist()
+        if w > 0:
+            vg.add(sel, float(w), 'REPLACE')
+    apply_mods(base, [('SMOOTH', dict(factor=0.5, iterations=2, vertex_group='body'))])
     out = {}
     nf = len(base.data.polygons)
     for t in targets:
         o = base.copy()
-        o.data = base.data.copy()
         o.name = f'{name}_{t}'
         bpy.context.scene.collection.objects.link(o)
-        apply_mods(o, [('DECIMATE', dict(decimate_type='COLLAPSE', ratio=min(1.0, t / nf), use_collapse_triangulate=True))])
+        # the guard makes the decimation stop short of its ratio: the ratio is corrected until the count is met
+        ratio = min(1.0, t / nf)
+        for _ in range(6):
+            trial = base.data.copy()
+            o.data = trial
+            props = dict(decimate_type='COLLAPSE', ratio=ratio, use_collapse_triangulate=True)
+            if t > 3000:
+                props.update(vertex_group='body', vertex_group_factor=1.0)
+            apply_mods(o, [('DECIMATE', props)])
+            got = len(o.data.polygons)
+            if abs(got - t) <= 0.01 * t:
+                break
+            ratio = min(1.0, ratio * t / got)
+        if ground:
+            me = o.data
+            co = np.empty(len(me.vertices) * 3)
+            me.vertices.foreach_get('co', co)
+            co = co.reshape(-1, 3)
+            co[:, 2] = np.maximum(co[:, 2], 0.0)       # (the decimation can push a vertex of the contact under it)
+            me.vertices.foreach_set('co', co.ravel())
+            me.update()
         out[t] = o
     bpy.data.objects.remove(base)
     return out, (len(verts), len(faces))
@@ -249,7 +290,10 @@ def vertex_normals(V, Fv):
     return vn / np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-12)
 
 
-def unwrap(o, head_c_mm, head_r_mm, gain=1.8):
+MARGIN = 0.006       # between islands and at the layout's border (a fraction of the layout): 3 texels at 512 px
+
+
+def unwrap(o, head_c_mm, head_r_mm, gain=2.4):
     """Smart projection on a copy whose head is swollen [gain] times (so the head gets that much more texture per
     millimetre), the texture places copied back by loop."""
     tmp = o.copy()
@@ -274,18 +318,102 @@ def unwrap(o, head_c_mm, head_r_mm, gain=1.8):
     tmp.select_set(True)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=math.radians(62), island_margin=0.006, area_weight=0.0,
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=MARGIN, area_weight=0.0,
                              correct_aspect=True, scale_to_bounds=False)
     bpy.ops.uv.select_all(action='SELECT')
-    bpy.ops.uv.pack_islands(rotate=True, margin=0.004)
+    bpy.ops.uv.pack_islands(rotate=True, margin_method='FRACTION', margin=MARGIN)
     bpy.ops.object.mode_set(mode='OBJECT')
     uv = np.empty(len(me.loops) * 2, np.float32)
     me.uv_layers.active.data.foreach_get('uv', uv)
+    # where the decimated skin folds over itself (a sliver turned under its neighbour) the projection overlaps: one
+    # face of each overlapping pair is moved to a free place of its own in the layout
+    V3 = np.empty(len(o.data.vertices) * 3)
+    o.data.vertices.foreach_get('co', V3)
+    V3 = V3.reshape(-1, 3)
+    Fv = np.empty(len(o.data.loops), np.int64)
+    o.data.loops.foreach_get('vertex_index', Fv)
+    Fv = Fv.reshape(-1, 3)
+    uv = uv.reshape(-1, 3, 2)
+    for k in range(8):
+        bad = uv_overlaps(uv)
+        if not bad:
+            break
+        relocate(uv, sorted({max(p) for p in bad}), V3, Fv)
+    uv = uv.reshape(-1)
     if not o.data.uv_layers:
         o.data.uv_layers.new(name='uv')
     o.data.uv_layers[0].data.foreach_set('uv', uv)
     bpy.data.objects.remove(tmp)
     return uv.reshape(-1, 3, 2)
+
+
+def relocate(uv, faces, V, Fv, size=512):
+    """Give each of [faces] its own small island in a free part of the layout, at the layout's own texture density."""
+    tri = V[Fv]
+    a3 = 0.5 * np.linalg.norm(np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0]), axis=1).sum()
+    e = uv[:, 1] - uv[:, 0]
+    f = uv[:, 2] - uv[:, 0]
+    a2 = 0.5 * np.abs(e[:, 0] * f[:, 1] - e[:, 1] * f[:, 0]).sum()
+    k = math.sqrt(a2 / a3)                                # layout units per metre
+    fid, _ = raster(uv, size)
+    occ = fid >= 0
+    m = 3                                                  # (a few texels round a moved face)
+    for face in faces:
+        a, b, c = tri[face]
+        ex = (b - a) / max(np.linalg.norm(b - a), 1e-12)
+        n = np.cross(b - a, c - a)
+        n /= max(np.linalg.norm(n), 1e-12)
+        ey = np.cross(n, ex)
+        q = np.array([[0.0, 0.0], [(b - a) @ ex, (b - a) @ ey], [(c - a) @ ex, (c - a) @ ey]]) * k
+        q -= q.min(0)
+        busy = ndimage.binary_dilation(occ, iterations=m) if m else occ
+        ii = np.pad(np.cumsum(np.cumsum(busy, 0), 1), ((1, 0), (1, 0)))
+        sc = 1.0
+        done = False
+        while not done and sc > 0.05:
+            # (where no place is free at the layout's density, the face is given a little less)
+            w = int(math.ceil(q.max() * sc * size)) + 2 * m + 1
+            win = ii[w:, w:] - ii[:-w, w:] - ii[w:, :-w] + ii[:-w, :-w]
+            free = np.argwhere(win == 0)
+            free = free[(free[:, 0] >= m) & (free[:, 1] >= m) & (free[:, 0] + w <= size - m) & (free[:, 1] + w <= size - m)]
+            done = len(free) > 0
+            if not done:
+                sc *= 0.7
+        if done:
+            y, x = free[0]
+            uv[face] = q * sc + (np.array([x, y]) + m) / size
+            occ[y:y + w, x:x + w] = True
+        if not done:
+            raise SystemExit('no free place left in the texture layout for a face')
+
+
+def uv_overlaps(UV, size=2048, eps=0.02):
+    """The pairs of texture triangles that cover the same texels (inside each by more than [eps] of its own barycentric
+    range, so shared edges do not count): an empty list when the layout is sound."""
+    owner = np.full((size, size), -1, np.int64)
+    bad = set()
+    P = UV * size
+    for t in range(len(P)):
+        p = P[t]
+        x0, y0 = np.floor(p.min(0)).astype(int)
+        x1, y1 = np.ceil(p.max(0)).astype(int)
+        x0, y0, x1, y1 = max(x0, 0), max(y0, 0), min(x1, size - 1), min(y1, size - 1)
+        if x0 > x1 or y0 > y1:
+            continue
+        ys, xs = np.mgrid[y0:y1 + 1, x0:x1 + 1] + 0.5
+        d = (p[1, 1] - p[2, 1]) * (p[0, 0] - p[2, 0]) + (p[2, 0] - p[1, 0]) * (p[0, 1] - p[2, 1])
+        if abs(d) < 1e-12:
+            continue
+        l1 = ((p[1, 1] - p[2, 1]) * (xs - p[2, 0]) + (p[2, 0] - p[1, 0]) * (ys - p[2, 1])) / d
+        l2 = ((p[2, 1] - p[0, 1]) * (xs - p[2, 0]) + (p[0, 0] - p[2, 0]) * (ys - p[2, 1])) / d
+        m = (l1 > eps) & (l2 > eps) & (1 - l1 - l2 > eps)
+        ow = owner[y0:y1 + 1, x0:x1 + 1]
+        clash = m & (ow >= 0)
+        if clash.any():
+            for o in np.unique(ow[clash]):
+                bad.add((int(o), t))
+        ow[m] = t
+    return sorted(bad)
 
 
 def raster(UV, size):
@@ -363,6 +491,8 @@ def material(name, col, nrm, rough=0.85):
     tn = nt.nodes.new('ShaderNodeTexImage')
     tn.image = image(name + '_normal', nrm)
     tn.image.colorspace_settings.name = 'Non-Color'
+    tc.extension = 'EXTEND'                 # written as clamp-to-edge: nothing wraps in from the far border
+    tn.extension = 'EXTEND'
     nm = nt.nodes.new('ShaderNodeNormalMap')
     nm.uv_map = 'uv'
     nt.links.new(tc.outputs['Color'], bsdf.inputs['Base Color'])

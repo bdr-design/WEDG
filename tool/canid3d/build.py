@@ -86,6 +86,15 @@ def build(kind, pose):
             first += len(pc.T)
         skin.add_pieces(o, extras)
         UV = skin.unwrap(o, tuple(head_c), 0.75 * Lh)
+        bad = skin.uv_overlaps(UV)
+        if bad:
+            V_, F_ = skin.mesh_arrays(o)
+            for pa in bad[:3]:
+                for f_ in pa:
+                    print('   face', f_, 'xyz', V_[F_[f_]].round(1).tolist(), 'uv', UV[f_].round(4).tolist())
+            raise SystemExit(f'{kind}_{pose} level {level}: {len(bad)} pairs of texture triangles overlap: {bad[:6]}')
+        edge = int(((UV < 0.002) | (UV > 0.998)).any(axis=(1, 2)).sum())
+        print(f'   texture layout level {level}: no overlapping triangles (checked at 2048 px); {edge} faces touch its border')
         col, nrm, cover = texture.bake(coat, m, rest, o, UV, n_skin, blocks, TEX[level], H)
         if level == 0 and os.environ.get('CANID_ATLAS'):
             from PIL import Image
@@ -190,11 +199,24 @@ def measures(m, o):
             return 0.0
         pts = seg.reshape(-1, 3)
         pts = pts[np.abs(pts[:, 2] - q.z) < dz]
-        return float(np.ptp(pts[:, 1])) if len(pts) else 0.0
+        return float(np.ptp(pts[:, 1])) if len(pts) else -1.0
     occ = o_
     out.append(f'neck width just behind the skull {width_at(occ - hd * (0.04 * H), 0.05 * H):.0f} mm, across the cheeks '
                f'{width_at(occ + hd * (0.24 * Lh), 0.04 * H):.0f} mm; the muzzle at 0.62 and 0.76 of the head '
                f'{width_at(occ + hd * (0.62 * Lh), 0.03 * H):.0f} and {width_at(occ + hd * (0.76 * Lh), 0.025 * H):.0f} mm')
+    et = S['eye'][0]
+    eyes = m.points['eye_l'], m.points['eye_r']
+    out.append(f'head width at the eyes {width_at(occ + hd * (et * Lh), 0.035 * H):.0f} mm, the eyes {(eyes[0] - eyes[1]).length:.0f} mm apart; '
+               f'the muzzle at its base (0.56) {width_at(occ + hd * (0.56 * Lh), 0.03 * H):.0f} mm')
+    # triangles per paw: faces within a paw's length of its sole point and below twice its height
+    fc = V[Fv].mean(1)
+    per = []
+    for k in ('foot_fl', 'foot_fr', 'foot_hl', 'foot_hr'):
+        sole = np.array(tuple(m.points[k][0]))
+        L = (S['forepaw'] if k[5] == 'f' else S['hindpaw'])[0] * H
+        sel = (np.linalg.norm((fc - sole)[:, :2], axis=1) < 0.75 * L) & (fc[:, 2] < sole[2] + 1.4 * S['forepaw'][2] * H)
+        per.append(int(sel.sum()))
+    out.append('triangles per paw (fl, fr, hl, hr) ' + ', '.join(map(str, per)))
     lx = -0.16 * H
     seg = section(V, Fv, 0, lx)
     trunk = seg[seg[:, :, 2].min(1) > 0.3 * H] if len(seg) else seg
@@ -293,6 +315,13 @@ def pictures(kind, pose, o, m):
         finish(png)
     if want('top') and pose == 'alert':
         png = st.shot(tag + '_top', (mid[0], mid[1] + 0.001, 5), mid, ortho=max(ext[0], ext[1] * 1.33) * 1.2, res=res)
+        finish(png)
+    if want('paws') and pose == 'alert':
+        # the forepaws from three-quarter front, low, with a raking light from the side
+        f = V3(m.points['foot_fl'][0]) * 0.001
+        tgt = f + V3((0.02, -0.05, 0.03))
+        st.light('AREA', tgt + V3((0.1, 0.9, 0.08)), 30, tgt, 0.3)
+        png = st.shot(tag + '_paws', tgt + V3((0.42, 0.30, 0.14)), tgt, lens=60, res=res)
         finish(png)
     if want('front') and pose == 'alert':
         png = st.shot(tag + '_front', (mid[0] + 5, mid[1], mid[2]), mid, ortho=max(ext[1], ext[2]) * 1.5, res=(res[1], res[1]))

@@ -440,7 +440,8 @@ def export(path, root):
     for o in [root, *root.children_recursive]:
         o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=True,
-                              export_image_format='AUTO', export_extras=False, export_materials='EXPORT')
+                              export_image_format='AUTO', export_extras=False, export_materials='EXPORT',
+                              export_tangents=True)   # the normal map's tangents, MikkTSpace as baked
     settle(path)
 
 

@@ -219,6 +219,12 @@ class Canid:
         secs = [Sec(o + hd * (t * Lh) + hn * (cz * H), hn, hv, up * H, dn * H, w * H, w * H, p=2.2) for t, cz, up, dn, w in rows]
         self.add('head', piece('head', secs, d.head_ring, shapes=self.shapes))
         self.points['head'] = (o + hd * (0.35 * Lh), hd, hn)
+        # the cheeks: the jaw's muscle and the cheek fur flaring out below and behind the eyes
+        if S.get('cheeks'):
+            ct, ccz, cy, ra, rl, ru = S['cheeks']
+            for sg in (1, -1):
+                c = o + hd * (ct * Lh) + hn * (ccz * H) - hv * (sg * cy * H)
+                self.add('head', blob('head', c, (ra * H, rl * H, ru * H), 12, 7, hd, hn))
 
         # the lower jaw: hinged under the cheek, opened [jaw] degrees
         jt, jcz = S['jaw_hinge']
@@ -357,6 +363,12 @@ class Canid:
         for ty, tx, tl in ((-0.33, 0.70, 0.86), (-0.11, 0.80, 1.0), (0.11, 0.80, 1.0), (0.33, 0.70, 0.86)):
             c = sole + fwd * ((tx - 0.20) * plen * H) + v * (ty * pw * H) + n * (0.42 * ph * H)
             self.add('legs', blob(block, c, (0.17 * plen * H * tl, 0.15 * pw * H, 0.40 * ph * H), 10, 6, fwd, n))
+        # the clefts between the toes, cut from the top and the front
+        self.group = 'cleft_' + pts_name[-2:]
+        for ty in (-0.22, 0.0, 0.22):
+            c = sole + fwd * ((0.86 - 0.20) * plen * H) + v * (ty * pw * H) + n * (0.62 * ph * H)
+            self.add('legs', blob(block, c, (0.20 * plen * H, 0.05 * pw * H, 0.30 * ph * H), 8, 5, fwd, n))
+        self.group = 'paw_' + pts_name[-2:]
         self.points[pts_name] = (sole, fwd, n)
         return sole + n * (0.72 * ph * H) - fwd * (0.06 * plen * H)
 

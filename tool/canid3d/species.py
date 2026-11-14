@@ -50,16 +50,20 @@ WOLF = dict(
     # a wedge broadening steadily from the nose: the muzzle (eye to nose) half the head, 60-70 mm wide at its middle;
     # a mild stop, a broad flat crown
     head=[
-        (0.00, 0.000, 0.050, 0.050, 0.060),
-        (0.10, 0.006, 0.074, 0.070, 0.088),
-        (0.24, 0.008, 0.080, 0.076, 0.100),
-        (0.38, 0.004, 0.072, 0.066, 0.088),
-        (0.50, -0.004, 0.060, 0.056, 0.070),
-        (0.62, -0.010, 0.054, 0.047, 0.058),
-        (0.76, -0.014, 0.047, 0.040, 0.054),
-        (0.90, -0.017, 0.041, 0.033, 0.044),
-        (1.00, -0.020, 0.031, 0.024, 0.033),
+        (0.00, 0.000, 0.052, 0.050, 0.064),
+        (0.10, 0.006, 0.076, 0.070, 0.092),
+        (0.24, 0.010, 0.084, 0.076, 0.102),
+        (0.38, 0.010, 0.080, 0.068, 0.092),
+        (0.48, 0.006, 0.070, 0.062, 0.078),
+        (0.56, -0.006, 0.054, 0.054, 0.062),
+        (0.68, -0.011, 0.048, 0.046, 0.054),
+        (0.82, -0.015, 0.042, 0.037, 0.046),
+        (0.93, -0.017, 0.038, 0.031, 0.040),
+        (1.00, -0.020, 0.030, 0.024, 0.033),
     ],
+    # the cheeks (the jaw's muscle under the cheek fur) flaring out at and behind the eyes: the head about twice as
+    # wide across them as the eyes are apart (the reviewer's head-front photograph)
+    cheeks=(0.34, 0.000, 0.064, 0.075, 0.050, 0.054),
     jaw_hinge=(0.24, -0.054),
     jaw=[
         (0.16, 0.000, 0.028, 0.042, 0.070),
@@ -70,7 +74,7 @@ WOLF = dict(
         (0.96, 0.002, 0.012, 0.013, 0.022),
     ],
     nose=(0.985, -0.012, 0.024),
-    eye=(0.50, 0.034, 0.051, 0.0160),
+    eye=(0.48, 0.032, 0.050, 0.0160),
     eye_out=30.0,
     ear=(0.165, 0.106, 0.014),
     ear_base=(0.14, 0.050, 0.080),
@@ -84,8 +88,8 @@ WOLF = dict(
     hip=(-0.40, 0.700, 0.056),
     fore_bones=(0.26, 0.31, 0.12),
     hind_bones=(0.28, 0.30, 0.19),
-    forepaw=(0.112, 0.082, 0.050),
-    hindpaw=(0.104, 0.076, 0.048),
+    forepaw=(0.128, 0.086, 0.050),
+    hindpaw=(0.116, 0.080, 0.048),
     paw_shape=PAW,
     # the forearm and the gaskin flattened sideways (about 0.7 width to depth), as a canid's are
     fore_sizes=dict(top=(0.040, 0.080, 0.100), shoulder=(0.048, 0.068, 0.080), arm=(0.046, 0.070, 0.066),
@@ -119,8 +123,8 @@ WOLF_POSES = {
     'run': dict(drop=0.05, pitch=-4, arch=10, neck=22, head=22, ears_back=55, tail=[12, 16, 20, 24, 28],
                 legs=dict(fore_r=dict(x=0.28, meta=38, root=(0.0, 0.0)),
                           fore_l=dict(x=0.80, z=0.20, meta=60, paw=8, root=(0.05, 0.02)),
-                          hind_l=dict(x=-0.95, z=0.20, meta=-53, paw=-117, pole=(1, 0, -0.2), root=(-0.03, 0.0)),
-                          hind_r=dict(x=-0.86, z=0.10, meta=-46, paw=-108, pole=(1, 0, -0.2), root=(-0.02, 0.0)))),
+                          hind_l=dict(x=-0.95, z=0.20, meta=-50, paw=-115, pole=(1, 0, -0.2), root=(-0.03, 0.0)),
+                          hind_r=dict(x=-0.86, z=0.10, meta=-38, paw=-102, pole=(1, 0, -0.2), root=(-0.02, 0.0)))),
 }
 
 # ------------------------------------------------------------------ the guard dog (the local pariah type), a male
