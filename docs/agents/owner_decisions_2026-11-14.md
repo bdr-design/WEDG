@@ -28,3 +28,17 @@ what was asked overnight; this file is his own word.
 7. A saker or a قرناس in the net: «ينطلق: اللعبة تطلقه على طول مع سطر يقول ليش.» (Confirms items 3 and 4.)
 8. A trapped peregrine he kept: «ما ينباع بعدين: الطير اللي تخليه لك يبقى لك. ما نعرض بيعة ما نقدر نبيّن إنها
    نظامية.» (Confirms item 6.)
+9. How much easier trapping is than the sources' range: «الضعف: المبتدي طير كل 6 مواسم تقريباً، والمجهز زين موسمين من
+   كل 3. يربّح أسرع ويبقى فيه طعم الصبر والحظ.» The share of dear birds and the prices stay as in reality. To be
+   written in the GDD as a game choice that departs from the sources (the sources' range is one season in 12.5 to
+   one in 2.98).
+
+## المزاين and الحراج (the proxy's batch 1, put to him)
+
+10. A treated camel in the preliminary: «خله مثل ما هو: مثل ترتيب المهرجان الحقيقي: الكل يتحكّم، والكشف ينعلن
+    بمرحلته مع الغرامة والمنع. الغشاش ياخذ مكان مؤقت ويطيح.» (Confirms batch 1 item 1 as built.)
+11. الفحل وإنتاجه's five offspring: «اللعبة تختار الأزين: يبقى مثل ما هو: أسهل وما يحتاج شاشة جديدة، ومكتوب إنه
+    اختيار لعب.» (Confirms item 3 as built.)
+12. A buyer who knew of a treatment before buying, selling declared with no fine: «لا: البيع المعلن بدون غرامة للي
+    ما درى بس. اللي اشتراها وهو يدري يتركها، أو ينتظر لين يروح التجميل، أو يبيعها ساكت ويتحمل خطر الفحص.»
+    (Confirms item 5.)
