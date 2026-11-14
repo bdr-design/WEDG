@@ -139,11 +139,11 @@ Sources:
 | What | Real | Source | Model |
 |---|---|---|---|
 | Shoulder (withers) height | 64–66 cm on average; 70 cm in one Arabic source | en.wikipedia 'Arabian wolf', citing the UK Wolf Conservation Trust's leaflet *(opened by the reviewer)*; Saudipedia الذئب العربي *(search)* | 650 mm |
-| Weight (for the record) | about 20 kg on average (one source 25 kg); females possibly as little as 10 kg | en.wikipedia, citing Lopez 2004 *(opened by the reviewer)*; Saudipedia, mawdoo3 *(search)*; a forum post *(search, weak)* | volume 27.8 L. Less the summer coat's depth (about 1.5 cm over about 0.6 m² of skin, about 9 L), that is about 19 L, so about 19 kg at a body's density: inside the range |
-| Length | 114 cm, not saying what it measures; head and body not found for this subspecies | Saudipedia *(search)* | nose to tail base 992 mm; overall, nose to tail as it hangs, 1,124 mm |
-| Tail | "reaches its hocks" | Saudipedia *(search)* | 390 mm; its tip 194 mm above the ground against the hocks' 145 mm |
-| Skull length | about 200.8 mm (cranial length) | animal database pages citing older literature *(search, weak)* | head, occiput to nose, 227 mm (with the skin, nose and fur) |
-| Ears | "proportionally larger" than other wolves'; no length found | en.wikipedia, citing Mills 1945 *(opened by the reviewer)* | 109 mm tall, 68 mm at the base *(a game choice)* |
+| Weight (for the record) | about 20 kg on average (one source 25 kg); females possibly as little as 10 kg | en.wikipedia, citing Lopez 2004 *(opened by the reviewer)*; Saudipedia, mawdoo3 *(search)*; a forum post *(search, weak)* | the skin's volume 27.8 L. Less the summer coat's depth (about 1.5 cm over about 0.6 m² of skin, about 9 L), that is about 19 L, so about 19 kg at a body's density: inside the range |
+| Length | 114 cm, not saying what it measures; head and body not found for this subspecies | Saudipedia *(search)* | nose to tail base 996 mm; overall, nose to tail as it hangs, 1,158 mm |
+| Tail | "reaches its hocks" | Saudipedia *(search)* | 390 mm (0.60 H), about 40 mm across at the root, fullest at mid-length; its tip about level with the hocks (the side picture) |
+| Skull length | about 200.8 mm (cranial length) | animal database pages citing older literature *(search, weak)* | head, occiput to nose, 227 mm (with the skin, nose and fur); the muzzle (eye to nose) 0.50 of it, 74 and 69 mm wide at 0.62 and 0.76 of the head; 127 mm across the cheeks |
+| Ears | "proportionally larger" than other wolves'; no length found | en.wikipedia, citing Mills 1945 *(opened by the reviewer)* | 107 mm tall, 69 mm at the base, their bases' centres 104 mm apart on the skull's corners *(a game choice)* |
 | Chest depth, leg lengths, paw size | not found | – | chest bottom 328 mm, elbows 299 mm, hocks 145 mm; forepaw 73 × 53 mm *(game choices, from canid proportions)* |
 
 The model's own proportions are game choices from general canid anatomy:
@@ -203,8 +203,8 @@ middle toes are fused):
 | What | Real | Source | Model |
 |---|---|---|---|
 | Shoulder height | males 50–60 cm, females 45–50 cm | Kennel Club and UKC Canaan Dog standards *(search)* | 560 mm, a male |
-| Weight (for the record) | 18–25 kg | the same *(search)* | volume 21.5 L; less about 5 L of short coat, about 16–17 kg: at the range's low end, a lean working dog. The first build came to 18.6 L (about 13 kg), too light and sighthound-like, so its chest, neck, legs and muzzle were filled out |
-| Build | square, chest to the elbows, loin tucked up, wedge head, short erect ears broad at the base, bushy tail curled over the back when alert | the same; saudi-archaeology.com *(search)* | nose to tail base 812 mm; head 202 mm; chest 164 mm wide, its bottom 276 mm up, elbows 248 mm; ears 78 × 63 mm; the tail curled over the back |
+| Weight (for the record) | 18–25 kg | the same *(search)* | the skin's volume 21.4 L; less about 5 L of short coat, about 16–17 kg: at the range's low end, a lean working dog (the stray: 20.2 L) |
+| Build | square, chest to the elbows, loin tucked up, wedge head, short erect ears broad at the base, bushy tail curled over the back when alert | the same; saudi-archaeology.com *(search)* | nose to tail base 815 mm; head 202 mm, the muzzle 0.47 of it (70 and 60 mm wide at 0.62 and 0.76), 115 mm across the cheeks; ears 76 × 70 mm, their bases' centres 95 mm apart; loin girth 470 mm (the stray's 394 mm, 16% less); the tail curled over the back |
 | Coat | short to medium, harsh; sand to red-brown, white, black, with or without white markings | breed standards *(search)* | sandy, white chest, belly, socks and tail tip: one of the type's colours, a game choice |
 | Collar | not found as a practice for herders' dogs | – | a dark leather collar 26 mm wide with a steel ring under the throat *(a game choice: it marks the dog as the player's own)* |
 
