@@ -21,19 +21,19 @@ The owner chose these options; their exact text, as he read it, is the decision:
    > «المقناص بالصقر: تشتري صقر من المزاد، تطلع له جواز وتصريح فطري، تدعيه، وتطلع بالجيب في الموسم. وبعده الساكتون.»
 3. **Wolves and stray dogs (option D):**
    > «تدخل: خطر نادر بالليل على الحيران، يقل بالشبك والراعي وكلب الحراسة. اللي يقتل الذيب يتغرم إذا انمسك.»
-4. **The Kalashnikov's penalty in the game (question 7):**
+4. **The Kalashnikov's penalty in the game (section 7, question 7):**
    > «غرامة ومصادرة بس: ينصادر وتتغرم وينزل صيتك، بدون منع من المهرجانات.»
 
    No prison and no absence from the farm. This is lighter than the law (up to 15 years
    and SAR 150,000 [145]): a game choice the owner made.
-5. **Killing a wolf (question 9):**
+5. **Killing a wolf (section 7, question 9):**
    > «ما يقلل الخطر: لو قتلت ذيب يجي غيره والخطر مثل ما هو، والغرامة المتوقعة أكبر من قيمة الحيران. الحماية الصح تبقى الشبك والراعي وكلب الحراسة.»
-6. **Names in the game (question 8):**
+6. **Names in the game (section 7, question 8):**
    > «أسماء عامة: «تصريح الصيد»، «نادي الصقور» بدون ذكر التطبيق الحقيقي، مثل ما سوينا بأسماء المهرجانات في تصميم المزاين.»
 
    So the game does not name فطري or أبشر as its apps. This file and the research keep the
    real names, because they are the sources.
-7. **Falcon contests (option E, question 5):**
+7. **Falcon contests (option E, section 7, question 5):**
    > «مع المقناص: تنبني المسابقات مع المقناص من البداية. شغل أكبر ويصير للصقور خط دخل.»
 
    So hunting is no longer only a cost. Game itself is still never sold [166], but الملواح
@@ -360,6 +360,8 @@ odds is a game choice in every case.** No source measures it.
 | **البرقع، السبوق، الوكر، الدس** | The kit for holding and carrying the falcon once caught [222] | Needed to keep a caught bird in good shape to the auction; without it the bird may be harmed (and loses value) |
 | **The tracker** (جهاز التتبع) | Fitted to a trained falcon [155]; not found in trapping | Only for the player's own trained falcon (the owner's decision 6), not for trapping |
 
+> *The proxy's provisional answer (batch 3, item 7), for the owner to confirm or overturn:* the farm runs by its own rules, as in decision 7 for the outing; he can break camp and drive back at any time; no new risk is invented; the card before leaving says how long the feed and water last. A herdsman for long camps is his to choose later.
+
 **The camp also needs the farm to run:** the herd keeps being fed and watered as on every day,
 and alerts come to the in-game phone. Without a herdsman, the farm's risks while away (thirst,
 wolves at the calves) rise, so a long camp wants a herdsman first (game choice).
@@ -395,6 +397,8 @@ So gear moves the player along the real range, and nothing lifts him above it. M
 still end without a bird, and the dear bird stays rare.
 
 ### 9.4 What it would be in the game
+
+> *The proxy's provisional answer (batch 3, item 9), for the owner to confirm or overturn:* trapping is shown as lawful only on its ground (a pin), in its season and with a trapping permit, whose issuer was not found, so its price and terms are a marked game choice; everywhere else the hunting rules hold (a net there is a 100,000 fine; the button warns and does not act). The gap is written plainly in the GDD.
 
 1. **Before the season:** «تصريح الطرح» and registration with «نادي الصقور» in the phone (generic
    names, the owner's decision; that a separate trapping permit exists is a game choice). Then
@@ -478,29 +482,38 @@ the Arabic line to put to him is in 13.8.
 1. **Decision 7 for falconry only?** He said of trapping «مخيم وايام», and his decision 7 was an
    outing of hours, back the same day. Our reading: decision 7 stays for المقناص with the falcon,
    while trapping is a camp of days with the farm running as on any day. *Recommended:* yes.
+   > *The proxy's provisional answer (item 8):* keep the reading, marked as ours, for him to confirm.
 2. **Aiming with the air rifle.** *Recommended:* a tap on the flock and a result by chance and the
    rifle's reach, with no crosshair game. A crosshair is closer to a shooter and a little heavier.
+   *Not put to the proxy: waiting for the owner.*
 3. **Cheating in falcon contests.** Doping checks are real [179]; the Saudi penalty was not found.
    *Recommended:* not now, until the real penalty is found.
+   *Not put to the proxy: waiting for the owner.*
 4. **Partners in trapping.** Most birds are taken by groups who share the price [184][190][200].
    *Recommended:* allowed, sharing the price.
+   > *The proxy's provisional answer (item 2):* build alone first, with the gear he named; partners drawn in the design as the next step, for him to pull forward with one word. This differs from the recommendation (yes now).
 5. **The odds and the gear.** *Recommended:* the gear moves a lone trapper from about one season
    in 12 (a beginner) to one in 3 (well equipped, well placed), never beyond.
    *Alternative:* a beginner lower, about one in 25, because the number of trappers who go out is
    unknown and may be well above 500. In either case the news over-reports dear birds; over the
    whole 2025 season at least one bird in seven sold above 300,000 [213].
+   > *The proxy's provisional answer (item 1):* the first range (one in 12 to one in 3, never past it); the 20,000 camp cost marked as invented; never more generous without him.
 6. **A mountain peregrine or a lanner in the net.** Trapping them is banned [194].
    *Recommended:* released at once, never kept or sold.
+   > *The proxy's provisional answer (item 3):* released at once with the line «طلقته: الشاهين الجبلي طير مقيم، وطرحه ممنوع».
 7. **A saker or a peregrine قرناس in the net.** No ban on them in particular was found, beyond the
    hunting rules' general ban on birds of prey [135], which may not bind trapping. The auction
    refuses them [184][188], and the club urges trappers not to take the saker [185].
    *Recommended:* released too.
+   > *The proxy's provisional answer (item 4):* released, with «طلقته: الحر مهدد، والمزاد ما يقبل إلا فرخ الشاهين البحري» and «طلقته: المزاد ما يقبل إلا الفرخ»; the قرناس's release is a marked game choice, cheap to change.
 8. **Where the player's own hunting falcon comes from.** The real sources:
    - a farm-bred saker at the August auction (about 19,000 [158]);
    - a Mongolian saker at the October exhibition (700,000 and 100,000 [184]);
    - a passage فرخ شاهين at the trapping auction (from 71,000 [217]).
 
    *Recommended:* all three, each in its month.
+   > *The proxy's provisional answer (item 5):* all three routes, each in its month, built in that order (August, October, the trapping auction).
 9. **Keeping a trapped bird.** Falconers keep passage birds [201], and a فرخ شاهين بحري beauty
    round exists [188]. *Recommended:* yes, for his own hunting and contests. Where it could be sold
    later was not found, so that is not offered.
+   > *The proxy's provisional answer (item 6):* he may keep it for hunting and contests; resale later is not offered (an open point for him).
