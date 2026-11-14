@@ -91,6 +91,43 @@ All of it goes into the design he is shown, not straight into a build.
    everywhere else the hunting rules hold as he decided (a net there is a 100,000 fine; the button warns and does
    not act). The gap is written in the GDD and told to him in plain words.
 
+## Batch 4: rushing and the calendar (task T15, part A: the design; nothing built when asked)
+
+The design: docs/proposals/rush_and_calendar.md, design/ui/phone_rush.jpg and phone_calendar.jpg (on branch
+wip/t15 until it is brought in). Answered before the review's findings; put again if the review changes the facts.
+
+1. **What money cannot hurry in the real world** (a pregnancy and its check, a calf growing, recovery, a bull's
+   rest, buyers' offers, festival dates, DNA results, the 30-day ownership rule, a ban). Answer: not rushed; he
+   reaches them with the calendar. Marked as OUR READING of «اي شي اسويه او ابنيه اقدر اسرعه» ("anything that money
+   can really hurry"), for him to confirm.
+2. **The price of a rush.** Answer: half again, anchored on the Labour Law's overtime at +50%: a facility = its
+   price × 0.5 × days left / 3, a water tanker +50%, a bought camel's trucking +50%, a feed order SAR 150 a trip.
+   Every price a marked game choice.
+3. **Paying for it.** Answer: cash only, never on the merchant's account, refused while in debt (his decisions put
+   only feed, water and the vet on account).
+4. **Where it is offered.** Answer: both: the «استعجل» button on what is already under way, AND at the moment of
+   ordering (his words «يبني بنفس اللحظة»: e.g. a line «ابنه الحين بـ X ريال» beside the normal order). Where that
+   line sits is his eye.
+5. **In the bank.** Answer: its own kind, «الاستعجال».
+6. **A standing order for feed and water.** Answer: yes, in the build (without it a season's jump stops 8 times on
+   stores at a full farm). Condition: the save's new version must migrate his phone's saved game, tested on a
+   copy of a real save.
+7. **A vet contract.** Answer: yes (the vet "by visit or contract" is already his decision of 12 Nov in the GDD);
+   the fee (proposed SAR 1,000 a month plus 20 a head) is invented: a marked game choice, told to him.
+8. **When a jump stops and hands the game back.** Answer: an illness; a death from illness or thirst; a store at
+   3 days; money below zero for the first time; an offer on his listing; his round's day; a treatment found in his
+   herd; and to add or confirm with the reviewer: the merchant's account reaching its limit or an order refused;
+   a fine or a ban landing for any cause; his falcon's daily care, when he owns one. Calvings and registrations
+   go in the summary.
+9. **A camel already sick when he wants to leave.** Answer: the go button waits until she is treated, unless a vet
+   contract is in force (this needs the phone's first «عالجها» button).
+10. **How far one jump may go.** Answer: up to a year, on condition that it runs off the main thread with a
+    progress card and is measured on a phone with a large herd; a season is the fallback if it freezes or heats.
+11. **The app.** Answer: «التقويم» as a ninth app on the home screen (his eye).
+12. **Build tonight or hold.** Answer: build tonight, reviewed, on a side branch, and KEEP IT OFF HIS PHONE'S BUILD
+    until he has seen and approved the design: it touches screens he approved, changes his save, and a wrong stop
+    can kill his herd. One word from him and it goes onto his phone.
+
 ## Waiting for the owner
 
 - Batch 1, item 1's alternative reading of decision 13 (above).
@@ -101,3 +138,6 @@ All of it goes into the design he is shown, not straight into a build.
   texture for the falcon on the fist, after he tries 512 on his phone.
 - Batch 3: every item, when the trapping design is shown; above all item 6's
   open point (resale of a kept bird) and item 9's gap (the trapping regulation's text was not found).
+- Batch 4: the design of rushing and the calendar itself (he has not seen it); item 1 (our reading of "anything");
+  the invented prices (item 2) and the vet contract's fee (item 7); and his word to put the build on his phone
+  (item 12).
