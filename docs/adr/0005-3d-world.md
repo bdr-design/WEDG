@@ -705,24 +705,31 @@ the closed meter names the variant.
   (frames drawn by hand at the phone's 2x, the same poses, the far level
   shaded):
 
-  | Option | Over the pens | At eye height | Near view | Camels' pixels changed |
+  | Option | Over the pens | At eye height | Near view (saving) | Camels' pixels changed |
   |---|---|---|---|---|
-  | Now | 544k | 735k | 656k | - |
-  | The 8k level to 24 m, not 48 | 349k | 696k | 624k | 6.3% over the pens |
-  | The 8k level to 30 m | 427k | 735k | 656k | 2.1% over the pens |
-  | The full level within 5 m, not 8 | 544k | 613k | 547k | 1.0% at eye height, 2.1% near |
-  | A 4k middle level instead of the 8k | 160k less | 148k less | 160k less | 4.3% over the pens, 3.9% near, 1.7% at eye height |
-  | Full-level camels' shadows from the 1.5k mesh | 544k | 696k | 643k | 0.7% at eye height and near |
+  | Now | 537k | 724k | 656k | - |
+  | A 4k middle level instead of the 8k | 377k | 576k | 160k less | 4.3% over the pens, 3.9% near, 1.7% at eye height |
+  | The full level within 5 m, not 8 | 537k | 602k | 109k less | 1.0% at eye height, 2.1% near |
+  | The 8k level to 30 m, not 48 | 426k | 724k | none | 1.7% over the pens |
+  | Full-level camels' shadows from the 1.5k mesh | 537k | 685k | 13k less | 0.7% at eye height and near |
+  | The 8k level to 24 m (not offered) | 195k less | 39k less | 32k less | 6.3% over the pens |
 
-  (The 4k level was measured in its own page load, both frames from it: the
-  middle level's draws given the 4k mesh in place. In that load "now" was
-  537k, 724k and 656k, and the 4k level 377k, 576k and 496k; the other rows
-  are from another load, whose ground cover differed a little. The changed
-  pixels are on the camels; 555 to 1,157 more are in their shade.)
+  (Over the pens and at eye height, every frame comes from one page load, the
+  options switched in place. The near view's savings are from another load,
+  as the differences within it. The changed pixels are on the camels; a few
+  hundred more, up to 1,157, are in their shade. The panels for the owner are
+  made from the same load as the first two columns.)
 
   The 4k level was made with `tool/camel3d/lods.py`'s steps from the same
   rigged source (its clips and skeleton bit for bit the shipped ones'); it is
   not in the page.
+- **Shaders made in play (a follow-up).** After the loading screen, programs
+  are still compiled in play: the 8 of the parked vehicles in the first
+  seconds (the pickup's paint, black gloss, glass, number plate, tyre and lamp
+  cover, and one basic material), 2 more at the facilities' first draw, 1 at
+  the first camel's card (the selection ring) and 1 on foot (the car's
+  cabin). The herd's and the dust's are made at load. A later task is to warm
+  these at load as well.
 - **Draws in the car by the pens** (242 and 266): the herd is 3 + 2 of them;
   the rest is the yard and the player's car in play. Not the herd's work;
   left for its own task.
