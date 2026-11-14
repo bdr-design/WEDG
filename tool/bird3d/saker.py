@@ -81,15 +81,15 @@ POSES = {
                'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 1, 'fluff': 1.05, 'wings': 'fold'},
     # hooded on the fist (الدس): the same bird, her jesses held in the falconer's fist
     'fist': {'origin': (-58, 80), 'spine': [(0, 66), (160, 66), (200, 86), (238, 40), (262, 0), (300, 0)],
-             'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 1, 'fluff': 1.05, 'wings': 'fold', 'held': True,
-             'grip_r': 55.0, 'grip_x': 5.0},
+             'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': -9, 'fluff': 1.05, 'wings': 'fold', 'held': True,
+             'grip': 'dass'},
     # unhooded and alert: taller, sleeked, the neck stretched, the head a little raised
     'alert': {'origin': (-54, 78), 'spine': [(0, 65), (160, 65), (196, 88), (236, 48), (262, 6), (300, 6)],
               'foot': (0, 22, 0), 'foot_turn': 8, 'tail_droop': 0, 'fluff': 0.97, 'neck_stretch': 12, 'wings': 'fold'},
     # cast off: level, wings spread, tail a little fanned, the legs drawn up
     'flight': {'origin': (0, 0), 'spine': [(0, 0), (170, 0), (215, 6), (262, 0), (300, 0)], 'wings': 'open',
-               'wing_dihedral': 7, 'tail_spread': 1.22, 'tucked': True, 'tuck_ankle': (48, -30, 14),
-               'tuck_foot': (10, -3, 9), 'foot': (0, 0, 0)},
+               'wing_dihedral': 7, 'tail_spread': 1.22, 'tucked': True, 'tuck_ankle': (58, -26, 13),
+               'tuck_foot': (24, -10, 9), 'foot': (0, 0, 0)},
 }
 
 
@@ -107,6 +107,9 @@ def stations(pose):
 def build(pose_name, level):
     """The saker in one pose: {'body': pieces, 'hood': pieces, 'jesses': pieces}, the named points (mm), and the
     body (for painting)."""
+    if POSES[pose_name].get('grip') == 'dass':
+        import gear
+        POSES[pose_name]['grip_fn'] = gear.dass_top
     pose = POSES[pose_name]
     det = bird.Detail(level)
     body = bird.Body(stations(pose), pose, det, head_weight=2.0)

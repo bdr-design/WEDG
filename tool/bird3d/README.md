@@ -30,7 +30,7 @@ end).
 | `assets_src/birds/saker_hooded.glb` | perched, hooded, jessed, the swivel ready for the leash | 5,352 body + 724 hood + 560 jesses = 6,636 | 3 |
 | `saker_fist.glb` | the same bird hooded on the fist, her jesses running into the falconer's grip | 5,352 + 724 + 400 = 6,476 | 3 |
 | `saker_alert.glb` | perched, unhooded, alert | 5,896 + 560 jesses = 6,456 | 2 |
-| `saker_flight.glb` | cast off: wings spread, feet drawn back under the tail coverts with the toes closed, jesses trailing | 6,232 + 400 = 6,632 | 2 |
+| `saker_flight.glb` | cast off: wings spread, the feet clenched (toes and talons curled in) and drawn up into the belly and undertail feathers, out of sight; only the jesses trail | 6,232 + 400 = 6,632 | 2 |
 | `saker_*_lod1.glb` | the far model of each pose: no jesses, brow, tooth or eye ring (under a pixel at tens of metres) | 1,334 (hooded, with the hood) / 1,204 / 1,300 | 1–2 |
 | `houbara_alert.glb`, `houbara_flight.glb` | | 5,428 / 6,484 | 1 |
 | `houbara_*_lod1.glb` | | 1,084 / 1,468 | 1 |
@@ -206,7 +206,8 @@ source read here).
 | الدس | the cuff over the falconer's hand and wrist, to carry the falcon and keep the talons off (المنقلة is the word in the Emirates and Qatar) | a quilted, padded cloth cuff over the wrist and the fist (not a fingered glove), its bound edge closed round the wrist over the sleeve's end | SPA *(search)*; ar.wikipedia's caption 'منقلة (قفاز)' of Carl Raswan falconing in al-Jawf *(opened)*; the reviewer's description |
 
 The falcon is carried on the **left** hand (Arab News 2019 *(search)*). In `birds_scale.jpg` the figure's left fist is
-1.19 m above the ground and the falcon's feet are at 1.24 m. On the fist (`saker_fist.glb`) her toes follow the cuff's curve
+1.19 m above the ground and the falcon's feet are at 1.24 m. On the fist (`saker_fist.glb`) her toes and talons rest on the cuff's surface (from the cuff's own
+sections)
 and her jesses run down over the fist's front into the falconer's grip; the leash is not shown there.
 
 The figure's forearm is turned level and its hand bone shortened for that picture only, so the fingers stay inside

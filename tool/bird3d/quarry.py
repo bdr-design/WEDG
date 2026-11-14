@@ -114,7 +114,7 @@ HOUBARA_SPEC = {
 HOUBARA_POSES = {
     # alert: the body a little raised in front, the neck straight up, the head level
     'alert': {'origin': (-152, 196), 'spine': [(0, 12), (230, 14), (285, 72), (320, 86), (392, 86), (424, 0), (480, 0)],
-              'foot': (4, 34, 0), 'foot_turn': 4, 'tail_droop': -2, 'wings': 'fold'},
+              'foot': (10, 34, 0), 'foot_r_shift': (-36, 2, 0), 'foot_turn': 4, 'tail_droop': -2, 'wings': 'fold'},
     # in flight: level, the neck stretched forward, the wings spread with the hand's primaries slotted
     'flight': {'origin': (0, 0), 'spine': [(0, 2), (250, 2), (300, 7), (420, 2), (480, 0)], 'wings': 'open',
                'wing_dihedral': 5, 'tail_spread': 1.15, 'tucked': True, 'tuck_ankle': (60, -74, 24),

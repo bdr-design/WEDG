@@ -127,6 +127,24 @@ def mursil(swivel, level=0):
     return [tube('leash', pts, [2.4] * len(pts), 6 if level == 0 else 4, up=V3((0, 1, 0)))]
 
 
+# the cuff's sections: (x, half height up, down, half width, squareness), from the wrist over the hand and the fist;
+# the axis 52 mm under the fist's top (the origin)
+DASS_ROWS = [
+    (-105, 47, 47, 45, 2.2), (-100, 49, 49, 47, 2.2), (-92, 47, 47, 44, 2.2), (-80, 44, 44, 39, 2.2),
+    (-68, 43, 43, 36, 2.3), (-50, 44, 45, 34, 2.4), (-25, 50, 53, 36, 2.6), (5, 52, 53, 37, 2.8),
+    (30, 48, 46, 35, 2.8), (44, 40, 38, 32, 2.6), (53, 30, 28, 27, 2.4), (59, 16, 15, 16, 2.2), (61, 3, 3, 3, 2.0),
+]
+
+
+def dass_top(x, y):
+    """The cuff's upper surface (mm, the file's frame) above the point (x, y): where a falcon's toes rest on it."""
+    r = np.array(DASS_ROWS, float)
+    x = min(max(x, r[0, 0]), r[-1, 0])
+    au, b, p = (float(np.interp(x, r[:, 0], r[:, k])) for k in (1, 3, 4))
+    f = max(0.0, 1.0 - (abs(y) / b) ** p) if abs(y) < b else 0.0
+    return -52.0 + au * f ** (1.0 / p)
+
+
 def dass(level=0):
     """The dass: the padded cuff from the wrist over the hand and the fist (thumb up), the thumb's bulge over the
     curled index finger, the knuckles' ridge."""
@@ -135,11 +153,7 @@ def dass(level=0):
     out = []
     top = 52.0          # the fist's top above the glove's axis
     o = V3((0, 0, -top))          # the axis in the file: the origin is the fist's top
-    rows = [   # (x, half height up, down, half width, squareness): from the wrist over the hand and the fist
-        (-105, 47, 47, 45, 2.2), (-100, 49, 49, 47, 2.2), (-92, 47, 47, 44, 2.2), (-80, 44, 44, 39, 2.2),
-        (-68, 43, 43, 36, 2.3), (-50, 44, 45, 34, 2.4), (-25, 50, 53, 36, 2.6), (5, 52, 53, 37, 2.8),
-        (30, 48, 46, 35, 2.8), (44, 40, 38, 32, 2.6), (53, 30, 28, 27, 2.4), (59, 16, 15, 16, 2.2), (61, 3, 3, 3, 2.0),
-    ]
+    rows = list(DASS_ROWS)
     if level != 0:
         rows = [rows[0], rows[2], rows[4], rows[6], rows[7], rows[9], rows[11], rows[12]]
     secs = [Sec(o + X * x, Z, Y, au, ad, b, b, p=p) for (x, au, ad, b, p) in rows]

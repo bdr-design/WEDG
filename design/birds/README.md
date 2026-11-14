@@ -17,7 +17,10 @@ Side pictures carry a centimetre ruler; flight pictures are seen from the side, 
 - The man's fingers cannot curl yet, so on the fist his hand is hidden inside the cuff; the leash is not drawn on the
   fist.
 - A faint dark line where the saker's face meets the cere, seen only in the close head picture.
-- The houbara's crest is a small fan of flat feathers, simpler than the real loose plumes.
+- The houbara's crest is a small fan of flat feathers and still reads as a small comb, simpler than the real loose
+  plumes.
+- On the fist a few toe and talon vertices sit up to about 3 mm inside the padded cuff (by the reviewer's contact
+  test), where the talons run down its steep front; the falcon's tail tip passes behind the cuff.
 - The far pictures of the flight feathers show fine stripes (the barring is finer than the texture can hold at a
   distance).
 - Wing areas, the houbara's and stone-curlew's leg and wing lengths, and the gear's sizes beyond the perch's top are

@@ -367,6 +367,8 @@ def legs(body, spec, pose, det):
         knee = torso_point(body, L['knee'][0], L['knee'][1], L['knee'][2] * side)
         fx, fy, fz = pose['foot']
         foot = V3((fx, fy * side, fz + L.get('foot_up', 0.0)))
+        if side < 0 and pose.get('foot_r_shift'):
+            foot = foot + V3(pose['foot_r_shift'])      # one foot a little back: the weight not evenly on both
         if pose.get('tucked'):
             # in flight the legs are drawn up under the body, the feet toward the tail
             ankle = torso_point(body, *pose['tuck_ankle'][:2], pose['tuck_ankle'][2] * side)
@@ -418,36 +420,39 @@ def foot_parts(foot, toes, heading, side, det, pose):
             # in flight the feet are drawn back under the tail coverts, the toes closed together, pointing back
             a = math.radians(180 + 0.25 * hd * side) if abs(hd) != 180 else 0.0
         d = rot @ V3((math.cos(a), math.sin(a), 0))
-        grip = pose.get('grip_r')      # a rounded support (the fist): its radius along X, its top at x = grip_x
+        grip = pose.get('grip_fn')     # a rounded support (the fist): its upper surface z = grip(x, y)
         n = det.toe_stations
         pts, rad = [], []
-        bend = math.radians(pose.get('toe_curl', curl) if not tucked else 110)
+        bend = math.radians(pose.get('toe_curl', curl) if not tucked else 160)
+        if tucked:
+            length = length * 0.6      # the toes closed: their joints folded, the reach about two thirds
         for i in range(n):
             f = i / (n - 1)
             # the toe lies on the surface and bends down over its last joint
             ang = bend * smoothstep(0.55, 1.0, f) if tucked else 0.0
             q = foot + d * (length * f - 2.0) + V3((0, 0, r * 0.9))      # from just behind the foot's middle
-            if grip and not tucked:
-                # the toe follows the support's curve down: it grips the fist rather than overhangs it
-                gx = min(abs(q.x - pose.get('grip_x', 0.0)), grip * 0.97)
-                q = q - V3((0, 0, grip - math.sqrt(grip * grip - gx * gx)))
-            pts.append(q)
             knuckle = 1.0 + 0.22 * math.sin(f * math.pi * 3) ** 2 if det.level == 0 else 1.0
             rad.append(r * (1.1 - 0.35 * f) * knuckle)
+            if grip and not tucked:
+                # the toe follows the support's surface: it grips the fist rather than overhangs it or sinks in
+                q = V3((q.x, q.y, grip(q.x, q.y) + rad[-1] + 0.3))
+            pts.append(q)
         if tucked:
             # roll the toe up toward the sole
             q = [pts[0]]
             dirv = d.copy()
             seg = length / (n - 1)
             for i in range(1, n):
-                k = Matrix.Rotation(-bend / (n - 1), 3, d.cross(V3((0, 0, 1))).normalized())
+                k = Matrix.Rotation(bend / (n - 1), 3, d.cross(V3((0, 0, 1))).normalized())      # curled up, into the body
                 dirv = k @ dirv
                 q.append(q[-1] + dirv * seg)
             pts = q
         toe_out.append(tube('skin', pts, rad, det.toe_ring, up=V3((0, 0, 1))))
         # the claw: a curved cone from the toe's end, curving down
         tipd = (pts[-1] - pts[-2]).normalized()
-        down = V3((0, 0, -1))
+        down = V3((0, 0, 1)) if tucked else V3((0, 0, -1))      # clenched in flight: the talon curls in, not down
+        if tucked:
+            down = (down - tipd * down.dot(tipd)).normalized() if abs(down.dot(tipd)) < 0.95 else V3((1, 0, 0))
         cpts, crad = [], []
         m = 5 if det.level == 0 else 3
         for i in range(m):
@@ -458,8 +463,11 @@ def foot_parts(foot, toes, heading, side, det, pose):
             # integrate a circular arc of length claw[0]
             R = claw[0] / max(math.radians(claw[1]), 1e-3)
             pos = p0 + tipd * (R * math.sin(arc)) + down * (R * (1 - math.cos(arc)))
+            cr = max(r * 0.62 * (1 - f) ** 0.9, 0.25)
+            if grip and not tucked:
+                pos = V3((pos.x, pos.y, max(pos.z, grip(pos.x, pos.y) + cr + 0.3)))      # the talon laid on the cuff
             cpts.append(pos)
-            crad.append(max(r * 0.62 * (1 - f) ** 0.9, 0.25))
+            crad.append(cr)
         claw_out.append(tube('claw', cpts, crad, det.toe_ring, up=tipd.cross(down) if tipd.cross(down).length > 0.1 else V3((0, 0, 1))))
         tips.append(cpts[-1])
     return toe_out, claw_out, tips
