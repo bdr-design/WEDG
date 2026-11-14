@@ -66,7 +66,12 @@ Map<String, Object?> rushFacts(GameState state, OwnerId viewer) {
     'trucks': [
       for (final c in herd)
         if (Eligibility.onTheWay(c, today))
-          {'camel': c.id.value, 'trucking': truckingOf(p, c, sim)},
+          {
+            'camel': c.id.value,
+            'name': c.name,
+            'sex': c.sex.name,
+            'trucking': truckingOf(p, c, sim),
+          },
     ],
     'truckShare': Balance.rushTruckShare,
     'truckFloor': Balance.rushTruckFloor,
