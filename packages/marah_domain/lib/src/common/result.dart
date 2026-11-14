@@ -105,6 +105,26 @@ enum ErrorCode {
   /// tomorrow: Balance.camelTruckDays).
   onTheWay,
 
+  /// A rush of water or feed on a day the herd was not short of it: the
+  /// ordinary delivery comes before the herd drinks or eats tomorrow
+  /// ({'supply'}).
+  notShortToday,
+
+  /// Nothing of that kind is on its way, or being built, to hurry.
+  nothingToRush,
+
+  /// A rushed truck's price was for an hour that has gone ({'hour'}): the
+  /// price shown is the price paid, this hour or the one before.
+  priceChanged,
+
+  /// The vet's contract is signed already, or there is none to cancel.
+  contractState,
+
+  /// The calendar's jump cannot go: a day not ahead, more than a year, a
+  /// camel sick and untreated without a vet's contract, or his round's day
+  /// being told ({'reason'}).
+  cannotJump,
+
   /// The engine hit a bug; the game was restored from the last save.
   internalError,
 }

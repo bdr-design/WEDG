@@ -21,6 +21,7 @@ import '../rules/valuation.dart';
 import '../sim.dart';
 import '../systems/systems.dart';
 import '../world_gen.dart';
+import 'rush.dart';
 
 /// Applies one command. Validation and effects live together per command;
 /// nothing outside this file changes state on a player's behalf.
@@ -51,6 +52,12 @@ Result handle(Sim sim, Command cmd) {
     ReadMessages() => _readMessages(sim, p),
     MarkFindingsTold() => _findingsTold(sim, p, cmd),
     SetTestMoney() => _testMoney(sim, p, cmd),
+    RushBuild() => rushBuild(sim, p, cmd),
+    RushDelivery() => rushDelivery(sim, p, cmd),
+    RushTruck() => rushTruck(sim, p, cmd),
+    SetStandingOrder() => setStanding(sim, p, cmd),
+    SignVetContract() => signVet(sim, p, cmd),
+    CancelVetContract() => cancelVet(sim, p, cmd),
   };
 }
 
@@ -77,7 +84,17 @@ int transportToFarm(PlayerState p, Listing l) =>
 Result _buy(Sim sim, PlayerState p, BuyListing cmd) {
   final l = sim.world.listings[cmd.listing];
   if (l == null) return _err(sim, ErrorCode.notFound);
-  return _buyAt(sim, p, l, l.askPrice);
+  if (!cmd.now) return _buyAt(sim, p, l, l.askPrice);
+  // bought and brought now: the money must cover the price, the trucking and
+  // the rush before anything is done
+  final move = transportToFarm(p, l);
+  final fee = Balance.rushTruckFee(move, cmd.hour ?? 0);
+  final money = cashFor(p, l.askPrice.value + move + fee);
+  if (money != null) return Err(money, sim.drain());
+  final bought = _buyAt(sim, p, l, l.askPrice);
+  if (bought is Err) return bought;
+  final r = rushTruck(sim, p, RushTruck(p.id, l.camelId, hour: cmd.hour));
+  return Ok([...bought.events, ...r.events]);
 }
 
 Result _buyAt(Sim sim, PlayerState p, Listing l, Riyal price) {
@@ -114,6 +131,7 @@ Result _buyAt(Sim sim, PlayerState p, Listing l, Riyal price) {
     ..ownerId = p.id
     ..lastPlayerOwner = p.id
     ..acquiredOn = sim.today
+    ..arrivedOn = null
     ..purchasePrice = price.value;
   final sellerName = sim.world.owners[l.sellerId]?.name ?? seller?.name ?? '';
   sim.emit(
@@ -411,6 +429,7 @@ void _sellTo(
   c
     ..ownerId = buyerId
     ..acquiredOn = sim.today
+    ..arrivedOn = null
     ..purchasePrice = price.value
     ..status = CamelStatus.gone
     ..endedOn = sim.today;
@@ -512,12 +531,35 @@ Result _treat(Sim sim, PlayerState p, Treat cmd) {
   final c = sim.world.camels[cmd.camel];
   final own = Eligibility.owned(c, p.id);
   if (own != null) return Err(own, sim.drain());
-  final camel = c!;
+  return treatCamel(sim, p, c!);
+}
+
+/// The vet's random stream for [camel]'s illness: keyed by the day she fell
+/// ill, not by today, so the price he names holds while she is sick and a
+/// player cannot wait for a cheaper day (the second review's N5).
+Rng vetRng(Sim sim, Camel camel) => Rng.keyed(sim.world.seed, [
+  (camel.sickSince ?? sim.today).value,
+  'vet',
+  camel.id.value,
+]);
+
+/// What the vet asks to treat [camel] (she must be sick).
+Riyal vetQuote(Sim sim, Camel camel) {
+  final illness = camel.illness!;
+  return marketRound(
+    vetRng(sim, camel).range(illness.treatMin, illness.treatMax).toDouble(),
+  );
+}
+
+/// Treats [camel], paid from cash and then on account (the owner, 13 Nov:
+/// the vet goes on account like feed): by the player's tap, or by the vet's
+/// contract the day she falls ill.
+Result treatCamel(Sim sim, PlayerState p, Camel camel) {
   final illness = camel.illness;
   if (camel.health != HealthStatus.sick || illness == null) {
     return _err(sim, ErrorCode.notSick);
   }
-  final rng = sim.rng(['vet', camel.id.value]);
+  final rng = vetRng(sim, camel);
   final cost = marketRound(
     rng.range(illness.treatMin, illness.treatMax).toDouble(),
   );
@@ -572,6 +614,44 @@ Result _feedPlan(Sim sim, PlayerState p, SetFeedPlan cmd) {
 }
 
 Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
+  if (!cmd.now) return placeOrder(sim, p, cmd);
+  // ordered and brought now, on a day the herd went short of it: the rush's
+  // fee (cash only) must be there before the order is placed
+  final kind = cmd.supply == Supply.water
+      ? StandingOrder.water
+      : StandingOrder.feed;
+  if (!shortToday(sim, p, kind)) {
+    return _err(sim, ErrorCode.notShortToday, {'supply': kind.name});
+  }
+  final size = cmd.supply == Supply.water
+      ? Provisions.tankerSize(cmd.tanker)
+      : Provisions.unitSize(cmd.supply);
+  final fee = rushDeliveryFee(p, kind, [
+    ...coming(p, kind),
+    Delivery(
+      supply: cmd.supply,
+      units: cmd.units,
+      arrivesOn: sim.today,
+      size: size,
+    ),
+  ]);
+  final money = cashFor(p, fee);
+  if (money != null) return Err(money, sim.drain());
+  final placed = placeOrder(sim, p, cmd);
+  if (placed is Err) return placed;
+  final r = rushDelivery(sim, p, RushDelivery(p.id, kind));
+  return Ok([...placed.events, ...r.events]);
+}
+
+/// Places an order (paid now, from cash and then on account to its limit;
+/// it arrives Balance.deliveryDays later). [standing]: sent by the standing
+/// order (UpkeepSystem), not by a tap.
+Result placeOrder(
+  Sim sim,
+  PlayerState p,
+  OrderSupply cmd, {
+  bool standing = false,
+}) {
   if (cmd.units < 1) return _err(sim, ErrorCode.invalidAmount);
   final water = cmd.supply == Supply.water;
   final size = water
@@ -613,6 +693,7 @@ Result _order(Sim sim, PlayerState p, OrderSupply cmd) {
       size: size,
       cost: cost.value,
       arrivesOn: arrives,
+      standing: standing,
     ),
   );
   return _ok(sim);
@@ -652,6 +733,11 @@ Result _build(Sim sim, PlayerState p, BuildFacility cmd) {
   final f = cmd.facility;
   final no = cannotBuild(p, f);
   if (no != null) return _err(sim, no.code, no.params);
+  if (cmd.now) {
+    final all = f.price + Balance.rushBuildFee(f.price, Balance.buildDays);
+    final money = cashFor(p, all);
+    if (money != null) return Err(money, sim.drain());
+  }
   sim.pay(p, Riyal(-f.price), LedgerCategory.construction, ref: f.name);
   final done = sim.today + Balance.buildDays;
   p.farm.building.add(Construction(f, done));
@@ -664,7 +750,10 @@ Result _build(Sim sim, PlayerState p, BuildFacility cmd) {
       doneOn: done,
     ),
   );
-  return _ok(sim);
+  if (!cmd.now) return _ok(sim);
+  final ordered = sim.drain();
+  final r = rushBuild(sim, p, RushBuild(p.id, f));
+  return Ok([...ordered, ...r.events]);
 }
 
 Result _calfShare(Sim sim, PlayerState p, SetCalfShare cmd) {

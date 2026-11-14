@@ -212,6 +212,43 @@ class Balance {
   /// done after three days", 13 Nov 2026).
   static const buildDays = 3;
 
+  // ------------------------------------------------------------ rush
+  // Finishing now, for more (task T15, docs/proposals/rush_and_calendar.md
+  // section 2; the proxy's batches 4 and 4b, provisional). Every figure a
+  // game choice: the Labour Law's overtime (+50% on wages, art. 107) is a
+  // reason work done at night costs more, not the source of the prices.
+
+  /// (balance) A facility: half its price for its three days, less as it
+  /// nears its end, to the 500 (at ordering: the whole half).
+  static const rushBuildShare = 0.5;
+  static int rushBuildFee(int price, int daysLeft) =>
+      (price * rushBuildShare * daysLeft / buildDays / 500).round() * 500;
+
+  /// (balance) A water tanker on a day the herd went short: half its price
+  /// again; a feed order: half the order's price again, at most
+  /// [rushFeedCap] (a truck sent alone).
+  static const rushDeliveryShare = 0.5;
+  static const rushFeedCap = 300;
+
+  /// (balance) A camel on the truck: half the trucking again at the day's
+  /// start, falling with the part of the game's day left, never under
+  /// [rushTruckFloor] of that half; to the riyal's five.
+  static const rushTruckShare = 0.5;
+  static const rushTruckFloor = 0.2;
+  static int rushTruckFee(int trucking, int hour) {
+    final left = (24 - hour) / 24;
+    final part = left < rushTruckFloor ? rushTruckFloor : left;
+    return (trucking * rushTruckShare * part / 5).round() * 5;
+  }
+
+  /// (balance) The vet's contract (GDD 4.2, a game choice; the proxy's batch
+  /// 4c): a month's fee, a base and so much a head, billed on signing for
+  /// the rest of the month by days and then on each 1st, from cash only.
+  static const vetContractBase = 1000;
+  static const vetContractPerHead = 20;
+  static int vetContractFee(int head) =>
+      vetContractBase + vetContractPerHead * head;
+
   // ------------------------------------------------------------ milk
   /// (field) A she-camel's common average is no more than about 5 L a day;
   /// high producers give 10 or more, low ones 5 or less; مجاهيم give the most

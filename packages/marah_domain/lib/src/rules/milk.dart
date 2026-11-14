@@ -52,8 +52,12 @@ abstract final class Milk {
   static double litres(Camel c, Farm farm, GameDay today, int seed) {
     final d = inMilkDays(c, today);
     if (d == null) return 0;
-    var l = level(c, seed) * shape(d) * farm.fedShare;
-    if (farm.dryDays > 0) l *= 0.5;
+    // (the dawn's ration and water: a rushed delivery later in the day does
+    // not change the milk the day gave, the second review's N1)
+    final r = farm.today;
+    final dawn = r != null && r.day == today;
+    var l = level(c, seed) * shape(d) * (dawn ? r.fedAtDawn : farm.fedShare);
+    if ((dawn ? r.dryAtDawn : farm.dryDays) > 0) l *= 0.5;
     return l;
   }
 

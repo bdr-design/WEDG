@@ -163,6 +163,7 @@ class Camel {
     this.purchasePrice = 0,
     this.lastPlayerOwner,
     this.bannedThrough,
+    this.arrivedOn,
     List<Placing>? placings,
     List<Tampering>? treatments,
   }) : placings = placings ?? [],
@@ -183,6 +184,13 @@ class Camel {
   /// Body condition 0–100.
   double condition;
   GameDay acquiredOn;
+
+  /// The day a camel bought was brought to the farm by a rushed truck (the
+  /// rush: docs/proposals/rush_and_calendar.md 2.3), or null: she then
+  /// arrives as the truck brings her ([Balance.camelTruckDays]).
+  /// [acquiredOn] stays the day she was bought: it counts the days of
+  /// ownership before a round (Eligibility, the 30 days).
+  GameDay? arrivedOn;
   CamelStatus status;
 
   /// When the camel died or left the world.
@@ -224,6 +232,7 @@ class Camel {
     ownerId.value,
     condition,
     acquiredOn.value,
+    arrivedOn?.value,
     status.index,
     endedOn?.value,
     health.index,
@@ -275,6 +284,7 @@ class Camel {
     'env': traitsToJson(env),
     'condition': condition,
     'acquiredOn': acquiredOn.value,
+    if (arrivedOn != null) 'arrivedOn': arrivedOn!.value,
     'status': status.name,
     'endedOn': endedOn?.value,
     'health': health.name,
@@ -310,6 +320,7 @@ class Camel {
       env: traitsFromJson(j['env']! as List<Object?>),
       condition: (j['condition']! as num).toDouble(),
       acquiredOn: GameDay(j['acquiredOn']! as int),
+      arrivedOn: day('arrivedOn'),
       status: CamelStatus.values.byName(j['status']! as String),
       endedOn: day('endedOn'),
       health: HealthStatus.values.byName(j['health']! as String),
