@@ -682,7 +682,7 @@ function shareCoatMaps(T) {
 // the shadow map, where each was a skinned mesh of its own (40 camels: 254 draws in the worst frame, 2 camels: 178).
 // The bones of an instance come from one of two places:
 // - the clips baked once at load, 60 frames a second, into a texture of bone matrices (577 frames x 38 bones, 1.4 MB),
-//   read between the two nearest frames: within 0.65 mm of the mixer's pose at every vertex (err.cjs, 120 poses);
+//   read between the two nearest frames: within 1.3 mm of the mixer's pose at every vertex (err2.cjs, 60 random poses);
 // - while one clip fades into another (half a second), its bones worked out on the CPU as three.js's mixer blended them
 //   (each bone's place, turn and scale from the two clips' baked frames, the turns slerped, then the bones from the top
 //   down; 0.00 mm from the mixer, err.cjs), written into the camel's own row of a second texture, one row for each
@@ -1142,12 +1142,13 @@ function cardInfo(card) {
 }
 // a test herd for the frame meter (its line «قطيع تجربة»; only with #fps): the yard filled to 40 head with copies of the
 // player's own camels, in the 3D view only (the game is not touched), so the herd's weight can be measured on a phone in
-// any game
+// any game. The copies stand in all six pens as a full farm's herd does (built or not: the test is the camels' weight),
+// and they are not the player's: a tap passes through them, and the pens' counts and lists leave them out.
 let demoHerd = false;
 const demoYard = (yard) => {
   if (!demoHerd || !yard.length || yard.length >= 40) return yard;
   const out = yard.slice(), cats = ['wodh', 'homr', 'shoqh', 'shoal', 'sofr', 'majaheem'];
-  for (let i = 0; out.length < 40; i++) out.push({ ...yard[i % yard.length], id: 'demo-' + i, category: cats[i % 6], ageDays: 400 + i * 97, pregnant: false });
+  for (let i = 0; out.length < 40; i++) out.push({ ...yard[i % yard.length], id: 'demo-' + i, demo: true, category: cats[i % 6], ageDays: 400 + i * 97, pregnant: false });
   return out;
 };
 function syncYard() {
@@ -1171,12 +1172,22 @@ function syncYard() {
   // camel after them still takes that place: a full pen overflowed into the last, the re-review); the last pen takes
   // what fits nowhere
   const free = pens.map((k) => penRoom(k));
+  // the test herd's copies into every pen's room left, all six (demoYard)
+  const demoFree = PEN_ORDER.map((k) => penRoom(k));
   for (const card of want) {
+    if (card.demo) continue;
     if (calfOf.has(card.id) && ids.has(calfOf.get(card.id))) continue;      // (placed with its dam, below)
     const need = withCalf.has(card.id) ? 2 : 1;
     let i = free.findIndex((f) => f >= need);
     if (i < 0) i = pens.length - 1;
     penOf.set(card.id, P[pens[i]]); free[i] -= need;
+  }
+  for (const [k, key] of pens.entries()) demoFree[PEN_ORDER.indexOf(key)] -= penRoom(key) - free[k];      // (room the player's own took)
+  for (const card of want) {
+    if (!card.demo) continue;
+    let i = demoFree.findIndex((f) => f >= 1);
+    if (i < 0) i = PEN_ORDER.length - 1;
+    penOf.set(card.id, P[PEN_ORDER[i]]); demoFree[i]--;
   }
   for (const card of want) if (!penOf.has(card.id)) penOf.set(card.id, penOf.get(calfOf.get(card.id)) || P[pens[0]]);
   for (const card of want) {
@@ -1185,7 +1196,7 @@ function syncYard() {
     const spot = () => [R(rect.x0 + 2, rect.x1 - 2), R(rect.z0 + 2, rect.z1 - 2)];
     if (!c) {
       const [x, z] = spot();
-      c = new Camel({ id: card.id, coat: CAT_COAT[card.category], male: card.sex === 'male', home: 'pen', pen: rect, x, z, heading: R(0, 6.28), scale: sizeOf(card.ageDays) });
+      c = new Camel({ id: card.id, demo: !!card.demo, coat: CAT_COAT[card.category], male: card.sex === 'male', home: 'pen', pen: rect, x, z, heading: R(0, 6.28), scale: sizeOf(card.ageDays) });
       camels.push(c);
     } else if (c.pen !== rect) { const [x, z] = spot(); c.pen = rect; c.root.position.set(x, 0, z); c.mode = 'idle'; c.target = null; }
     if (c.scale !== sizeOf(card.ageDays)) { c.scale = sizeOf(card.ageDays); c.root.scale.setScalar(c.scale); }      // (a calf grows)
@@ -1207,7 +1218,7 @@ const labelLayer = $('labels');
 const P = LAYOUT.pens, mid = (p, y) => new THREE.Vector3((p.x0 + p.x1) / 2, y, (p.z0 + p.z1) / 2);
 let pop = null;          // the open card: { place, camel } (camel: its details, opened from its place or tapped in the world)
 const GRAZE_MID = new THREE.Vector3((LAYOUT.graze.x0 + LAYOUT.graze.x1) / 2, 3.2, (LAYOUT.graze.z0 + LAYOUT.graze.z1) / 2);
-const inPenOf = (pen) => camels.filter((c) => c.pen === pen);
+const inPenOf = (pen) => camels.filter((c) => c.pen === pen && !c.demo);      // (the test herd's copies are not the player's)
 // Arabic counting: 1 and 2 have words of their own, 3-10 take the plural, 11 and up the singular ([value, unit])
 const count = (n, one, two, few, many) => (n === 1 ? [one, ''] : n === 2 ? [two, ''] : [String(n), n <= 10 ? few : many]);
 const days = (n) => count(n, 'يوم', 'يومين', 'أيام', 'يوم');
@@ -1783,7 +1794,7 @@ function tapWorld(x, y) {
   const r = rectOf(renderer.domElement);
   ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  camelHits.length = 0; for (const c of camels) camelHits.push(c.hit);
+  camelHits.length = 0; for (const c of camels) if (!c.demo) camelHits.push(c.hit);      // (a tap passes through the test herd's copies)
   const hit = ray.intersectObjects(camelHits, false)[0];
   if (hit) { openCamel(hit.object.userData.camel); return true; }
   const at = ray.intersectObjects(placeHits, false)[0];
@@ -1954,7 +1965,7 @@ function meterFrame(now) {
   // closed: the frames a second and the slowest 1%, and a red dot when the engine did not start, a save failed, or the
   // save could not be read (the game started over; it is kept as .broken)
   const variant = HERD ? HERD_MODES[HERD.mode] : '';
-  if (!meter.el.classList.contains('open')) { meterText(`<b>${fps}</b> · ${Math.round(p99)} م.ث · ${variant}${bad ? ' <span class="dot">●</span>' : ''}`); return; }
+  if (!meter.el.classList.contains('open')) { meterText(`<b>${fps}</b> · ${Math.round(p99)} م.ث · ${variant}${demoHerd ? ` · <span class="bad">تجربة ${camels.length}</span>` : ''}${bad ? ' <span class="dot">●</span>' : ''}`); return; }
   meterText(`<b>${fps}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><u data-herd>رسم القطيع: ${variant}</u> · <u data-demo>قطيع تجربة: ${demoHerd ? 'شغّال' : 'طافي'}</u> · ${camels.length} راس<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}${line4 ? '<br>' + line4 : ''}`);
 }
 // the meter's text, once a second; the pins measured again only when its box changed size (a read of its size a
