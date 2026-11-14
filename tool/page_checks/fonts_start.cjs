@@ -34,11 +34,11 @@ const LAUNCH = { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-u
     await p.waitForTimeout(1500);
     const r = await p.evaluate(async () => {
       const F = window.__F, before = F.loadingdone;
-      const phoneFaces = () => ['400 13px "IBM Plex Sans Arabic"', '600 13px "IBM Plex Sans Arabic"', '700 13px "IBM Plex Sans Arabic"', '700 21px Alexandria'].map((w) => document.fonts.check(w, 'ا1'));
+      const phoneFaces = () => ['400 13px "IBM Plex Sans Arabic"', '600 13px "IBM Plex Sans Arabic"', '700 13px "IBM Plex Sans Arabic"', '700 21px Alexandria', '600 13px "Marah Figures"', '700 13px "Marah Figures"'].map((w) => document.fonts.check(w, 'ا1'));
       const atOpen = phoneFaces();
       window.__phone.toggle();
       await new Promise((res) => setTimeout(res, 3000));
-      return { firstFrame: Math.round(F.firstFrame), fallbackFrames: F.fallbackFrames, frames: F.frames, shifts: F.shifts, shiftScore: +F.shiftScore.toFixed(4), phoneFacesInAtOpen: atOpen.filter(Boolean).length + '/4', refitsAfterOpen: F.loadingdone - before, phoneFacesAfter: phoneFaces().filter(Boolean).length + '/4' };
+      return { firstFrame: Math.round(F.firstFrame), fallbackFrames: F.fallbackFrames, frames: F.frames, shifts: F.shifts, shiftScore: +F.shiftScore.toFixed(4), phoneFacesInAtOpen: atOpen.filter(Boolean).length + '/' + atOpen.length, refitsAfterOpen: F.loadingdone - before, phoneFacesAfter: phoneFaces().filter(Boolean).length + '/' + atOpen.length };
     });
     rows.push({ run: i + 1, yardIn: Math.round(yardIn), ...r, wall: Date.now() - t0 });
     console.log(JSON.stringify(rows[rows.length - 1]));

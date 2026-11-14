@@ -15,7 +15,7 @@ fs.mkdirSync(OUT, { recursive: true });
   const ctx = await b.newContext({ viewport: { width: 956, height: 440 }, deviceScaleFactor: +(process.env.SCALE || 2) });
   const p = await ctx.newPage();
   p.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
-  await p.goto(`http://127.0.0.1:${PORT}/index.html`);
+  await p.goto(`http://127.0.0.1:${PORT}/index.html`, { timeout: 600000, waitUntil: 'domcontentloaded' });
   await p.waitForFunction(() => document.getElementById('status').hidden && window.marahEngine && window.marahEngine.snapshot, null, { timeout: 900000 });
   console.log(await p.evaluate(async () => {
     window.R = () => [...document.querySelectorAll('*')].find((x) => x.shadowRoot && x.shadowRoot.querySelector('.phone')).shadowRoot;
