@@ -17,3 +17,14 @@ what was asked overnight; this file is his own word.
 4. Paying for a rushed tanker or feed order on a day the herd is short: «من الرصيد بس: الاستعجال راحة تندفع نقد.
    والطلب العادي يبقى ينكتب على الحساب ويوصل بكرة، فالحلال ما يموت على ريالات.» (Confirms batch 4 item 3 and the
    flag of batch 4b item 1.)
+
+## The trapping business (the proxy's batch 3, put to him)
+
+5. The odds of trapping: «أسهل من كذا: نرفع الفرصة فوق اللي تقوله المصادر عشان الطرح يربّح أسرع. أمتع بس أبعد عن
+   الواقع، وينكتب إنه اختيار لعب.» (OVERTURNS the proxy's batch 3 item 1, which kept the range inside the sources.
+   How much easier is asked next.)
+6. Partners: «لحالي أول: نبني الطرح لحالك بالعدة اللي سميتها، ولما ينلعب المخيم نصمم الشركاء ونعرضهم عليك كخطوة
+   ثانية.» (Confirms item 2.)
+7. A saker or a قرناس in the net: «ينطلق: اللعبة تطلقه على طول مع سطر يقول ليش.» (Confirms items 3 and 4.)
+8. A trapped peregrine he kept: «ما ينباع بعدين: الطير اللي تخليه لك يبقى لك. ما نعرض بيعة ما نقدر نبيّن إنها
+   نظامية.» (Confirms item 6.)
