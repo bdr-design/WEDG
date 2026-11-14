@@ -141,6 +141,30 @@ int _extras(Game game, int week, Map<String, int> done) {
   if (week >= 86 && week % 4 == 2 && v.herd.isNotEmpty) {
     send(Tamper(me, v.herd.last.id, TamperKind.values[week % 7], 1 + week % 3));
   }
+  // the rush and being away (T15), so their paths run on both platforms: a
+  // pen built now, a camel rushed home, the standing orders and the vet's
+  // contract switched on and off, a short day's tanker, and a week away
+  if (week == 6) send(BuildFacility(me, Facility.pen, now: true));
+  if (week == 12) {
+    send(SetStandingOrder(me, StandingOrder.water, on: true));
+    send(SetStandingOrder(me, StandingOrder.feed, on: true));
+    send(SignVetContract(me));
+  }
+  if (week == 40) send(CancelVetContract(me));
+  if (week == 60) send(SetStandingOrder(me, StandingOrder.feed, on: false));
+  for (final c in v.herd) {
+    if (c.onTheWay) send(RushTruck(me, c.id, hour: week % 24));
+  }
+  if (game.me.farm.today?.waterShort ?? false) {
+    send(OrderSupply(me, Supply.water, 1, tanker: Tanker.small, now: true));
+  }
+  if (week % 26 == 13) {
+    final run = AwayRun(game, AwayPlan(game.today + 7));
+    while (!run.done) {
+      run.step();
+    }
+    done['away'] = (done['away'] ?? 0) + 1;
+  }
   if (week % 5 == 2) {
     for (final f in v.festivals.where((f) => f.registrationOpen(v.today))) {
       for (final r in f.rounds) {
