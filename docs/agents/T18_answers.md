@@ -103,3 +103,20 @@ The reviewer's rules table raised 28 places where the documents disagree or are 
 Q-13/Q-15, Q-18, Q-20 and Q-28 were put to him and he chose the provisional answer in each
 (docs/agents/owner_decisions_2026-11-14.md items 22–25): they are now his word, not provisional; the switches may
 be removed where they cost anything to keep. Q-4 is still provisional.
+
+## After the reviewer's phase 2 on items 1 and 2 (14 Nov)
+
+- Q-17 revised: the buy command carries the buyer's own ceiling: `BuyFalcon(lot, upTo)`. If upTo is at least the
+  hammer the lot will reach, he pays the hammer; otherwise the lot goes to another bidder, its price is told, and it
+  is gone for good. He never pays more than he said: as at a live auction, where a bidder stops when he chooses.
+  Still no bidding game. The phone's view (part B) asks him for his ceiling before the command is sent.
+- A lot's opening figure must not give its hidden worth away: drawn mostly on its own across the sourced 30,000 to
+  150,000 [217], never above the worth, with a test that the share of dear birds in each opening band stays near
+  the whole's.
+- The trapping auction's lots are females only (every sale read gives a female's size [187][216]). Whether a male
+  peregrine of the year is taken at the auction was not found: for now a sellable bird in the net is a female too
+  (a marked simplification in the GDD; a question for the owner later).
+- الحماد's distance: with the ground placed north-west of Arar the road distance from the farm is about 843 km and
+  about 10 hours, not the approved card's «600 كم، حوالي 7 ساعات» (that 600 was the straight line to Arar). The real
+  road figure is built; the card's words change with it; the owner is told.
+- The static catalog (grounds, gear, routes, permit names and fees) is sent once per session, not in every snapshot.
