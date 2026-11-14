@@ -58,6 +58,7 @@ Result handle(Sim sim, Command cmd) {
     SetStandingOrder() => setStanding(sim, p, cmd),
     SignVetContract() => signVet(sim, p, cmd),
     CancelVetContract() => cancelVet(sim, p, cmd),
+    TreatAll() => treatAll(sim, p),
   };
 }
 

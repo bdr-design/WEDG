@@ -765,8 +765,11 @@ function buildScreen() {
     return out.join('');
   };
   // the sick, with the vet's price (the phone's first treatment: T15), and the vet's contract
-  const sick = RU().sick || [];
-  const vet = sick.length ? `<div class="sec">يبي علاج</div><div class="group">${sick.map(sickRow).join('')}</div>
+  const sick = RU().sick || [], all = RU().sickCount ?? sick.length;
+  // a large herd: the first ones by name, how many more, and one «عالجهم كلهم» (its total first; two taps)
+  const more = all - sick.length, accAll = all > 1 ? onAccount(RU().treatAll) : null;
+  const treatAll = all > 1 ? `<div class="row r3"><span class="lead bad">${svg('heart')}</span><b>${more > 0 ? `وغيرها ${count(more, 'head')}` : `${count(all, 'head')} مريضة`}</b>${rushLike('treatAll', 'data-act="treatAll"', 'عالجهم', `عالج ${count(all, 'head')} بـ ${n0(RU().treatAll)} ريال`, accAll != null)}<small>${HJ.sure === 'treatAll' ? `يعالج ${count(all, 'head')} بـ ${n0(RU().treatAll)} ريال` : `علاجهم كلهم بـ ${n0(RU().treatAll)} ريال`}</small>${accAll && accAll.short > 0 ? `<small class="rush">${accountLine(accAll.owed)}</small>` : !accAll ? `<small class="rush">${accountFullLine()}</small>` : ''}</div>` : '';
+  const vet = sick.length ? `<div class="sec">يبي علاج</div><div class="group">${sick.map(sickRow).join('')}${treatAll}</div>
     <div class="note">${sick.length === 1 ? `لو ${sick[0].sex !== 'male' ? 'تركتها' : 'تركته'} بعد ${days(sick[0].graceDays)} ممكن ${sick[0].sex !== 'male' ? 'تموت' : 'يموت'}.` : `لو تركتهم بعد ${days(sick[0].graceDays)} ممكن يموتون.`}</div>` : '';
   const building = (RU().builds || []).length > 0;
   return `<div class="body">${nav()}<div class="title">العزبة</div>${errCard()}
@@ -1539,6 +1542,11 @@ function calGoingScreen() {
   const P = CAL.progress, t = CAL.day, from = CAL.from ?? (G ? G.today : 0);
   const day = P ? P.day : from, done = P ? P.done : 0, total = P ? P.total : Math.max(1, (t ?? from) - from);
   const pct = Math.round(done / Math.max(1, total) * 100);
+  if (P && P.saving) return `<div class="body"><div class="nav"></div><div class="title">يمشي الوقت</div>
+    <div class="tank"><small>وصل</small><div class="v"><b class="fit">${G ? ddAt(day) : ''}</b></div>
+      <div class="bar"><i style="width:100%;background:linear-gradient(90deg,#0b8a5c,#3fb487)"></i></div>
+      <div class="ln">يحفظ اللعبة…</div></div>
+    <div class="note">خلصت الأيام، ويحفظ قبل ما يرجع لك.</div></div>`;
   return `<div class="body"><div class="nav"></div><div class="title">يمشي الوقت</div>
     <div class="tank"><small>وصل</small><div class="v"><b class="fit">${G ? ddAt(day) : ''}</b></div>
       <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,#0b8a5c,#3fb487)"></i></div>
@@ -1559,7 +1567,7 @@ function stopWords(stop) {
     case 'account': return { title: 'حساب التاجر وصل حده', line: accountFullLine(), act: 'البنك', go: 'bank' };
     case 'fine': return { title: `انكشف تجميل ${nm ? `بـ${nm}` : 'بحلالك'}`, line: 'وانكتبت عليك الغرامة. التفاصيل بالحراج.', act: 'الحراج', go: 'haraj' };
     case 'offer': return { title: `جاك سوم على ${nm}`, line: `السوم ينتهي بعد ${days(G.haraj.offerDays ?? 3)}: اقبله أو ارفضه من إعلاناتي.`, act: 'إعلاناتي', go: 'haraj', tab: 'mine' };
-    case 'round': return { title: `اليوم شوطك بـ${shortFest(stop.name || '')}`, line: 'وقف الساعة 6 الصبح قبل أول مرحلة الساعة 7، وتجيك المراحل وحدة وحدة مثل أي يوم.', act: 'شوف يوم الشوط', go: 'mazayen' };
+    case 'round': return { title: `اليوم شوطك بـ${shortFest(stop.name || '')}`, line: `وقف الساعة 6 الصبح قبل أول مرحلة الساعة 7، وتجيك المراحل وحدة وحدة مثل أي يوم.${/money/.test(stop.extra || '') ? ' ونقل حلالك للمهرجان نزّل رصيدك تحت الصفر: ما تقدر تشتري حلال ولا تبني لين تسدد.' : ''}`, act: 'شوف يوم الشوط', go: 'mazayen' };
     case 'registration': return { title: `باقي 3 أيام ويقفل تسجيل ${esc(stop.name || '')}`, line: 'وعندك حلال يقدر يدخله. وبعد القفل تسجيل متأخر برسوم لين 72 ساعة قبل الشوط.', act: 'شوف المزاين', go: 'mazayen' };
     case 'breeding': return { title: 'بدا وقت الضراب', line: 'وعندك ناقة تنلقح.', act: null, go: null };
     case 'crowded': return { title: 'ضاقت الشبوك على حلالك', line: 'ابنِ شبك من العزبة.', act: 'العزبة', go: 'build' };
@@ -1944,7 +1952,7 @@ export function createPhone({ host }) {
     // the trucking), a treatment (illegal, and money)
     const twice = { quick: `quick:${HJ.camel}`, accept: `accept:${t.dataset.o}`, unlist: `unlist:${t.dataset.id}`, withdraw: `withdraw:${t.dataset.id}`, enter: `enter:${t.dataset.id}`, tamper: `tamper:${t.dataset.k}:${t.dataset.p}`,
       // the rush and التقويم (T15): money spent now, a contract, days that will not come back
-      rushBuild: `rushBuild:${t.dataset.f}`, buildNow: `buildNow:${t.dataset.f}`, rushWater: 'rushWater', rushFeed: 'rushFeed', tankerNow: `tankerNow:${t.dataset.t}`, feedNow: 'feedNow', rushTruck: `rushTruck:${t.dataset.id}`, buyNow: `buyNow:${HJ.listing}`, vetSign: 'vetSign', vetCancel: 'vetCancel', calGo: 'calGo' }[kind];
+      treatAll: 'treatAll', rushBuild: `rushBuild:${t.dataset.f}`, buildNow: `buildNow:${t.dataset.f}`, rushWater: 'rushWater', rushFeed: 'rushFeed', tankerNow: `tankerNow:${t.dataset.t}`, feedNow: 'feedNow', rushTruck: `rushTruck:${t.dataset.id}`, buyNow: `buyNow:${HJ.listing}`, vetSign: 'vetSign', vetCancel: 'vetCancel', calGo: 'calGo' }[kind];
     if (!LOCAL && (twice == null || HJ.sure === twice) && keyOf(t) === orderKey && at - orderAt < DOUBLE_TAP) return;
     // الحراج: a sale asked twice (the first tap readies it: HJ.sure); any other tap stands it down. [next]: the screen
     // to go to once the order is done (a camel bought or sold goes back to the market's list)
@@ -2016,6 +2024,7 @@ export function createPhone({ host }) {
       else if (kind === 'buyNow') await buy('now');
       else if (kind === 'standing') { const k = t.dataset.k; await send({ type: 'setStandingOrder', kind: k, on: !(RU().standing || []).includes(k) }); }
       else if (kind === 'standingBoth') { const both = ['water', 'feed'].every((k) => (RU().standing || []).includes(k)); for (const k of ['water', 'feed']) if (!ERR) await send({ type: 'setStandingOrder', kind: k, on: !both }); }
+      else if (kind === 'treatAll') { const n = RU().sickCount; if (await send({ type: 'treatAll' })) HJ.said = `عالجت ${count(n, 'head')}`; }
       else if (kind === 'vetSign') await send({ type: 'signVetContract' });
       else if (kind === 'vetCancel') await send({ type: 'cancelVetContract' });
       else if (kind === 'treat') { const x = (RU().sick || []).find((y) => y.camel === t.dataset.id); if (await send({ type: 'treat', camel: t.dataset.id }) && x) HJ.said = `عالجت ${x.name}`; }

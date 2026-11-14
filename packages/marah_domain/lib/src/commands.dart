@@ -178,6 +178,13 @@ final class SignVetContract extends Command {
   const SignVetContract(super.actor);
 }
 
+/// Treats every camel of his that is sick, each at the vet's own price, on
+/// account as the vet is, till the account's limit (a large herd: one tap
+/// for a thousand rows).
+final class TreatAll extends Command {
+  const TreatAll(super.actor);
+}
+
 /// Cancels it: it runs to the month's end, nothing refunded.
 final class CancelVetContract extends Command {
   const CancelVetContract(super.actor);

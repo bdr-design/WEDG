@@ -18,6 +18,7 @@ import '../rules/provisions.dart';
 import '../sim.dart';
 import '../systems/systems.dart';
 import 'handlers.dart';
+import 'handlers.dart' as handlers;
 
 Err _no(Sim sim, ErrorCode code, [Map<String, Object> params = const {}]) =>
     Err(DomainError(code, params), sim.drain());
@@ -132,7 +133,12 @@ Result rushDelivery(Sim sim, PlayerState p, RushDelivery cmd) {
 void makeGood(Sim sim, PlayerState p, StandingOrder kind) {
   final f = p.farm, r = f.today;
   if (r == null || r.day != sim.today) return;
-  final herd = sim.herdOf(p.id).toList();
+  // the herd as it was at dawn: a camel bought or born today (after the
+  // day's step) never went short (the review's L1)
+  final herd = [
+    for (final c in sim.herdOf(p.id))
+      if (c.acquiredOn < sim.today) c,
+  ];
   var pull = 0.0;
   if (kind == StandingOrder.water && r.waterShort) {
     final wasDry = f.dryDays > 0;
@@ -281,6 +287,38 @@ Result cancelVet(Sim sim, PlayerState p, CancelVetContract cmd) {
   );
   return Ok(sim.drain());
 }
+
+/// Every sick camel treated, the oldest illness first, till the account's
+/// limit stops it (what was treated stands; the rest are said by the refusal
+/// when none could be).
+Result treatAll(Sim sim, PlayerState p) {
+  final sick = [
+    for (final c in sim.herdOf(p.id))
+      if (c.health == HealthStatus.sick && c.illness != null) c,
+  ]..sort((a, b) => a.sickSince!.value - b.sickSince!.value);
+  if (sick.isEmpty) return _no(sim, ErrorCode.notSick);
+  final out = <DomainEvent>[];
+  Err? refused;
+  for (final c in sick) {
+    final r = treatCamel(sim, p, c);
+    out.addAll(r.events);
+    if (r is Err) {
+      refused = r;
+      break;
+    }
+  }
+  if (refused != null && !out.any((e) => e is Treated)) {
+    return Err(refused.error, out);
+  }
+  return Ok(out);
+}
+
+/// What treating every sick camel would cost today (the vet's quotes).
+int treatAllQuote(Sim sim, PlayerState p) => [
+  for (final c in sim.herdOf(p.id))
+    if (c.health == HealthStatus.sick && c.illness != null)
+      handlers.vetQuote(sim, c).value,
+].fold(0, (a, b) => a + b);
 
 /// Whether [p] has a vet's contract in force today.
 bool hasVet(PlayerState p) => p.farm.vet != null;

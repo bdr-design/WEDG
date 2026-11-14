@@ -292,6 +292,8 @@ class EngineCore {
     GameDay target, {
     int landingMinute = 360,
     List<AwayCondition> extra = const [],
+    List<AwayCounter> counters = const [],
+    Map<String, Object?> card = const {},
   }) => _serial(() async {
     final g = _game;
     if (g == null || _halted) {
@@ -301,7 +303,10 @@ class EngineCore {
     if (no != null) return (run: null, refused: no);
     _cancelAway = false;
     _nextDay?.cancel();
-    final run = AwayRun(g, AwayPlan(target, extra: extra));
+    final run = AwayRun(
+      g,
+      AwayPlan(target, extra: extra, counters: counters, card: card),
+    );
     final watch = Stopwatch()..start();
     var lastPush = Stopwatch()..start();
     while (!run.done) {
@@ -324,6 +329,7 @@ class EngineCore {
     _cancelAway = false;
     emit(AwayProgress(run.doneDays, run.total, g.today));
     land(g.state, g.today, landingMinute);
+    emit(AwayProgress(run.doneDays, run.total, g.today, saving: true));
     await _saveNow();
     if (_saveOk && !await store.markGood()) emit(const BackupWarning());
     _publish();

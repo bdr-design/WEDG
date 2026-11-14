@@ -16,6 +16,9 @@ import '../rules/eligibility.dart';
 import '../rules/provisions.dart';
 import '../sim.dart';
 
+/// How many sick camels the snapshot lists by name.
+const sickShown = 20;
+
 Map<String, Object?> rushFacts(GameState state, OwnerId viewer) {
   final sim = Sim(state);
   final p = state.players[viewer]!;
@@ -35,6 +38,10 @@ Map<String, Object?> rushFacts(GameState state, OwnerId viewer) {
         if (preg.dueOn.daysSince(today) <= 30) c.id.value,
   ];
   final block = AwayRun.refusal(Game(state), today + 1);
+  final sick = [
+    for (final c in herd)
+      if (c.health == HealthStatus.sick && c.illness != null) c,
+  ]..sort((a, b) => a.sickSince!.value - b.sickSince!.value);
   return {
     'waterShort': r?.waterShort ?? false,
     'feedShort': r?.feedShort ?? false,
@@ -83,21 +90,25 @@ Map<String, Object?> rushFacts(GameState state, OwnerId viewer) {
       'monthly': Balance.vetContractFee(herd.length),
       'part': vetContractPart(sim, p),
     },
+    // the first [sickShown] (the oldest illness first) and how many in all,
+    // with the price of treating them all: at 10,000 head a thousand sick
+    // made the snapshot four times its size (the review's B3)
+    'sickCount': sick.length,
+    'treatAll': sick.isEmpty ? 0 : treatAllQuote(sim, p),
     'sick': [
-      for (final c in herd)
-        if (c.health == HealthStatus.sick && c.illness != null)
-          {
-            'camel': c.id.value,
-            'name': c.name,
-            'sex': c.sex.name,
-            'illness': c.illness!.name,
-            'illnessName': c.illness!.label,
-            'sickSince': c.sickSince?.value,
-            'quote': handlers.vetQuote(sim, c).value,
-            'recoverMin': c.illness!.recoverDays ~/ 2,
-            'recoverMax': c.illness!.recoverDays,
-            'graceDays': Balance.untreatedGraceDays,
-          },
+      for (final c in sick.take(sickShown))
+        {
+          'camel': c.id.value,
+          'name': c.name,
+          'sex': c.sex.name,
+          'illness': c.illness!.name,
+          'illnessName': c.illness!.label,
+          'sickSince': c.sickSince?.value,
+          'quote': handlers.vetQuote(sim, c).value,
+          'recoverMin': c.illness!.recoverDays ~/ 2,
+          'recoverMax': c.illness!.recoverDays,
+          'graceDays': Balance.untreatedGraceDays,
+        },
     ],
     'awayBlock': block?.params['reason'],
     'crowdedSoon': herd.length >= f.capacity && dueSoon.isNotEmpty
