@@ -107,6 +107,11 @@ in the code, and the numbers are in
   drawing variant: two baked frames blended, the nearest frame, or every camel
   on the CPU; also `?herd=0/1/2`) and «قطيع تجربة» (a test herd of 40 in the 3D
   view).
+- **Money without limit (`#fps` only, for the owner's testing):** a line in
+  the opened meter, «فلوس بلا حد», turned on by two taps within 3 s, off by
+  one. The engine keeps the money at 10,000,000 or more (TestMoney in
+  `marah_domain`, ledger rows «فلوس تجربة», the game marked for good; GDD 13).
+  **A release build must not carry the meter**, and with it this switch.
 - **Draw calls:** the yard's fixed objects are merged, and footprints are
   instanced.
 - **Lighter assets:** 12k-triangle vehicles (`tool/vehicle3d/slim_vehicle.py`)

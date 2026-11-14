@@ -425,6 +425,8 @@ class Presenter {
       playerId: me.id,
       playerName: me.name,
       cash: me.cash.value,
+      testMoney: me.testMoney,
+      testedFrom: me.testedFrom,
       herdValue: v.herdValue.value,
       todayNet: v.todayNet.value,
       farm: farm,

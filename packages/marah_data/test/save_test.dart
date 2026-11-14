@@ -76,6 +76,7 @@ const fixtures = {
   7: 'test/fixtures/save_v7.json',
   8: 'test/fixtures/save_v8.json',
   9: 'test/fixtures/save_v9.json',
+  10: 'test/fixtures/save_v10.json',
 };
 
 /// [data] at version [from] brought up to today's by the later steps, as

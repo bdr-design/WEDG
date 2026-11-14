@@ -16,6 +16,8 @@ class SnapshotJson {
     'playerId': s.playerId.value,
     'playerName': s.playerName,
     'cash': s.cash,
+    'testMoney': s.testMoney,
+    'testedFrom': s.testedFrom == null ? null : _date(s.testedFrom!),
     'herdValue': s.herdValue,
     'todayNet': s.todayNet,
     'farm': farm(s.farm),

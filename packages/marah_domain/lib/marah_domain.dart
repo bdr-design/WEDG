@@ -27,5 +27,6 @@ export 'src/rules/balance.dart';
 export 'src/rules/contest_rules.dart';
 export 'src/rules/pasture.dart';
 export 'src/rules/provisions.dart';
+export 'src/rules/test_money.dart' show TestMoney;
 export 'src/views/money.dart';
 export 'src/views/views.dart';
