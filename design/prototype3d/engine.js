@@ -121,6 +121,13 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
     /** The calendar's jump (EngineCore.away): to game day [target], landing at [landingMinute] of the day it ends
      *  on; resolves to {ok, error, away: {from, to, target, stop, summary}}. Progress comes to onAway. */
     away: (target, landingMinute = 360) => call('away', { target, landingMinute }),
+    /** The hunting season's catalog (T18: the routes, permits, gear, grounds, the refusals' and release lines), asked
+     *  once by the phone and kept: resolves to {ok, catalog}. */
+    falconCatalog: () => call('falconCatalog'),
+    /** The trip's lines for the card before leaving (T18: Trips.card): resolves to {ok, card}. */
+    tripCard: (kind, ground, nights) => call('tripCard', { kind, ground, nights }),
+    /** A night at camp («نام لين الفجر», T18: EngineCore.tripNight): resolves as away does. */
+    tripNight: () => call('tripNight'),
     /** «وقّف هنا»: handed over at once (the worker takes it outside its queue); the jump ends at the day it is on. */
     stopAway: () => call('stopAway'),
     /** Saves now; resolves when the save has been kept. */
