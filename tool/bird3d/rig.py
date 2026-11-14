@@ -863,6 +863,17 @@ def build_saker(out, sheets=False):
     }
     for k in ('fold', 'open'):
         add_hidden_morph(meshes[k], body)
+    # the far level: the T11 far meshes (256 px) on the same skeleton, the same clips; no hood or jesses at that range
+    pf1, _, body1 = saker_rest('fold', level=1)
+    po1, _, _ = saker_rest('open', level=1)
+    c1, o1 = paint.paint('saker', atlas, 256, body1)
+    mat1 = common.material('saker_far', c1, o1)
+    far = {'fold': skinned_mesh('saker_fold_far', pf1['body'], body1, B, atlas, mat1, arm),
+           'open': skinned_mesh('saker_open_far', po1['body'], body1, B, atlas, mat1, arm)}
+    for k in far:
+        add_hidden_morph(far[k], body1)
+        far[k].hide_render = True
+    FAR[:] = [far]
     clips = SakerClips()
     arm.animation_data_create()
     frames_mesh = {}
@@ -885,8 +896,8 @@ def build_saker(out, sheets=False):
         FRAMES_FEET[name] = []
         HIDDEN_FEET[name] = []
         keys_shape = {}
-        for k in ('fold', 'open'):
-            sk = meshes[k].data.shape_keys
+        for k, o in (('fold', meshes['fold']), ('open', meshes['open']), ('fold_far', far['fold']), ('open_far', far['open'])):
+            sk = o.data.shape_keys
             sk.animation_data_create()
             sk.animation_data.action = bpy.data.actions.new(name)      # the same name: merged into the clip on export
             keys_shape[k] = sk
@@ -894,7 +905,7 @@ def build_saker(out, sheets=False):
             sp = spec_fn(f % n)
             A.apply(sp, f)
             for k, sk in keys_shape.items():
-                sk.key_blocks['hidden'].value = 0.0 if sp['mesh'] == k else 1.0
+                sk.key_blocks['hidden'].value = 0.0 if sp['mesh'] == k.split('_')[0] else 1.0
                 sk.key_blocks['hidden'].keyframe_insert('value', frame=f)
             frames_mesh[name].append(sp['mesh'])
             FRAMES_FEET[name].append(sp['feet'] if isinstance(sp['feet'], str) else sp['feet'][0])
@@ -914,8 +925,8 @@ def build_saker(out, sheets=False):
         tr = arm.animation_data.nla_tracks.new()
         tr.name = name
         tr.strips.new(name, 0, bpy.data.actions[name])
-        for k in ('fold', 'open'):
-            sk = meshes[k].data.shape_keys
+        for k, o in (('fold', meshes['fold']), ('open', meshes['open']), ('fold_far', far['fold']), ('open_far', far['open'])):
+            sk = o.data.shape_keys
             t2 = sk.animation_data.nla_tracks.new()
             t2.name = name
             t2.strips.new(name, 0, SHAPE_ACTIONS[k][name])
@@ -936,7 +947,22 @@ def build_saker(out, sheets=False):
     common.settle(path)
     t, imgs, nbytes = common.glb_report(path)
     print(f'saker_rig.glb: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {len(B)} bones; {nbytes / 1024:.0f} KB')
+    export_far(arm, far, os.path.join(out, 'saker_rig_far.glb'))
     return arm, meshes, frames_mesh, B, clips
+
+
+def export_far(arm, far, path):
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in [arm, *far.values()]:
+        o.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=False,
+                              export_animations=True, export_animation_mode='NLA_TRACKS', export_skins=True,
+                              export_all_influences=False, export_force_sampling=False, export_optimize_animation_size=True,
+                              export_morph=True, export_morph_animation=True, export_morph_normal=False,
+                              export_materials='EXPORT', export_extras=False, export_image_format='AUTO')
+    common.settle(path)
+    t, imgs, nbytes = common.glb_report(path)
+    print(f'{os.path.basename(path)}: {", ".join(f"{k} {v}" for k, v in sorted(t.items()))}; {nbytes / 1024:.0f} KB')
 
 
 def evaluated_co(o):
@@ -994,6 +1020,8 @@ VIEWS = {'side': (0, -1, 0), 'three_quarter': (-1, -1, -0.5), 'front': (-1, 0, 0
 
 
 SHAPE_ACTIONS = {}
+FAR = []
+SHEET_PREFIX = ['saker']
 QTOL, LTOL, STOL = 0.0015, 0.00005, 0.001
 
 
@@ -1060,16 +1088,34 @@ def thin_keys(actions):
     return kept, total
 
 
+def show_both(arm, on=True):
+    """For a measure: every mesh shown (the morph 'hidden' held at 0), or back to the clip's own keys."""
+    for o in arm.children:
+        sk = o.data.shape_keys if o.type == 'MESH' else None
+        if sk and sk.animation_data:
+            if on:
+                sk.animation_data.action = None
+                sk.key_blocks['hidden'].value = 0.0
+
+
 def use_clip(arm, name):
-    """Show one clip: its action played directly, every NLA track muted (so nothing else blends in)."""
-    for t in arm.animation_data.nla_tracks:
-        t.mute = True
-    act = bpy.data.actions[name]
-    arm.animation_data.action = act
-    try:
-        arm.animation_data.action_slot = act.slots[0]
-    except (AttributeError, IndexError):
-        pass
+    """Show one clip: its actions (the skeleton's, and each mesh's morph 'hidden') played directly, every NLA track
+    muted (so nothing else blends in)."""
+    def assign(ad, act):
+        for t in ad.nla_tracks:
+            t.mute = True
+        ad.action = act
+        try:
+            ad.action_slot = act.slots[0]
+        except (AttributeError, IndexError):
+            pass
+    assign(arm.animation_data, bpy.data.actions[name])
+    for o in arm.children:
+        sk = o.data.shape_keys if o.type == 'MESH' else None
+        if sk and sk.animation_data:
+            for t in sk.animation_data.nla_tracks:
+                if t.name == name and t.strips:
+                    assign(sk.animation_data, t.strips[0].action)
 
 
 def toe_vertex_sets(o):
@@ -1139,7 +1185,7 @@ def strip_gif(arm, meshes, frames_mesh, name, frames, out, cam, res=(240, 180), 
         ims.append(Image.open(png).convert('RGB').quantize(colors=96, method=Image.Quantize.MEDIANCUT))
         os.remove(png)
     ims = ims * repeat
-    path = os.path.join(out, f'saker_{name}.gif')
+    path = os.path.join(out, f'{SHEET_PREFIX[0]}_{name}.gif')
     ims[0].save(path, save_all=True, append_images=ims[1:], duration=int(1000 / FPS), loop=0, optimize=True)
     print('gif', path, f'{os.path.getsize(path) / 1024:.0f} KB')
     return path
@@ -1181,7 +1227,7 @@ def contact_sheet(arm, meshes, frames_mesh, name, frames, out, view='side', res=
         x, y = (i % cols) * w, (i // cols) * h + 28
         sheet.paste(im, (x, y))
         d.text((x + 6, y + 4), f'{f}', fill=(20, 20, 20), font=f_)
-    path = os.path.join(out, f'saker_{name}_{tag or "sheet"}.jpg')
+    path = os.path.join(out, f'{SHEET_PREFIX[0]}_{name}_{tag or "sheet"}.jpg')
     sheet.save(path, quality=86)
     print('sheet', path)
     return path
@@ -1301,6 +1347,7 @@ def motion_checks(arm, meshes, frames_mesh, clips, body):
         for f in range(1, n):
             if fm[f] != fm[f - 1]:
                 worst = 1.0
+                show_both(arm)
                 for g in (f - 1, f):
                     sc.frame_set(g)
                     a, ta = evaluated_co(meshes['fold'])
