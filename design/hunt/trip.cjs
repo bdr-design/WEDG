@@ -40,7 +40,7 @@
 // hour's start, with ALL the calendar's stops (an illness, a death, a store at 3 days, money below zero, the account at its
 // limit, a fine or ban, an offer, his round's day, a registration closing in 3 days, the breeding season opening, the pens
 // full) plus the camp's own (its supplies out, the trapping season's end, the trip's chosen end); a bird in the net is
-// played live, not a stop; the summary (trip_21) is the calendar's summary view with the trip's lines above its own.
+// played live, not a stop; the summary (trip_22) is the calendar's summary view with the trip's lines above its own.
 // DRAW COSTS: the driver's seat is round 1's count only (37 draws / 159k); this run's reading did not take. The binocular
 // view (trip_14) narrows the view, so the far peregrine shows enlarged and needs the near model by its size on screen:
 // about 6k triangles and 3 draws (+3 shadow) over the base; he leaves it by the binoculars' own button at the right edge
@@ -354,7 +354,7 @@ const ONLY = (process.env.ONLY || 'map,room,trip,camp').split(',');
       await p.evaluate(() => window.__phone.toggle());
       await p.waitForTimeout(800);
       await phoneScreen(`${BACK}<div class="title">اللي صار</div>
-        <div class="span" style="background:#fff;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:2px"><b style="font:700 15px/1.3 Alexandria,sans-serif">9 أيام · مخيم الحماد</b><small style="font-size:12px;color:#6e6e73">من الخميس 1 أكتوبر لين السبت 10 أكتوبر</small></div>
+        <div class="span" style="background:#fff;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:2px"><b style="font:700 15px/1.3 Alexandria,sans-serif">9 ليالي · مخيم الحماد</b><small style="font-size:12px;color:#6e6e73">من الخميس 1 أكتوبر لين السبت 10 أكتوبر</small></div>
         <div class="group">
           <div class="row"><span class="lead">${ps('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 12h18M12 3v18"/>')}</span><b>طرحت فرخ شاهين بحري (مثال)</b><small>اليوم السابع · بغرفة الصقور</small></div>
           <div class="row"><span class="lead">${ps('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}</span><b>طلقت حر</b><small>اليوم الثالث: المزاد ما يقبله</small></div>
@@ -396,7 +396,7 @@ const CAP = {
   trip_16_catch: 'الشاهين بالشبك (بديل) ودبوسه، وبطاقته بضغطتك: فرخ شاهين بحري ينباع بمزاد الطرح، طوله وعرضه ووزنه. مرسوم.',
   trip_17_release: 'حر بالشبك (صورة مجسم الحر) ودبوسه؛ بضغطتك على الدبوس تنفتح البطاقة: ينطلق، بسطر الوكيل (جواب مؤقت) بنصه. مرسوم.',
   trip_18_empty_day: 'اليوم الرابع، فاضي: بطاقة المخيم بضغطة الخيمة بالمسا، ووقفة التقويم اللي رجّعت اللعب لك (باقي 3 أيام على العلف: العلف كان يكفي 7 أيام). مرسوم.',
-  trip_19_registration: 'اليوم الثامن: وقفة التقويم بالجوال الصغير: باقي 3 أيام على قفل تسجيل مزاين حائل (يقفل 11 أكتوبر)، تسجّل أو تكمّل المخيم. مرسوم: محتوى الشاشة.',
+  trip_19_registration: 'اليوم الثامن: زر الجوال ينوّر بوقفة التقويم، وبضغطتك ينفتح: باقي 3 أيام على قفل تسجيل مزاين حائل (يقفل 11 أكتوبر)، تسجّل أو تكمّل المخيم. مرسوم: محتوى الشاشة.',
   trip_20_off_ground: 'جنب العزبة: زر الطرح يحذر وما يشتغل، وبضغطتك على زر التحذير تنفتح بطاقته: الطرح بأرضه وموسمه بس، والشبك براها 100,000 [136] (الوكيل). مرسوم.',
   trip_21_banned: 'جنب العزبة بالصقر: زر الإرسال يحذر وما يرسل (قرار المالك 4)، وبضغطتك على زر التحذير تنفتح بطاقته والغرامة 5,000 [136]. مرسوم.',
   trip_22_back: 'رجعت: «اللي صار» بالجوال الصغير، نفس ملخص التقويم ومعه سطور المخيم؛ الطير «مثال». مرسوم: محتوى الشاشة.',

@@ -303,8 +303,8 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
     // ------------------------------------------------ 16, 17 the card before leaving: the calendar's card (task T15, its words and
     // layout as phone_calendar.cjs draws them), with the trip's own lines added under its own (gear, camp supplies, distance)
     const away_card = `<div class="body">${nav()}<div class="title">قبل ما تمشي</div>
-      <div class="span"><b>مخيم طرح بالحماد · لين 10 أكتوبر</b><small>9 أيام · من الخميس 1 أكتوبر · 600 كم، حوالي 7 ساعات سواقة</small></div>
-      <div class="sec">يكفي 9 أيام؟</div>
+      <div class="span"><b>مخيم طرح بالحماد · لين 10 أكتوبر</b><small>9 ليالي · من الخميس 1 أكتوبر · 600 كم، حوالي 7 ساعات سواقة</small></div>
+      <div class="sec">يكفي 9 ليالي؟</div>
       <div class="group">
         <div class="row two2"><span class="lead">${svg('scale')}</span><b>الماء · يكفي 14 يوم</b><span class="act"><button class="btn sm ghost">عبّه</button></span><small>يكفي الأيام كلها تقريبًا: <span class="pos">يكفي</span></small></div>
         <div class="row two2"><span class="lead me">${svg('box')}</span><b>العلف · يكفي 7 أيام</b><span class="act"><button class="btn sm ghost">عبّه</button></span><small>كيسين و12 ربطة بـ 452 ريال، يصير يكفي 48 يوم تقريبًا</small></div></div>
@@ -328,7 +328,7 @@ const PERE = `<svg viewBox="0 0 60 60"><path d="M22 58 C18 44 20 30 28 22 C32 16
       <div class="note">التقويم يمشي لقدام بس: الأيام اللي تمضي ما ترجع.</div></div>`;
     // ------------------------------------------------ 18 the summary: the calendar's summary view with the trip's lines above its own
     const away_summary = `<div class="body">${nav()}<div class="title">اللي صار</div>
-      <div class="span"><b>9 أيام · مخيم الحماد</b><small>من الخميس 1 أكتوبر لين السبت 10 أكتوبر</small></div>
+      <div class="span"><b>9 ليالي · مخيم الحماد</b><small>من الخميس 1 أكتوبر لين السبت 10 أكتوبر</small></div>
       <div class="group">
         <div class="row two"><span class="lead">${svg('net')}</span><b>طرحت فرخ شاهين بحري (مثال)</b><small>اليوم السابع · بغرفة الصقور</small></div>
         <div class="row two"><span class="lead">${svg('falcon')}</span><b>طلقت حر</b><small>اليوم الثالث: المزاد ما يقبله</small></div>

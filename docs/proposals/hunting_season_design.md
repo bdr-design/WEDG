@@ -155,10 +155,14 @@ game's state after each day, a landing minute, a cancel flag, the summary counte
    - *A bird in the net is played live,* in the working hours, not a stop.
    - *What he does himself:* falconry, morning and afternoon flights (game choice); trapping, dawn to 10 a.m. and the
      evening hour [204]: watching, releasing the pigeon, taking the bird.
+   *How a stop reaches him:* by decision 3 nothing written comes up by itself: a stop lights the phone's button with a
+   mark, and the phone opens on his tap, on the calendar's stop view (trip_19).
+   *Counting:* the camp's span is told in nights («9 ليالي», 1 to 10 October) and its days from the first, 1 October
+   being day 1, so day 8 is 8 October.
    *The sample camp obeys its own card:* feed for 7 days brings the 3-day store stop on day 4 (trip_18), and مزاين
    حائل's registration closing on 11 October brings the registration stop on day 8 (trip_19); both are in the
    summary.
-5. **The summary is the calendar's summary view** («اللي صار», phone view 18 and trip_21), with the trip's lines above
+5. **The summary is the calendar's summary view** («اللي صار», phone view 18 and trip_22), with the trip's lines above
    its own (days out, birds caught and released, the camp's spending).
 
 **A day at camp, three ways (recommendation first):**
