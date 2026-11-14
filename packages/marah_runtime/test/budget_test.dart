@@ -2,6 +2,8 @@
 // engine an order of magnitude heavier, long before players would feel it.
 // Limits are generous (shared CI machines are noisy); measured values on a
 // desktop CPU are noted next to each limit.
+import 'dart:convert';
+
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/src/sim.dart';
 import 'package:marah_domain/src/world_gen.dart';
@@ -117,6 +119,39 @@ void main() {
       lessThan(250),
     );
   });
+
+  test(
+    'the snapshot stays bounded with a thousand sick (the review\'s B3)',
+    () {
+      final sick = g.state.world.aliveOwnedBy(g.me.id).take(1000).toList();
+      final was = [for (final c in sick) (c.health, c.illness, c.sickSince)];
+      for (final c in sick) {
+        c
+          ..health = HealthStatus.sick
+          ..illness = Illness.mange
+          ..sickSince = g.today;
+      }
+      try {
+        final snap = Presenter(g.state, g.me.id).snapshot(1);
+        final text = jsonEncode(SnapshotJson.snapshot(snap));
+        final rush = snap.rush;
+        expect((rush['sick']! as List).length, 20);
+        expect(rush['sickCount'], greaterThanOrEqualTo(1000));
+        expect(rush['treatAll'], greaterThan(0));
+        // (measured 59.7k at day one; 240k with every sick camel listed)
+        expect(text.length, lessThan(80000));
+        // ignore: avoid_print
+        print('10k head, 1,000 sick: snapshot ${text.length} characters');
+      } finally {
+        for (var i = 0; i < sick.length; i++) {
+          sick[i]
+            ..health = was[i].$1
+            ..illness = was[i].$2
+            ..sickSince = was[i].$3;
+        }
+      }
+    },
+  );
 
   test('measured values', () {
     final day = avgMs(() => g.advanceDays(1), 10);
