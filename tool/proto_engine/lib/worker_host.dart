@@ -415,7 +415,13 @@ class WorkerHost {
   void _push(Push p) => _send(switch (p) {
     SnapshotPush(:final snapshot) => {
       'type': 'snapshot',
-      'snapshot': SnapshotJson.snapshot(snapshot),
+      // (the game's minute of the day by the engine's clock: the truck's rush
+      // is priced by its hour, T15)
+      'snapshot': {
+        ...SnapshotJson.snapshot(snapshot),
+        'minute': _core?.minuteOfDay() ?? 0,
+        'minuteAt': _wall().millisecondsSinceEpoch,
+      },
     },
     SaveStatus(:final ok, :final error) => {
       'type': 'save',

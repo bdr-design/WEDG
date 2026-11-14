@@ -30,4 +30,5 @@ export 'src/rules/pasture.dart';
 export 'src/rules/provisions.dart';
 export 'src/rules/test_money.dart' show TestMoney;
 export 'src/views/money.dart';
+export 'src/views/rush_view.dart';
 export 'src/views/views.dart';

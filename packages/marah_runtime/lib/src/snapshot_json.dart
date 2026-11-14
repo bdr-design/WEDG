@@ -83,6 +83,7 @@ class SnapshotJson {
           },
       ],
     },
+    'rush': s.rush,
     'findings': [
       for (final f in s.findings)
         {
