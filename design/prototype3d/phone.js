@@ -696,7 +696,7 @@ const onTruck = () => (RU().trucks || []).map((t) => ({ ...t, male: t.sex === 'm
 const sinceSick = (x) => { const d = G.today - (x.sickSince ?? G.today); const f = x.sex !== 'male'; return d <= 0 ? (f ? 'مريضة من اليوم' : 'مريض من اليوم') : `${f ? 'مريضة' : 'مريض'} من ${days(d)}`; };
 const sickRow = (x) => {
   const f = x.sex !== 'male', acc = onAccount(x.quote);
-  const line = [sinceSick(x), `البيطري\u00a0${n0(x.quote)} ريال`, `${f ? 'تطيب' : 'يطيب'} بـ ${x.recoverMin} إلى ${days(x.recoverMax)}`].join(' · ');
+  const line = [sinceSick(x), `البيطري\u00a0${n0(x.quote)} ريال`, `${f ? 'تطيب' : 'يطيب'} بـ ${x.recoverMin} إلى\u00a0${days(x.recoverMax)}`].join(' · ');
   return `<div class="row r3"><span class="lead bad">${svg('heart')}</span><b>${esc(x.name)} · ${esc(x.illnessName)}</b><span class="act"><button class="btn sm ${acc ? 'pri' : ''}" data-act="treat" data-id="${esc(x.camel)}" aria-label="${f ? 'عالج' : 'عالج'} ${esc(x.name)} بـ ${n0(x.quote)} ريال" ${acc ? '' : 'disabled'}>${f ? 'عالجها' : 'عالجه'}</button></span><small>${line}</small>${acc && acc.short > 0 ? `<small class="rush">${accountLine(acc.owed)}</small>` : !acc ? `<small class="rush">${accountFullLine()}</small>` : ''}</div>`;
 };
 function vetRows() {
