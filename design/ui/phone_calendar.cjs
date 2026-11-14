@@ -220,6 +220,8 @@ const FILL = `window.__fill = (S) => {
     const span = (a, z) => { const x = dateOf(a), y = dateOf(z); if (a === z) return dShort(a); return x.getUTCMonth() === y.getUTCMonth() ? `من ${x.getUTCDate()} لين ${dShort(z)}` : `من ${dShort(a)} لين ${dShort(z)}`; };
     const inDays = (day) => { const n = day - S.today; return n <= 0 ? 'اليوم' : n === 1 ? 'بكرة' : `بعد ${days(n)}`; };
     const her = (c, f, m) => (c.sex === 'female' ? f : m);
+    // a festival by its place in a list («حائل، القصيم، الكبير»)
+    const short = (name) => (/الكبير/.test(name) ? 'الكبير' : name.replace(/^(مهرجان )?مزاين /, ''));
 
     // ---- the year's dated things: the engine's festivals, the breeding months, the seasons, the herd's own
     const fests = S.festivals.filter((f) => !f.done).sort((a, b) => a.startsOn - b.startsOn);
@@ -333,7 +335,7 @@ const FILL = `window.__fill = (S) => {
       <div class="sec">اللي يجي بالطريق</div>
       <div class="group">
         <div class="row two"><span class="lead brd">${svg('heart')}</span><b>وقت الضراب يبدأ ${dShort(bStart)}</b><small>${S.yard.filter((c) => c.sex === 'female' && !c.pregnant && c.ageDays >= 1209).length ? 'عندك نياق تنلقح' : 'نورة عشار، وما عندك غيرها تنلقح'}</small></div>
-        <div class="row two"><span class="lead fest">${svg('cup')}</span><b>${count(between.length, 'fest')}</b><small>${between.map((f) => f.name.replace('مهرجان ', '').replace('مزاين ', '')).join('، ')} · ما سجلت بشي</small></div>
+        <div class="row two"><span class="lead fest">${svg('cup')}</span><b>${count(between.length, 'fest')}</b><small>${between.map((f) => short(f.name)).join('، ')} · ما سجلت بشي</small></div>
         <div class="row two"><span class="lead milk">${svg('milk')}</span><b>الحليب يدخلك ${n0(milkDay)} ريال باليوم</b><small>وما عليك رواتب: ما عندك رعاة</small></div></div></div>`;
 
     // ---------------------------------------------------------------- 6 the card scrolled: the stops, the go button
@@ -389,7 +391,7 @@ const FILL = `window.__fill = (S) => {
     const sick = by('fellSick'), died = by('died'), born = by('calfBorn');
     rows.push(`<div class="row two"><span class="lead ${sick.length || died.length ? 'me' : 'brd'}">${svg('heart')}</span><b>${sick.length ? `مرض ${count(sick.length, 'camel')}` : 'ما مرض شي'}</b><small>${died.length ? `ماتت ${died.map((x) => x.name).join('، ')}` : 'وما مات شي'}${born.length ? ` · ولد ${born.length}` : ''}</small></div>`);
     const regs = by('registrationOpened');
-    if (regs.length) rows.push(`<div class="row two"><span class="lead fest">${svg('cup')}</span><b>انفتح تسجيل ${count(regs.length, 'fest')}</b><small>${regs.map((x) => x.name.replace('مهرجان ', '').replace('مزاين ', '')).join('، ')}</small></div>`);
+    if (regs.length) rows.push(`<div class="row two"><span class="lead fest">${svg('cup')}</span><b>انفتح تسجيل ${count(regs.length, 'fest')}</b><small>${regs.map((x) => short(x.name)).join('، ')}</small></div>`);
     const lows = by('supplyLow');
     if (lows.length) rows.push(`<div class="row two"><span class="lead me">${svg('alert')}</span><b>${why}</b><small>هذا اللي وقّف التقويم</small></div>`);
     const summary = `<div class="body">${nav()}<div class="title">اللي صار</div>
