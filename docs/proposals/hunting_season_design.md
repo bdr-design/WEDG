@@ -1,255 +1,244 @@
-# The hunting season (موسم القنيص): design for the owner's approval
+# Falcons as a second business: the season's design, round 2 (for the owner's approval)
 
-> **Status: design, awaiting the owner (13 Nov 2026).** Nothing here is built and nothing
-> here is adopted. It draws the owner's decisions of 13 Nov (the top of
-> [gdd_hunting_section.md](gdd_hunting_section.md), the draft of GDD section 13, and
-> [hunting.md](hunting.md)) as pictures, and asks what is still his to decide.
-> "[n]" is a source in [research-realism.md section 8](../research-realism.md). **Every figure
-> there rests on search-result text only: no official page was opened.** "(game choice)" is ours.
+> **Status: design, awaiting the owner (14 Nov 2026).** Nothing here is built and nothing is
+> adopted. Round 2 redraws round 1 for:
+> - the owner's seven answers on round 1 ([hunting_owner_decisions.md](../agents/hunting_owner_decisions.md));
+> - his choice of falcons as a second business by trapping (الطرح), and his word of 14 Nov that the
+>   falcon outing may be days too;
+> - the trapping research ([hunting.md](hunting.md) sections 9 and 10, research section 8 "Trapping
+>   wild passage falcons", sources 184–223);
+> - the proxy's provisional answers ([proxy_decisions.md](../agents/proxy_decisions.md) batches 2
+>   and 3), which are **his to overturn**.
+>
+> "[n]" is a source in [research-realism.md section 8](../research-realism.md). Every figure there
+> rests on search-result text or pages read on spa.gov.sa. **The text that makes trapping lawful
+> was not found.** "(game choice)" is ours. "(proxy)" is the proxy's provisional answer.
+
+## Whose word is what
+
+**The owner's own words (decisions):**
+1. He drives and casts the falcon himself; the result comes from the falcon, the ground and luck.
+2. «تجارة ثانية»; asked what kind, «اصيده صيد وفيه طيور بس قيمتها عاليه جدًا», and the night of
+   13–14 Nov «ايه مخيم وايام والطرح يعتمد على تجهيزاتك وحمامك وغيره والخيمه المتنقله وغيره»: trapping,
+   a camp of days, the catch resting on his gear, his pigeons and the mobile tent.
+3. A card opens in play only by his tap of a pin or a warning button, on the right.
+4. In a banned place or time the button warns, says why, and does not act.
+5. A falcons' room at the farm, with its pin and card.
+6. A falcon is lost rarely; the tracker finds it mostly.
+7. The farm runs as on any day while he is away. **14 Nov: «خل الطلعة ايام مافي مشكلة»**: the falcon
+   outing is a trip of days too. Our earlier reading (decision 7 kept "hours, back the same day"
+   for falconry, days for trapping only) and the proxy's batch 3 item 8 are **withdrawn**.
+
+**The proxy's provisional answers (batch 3), drawn and marked:**
+1. The odds as a range, the gear moving him along it, never past it.
+2. Alone first; partners drawn as the next step.
+3. A mountain peregrine or a lanner is released at once, with a line.
+4. A saker or a قرناس is released, with a line. The قرناس's release is a game choice: no ban was found.
+5. All three routes to his own falcon, each in its month.
+6. A trapped bird may be kept for hunting and the contests; resale later is not offered.
+7. The farm runs by its own rules during a camp; he breaks camp at any time; the card before
+   leaving says honestly how long feed and water last.
+9. Trapping lawful only on a trapping ground, in its season, with a trapping permit. The issuer and
+   terms were not found, so the price and terms are a game choice. Everywhere else the hunting rules
+   hold: a net there is the 100,000 fine, and the button warns and does not act.
+
+**Our reading, to be confirmed:**
+- That «اصيده صيد…» means trapping (the director's reading, told back to him: «ايه»).
+- That the falcon trip and the trapping camp are one way of being away (below).
 
 ## The pictures
 
-| Picture | What it shows | GDD draft |
+| Picture | What it shows |
+|---|---|
+| `design/hunt/season_calendar.jpg` (`season.cjs`) | The year Aug 2026–Jul 2027: the trapping season and the passage; the auctions told apart (the breeders' auction in August; the trapping auction 1 Oct–30 Nov; the exhibition 1–10 Oct), the three routes each in its month; the hunting season; the festival's two date ranges; the camel year from the engine; a new game's first season |
+| `design/ui/phone_falcon.jpg` (`phone_falcon.cjs`, 15 views) | The home with ten apps; «نادي الصقور»: the auctions and the routes, tonight's trapping lots as bidders see them, الطرح (the permit and the gear), entering a trapped bird, the hammer (an example), his falcons and how each came, الدعو, the festival and its rules, the results; «تصريح الصيد»: the two permits, what is banned and what is released, the fines; a violation |
+| `design/hunt/trip_01..21_*.jpg`, `trip_board.jpg` (`trip.cjs`) | Being away for days: the grounds' pins and the card before leaving (falconry and trapping); the falcons' room and its card; the drive; the falcon trip's camp, its card, the cast, the flight, the result, the rare lost falcon; the trapping camp, dawn through the binoculars, the pigeon and the stoop, the bird in the net, a sellable peregrine, a saker released, an empty day handing the game back, the net's button warning off the ground, the falcon's button warning by the farm, the trip's summary |
+| `design/hunt/season_money.jpg` (`season.cjs`) | A season of trapping alone as a range, beside falconry's costs and the contests' prizes |
+
+## The trapping business
+
+**The real rules, in short (research):**
+- **Season:** 1 Oct–30 Nov, with the auction at Malham nightly [184][185][186]. The auction closed on
+  15 Nov in 2020, 2022 and 2024 [187][191][188].
+- **What the auction takes:** only the passage peregrine of the year (فرخ شاهين بحري) trapped in the
+  Kingdom. It refuses the saker and the قرناس [184][189][185][188].
+- **Banned:** trapping the resident mountain peregrine and the lanner [194].
+- **The club's part:** its team checks the bird and documents the trapping, and the registration
+  document leads to the passport [190][191][192]. There are no fees [191][190]. Transport and
+  lodging to the auction are paid [184][189].
+- **Opening bids:** 30,000–150,000 [217]. 2025 sales read ran 71,000 and up, and 2022 down to 50,000
+  [217][200].
+- **Who traps:** most birds are taken by groups of 2–9 who share the price [184][190][200].
+
+**What round 1 had wrong, now fixed (hunting.md 9.6):**
+- No saker or قرناس is offered at the trapping auction.
+- A wild-caught bird for sale is a فرخ شاهين بحري from the trapping auction.
+- The "sell next autumn as a قرناس" line is gone. A kept bird is his own; resale is not offered.
+- The money no longer has a resale row, and no single "expected profit" figure.
+- Every place in the reviewer's list (phone_falcon.cjs, season.cjs, this note) is rewritten.
+
+**In the phone:**
+- «نادي الصقور» tells the three routes apart by month:
+  - the breeders' auction in August (a farm-bred saker about 19,000 [158]);
+  - the exhibition 1–10 Oct (imported sakers, two sold at 700,000 and 100,000 [184]);
+  - the trapping auction 1 Oct–30 Nov (a peregrine of the year from about 50,000 [200]).
+- The trapping auction is where he sells: he enters his bird, the club checks it, the bidders see
+  length, width, weight and where it was trapped (as the sale pages give them [187][216]; what the
+  width measures is not known), the hammer falls, and the money lands in full with no fee.
+  The hammer view's 112,000 is about the median of the 18 sales of 2025 read; it is marked as an
+  example, not an expectation.
+- **Gear:** in the club's app under «الطرح», with prices that are game choices (question 10):
+  pigeons, the net on the pigeon, nets for birds and the jerboa, binoculars, the mobile tent, the
+  camp's supplies. What each item does is from the sources [198][204][222][223]; what it changes in
+  the odds is unmeasured and a game choice.
+- «تصريح الصيد» holds two permits:
+  - the hunting permit: 1 Sep–31 Jan, by day [127][135];
+  - the trapping permit: 1 Oct–30 Nov, on trapping grounds only; 500 riyals, a game choice; the
+    issuer was not found.
+
+  It also lists what is never trapped (the mountain peregrine and the lanner [194]), what is released
+  (the saker and the قرناس: proxy), no night or lights (the hunting rules [135][136]; whether they
+  bind trapping is unconfirmed), and the fines in words.
+
+**The odds and the money** (`season_money.jpg`, the proxy's range; game choices on real numbers):
+- **Chance of a sellable bird in a season alone:** 0.08 to 0.34. That is 40 birds in 2025 [213] over
+  119 trappers [213], or over «مئات» [211]. Shown as about one season in 13 (1/0.08 = 12.5, rounded
+  against the player) to one in 3.
+- **Mean price:** 88,000 [200] to 160,000 [213].
+- **The season's cost:** 20,000, **invented**.
+- **Expected per season:** about −13,000 to about +34,000. That is 0.08 × 88,000 − 20,000 and
+  0.34 × 160,000 − 20,000, rounded against the player.
+- **A bird of 300,000 or more:** one season in about 83 to 20. That is 1 ÷ (p × 6/40): at least 6 of
+  the 40 birds of 2025 were that dear [213][185], a floor.
+- **Partners** raise the chance and divide the price (the next step: proxy).
+- Most seasons end with nothing. No single expected figure appears anywhere.
+
+## Being away for days: one way, for the falcon trip and the trapping camp
+
+The owner's word of 14 Nov makes the falcon outing a trip of days. A real المقناص is several 4x4s,
+two or three men a car, looking for houbara tracks, with camps in the desert [155][156]. How many
+days a trip lasts and the day's rhythm are **not sourced** (game choice). The trapping camp is
+stocked for the whole stay [204], and the trappers' hours are dawn to about 10 a.m. plus a short
+evening hour [204].
+
+So the game has **one** way of being away, the same for both. It shares everything it honestly can:
+1. **The card before leaving**, on the ground's pin. It shows what he takes, what is missing, and how
+   many days the feed and water last at the farm. It is the same card as the calendar's jump (task
+   T15, /home/user/wt/t15: its brief asks for that card; its design note was not yet written when this
+   was drawn).
+2. **The drive** (the real car), or «اطلع» from the card with the travel time passing.
+3. **The camp:** the tent, the supplies and the vehicle, with a pin on the tent whose card shows the
+   day, the supplies left and the farm's days left. «نام لين الفجر» and «فك المخيم وارجع» are there
+   at any time.
+4. **How the days pass:**
+   - *What he does himself:* each day's working hours are his to play.
+     - Falconry: morning and afternoon flights (game choice): he drives, searches, stops, unhoods
+       and casts.
+     - Trapping: dawn to 10 a.m. and the evening hour [204]: he watches with the binoculars,
+       releases the pigeon with the net when a falcon passes, and takes the bird from the net.
+   - *What is passed over:* the rest of the day and the night pass at a tap of «نام لين الفجر»,
+     the same passing of game time as the calendar's jump, a day at a time.
+   - *When the game hands back:* a bird in the net (he is playing then); the farm's feed or water
+     about to run out (an alert, the same as the jump's early stop, with ordering from the phone
+     allowed); the supplies running out; the season's end.
+   - *Where it differs from the calendar's jump:* the jump skips many days at once with the player
+     away. At camp, each day stops at its working hours, because decision 1 and his trapping words
+     put the work in his hands.
+5. **Breaking camp and the summary:** at any time; back at the farm, a summary in the phone, as the
+   jump's summary is.
+
+**A day at camp, three ways (recommendation first):**
+- **(a) He does the work with his hands; the result is worked out** (recommended). He spots the
+  falcon with the binoculars, picks the lure, and releases the pigeon. Whether the falcon stoops and
+  is held comes from his gear, the ground, the month, the hour and luck, inside the proxy's range.
+  It is decision 1's spirit: he works, the result is fair and rare.
+- **(b) More by hand:** he also aims the pigeon's release at the falcon's line and times the pull of
+  the net. Closer to a skill game, and the odds then rest on his thumb, not the real range.
+- **(c) Less by hand:** he stakes the gear at dawn and the day is worked out. It is lightest and
+  loses his part.
+
+## The falcons' room (غرفة الصقور)
+
+The owner's decision 5. A building in the yard with its pin and card. The card shows how many
+falcons, which want الدعو today, and the moult (in summer). Its buttons are «ادعهم» and «نادي
+الصقور». It holds 4 falcons (game choice), and its price is 18,000 (game choice) in العزبة's build
+list. The daily care is الدعو, once each time the game opens (game choice). The moult's months are
+not sourced. The building in the picture is a stand-in.
+
+## The falcon trip, redrawn
+
+The pin and card (a trip of days); the drive; the camp; on foot the hooded saker on the glove; the
+cast-off button at the edge (it unhoods and casts); the flight; the result card only by his tap
+(decision 3); the button warning and not casting in a banned place or time (decision 4); the rare
+lost falcon with the tracker's button and card (decision 6: mostly found, sometimes gone).
+
+## What it costs to draw (estimates; T11's birds measured)
+
+**Each frame's base** is counted from the WebGL calls in `design/hunt/trip_draws.txt` (SwiftShader
+at 956x440: the counts are the phone's, the times are not). TRIP_TABLE
+
+**New things and their estimates** (none is built):
+
+| Thing | Triangles | Draws |
 |---|---|---|
-| `design/hunt/season_calendar.jpg` (`season.cjs`) | A year, Aug 2026 to Jul 2027: the falcons' lane, the season, the falcon festival's two disagreeing date ranges, the camels' lane from the engine; the new game's start and its first season; the two collisions | 13.1, 13.2 |
-| `design/ui/phone_falcon.jpg` (`phone_falcon.cjs`, 15 views) | The home screen with ten apps; «نادي الصقور»: the auction, a falcon's page for a buyer and the bid, the player's falcon, الدعو, the festival (top and scrolled to its rules), the race day, the race result, المزاين's result (the sample falcon out of the prizes), and an example of a third place's card; «تصريح الصيد»: before it is taken, held (top and scrolled), and a violation | 13.1, 13.2 |
-| `design/hunt/outing_1..9_*.jpg`, `outing_board.jpg` (`outing.cjs`) | The outing on real screenshots of the game: the two places as far pins, the place's card, driving out, parked, on foot with the falcon on the glove, the cast-off, the result, the banned place's warning, the fine after | 13.1 |
-| `design/hunt/season_money.jpg` (`season.cjs`) | One season's costs against what it can bring, for a pastime and for a contest falcon | 13.1, 13.2 |
+| Hooded saker (T11, measured) | 6,752 | 3 |
+| Saker in flight / standing (T11, measured) | 6,364 / 6,188 | |
+| Stone-curlew (T11, measured) | 5,084 / 5,420 | |
+| Far birds (T11, measured) | under 1,500 | |
+| Perch / cuff (T11, measured) | 1,424 / 864 | |
+| Peregrine (not built) | about the saker's | |
+| Lure pigeon (skinned) | about 1.5k | 1 |
+| Net | a few hundred | 1 |
+| Mobile tent, pigeon cage, supplies (static, in the cached shadow map) | about 1.5k, 400, 800 | 3 |
+| Falcons' room | about 2k | 2 |
+| Its perches (instanced) | | 1 |
 
-Each script's header lists every figure as real (with its source) or a game choice.
+The camp and the room add a few draws at most, far under the ADR's 200 draws and 400k triangles.
 
-## What the views decide, and why
+## Where the later parts attach
 
-### The year, and a new game's first season
+- **The air rifle:** a second kind of permit in «تصريح الصيد» and a button beside the falcon's.
+- **The Kalashnikov:** never on a lawful screen, only through a secret chat.
+- **Wolves:** a night event at the pens, defended by the pen, the herdsman and a guard dog.
+- **Partners:** the next step for trapping (proxy).
 
-The season is 1 Sep – 31 Jan, autumn to 30 Nov, winter from 1 Dec [127][167]. الدعو is
-September and early October [155]. Falcons are bought at the breeders' auction at Malham in
-August [158] or at the national auction of wild-caught (طرح) birds, 1 Oct – 30 Nov [157].
+## Questions for the owner (numbered as in hunting.md section 10; recommendation first)
 
-**A new game starts on 1 October.** By then the season is a month old, Malham's auction is
-past and most of the الدعو weeks are gone. So the first season is: buy a wild-caught bird at
-the national auction (open), take its passport and the permit, give it الدعو for four weeks
-(game choice: a falconer never flies a bird the week he bought it), and fly it from about
-late October. In that same month the camel side asks for the grand festival's registration
-(17 Oct – 24 Nov, from the engine).
+1. *(Answered by him, 14 Nov: the outing is days too.)*
+2. **Aiming with the air rifle.** *Recommended:* a tap on the flock, the result by chance and reach.
+3. **Cheating in falcon contests.** *Recommended:* not now, until the Saudi penalty is found.
+4. **Partners in trapping.** *Proxy:* alone first, partners as the next step. The research recommended
+   yes now (most birds are taken by groups [184][190][200]). Drawn the proxy's way.
+   > الطرح: نبدأ لحالك، والشركاء (ربع يتقاسمون السعر مثل الواقع) الخطوة الجاية؟
+5. **The odds and the gear.** *Proxy:* about one season in 13 for a bare beginner to one in 3 well
+   equipped and placed, never beyond; dear birds at least one season in about 83 to 20.
+6. **A mountain peregrine or a lanner in the net.** *Proxy:* released at once, with a line [194].
+7. **A saker or a قرناس in the net.** *Proxy:* released, with the lines drawn. The قرناس's release is a
+   game choice.
+8. **His own falcon's routes.** *Proxy:* all three, each in its month (drawn).
+9. **Keeping a trapped bird.** *Proxy:* yes, for hunting and contests; resale later not offered (no
+   lawful route was found: his to open).
+10. **Where gear is bought.** *Recommended:* in the phone, under «نادي الصقور» → «الطرح», delivered to
+    the farm like feed. *Or:* at a place on the map (a camping market, as at Arar [202]: a trip of its
+    own).
+    > عدة الطرح: تشتريها من الجوال وتوصل العزبة؟ ولا من سوق على الخريطة تروح له؟ نقترح الجوال.
+11. **A one-day outing beside the trip of days.** Not in his words. *Recommended:* yes: «طلعة يوم» on
+    the ground's card for a near ground (back the same evening), beside «اطلع للرحلة». *Or:* trips of
+    days only.
+    > تبي تبقى طلعة يوم وحدة للمقناص القريب، جنب رحلة الأيام؟ نقترح نعم.
+12. **A day at camp.** *Recommended:* (a) above.
+13. **The falcon festival's date, as an interim choice** until the club's page can be read.
+    *Recommended:* the 2025 dates, 25 Dec–10 Jan.
+14. **Releasing a wild-caught falcon in spring.** *Recommended:* allowed from February.
+15. **What «العرض» in inches measures**: not known (a body measure, not the wingspan).
 
-The moult (المقيض) in spring and summer, when falcons are not flown, is drawn hatched: it is
-not in our research yet (the reviewer's search only) and needs a source before it binds.
+## Gaps, told plainly
 
-### The falcon festival's date, and where it collides
-
-The 2026 edition is 17–30 Nov in two search summaries [157] and 25 Dec – 10 Jan in another
-search [181]; 2025 was 25 Dec – 10 Jan [169][157]. The calendar shows both:
-- **17–30 Nov:** its end meets مزاين الجوف (29 Nov – 2 Dec) and the last days of the grand
-  festival's registration.
-- **25 Dec – 10 Jan:** it falls inside the grand camel festival (1 Dec – 3 Jan).
-
-The phone views draw the 2025 dates until the owner picks one or the club's page is read.
-
-### Two apps, ten on the home screen
-
-The owner named two: «تصريح الصيد» and «نادي الصقور». They stay two apps because they are two
-real things: the permit is the state's, and it will also carry the air rifle's permit later;
-the club holds the falcons, their passports, the auction and the contests. With the six apps
-there now and the two approved and being built (المزاين, المحادثات: task T10), the home has
-ten, in three rows of four. It fits the enlarged phone without scrolling (audited).
-
-### الدعو (training)
-
-One short care action each time the game opens, counting the days since (the draft's game
-choice). What the player sees change is words, never a number: «يرضى بالبرقع والدس»، «ياكل على
-يدك»، «يجي للملواح من قريب»، «يجي للملواح من بعيد»، «جاهز للمقناص» (the steps and their words are a
-game choice; الدعو itself is real [155]). The scale (الميزان) shows the bird's weight in grams:
-an observable a falconer reads daily [155], never standing in for skill. Two weeks untouched
-loses a step (game choice). No الدعو in the moult.
-
-### What a buyer sees, and what stays hidden
-
-A falcon on the auction shows its species, age (فرخ under a year, قرناس over [169]), origin
-(طرح or farm-bred), whether it is «تام» (a full-sized female) or «مثلوث» (the smaller male), and
-its weight: all things a buyer really sees. «تام / مثلوث» is a game choice resting on the club's
-2025 rules' wording as a search summary gives it («تام وليس مثلوث»; not in research section 8).
-The race's «الحر عرضه 16 إنش وفوق» [169] is shown only on the festival screen, as the club's own
-words: **what the inches measure is not known** (not the wingspan: 16 in is 40.6 cm), so no
-falcon carries a number of inches. A wild-caught bird is «طرح هالموسم»: trapped this season and
-sold at the auction [156][157]; that it was trapped with a licence rests on a weak source [160].
-Most wild-caught lots are فرخ (a wild-caught قرناس is rarer: game choice). How it hunts and races is never shown: only its
-outings and results tell, as with the camels' scores.
-
-### The outing
-
-1. The open hunting ground and the licensed estate (المحازة) are far pins on the map, as the
-   mountains are. Open land west of the yard is the real Nafud edge; its exact place, the
-   estate's place and their distances (14 and 22 km) are game choices, to check against a map
-   for villages and farms at build.
-2. The ground's card: what may be hunted there, the season, the distance. «روح بالجيب» takes
-   the player there with the time passing (recommended; question 1).
-3. Driving, from behind: the real HUD; only the gear while moving. The falcon rides hooded on
-   its perch in the car, unseen.
-4. Parked outside the farm and its surroundings, in season, by day, with a permit: the falcon's
-   icon button joins the car's own row. **Parked is the law, not a game choice:** hunting from a
-   moving vehicle is fined 100,000 [136]. Real falconers often slip from a car on the move; the
-   game cannot.
-5. On foot (first person, the owner's rule of 11 Nov): the hooded falcon on the glove, and one
-   icon button at the edge: the hood comes off and the falcon is cast in one tap.
-6. The flight: the falcon and the flushed stone-curlew; the lure (الملواح) button calls it back.
-7. The result: a pin over the falcon where it came down; its card says caught or missed, the
-   flight's time and distance (observables). Game is never sold [166]: nothing on the card is money.
-8. A banned place (the farm and around it, towns, reserves, the coast to 20 km
-   [127][134][135]), a closed season or night (an hour before sunset to an hour after sunrise
-   [135], one source): the button shows in its warning colour; a tap opens the warning card with
-   the fine in words (5,000 [136]). The card offers only «طيب»: whether he may knowingly cast
-   anyway is the owner's (question 8).
-9. Caught, the fine comes after, in the permit app (a badge on the phone button): «مخالفة».
-   Who stops him is «الدورية»: the real body is not named, following the owner's generic-names
-   decision of 13 Nov.
-
-**Why open land offers only الكروان:** the law. The stone-curlew is the falcon's quarry on the
-open-land list [140]; houbara is confirmed only in the licensed estates [142], and whether it
-may be hunted in open land this season was not found, so the game keeps it to the estate. A
-falconer will ask why: this is why.
-
-**The card in play** is new: today the place card is hidden in play (`body.playing #pop`).
-The frames show it docked on the right, as on the map. On foot there is nothing else there;
-in the car the card must sit below the car's row. The approved HUD hides cards in play, so this
-is the owner's to decide (question 7).
-
-**What a frame costs:** the base of each frame was counted from the WebGL calls (main pass and
-shadow pass, `design/hunt/outing_draws.txt`; SwiftShader at 956x440, the counts are the
-phone's, the times are not). The new models are task T11's measured ones
-(`/home/user/wt/t11`): the hooded saker close 6,752 triangles with hood and jesses in 3 draws,
-alert 6,188, in flight 6,364; the stone-curlew 5,084 / 5,420; the houbara 4,996 / 6,052; each
-far model under 1,500; the perch 1,424; the cuff 864. Each draw also casts a shadow (the
-saker's 1 m span is over the 30 cm rule). The sums are still estimates until the birds are in
-the page.
-
-| Frame | Base, measured (main + shadow) | With the new models (estimate) |
-|---|---|---|
-| 1 the map looking west | 118 draws / 155k | pins only: +0 |
-| 3 driving, from behind | 72 / 143k | the falcon unseen in the car: +0 |
-| 4 parked, from behind | 74 / 143k | +0 |
-| driver's seat, parked (counted, no picture) | 37 / 159k | the hooded saker on its perch in the cabin: +4 draws +4 shadow, +8.2k (+8.2k shadow): 45 / 175k |
-| 5 on foot, falcon on the glove | 58 / 227k | hooded saker and cuff: +4 draws +4 shadow, +7.6k (+7.6k shadow): 66 / 242k |
-| 6 the flight | 34 / 104k | far saker and far stone-curlew: +2 +2 shadow, under 3k (+3k): 38 / 110k |
-| 7 the result | 34 / 104k | the same: 38 / 110k |
-| 8 on foot by the yard | 115 / 258k (78 / 197k in an earlier run: the herd moves) | hooded saker and cuff: 123 / 273k |
-
-All under the ADR's 200 draws and 400k triangles. (The base on foot here, 58 / 227k, is
-lower than the 167 / 394k counted on foot by the car at the yard: out in the open there are no
-pens, buildings or grass cells in view.)
-
-None of the outing frames is near the herd: the hunting ground is kilometres away and the farm
-is a banned place. The heaviest view is frame 8, on foot by the yard with the falcon on the glove: about 123 draws and 273k triangles (T11's counts on a measured base); out in the open, the same is about 66 / 242k. The driver's seat with the falcon hooded on its perch is about 45 / 175k.
-
-### The contests
-
-الملواح: a 400 m race from the release to the lure [169][171] (300 m in an older edition, 200 m
-also reported [183]). Classes الملاك، الهواة، المحترفين، النخبة [169][171]; the player starts in
-الملاك (game choice). The round's day in the phone, as the camels' round is: the times come in
-through the day, the player's falcon flies, its time is told to three decimals like the real
-ones. The first two of the owners' round are real (17.905 and 18.061 s, 2025 [182]); the game's
-times run about 16.5–19 s (game choice inside the real 16.549 s reported as a record [183] and
-the 2025 winners 17.653–18.061 s [182]). Prizes by place are a game choice (the real split is
-unknown: [169] and [176] disagree), down to the 7th place (about seven prizes a round:
-1,012 prizes over 139 rounds in 2025 [170][176]).
-
-مزاين الصقور: classes الحر and الجير بيور, each فرخ and قرناس, شاهين بحري قرناس, حر فرخ إنتاج
-محلي [172]; judged of 100 over seven parts by three judges [172][173], **scores never shown**:
-places and prizes only. First three 300,000, 175,000, 100,000 [177] (one source); the 4th and
-5th split the round's remaining 50,000 (uncertain: game choice). At most five falcons a round
-[175] (one source; whether a round or a falconer is not clear). Beauty is the bird's own;
-الدعو does not change it (game choice).
-
-القرموشة and الجير تبع, in the race's species list [169], are likely sex or size classes (the
-male saker is called مثلوث or قرموشة by different sources; تبع the male peregrine): they are
-not drawn as species. Unresolved.
-
-### Money (the owner's decision)
-
-`season_money.jpg`: a wild-caught فرخ (32,000) and a season of outings. No auction runs from
-December to August (the calendar), so the falcon is sold at the next autumn's national auction,
-as a قرناس, after eight months of feed through the moult: the pastime costs about 8,000 over the
-year (game choices). Hunting itself earns nothing [166]. Contests: about one falcon in five wins
-anything (1,012 prizes [170][176] for more than 5,200 falcons [157]), and the prizes average about
-7,300 a falcon (more than 38 million [170][176] over those falcons): both estimates from two
-sources. So most seasons are a small loss (−9,560), the average about −2,260, and a third place
-at المزاين (100,000 [177], one round's split, one source) a large gain (+115,440). The four
-classes' first prizes on the festival screen are that one round's split extended to them (game
-choice). Falconers often release passage birds in spring; if the player may, the pastime costs
-about 38,000 and nothing is sold (question 10).
-
-## Where the later parts attach (not designed here)
-
-- **The air rifle (الساكتون):** a second kind of permit in «تصريح الصيد», a rifle's licence, and
-  a button in the car's row beside the falcon's.
-- **The Kalashnikov:** never in these apps or on any lawful screen; bought through a secret
-  chat in «المحادثات» as the festival's cheating is; if caught, seized, fined and reputation down
-  (the owner's decision), told as the violation here is.
-- **Wolves and stray dogs:** a rare night event at the pens, defended by the pen, the herdsman
-  and a guard dog bought in «العزبة»; killing a wolf never lowers the danger (the owner's decision).
-
-## Questions for the owner (recommendation first)
-
-1. **How much of the outing the player plays.** *Recommended:* he drives within the ground,
-   looks, parks and casts himself; the flight and its result come from the falcon's hidden
-   skill, the ground and luck. *Other options:* (b) he also steers the falcon's stoop (closer to
-   a game of skill, more on the phone: a chase camera on the bird); (c) a result worked out from
-   the card alone, with no outing in 3D (lightest, loses the hunt).
-   > الطلعة: تسوق بالبر وتدوّر وتوقف وترسل الصقر بنفسك، والنتيجة من الصقر والأرض والحظ؟ ولا تبي توجّه الصقر بنفسك وهو ينقض؟ ولا تطلع النتيجة من البطاقة بدون طلعة؟ نقترح الأولى.
-   And the trip there: *recommended* «روح بالجيب» from the card, with the game's time passing;
-   *or* drive all 14 km.
-2. **The falcon at the farm.** *Recommended:* the falcon lives on its perch (الوكر) under the
-   tent's shade (بيت الشعر) or the room's porch, seen only when the camera is near, with no pin
-   of its own: its care is in the phone. Its cost near the herd, from T11's models: the
-   hooded saker 6,752 triangles in 3 draws and the perch 1,424 (about 8.2k and 4 draws, the
-   same again for their shadows) when within sight, nothing when far; one static perched pose,
-   no animation, so it is not an animated animal beside the herd. *Or:* a mews as a place with its own pin and card (more to tap on the map; the
-   map stays clear only if the pin shows when near).
-   > الصقر بالعزبة: يقعد على وكره تحت بيت الشعر ويبان لما تقرّب، ورعايته من الجوال؟ ولا تبي له مكان بدبوس وبطاقة؟ نقترح الأولى.
-3. **The camels while he is away.** *Recommended:* nothing stops: the herd goes on as it does
-   when the player is anywhere else (feed, water and the herdsman as they are), and a trip takes
-   game hours, not days. *Or:* a longer trip (a camp of days, as real falconers do [155][156])
-   leaves the herd to the herdsman, and without one the herd's daily care waits.
-   > الحلال وانت بالمقناص: يمشي مثل ما هو وكل شي على حاله، والطلعة ساعات؟ ولا تبي طلعات أيام بمخيم والراعي يمسك الحلال؟ نقترح الأولى.
-4. **The falcon festival's date, as an interim choice** until the club's own page can be read.
-   *Recommended:* the 2025 dates (25 Dec – 10 Jan), the last edition the sources agree on,
-   inside the camel festival: the player chooses. *Or:* 17–30 Nov.
-   > مهرجان الصقور: نخليه 25 ديسمبر لين 10 يناير مثل آخر نسخة مؤكدة، ويصادف المهرجان الكبير للإبل؟ ولا 17 لين 30 نوفمبر؟ نقترح الأولى لين نقرا صفحة النادي.
-5. **Pastime or second business.** *Recommended:* a pastime that costs, with a rare large prize,
-   at the real odds (about one falcon in five wins anything).
-   > الصقور هواية تصرف عليها ومعها فرصة نادرة بجايزة كبيرة، ولا تبيها تجارة ثانية؟ نقترح الأولى.
-6. **A lost falcon.** Real: a falcon can fly off and be lost; falconers search by its tracker.
-   *Recommended:* yes, rarely, when it is cast far or too heavy, with the tracker shown as a
-   direction on the map until it is found or given up. *Or:* never lost.
-   > الصقر ممكن يضيع بالواقع ويدورونه بجهاز التتبع: تبيه يضيع أحيان؟ نقترح نعم بس نادر.
-7. **The place card in play.** The approved HUD hides cards while playing; the outing needs one
-   for the hunting ground, the result and the warning. *Recommended:* in play, a card opens only
-   when the player taps a pin or a warning button, docked on the right (below the car's row when
-   in the car), and closes with its ✕. *Or:* no card in play: the result told in the phone (a
-   badge) and the warning as the button's colour alone.
-   > البطاقة وقت اللعب (مو بس بالخريطة): تنفتح بس لما تضغط دبوس أو زر التحذير، على اليمين؟ ولا ما فيه بطاقات وقت اللعب والنتيجة بالجوال؟ نقترح الأولى.
-8. **Casting in a banned place anyway.** *Recommended:* not allowed: in a banned place, a closed
-   season or at night the cast button opens only the warning («طيب»); hunting stays lawful by
-   design, as your Kalashnikov and cheating decisions keep the unlawful to its own secret ways.
-   *Or:* allowed with its risk (the 5,000 fine if caught, a chance a game choice), as cheating is.
-   > لو أنت بمكان ممنوع أو الموسم مقفل أو بالليل: زر الصقر يحذرك بس وما يرسل؟ ولا يرسل على كيفك مع خطر الغرامة 5,000 لو انمسكت؟ نقترح يحذر بس.
-9. **Still open from the draft (13.6):** aiming with the air rifle (recommended: a tap on the
-   flock, the result by chance and reach) and cheating in falcon contests (recommended: not now,
-   until the Saudi penalty is found [179][180]). Unchanged by this design.
-
-10. **Releasing a passage falcon in spring.** Falconers often release wild-caught birds after the
-   season. *Recommended:* allowed, as a choice in the falcon's page from February (no resale,
-   no feed through the moult). *Or:* keep or sell only.
-   > الصقارين كثير يطلقون الطرح بالربيع: تبي اللاعب يقدر يطلق صقره بعد الموسم؟ نقترح نعم.
-
-## Not sure
-
-- The 30 species of this season, the bag limit and the permit's fee were not found; no list or
-  limit is shown, and the fee (100) is a game choice.
-- The moult's months, the word الهدد (two readings), and the Saudi words for the hand that carries
-  the falcon and its sex names were not checked against a source; the left hand in the frames is
-  a stand-in's pose, not a claim.
-- Whether "five a round" [175] counts falcons per round or per falconer.
-- What the race's «16 إنش» measures; the same search summary gives a peregrine at least 15 in
-  and «تام وليس مثلوث» (not in research section 8: a gap to read on the club's page).
-- The phone views' race and beauty results are samples (names, fields and places invented).
+- **The trapping regulation's text** was not found. Its licence, issuer and terms are game choices.
+- **Night and lights:** whether the hunting rules' bans on them bind trapping is unconfirmed.
+- **What each piece of gear changes in the odds** is unmeasured.
+- **Resale of a kept bird:** where it may be sold later was not found.
+- **The days of a real falcon trip, its rhythm, the moult's months:** not sourced.
+- **The calendar's jump design (T15)** was not yet drawn. The camp here follows its brief; once its
+  card and summary exist, the camp's take theirs.
+- **The peregrine is not built.** Its stand-in is marked. T11's birds await the owner's approval.
