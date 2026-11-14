@@ -36,7 +36,7 @@ corners, the toes out of the paw) and meshed as one closed surface, as `tool/cam
 | `wolf_*_lod1.glb` | the wolf, far: the same skin decimated | 1,300 each | 1 | 256 px |
 | `dog_alert.glb`, `dog_lie.glb`, `dog_bark.glb` | the guard dog, close: the skin, the eyes, its collar and the collar's ring; barking, also the four canines | 8,152 / 8,150 / 8,296 | 1 | 512 px |
 | `dog_*_lod1.glb` | the guard dog, far: the skin and the collar (2 pieces) | 1,418 / 1,418 / 1,420 | 1 | 256 px |
-| `stray_alert.glb`, `stray_bark.glb` | the stray, close: the skin and the eyes (the barking file adds the canines) | 7,536 / 7,680 | 1 | 512 px |
+| `stray_alert.glb`, `stray_bark.glb` | the stray, close: the skin and the eyes (the barking file adds the canines) | 7,536 / 7,678 | 1 | 512 px |
 | `stray_*_lod1.glb` | the stray, far | 1,300 each | 1 | 256 px |
 
 - **One mesh and one material per file, one-sided:** the skin and every extra piece are closed. The collar is in the
@@ -322,7 +322,7 @@ CANID_VOLUME=1 ...                          # also the standing model's volume
 **Requirements:** Blender as the `bpy` module (the project's `blendenv`), with numpy, SciPy, scikit-image (marching
 cubes) and Pillow in the same environment.
 
-**Time:** the whole set (16 GLBs) took 4 min 3 s in my last run on this machine (4 cores shared with other agents,
+**Time:** the whole set (16 GLBs) took 3 min 42 s in my last run on this machine (4 cores shared with other agents,
 load about 25) and about 17 minutes in the reviewer's run; the full picture set takes about an hour and a half. Each pose's field is voxelised piece by piece in Python (a ray parity per voxel column), each
 texel of two textures is found on the skin, on the nearest piece and on the standing animal, and the occlusion casts
 48 rays from every vertex; the overlap check rasterises every triangle at 2048 px. The GLB files are copied to `assets_src/canids/` and the
