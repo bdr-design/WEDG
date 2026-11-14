@@ -950,7 +950,7 @@ const REASON = {
   alreadyEnteredInFestival: (c) => her(c, 'مسجلة بهالمهرجان', 'مسجل بهالمهرجان'),
   oneFardiRound: () => 'سجلت ناقة بشوط فردي، وما يدخل إلا ناقة وحدة بكل مهرجان',
   roundOwnerLimit: (c, p) => `ما تسجّل أكثر من ${count(p.max, fem(c) ? 'camel' : 'head')} بهالشوط`,
-  wrongGroupSize: (c, p) => (p.have != null ? `ما عنده إلا ${count(p.have - 1, 'head')} من إنتاجه بالعزبة، والشوط يبي ${p.size - 1}` : `الشوط يبي الفحل ومعه ${p.size - 1} من إنتاجه`),
+  wrongGroupSize: (c, p) => (p.have == 1 ? `ما عنده إنتاج بالعزبة، والشوط يبي ${p.size - 1} من إنتاجه` : p.have != null ? `ما عنده إلا ${count(p.have - 1, 'head')} من إنتاجه يدخلون، والشوط يبي ${p.size - 1}` : `الشوط يبي الفحل ومعه ${p.size - 1} من إنتاجه`),
   tooYoungToBreed: () => 'صغير على الفحل وإنتاجه',
   notOffspring: () => 'واحد منهم ما هو من إنتاجه',
   registrationClosed: (c) => `التسجيل ${her(c, 'لشوطها', 'لشوطه')} قفل`,
@@ -1075,8 +1075,8 @@ function enterScreen() {
     <div class="lst flat">${rows.map(item).join('')}</div>
     ${more > 0 ? `<div class="note">وعندك ${count(more, 'head')} غيرها، والقائمة تبدأ بالأزين.</div>` : ''}
     ${c ? `<div class="tank"><small>اللي تدفعه عن ${esc(c.name)}</small>
-      <div class="kind"><span>التسجيل</span><span class="d">${late ? `${n0(FR.lateEntryFee * head)} ريال تأخير` : `ببلاش لين ${dShort(F.closesOn)}، وبعده ${n0(FR.lateEntryFee * head)} ريال لين ${dShort(r.lastEntryDay)}`}</span></div>
-      <div class="kind"><span>${head > 1 ? 'نقلهم' : her(c, 'نقلها', 'نقله')} لـ${REGION[F.region]} و${head > 1 ? 'رجعتهم' : her(c, 'رجعتها', 'رجعته')}</span><span class="d">${n0(D.transportPerHead * head)} ريال يوم الشوط</span></div></div>
+      <div class="kind"><span>التسجيل</span><span class="d">${late ? `${n0(x.fee)} ريال تأخير` : `ببلاش لين ${dShort(F.closesOn)}، وبعده ${n0(x.lateFee)} ريال لين ${dShort(r.lastEntryDay)}`}</span></div>
+      <div class="kind"><span>${head > 1 ? 'نقلهم' : her(c, 'نقلها', 'نقله')} لـ${REGION[F.region]} و${head > 1 ? 'رجعتهم' : her(c, 'رجعتها', 'رجعته')}</span><span class="d">${x.trip ? `${n0(x.trip)} ريال يوم الشوط` : 'مع حلالك الرايح'}</span></div></div>
     <button class="btn ${sure ? 'sure' : 'pri'} wide" data-act="enter" data-id="${esc(c.id)}">${sure ? (head > 1 ? 'اضغط مرة ثانية ويتسجلون' : her(c, 'اضغط مرة ثانية وتتسجل', 'اضغط مرة ثانية ويتسجل')) : `سجّل ${esc(c.name)} بشوط ${RK_SHORT[r.kind]}`}</button>
     <div class="note">تقدر ${her(c, 'تسحبها', 'تسحبه')} لين يوم ${her(c, 'شوطها', 'شوطه')}، وبعد ما يقفل التسجيل ما ${her(c, 'ترجع تسجّلها', 'ترجع تسجّله')} بهالمهرجان. وما تقدر ${her(c, 'تبيعها وهي مسجلة', 'تبيعه وهو مسجل')}.</div>`
     : '<div class="note">ما عندك حلال يدخل شوط بهالمهرجان الحين.</div>'}</div>`;
@@ -1092,7 +1092,8 @@ function dayScreen() {
   if (!G || !e || !R) return `<div class="body">${back}<div class="title">يوم الشوط</div>${G && !e ? '<div class="note" style="margin-top:6px">ما عاد لها شوط هنا.</div>' : waiting()}</div>`;
   const FR = G.festivalRules, c = entryCamel(e), told = e.told, fld = R.field || [], entered = R.entrants;
   const lost = (i) => (i === 0 ? entered : fld[i - 1]) - fld[i];
-  const outLine = (i) => (lost(i) > 0 ? ` · ${lost(i) === 1 ? 'طلع' : 'طلعوا'} ${count(lost(i), fieldNoun(e))}` : '');
+  // (she-camels: «طلعت» whatever the count, as approved; males and bulls: «طلع / طلعوا»)
+  const outLine = (i) => (lost(i) > 0 ? ` · ${fieldNoun(e) === 'camel' ? 'طلعت' : lost(i) === 1 ? 'طلع' : 'طلعوا'} ${count(lost(i), fieldNoun(e))}` : '');
   const removed = e.removedAt != null ? STAGE_KEY.indexOf(e.removedAt) : 99, found = e.foundAt != null ? STAGE_KEY.indexOf(e.foundAt) : 99;
   const row = (cls, icon, i, line, right) => `<div class="row ${cls}"><span class="lead">${svg(icon)}</span><b>${STAGE[i]}</b><span class="qty ${right[0]}">${right[1]}</span><small>${line}</small></div>`;
   const pending = e.announceOn != null && !e.rank && e.removedAt == null;
@@ -1142,7 +1143,7 @@ function resultScreen() {
     <div class="it big"><span class="ph">${c ? photo(c) : ''}</span><b>${esc(e.name)}</b><small class="${e.rank && e.rank <= 10 ? '' : 'bad'}">${outcome}</small>${second ? `<small>${second}</small>` : ''}<small>${worth}</small>${c && c.estimateLow ? `<small>${her(c, 'يقدّرونها', 'يقدّرونه')} ${est(c)}</small>` : ''}</div>
     <div class="sec">المراكز · الجايزة بالريال</div>
     <div class="group">${places.slice(0, 5).map(place).join('')}</div>
-    <div class="note">والجوايز لين العاشر (${n0(R.prizes[9])} ريال). اللي يجي بالعشرة الأوائل تزيد قيمته ويكبر صيته بلونه، وصيتك ب${FAMILY[c ? c.category : e.cat]} ${repWord}. والدرجات ما تنعلن. و${ew(e, 'نقلها', 'نقله', 'نقلهم')} ${n0(MZ.page.transportPerHead * (e.head || 1))} ريال انخصم.</div></div>`;
+    <div class="note">والجوايز لين العاشر (${n0(R.prizes[9])} ريال). اللي يجي بالعشرة الأوائل تزيد قيمته ويكبر صيته بلونه، وصيتك ب${FAMILY[c ? c.category : e.cat]} ${repWord}. والدرجات ما تنعلن. ${MZ.page.tripPaid ? `ونقل حلالك لهالمهرجان ${n0(MZ.page.tripPaid)} ريال انخصم.` : ''}</div></div>`;
 }
 
 // ---------------------------------------------------------------- «المحادثات»: the treatment man's secret chat (the owner, 13 Nov)
@@ -1270,7 +1271,8 @@ export function createPhone({ host }) {
     if (v === 'feed' && st.screen !== 'feed') ORD.barley = ORD.alfalfa = null;      // (opened afresh: the order starts at three weeks' need)
     st.screen = v; scr.classList.toggle('home', v === 'home');
     // (المزاين's and the chat's screens, as their design: a number kept with the word before it too, «لين | 100,000»)
-    let html = S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0');
+    // («بـ 64»: the prefix never left at a line's end either)
+    let html = S[v]().replace(/(\d) (?=[\u0600-\u06FF])/g, '$1\u00a0').replace(/(^|[\s>])بـ (?=\d)/g, '$1بـ\u00a0');
     if (MZ_SCREENS.has(v)) html = html.replace(/([\u0600-\u06FF]) (?=\d)/g, '$1\u00a0');
     if (same && html === drawn) return false;      // (a redraw that would draw the same: left as it is)
     drawn = html;

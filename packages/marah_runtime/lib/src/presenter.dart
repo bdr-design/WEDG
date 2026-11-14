@@ -660,6 +660,8 @@ class Presenter {
                   if (byId[id] case final k?) card(k, v),
               ],
               trip: v.tripFor(f.id, group.length),
+              fee: v.entryFee(f.id, group.length),
+              lateFee: Balance.lateEntryFee * group.length,
             ),
           );
           continue;
@@ -671,6 +673,8 @@ class Presenter {
             round: round,
             error: error,
             trip: v.tripFor(f.id, 1),
+            fee: v.entryFee(f.id, 1),
+            lateFee: Balance.lateEntryFee,
           ),
         );
       }

@@ -96,6 +96,11 @@ void main() {
       (x) => (x['camel']! as Map)['onTheWay'] == true,
     );
     expect(truck['error'], isNotNull);
+    // each row's own trip and fees, the engine's figures
+    for (final x in reg.cast<Map<String, Object?>>()) {
+      expect(x['trip'], greaterThan(0));
+      expect((x['fee'], x['lateFee']), (0, Balance.lateEntryFee));
+    }
     // the she-camel may enter her own round
     final dam = reg.cast<Map<String, Object?>>().firstWhere(
       (x) => (x['camel']! as Map)['ageName'] == 'سديسة',

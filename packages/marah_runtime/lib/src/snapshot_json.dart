@@ -372,6 +372,8 @@ class SnapshotJson {
               : {'code': x.error!.code.name, 'params': x.error!.params},
           if (x.group.isNotEmpty) 'group': [for (final c in x.group) camel(c)],
           'trip': x.trip,
+          'fee': x.fee,
+          'lateFee': x.lateFee,
         },
     ],
     'rounds': [

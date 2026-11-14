@@ -1325,6 +1325,8 @@ class RegisterRow {
     this.error,
     this.group = const [],
     this.trip = 0,
+    this.fee = 0,
+    this.lateFee = 0,
   });
   final CamelCard camel;
   final RoundId? round;
@@ -1337,6 +1339,11 @@ class RegisterRow {
   /// What registering this entry adds to the festival's trip there and
   /// back (one shared trip: nothing more when the camels are going anyway).
   final int trip;
+
+  /// Its registration fee today (0 before the closing), and after the
+  /// closing (the late fee for its head).
+  final int fee;
+  final int lateFee;
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {
