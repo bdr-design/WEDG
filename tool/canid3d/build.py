@@ -338,7 +338,9 @@ def pictures(kind, pose, o, m):
         finish(png)
     if want('head1m') and pose == 'alert':
         # the head at 1 m (front left, a little above), the distance the reviewer judges the faces at
-        hd_ = V3(m.points['head'][0]) * 0.001
+        # aimed at the face's middle (between the eyes and the nose), so the head sits in the picture's centre
+        eyes_ = (V3(m.points['eye_l']) + V3(m.points['eye_r'])) * 0.5
+        hd_ = (eyes_ * 0.65 + V3(m.points['nose']) * 0.35) * 0.001
         cam = hd_ + V3((0.62, 0.62, 0.48)).normalized() * 1.0
         png = st.shot(tag + '_head_1m', cam, hd_, lens=50, res=res)
         finish(png)

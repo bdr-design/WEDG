@@ -21,5 +21,6 @@ the weight on the phone and the owner's questions); the models are in `assets_sr
 - The forepaws close: `wolf_alert_paws.jpg`, `dog_alert_paws.jpg`, `stray_alert_paws.jpg`.
 - The closed mouth has no teeth (the barking mouth has its canines); the fused middle toe pads are under the foot and
   not modelled.
-- The dog's muzzle was shortened and deepened in round 6 (the pariah type's); it is still of the wolf's head family (the same builder), so a little long beside a real pariah dog.
+- The guard dog's muzzle is on the long side for a pariah dog: it was shortened and deepened in round 6 but is still of the wolf's head family (the same builder).
+- No words are written in the pictures; the rulers carry numbers only (centimetres along the ground, metres up the scale picture).
 - The eyes are modelled (a ball in a socket, dark lids); their iris, pupil and catch-light are paint, and with one rough material per animal the eye cannot really shine. The lip line and the nose's sheen are paint.

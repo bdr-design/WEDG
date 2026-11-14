@@ -68,7 +68,7 @@ def vruler(path, px_per_mm, x, y_ground, length_mm):
         w = 22 if mm % 500 == 0 else 14 if mm % 100 == 0 else 7
         d.line((x, y, x + w, y), fill=ink, width=2)
         if mm % 500 == 0:
-            d.text((x + 26, y - 11), f'{mm / 1000:.1f} m', fill=ink, font=f)
+            d.text((x + 26, y - 11), f'{mm / 1000:.1f}', fill=ink, font=f)
     im.save(path)
 
 
@@ -211,7 +211,7 @@ def night(B):
         from PIL import ImageDraw
         dr = ImageDraw.Draw(canvas)
         dr.rectangle(box, outline=(200, 60, 60), width=1)
-        dr.text((956 + 12, 380), f'x3 of the red box ({dist:.0f} m)', fill=(220, 220, 220), font=common.font(16))
+
         canvas.save(png)
         B.finish(png)
 
@@ -277,7 +277,7 @@ def far(B):
     canvas.paste(crop, (956 + 12, 40))
     dr = ImageDraw.Draw(canvas)
     dr.rectangle(box, outline=(200, 60, 60), width=1)
-    dr.text((956 + 12, 410), 'x4 of the red box (15 m): the far models', fill=(220, 220, 220), font=common.font(16))
+
     canvas.save(png)
     B.finish(png)
 
@@ -313,9 +313,4 @@ def firstperson(B):
         png = os.path.join(out, name + '.png')
         st.sc.render.filepath = png
         bpy.ops.render.render(write_still=True)
-        im = Image.open(png).convert('RGB')
-        dr = ImageDraw.Draw(im)
-        dr.rectangle((0, 0, 900, 46), fill=(20, 20, 20))
-        dr.text((14, 10), f'first person, the player\'s eyes (1.66 m): the {who} at {d:.1f} m', fill=(235, 235, 235), font=common.font(26))
-        im.save(png)
-        B.finish(png)
+        B.finish(png)                      # (no caption in the picture: the distance is in the file's name and the README)

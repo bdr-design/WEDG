@@ -54,15 +54,15 @@ HEAD_BLOCKS = ('head', 'jaw', 'nose', 'eye')
 PALETTES = {
     # the Arabian wolf: 'a mixture of black and slightly buffy grey' (Pocock); greyish beige; legs paler and tawny
     'wolf': dict(ground=C(0.55, 0.50, 0.43), tawny=C(0.66, 0.53, 0.39), pale=C(0.82, 0.78, 0.70), dark=C(0.14, 0.12, 0.10),
-                 grizzle=0.78, saddle=0.85, bar=0.35, legline=0.40, iris=C(0.80, 0.60, 0.20), tailtip=True, gland=True,
+                 grizzle=0.78, saddle=0.85, bar=0.35, legline=0.40, iris=C(0.86, 0.64, 0.22), tailtip=True, gland=True,
                  white_feet=False, dust=0.0, tailwhite=False),
     # the guard dog: sandy, white chest, belly, feet and tail tip (one of the pariah type's colours)
     'dog': dict(ground=C(0.80, 0.63, 0.42), tawny=C(0.78, 0.61, 0.40), pale=C(0.92, 0.90, 0.85), dark=C(0.55, 0.40, 0.25),
-                grizzle=0.10, saddle=0.35, bar=0.0, legline=0.0, iris=C(0.36, 0.20, 0.08), tailtip=False, gland=False,
+                grizzle=0.10, saddle=0.35, bar=0.0, legline=0.0, iris=C(0.50, 0.30, 0.13), tailtip=False, gland=False,
                 white_feet=True, dust=0.0, tailwhite=True),
     # the stray: dull ginger-tan, a darker mottled back, off-white below, dusty
     'stray': dict(ground=C(0.60, 0.46, 0.33), tawny=C(0.58, 0.45, 0.32), pale=C(0.76, 0.70, 0.60), dark=C(0.30, 0.22, 0.15),
-                  grizzle=0.25, saddle=0.75, bar=0.0, legline=0.0, iris=C(0.36, 0.20, 0.08), tailtip=False, gland=False,
+                  grizzle=0.25, saddle=0.75, bar=0.0, legline=0.0, iris=C(0.50, 0.30, 0.13), tailtip=False, gland=False,
                   white_feet=False, dust=0.35, tailwhite=False),
 }
 PALETTES['wolf_winter'] = PALETTES['wolf']
@@ -180,6 +180,7 @@ class Coat:
                 col = mix(col, pal['pale'], 0.7 * sstep(0.024 * H, 0.010 * H, np.linalg.norm(P - q, axis=-1)))
         else:
             col = mix(col, col * 0.85, sstep(0.75, 0.95, a))                         # the muzzle's end darker
+        col = col * (1 + 0.16 * self.face_relief(P))[..., None]     # the face's planes shaded a little in the colour
         col = self.eye(P, col)
         col = self.lip_line(P, a, b, c, col)
         return self.nose_mouth(P, N, a, col, block)
@@ -227,12 +228,21 @@ class Coat:
         o, hd, hn, hv, Lh = self.hf
         nose = np.array(tuple(self.rest.points['nose']))
         nr = self.rest.S['nose'][2] * self.H
-        col = mix(col, black * 0.9, sstep(nr * 1.6, nr * 1.3, np.linalg.norm(P - nose, axis=-1)))
-        sheen = nose + hn * (nr * 0.55) - hd * (nr * 0.3)
-        col = mix(col, C(0.30, 0.30, 0.32), 0.6 * sstep(nr * 0.45, nr * 0.1, np.linalg.norm(P - sheen, axis=-1)))   # the wet nose's sheen
-        for sg in (1, -1):                                   # the nostrils: two dark commas on the pad's front
-            q = nose - hv * (sg * nr * 0.45) - hn * (nr * 0.1) - hd * (nr * 0.2)
-            col = mix(col, C(0.0, 0.0, 0.0), sstep(nr * 0.38, nr * 0.22, np.linalg.norm(P - q, axis=-1)))
+        # the pad: black only over the pad itself (an ellipsoid round its middle, not a disc round its tip), its top
+        # (the bridge) and rim a little lighter with a painted sheen, the nostrils dark (one material: no real gloss)
+        pc = nose - hd * (0.8 * nr)
+        q = P - pc
+        e = np.sqrt((q @ hd / (1.15 * nr)) ** 2 + (q @ hv / (1.12 * nr)) ** 2 + (q @ hn / (0.88 * nr)) ** 2)
+        pad = sstep(1.10, 0.96, e)
+        col = mix(col, C(0.07, 0.06, 0.06), pad)
+        col = mix(col, C(0.20, 0.18, 0.18), pad * sstep(0.25, 0.75, (q @ hn) / nr) * 0.8)       # the bridge, lighter
+        col = mix(col, C(0.16, 0.14, 0.14), pad * sstep(0.80, 0.98, e) * 0.6)                   # the rim, lighter
+        sheen = pc + hn * (nr * 0.62) + hd * (nr * 0.25)
+        col = mix(col, C(0.42, 0.42, 0.44), 0.7 * pad * sstep(nr * 0.42, nr * 0.08, np.linalg.norm(P - sheen, axis=-1)))
+        tip = pc + hd * (0.7 * nr)
+        for sg in (1, -1):                                   # the nostrils: dark commas where they are cut
+            qn = tip - hd * (nr * 0.15) - hn * (nr * 0.12) - hv * (sg * nr * 0.42)
+            col = mix(col, C(0.0, 0.0, 0.0), sstep(nr * 0.34, nr * 0.16, np.linalg.norm(P - qn, axis=-1)))
         hinge, jd, jn, jv = self.rest.jaw_frame
         jn = np.array(tuple(jn))
         if block == 'jaw':
@@ -297,9 +307,9 @@ class Coat:
             # the iris (the wolf's amber, the dog's dark brown) round a dark round pupil, a rim of darker iris, the
             # rest of the ball dark (a canid shows almost no white); a painted catch-light (one material: no gloss)
             col = np.broadcast_to(C(0.10, 0.07, 0.05), P.shape).copy()
-            iris = sstep(0.62, 0.70, S)
-            col = mix(col, self.pal['iris'] * 0.75, iris)
-            col = mix(col, self.pal['iris'], sstep(0.74, 0.84, S))
+            iris = sstep(0.52, 0.60, S)
+            col = mix(col, self.pal['iris'] * 0.85, iris)
+            col = mix(col, np.clip(self.pal['iris'] * 1.15, 0, 1), sstep(0.66, 0.80, S))
             if self.eye_open > 0.6:
                 col = mix(col, np.clip(self.pal['iris'] * 1.8, 0, 1), sstep(0.80, 0.87, S))    # the lighter ring round the pupil
             col = mix(col, C(0.02, 0.02, 0.02), sstep(0.90, 0.93, S))
@@ -342,4 +352,23 @@ class Coat:
             return np.zeros(P.shape[:-1], np.float32)
         run = RUN_DOWN if block in LEG_BLOCKS or block == 'tail' else RUN_TRUNK
         q = P / run
-        return 0.30 * noise3(q, 0.9, 31) + 0.22 * noise3(q, 2.2, 32) + 0.6 * noise3(P, 14.0, 33)
+        h = 0.30 * noise3(q, 0.9, 31) + 0.22 * noise3(q, 2.2, 32) + 0.6 * noise3(P, 14.0, 33)
+        if block in HEAD_BLOCKS or block == 'neck':
+            h = h + 3.5 * self.face_relief(P)
+        return h
+
+    def face_relief(self, P):
+        """The face's planes (-1..1, about a millimetre or two in the normal map): the stop's crease between the eyes
+        and the brows over them, the edge where the muzzle's top meets its side, the cheek's lower edge."""
+        H = self.H
+        a, b, c = self.head_coords(P)
+        lat = np.abs(c)
+        stop = -np.exp(-((a - 0.47) / 0.05) ** 2) * np.exp(-(lat / 0.012) ** 2) * sstep(0.02, 0.06, b)
+        brow = np.exp(-((a - 0.43) / 0.06) ** 2) * np.exp(-((lat - 0.035) / 0.014) ** 2) * sstep(0.04, 0.07, b)
+        rows = self.rest.S['head']
+        ta = np.array([r[0] for r in rows])
+        top = np.interp(a, ta, np.array([r[1] + r[2] for r in rows]))
+        wid = np.interp(a, ta, np.array([r[4] for r in rows]))
+        edge = np.exp(-((lat - 0.78 * wid) / 0.008) ** 2) * np.exp(-((b - (top - 0.012)) / 0.012) ** 2) * sstep(0.52, 0.60, a) * sstep(0.98, 0.90, a)
+        cheek = -np.exp(-((b + 0.035) / 0.010) ** 2) * sstep(0.25, 0.35, a) * sstep(0.55, 0.45, a) * sstep(0.04, 0.06, lat)
+        return stop + 0.7 * brow + 0.6 * edge + 0.6 * cheek

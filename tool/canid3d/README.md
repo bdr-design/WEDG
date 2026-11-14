@@ -72,7 +72,7 @@ The pictures are in `design/canids/` (JPEG):
 - **Standing:** the front view, the view from above, and the forepaws close from three-quarter front with a raking light (`*_alert_paws.jpg`).
 - `canids_far_15m.jpg`: the far models (standing) from the game's camera at 15 m in the game's light, as the phone
   shows them, with a ×4 enlargement.
-- `firstperson_dog_1_0m.jpg`, `firstperson_dog_1_5m.jpg`, `firstperson_stray_2_0m.jpg`, `firstperson_wolf_3_0m.jpg`: first person, the player's eyes (the game on foot: eye height 1.66 m, 40° vertical field of view, 956 × 440 drawn at 2x), the camera that far from the head along the ground, in front of it and to its left.
+- `firstperson_dog_1_0m.jpg`, `firstperson_dog_1_5m.jpg`, `firstperson_stray_2_0m.jpg`, `firstperson_wolf_3_0m.jpg`: first person, the player's eyes (the game on foot: eye height 1.66 m, 40° vertical field of view, 956 × 440 drawn at 2x), the camera that far from the head along the ground (the distance in the file's name), in front of it and to its left. No words are written in any picture: the rulers carry numbers only (centimetres along the ground, metres up the scale picture), the night pictures' enlargement is the red box's ×3, the far picture's ×4.
 - `*_alert_head_1m.jpg`: each head at 1 m.
 - `canids_scale.jpg`: all of them beside the player's figure and a calf a few days old.
 - `wolf_night_20m.jpg`, `wolf_night_46m.jpg`, `wolf_day_46m.jpg`: the wolf where the game will show it (below).
@@ -389,15 +389,20 @@ animation texture beyond it, as ADR 0005 plans for the camels: 32 bones × about
   - the eye's opening: the wolf's an almond about 2.0 × 1.2 times the ball's radius; the dogs' a longer, lower,
     oblique almond (front corner lower, 12°), about 18 × 10 mm: a look judgement, no source gives a dog's eye opening;
   - the nose pad: wider than tall, its front nearly flat and bevelled down toward the lip, the two nostrils cut into
-    it as small commas;
+    it as small commas; in round 7 made smaller (the wolf's about 29 × 21 mm, the dogs' about 27 × 20 mm: it had
+    read as a ball as wide as the muzzle's end from the front; a look judgement, no source gives the pad's size);
   - the ears' cup (since round 2), the toes and their clefts (rounded since round 5), the cheeks.
 - **Painted:**
-  - on the eyeball: the iris (the wolf's amber, the dogs' brown with a lighter ring round the pupil) round a round
-    black pupil, the rest of the ball
+  - on the eyeball: the iris (the wolf's amber, the dogs' brown with a lighter ring round the pupil; round 7: a wider,
+    brighter iris so the eye reads at 1 m in the game's light) round a round black pupil, the rest of the ball
     dark, and a small catch-light: the material is one and rough (one draw per animal), so the eye cannot really
     shine and the catch-light is painted;
   - the lip line (about 2–3 mm wide with soft edges) in the groove; the lower lip's dark edge only near the corner;
-  - the nose's dark with its nostrils and a painted sheen (it cannot look wet with one rough material);
+  - the nose: black only over the pad (round 7: the black had spread round it as a disc), its bridge and rim a little
+    lighter, the nostrils dark, a painted sheen (it cannot look wet: one rough material and no roughness texture,
+    the texture pair being colour and normal);
+  - the face's planes (round 7): the stop's crease between the eyes, the brows, the edge where the muzzle's top meets
+    its side and the cheek's lower edge, in the normal map and shaded a little in the colour;
   - the ears: dark deep in the hollow, pale tufts of hair at the inner rim;
   - the coat's every mark, the claws, the pads.
 - **The far models** keep the socket in the skin with the eye painted in it (no ball: at their distances it is

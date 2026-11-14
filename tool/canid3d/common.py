@@ -598,7 +598,7 @@ def ruler(path, px_per_mm, x0, y, length_mm, step_label=100):
         d.line((x, y, x, y - h), fill=ink, width=2)
         if mm % step_label == 0:
             d.text((x - 8, y + 5), str(mm // 10), fill=ink, font=f)
-    d.text((x0 + length_mm * px_per_mm + 12, y - 10), 'cm', fill=ink, font=f)
+    pass                                   # (no unit written: the README says the ruler is in centimetres)
     im.save(path)
 
 
