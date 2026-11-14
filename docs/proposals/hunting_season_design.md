@@ -16,18 +16,23 @@
 
 ## Whose word is what
 
-**The owner's own words (decisions):**
-1. He drives and casts the falcon himself; the result comes from the falcon, the ground and luck.
-2. «تجارة ثانية»; asked what kind, «اصيده صيد وفيه طيور بس قيمتها عاليه جدًا», and the night of
-   13–14 Nov «ايه مخيم وايام والطرح يعتمد على تجهيزاتك وحمامك وغيره والخيمه المتنقله وغيره»: trapping,
-   a camp of days, the catch resting on his gear, his pigeons and the mobile tent.
-3. A card opens in play only by his tap of a pin or a warning button, on the right.
-4. In a banned place or time the button warns, says why, and does not act.
-5. A falcons' room at the farm, with its pin and card.
-6. A falcon is lost rarely; the tracker finds it mostly.
-7. The farm runs as on any day while he is away. **14 Nov: «خل الطلعة ايام مافي مشكلة»**: the falcon
-   outing is a trip of days too. Our earlier reading (decision 7 kept "hours, back the same day"
-   for falconry, days for trapping only) and the proxy's batch 3 item 8 are **withdrawn**.
+**The owner's decisions, in his words** (quoted from [hunting_owner_decisions.md](../agents/hunting_owner_decisions.md)):
+1. How the outing is played: «أسوق وأرسل بنفسي: تضغط دبوس المقناص و«روح بالجيب» يوديك هناك والوقت يمشي، وهناك أنت تسوق
+   وتدوّر وتوقف وتشيل البرقع وترسل الصقر. النتيجة من الصقر والأرض والحظ.»
+2. Pastime or business: «تجارة ثانية»; asked what kind: «اصيده صيد وفيه طيور بس قيمتها عاليه جدًا»; the night of 13–14
+   Nov: «ايه مخيم وايام والطرح يعتمد على تجهيزاتك وحمامك وغيره والخيمه المتنقله وغيره».
+3. Cards while playing: «تنفتح بضغطتك بس: البطاقة تنفتح وقت اللعب بس لما تضغط أنت دبوس أو زر التحذير، على يمين الشاشة،
+   مثل المرسوم. ما يطلع شي مكتوب من نفسه.»
+4. A banned place or time: «الزر يحذر وما يرسل: في المكان أو الوقت الممنوع زر الصقر يصير تحذير ويقول لك ليش ممنوع، وما
+   ينرسل الصقر.»
+5. Where the falcons live: «غرفة صقور بدبوسها: مكان للصقور تبنيه في العزبة (أوكار ومقيض) له دبوس على الخريطة وبطاقة،
+   مثل الشبوك والخزان. يناسب التجارة لأن عندك أكثر من صقر.»
+6. A lost falcon: «يضيع نادر: مرة نادرة الصقر ما يرجع، وتدوره بجهاز التتبع: غالبًا تلقاه وأحيانًا يروح. جهاز التتبع
+   يقلل الخطر.»
+7. The camels during an outing: «طلعة ساعات وكل شي يمشي: الطلعة تاخذ ساعات من نهار اللعبة وترجع نفس اليوم، والعزبة
+   تمشي مثل كل يوم.» Then on 14 Nov: «خل الطلعة ايام مافي مشكلة». So the outing is days too; «العزبة تمشي مثل كل يوم»
+   stands. Our earlier reading (hours for falconry, days for trapping only) and the proxy's batch 3 item 8 are
+   **withdrawn**.
 
 **The proxy's provisional answers (batch 3), drawn and marked:**
 1. The odds as a range, the gear moving him along it, never past it.
@@ -51,7 +56,7 @@
 | Picture | What it shows |
 |---|---|
 | `design/hunt/season_calendar.jpg` (`season.cjs`) | The year Aug 2026–Jul 2027: the trapping season and the passage; the auctions told apart (the breeders' auction in August; the trapping auction 1 Oct–30 Nov; the exhibition 1–10 Oct), the three routes each in its month; the hunting season; the festival's two date ranges; the camel year from the engine; a new game's first season |
-| `design/ui/phone_falcon.jpg` (`phone_falcon.cjs`, 15 views) | The home with ten apps; «نادي الصقور»: the auctions and the routes, tonight's trapping lots as bidders see them, الطرح (the permit and the gear), entering a trapped bird, the hammer (an example), his falcons and how each came, الدعو, the festival and its rules, the results; «تصريح الصيد»: the two permits, what is banned and what is released, the fines; a violation |
+| `design/ui/phone_falcon.jpg` (`phone_falcon.cjs`, 18 views) | The home with ten apps; «نادي الصقور»: the auctions and the routes, tonight's trapping lots as bidders see them, الطرح (the permit and the gear), entering a trapped bird, the hammer (an example), his falcons and how each came, الدعو, the festival and its rules, the results; «تصريح الصيد»: the two permits, what is banned and what is released (the proxy's three lines word for word), the fines; the card before leaving and the summary as the calendar's own views with the trip's lines. Round 2's fine view is dropped: by decision 4 the buttons warn and do not act, so no fine for hunting or trapping in a banned place can follow (the fines stay on the permit) |
 | `design/hunt/trip_01..21_*.jpg`, `trip_board.jpg` (`trip.cjs`) | Being away for days: the grounds' pins and the card before leaving (falconry and trapping); the falcons' room and its card; the drive; the falcon trip's camp, its card, the cast, the flight, the result, the rare lost falcon; the trapping camp, dawn through the binoculars, the pigeon and the stoop, the bird in the net, a sellable peregrine, a saker released, an empty day handing the game back, the net's button warning off the ground, the falcon's button warning by the farm, the trip's summary |
 | `design/hunt/season_money.jpg` (`season.cjs`) | A season of trapping alone as a range, beside falconry's costs and the contests' prizes |
 
@@ -86,7 +91,9 @@
   length, width, weight and where it was trapped (as the sale pages give them [187][216]; what the
   width measures is not known), the hammer falls, and the money lands in full with no fee.
   The hammer view's 112,000 is about the median of the 18 sales of 2025 read; it is marked as an
-  example, not an expectation.
+  example, not an expectation. Across the whole sample there is one trapped bird (براق, الحماد, sold), marked
+  «مثال» on the hammer and on the summary; سهيل was bought at the trapping auction (71,000, the lowest 2025 sale read
+  [217]).
 - **Gear:** in the club's app under «الطرح», with prices that are game choices (question 10):
   pigeons, the net on the pigeon, nets for birds and the jerboa, binoculars, the mobile tent, the
   camp's supplies. What each item does is from the sources [198][204][222][223]; what it changes in
@@ -96,6 +103,9 @@
   - the trapping permit: 1 Oct–30 Nov, on trapping grounds only; 500 riyals, a game choice; the
     issuer was not found.
 
+  The coast line's «إلا أرض طرح بموسمها» is **the game's choice, not a real rule**: the hunting rules close the coast
+  to 20 km [195], yet the auction takes birds trapped on the coast [197][217]; the research leaves the clash
+  unresolved.
   It also lists what is never trapped (the mountain peregrine and the lanner [194]), what is released
   (the saker and the قرناس: proxy), no night or lights (the hunting rules [135][136]; whether they
   bind trapping is unconfirmed), and the fines in words.
@@ -121,31 +131,30 @@ days a trip lasts and the day's rhythm are **not sourced** (game choice). The tr
 stocked for the whole stay [204], and the trappers' hours are dawn to about 10 a.m. plus a short
 evening hour [204].
 
-So the game has **one** way of being away, the same for both. It shares everything it honestly can:
-1. **The card before leaving**, on the ground's pin. It shows what he takes, what is missing, and how
-   many days the feed and water last at the farm. It is the same card as the calendar's jump (task
-   T15, /home/user/wt/t15: its brief asks for that card; its design note was not yet written when this
-   was drawn).
-2. **The drive** (the real car), or «اطلع» from the card with the travel time passing.
-3. **The camp:** the tent, the supplies and the vehicle, with a pin on the tent whose card shows the
-   day, the supplies left and the farm's days left. «نام لين الفجر» and «فك المخيم وارجع» are there
-   at any time.
-4. **How the days pass:**
-   - *What he does himself:* each day's working hours are his to play.
-     - Falconry: morning and afternoon flights (game choice): he drives, searches, stops, unhoods
-       and casts.
-     - Trapping: dawn to 10 a.m. and the evening hour [204]: he watches with the binoculars,
-       releases the pigeon with the net when a falcon passes, and takes the bird from the net.
-   - *What is passed over:* the rest of the day and the night pass at a tap of «نام لين الفجر»,
-     the same passing of game time as the calendar's jump, a day at a time.
-   - *When the game hands back:* a bird in the net (he is playing then); the farm's feed or water
-     about to run out (an alert, the same as the jump's early stop, with ordering from the phone
-     allowed); the supplies running out; the season's end.
-   - *Where it differs from the calendar's jump:* the jump skips many days at once with the player
-     away. At camp, each day stops at its working hours, because decision 1 and his trapping words
-     put the work in his hands.
-5. **Breaking camp and the summary:** at any time; back at the farm, a summary in the phone, as the
-   jump's summary is.
+So the game has **one** way of being away, the same for both, and it is **the calendar's own mechanism** (task T15,
+/home/user/wt/t15 docs/proposals/rush_and_calendar.md section 5: `away(plan)`: a target day, stops as checks on the
+game's state after each day, a landing minute, a cancel flag, the summary counted as it runs, one save at the end):
+1. **The card before leaving is the calendar's card** («قبل ما تمشي», phone views 16 and 17). Its own lines stay as
+   they are: the days each store lasts «تقريبًا», what falls due on the way (festivals and his round's day,
+   registrations, wages, a calving), the standing order and the vet's contract, the go button waiting while a camel is
+   sick and untreated, «التقويم يمشي لقدام بس» and its two taps. The trip adds its lines under them: the ground and its
+   distance, the gear he has and lacks, the camp's supplies. The ground's pin card on the map opens it with «اطلع».
+2. **The drive** is the plan's travel time (`AwayPlan.travel`), through the same call, with the stops still checked.
+3. **The camp:** the tent, the supplies and the vehicle, with a pin on the tent whose card shows the day, the supplies
+   left and the farm's days left «تقريبًا». «نام لين الفجر» and «فك المخيم وارجع» are there at any time.
+4. **How the days pass:** one night per tap of «نام لين الفجر», and each tap is, in the engine, one call of `away()` to
+   tomorrow, landing at the working hour's start (dawn for trapping, the morning flight for falconry).
+   - *Why one night a tap, not one jump of many days:* his decision 1 and his trapping words put each day's work in
+     his hands, so each day hands back at its working hours.
+   - *The stops are ALL the calendar's:* an illness, a death, a store at 3 days, money below zero, the account at its
+     limit, a fine or ban, an offer, his round's day (landing before its 07:00 stage), a registration closing in 3
+     days, the breeding season opening, the pens full. *Plus the camp's own:* its supplies out, the trapping season's
+     end, the trip's chosen end.
+   - *A bird in the net is played live,* in the working hours, not a stop.
+   - *What he does himself:* falconry, morning and afternoon flights (game choice); trapping, dawn to 10 a.m. and the
+     evening hour [204]: watching, releasing the pigeon, taking the bird.
+5. **The summary is the calendar's summary view** («اللي صار», phone view 18 and trip_21), with the trip's lines above
+   its own (days out, birds caught and released, the camp's spending).
 
 **A day at camp, three ways (recommendation first):**
 - **(a) He does the work with his hands; the result is worked out** (recommended). He spots the
@@ -182,12 +191,14 @@ at 956x440: the counts are the phone's, the times are not).
 | The map, a ground's card | 79–116 draws / 124–155k | pins only: +0 |
 | The farm with the falcons' room | 116 / 154k | room and perches: +3 draws, about +3.4k: 119 / 158k |
 | Behind the parked car at a camp | 71 / 143k | tent, cage or perch, supplies (static), the hooded saker on its perch: about +7 draws, +11k (+8k shadow): 78 / 162k |
-| The driver's seat | 37 / 159k (round 1; this run's reading agrees) | the hooded saker on its cabin perch: +4 +4 shadow, +8.2k (+8.2k): 45 / 175k |
+| The driver's seat | 37 / 159k (**round 1's count only**: this run's reading did not take) | the hooded saker on its cabin perch: +4 +4 shadow, +8.2k (+8.2k): 45 / 175k |
 | On foot in the open, the falcon on the glove | 56 / 225k | hooded saker and cuff: +4 +4 shadow, +7.6k (+7.6k): 64 / 240k |
 | On foot in the open, a flight or the trapping | 33 / 103k | far saker and stone-curlew, or a pigeon and a far peregrine: about +4 draws, under 6k: 37 / 109k; the peregrine close in the net with the net: about +5, +8k: 38 / 119k |
+| Through the binoculars (trip_14) | 37 / 159k (stale in the file: the view had just changed; the open-ground base is 33 / 103k) | the far peregrine enlarged by the narrowed view needs the near model by its size on screen: about 6k triangles, 3 draws (+3 shadow): about 39 / 115k |
 | On foot by the yard | 78–115 / 197–258k (the herd moves) | the hooded saker on the glove: up to 123 / 273k |
 
-All under the ADR's 200 draws and 400k triangles. Each line in the file is the heaviest of the last
+He leaves the binoculars by their own button at the right edge (the mask covers the top-left buttons). All under the
+ADR's 200 draws and 400k triangles. Each line in the file is the heaviest of the last
 five frames before its shot, so a view that had just changed can still read as the one before.
 
 **New things and their estimates** (none is built):
@@ -252,6 +263,9 @@ The camp and the room add a few draws at most, far under the ADR's 200 draws and
 - **What each piece of gear changes in the odds** is unmeasured.
 - **Resale of a kept bird:** where it may be sold later was not found.
 - **The days of a real falcon trip, its rhythm, the moult's months:** not sourced.
-- **The calendar's jump design (T15)** was not yet drawn. The camp here follows its brief; once its
-  card and summary exist, the camp's take theirs.
+- **The calendar's mechanism (T15)** is being revised after its own review; the card, the stops and the summary here
+  follow its note as it stood on 14 Nov (section 5 and its stops table). Its named hook for the falcon's daily care
+  (`falconCare`) stays empty until hunting is built.
+- **The coast:** coastal trapping grounds against the hunting rules' coastal ban are unresolved in the research; the
+  game's exception on the permit is its own choice.
 - **The peregrine is not built.** Its stand-in is marked. T11's birds await the owner's approval.
