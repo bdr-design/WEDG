@@ -113,6 +113,7 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         me,
         Gear.values.byName(_str(j['gear'])),
         _int(j['units']),
+        falcon: j['falcon'] == null ? null : FalconId(_str(j['falcon'])),
       ),
       'buyFalcon' => BuyFalcon(me, _str(j['lot']), _int(j['upTo'])),
       'startTrip' => StartTrip(
@@ -285,10 +286,11 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
   },
   SetTestMoney(:final on) => {'type': 'setTestMoney', 'on': on},
   BuyPermit(:final kind) => {'type': 'buyPermit', 'kind': kind.name},
-  OrderGear(:final gear, :final units) => {
+  OrderGear(:final gear, :final units, :final falcon) => {
     'type': 'orderGear',
     'gear': gear.name,
     'units': units,
+    if (falcon != null) 'falcon': falcon.value,
   },
   BuyFalcon(:final lot, :final upTo) => {
     'type': 'buyFalcon',

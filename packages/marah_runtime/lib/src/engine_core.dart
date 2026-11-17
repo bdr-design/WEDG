@@ -215,6 +215,15 @@ class EngineCore {
           ),
           null,
         );
+      case StartTrip(:final actor, :final kind, :final ground, :final nights):
+        return (
+          StartTrip(actor, kind, ground, nights, minute: minuteOfDay()),
+          null,
+        );
+      case EndTrip(:final actor):
+        return (EndTrip(actor, minute: minuteOfDay()), null);
+      case CareFalcons(:final actor):
+        return (CareFalcons(actor, minute: minuteOfDay()), null);
       default:
         break;
     }
@@ -365,13 +374,15 @@ class EngineCore {
     return (run: run, refused: null);
   });
 
-  /// A night at camp («نام لين الفجر», task T18): one away call to
-  /// tomorrow with the camp's own stops and lines, landing at the working
-  /// hour's start (Trips). Refused when he is not on a trip of days.
+  /// The trip's next leg by the away call (task T18, Trips.leg): the drive
+  /// out to the ground's working hour on the day it reaches it, a night at
+  /// camp («نام لين الفجر») to tomorrow's working hour, or the drive home;
+  /// with the calendar's stops (and the camp's own at the ground). Refused
+  /// when there is no leg beyond today.
   Future<({AwayRun? run, DomainError? refused})> tripNight() async {
     final g = _game;
-    final plan = g == null ? null : Trips.night(g);
-    if (g == null || plan == null) {
+    final leg = g == null ? null : Trips.leg(g);
+    if (g == null || leg == null) {
       return (
         run: null,
         refused: const DomainError(ErrorCode.huntRefused, {
@@ -379,13 +390,12 @@ class EngineCore {
         }),
       );
     }
-    final t = g.me.falconry?.trip;
     return away(
-      plan.target,
-      landingMinute: Trips.landingMinute(t, plan.target),
-      extra: plan.extra,
-      counters: plan.counters,
-      card: plan.card,
+      leg.plan.target,
+      landingMinute: leg.landing,
+      extra: leg.plan.extra,
+      counters: leg.plan.counters,
+      card: leg.plan.card,
     );
   }
 
@@ -402,7 +412,9 @@ class EngineCore {
     int nights,
   ) => _serial(() async {
     final g = _game;
-    return g == null ? null : Trips.card(g, kind, ground, nights);
+    return g == null
+        ? null
+        : Trips.card(g, kind, ground, nights, minute: minuteOfDay());
   });
 
   /// Moves [s]'s clock anchor so that now is [minute] of [day], in the
