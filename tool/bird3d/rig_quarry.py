@@ -75,8 +75,9 @@ def rest(name, wings, level=0):
     return out, pts, body, pose
 
 
-HANDOVERS = {'houbara': (('take_off', 'flight'), ('escape', 'flight'), ('stand', 'run'), ('run', 'stand')),
-             'curlew': (('take_off', 'flight'), ('stand', 'run'), ('stand', 'crouch'), ('crouch', 'stand')),
+HANDOVERS = {      # transitions into what follows them (two loops, such as stand and run, the game cross-fades)
+             'houbara': (('take_off', 'flight'), ('escape', 'flight')),
+             'curlew': (('take_off', 'flight'), ('stand', 'crouch'), ('crouch', 'stand')),
              'pigeon': (('stand', 'flutter'), ('flutter', 'stand'))}
 NECK = {'houbara': ((262, 312), (312, 362), (362, 408)), 'curlew': ((174, 205), (205, 236)), 'pigeon': ((136, 157), (157, 176))}
 HEAD_FROM = {'houbara': 408, 'curlew': 236, 'pigeon': 176}
@@ -541,7 +542,7 @@ class Clips:
         its plumage (from search summaries: crouch, freeze, then run; the timing is a game choice); down by 12,
         held, up again from 48."""
         k = ramp(f, 0, 12) * (1 - ramp(f, 48, 60))
-        feet = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((-6, -self.hw, 0)), True, 0)}
+        feet = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((-28, -self.hw, 0)), True, 0)}      # where the stand has them
         return {'feet': feet, 'mesh': 'fold', 'pitch': -4 * k, 'bob': -60 * k, 'neck': (-55 * k, -25 * k), 'head_pitch': 10 * k,
                 'tail_drop': -6 * k}
 
