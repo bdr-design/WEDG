@@ -279,8 +279,8 @@ const CSS = `
   .hjl .row.vet .act { grid-row: 1; }
   .hjl .row.vet .act .btn { white-space: nowrap; }      /* («افحص بكرة» on one line: the note under it gave the button no more room) */
   .hjl .row.vet small { grid-column: 2 / 4; }      /* (the vet's note on its own line under the title and the button, not three short lines beside it) */
-  .hjl .lnk { margin-top: -4px; }
-  .hjl .note.ans b { color: var(--ink); font-weight: 700; }      /* (the seller's answer in the سوم's block: the owner's item 26) */      /* (T15's buy-now link kept close under the buy button it belongs to) */
+  .hjl .lnk { margin-top: -4px; }      /* (T15's buy-now link kept close under the buy button it belongs to) */
+  .hjl .note.ans b { color: var(--ink); font-weight: 700; }      /* (the seller's answer in the سوم's block: the owner's item 26) */
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }      /* (what is said after an order, for a screen reader: outside the screen the redraws replace) */
 `;
 
