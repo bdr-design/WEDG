@@ -2206,7 +2206,7 @@ export function createPhone({ host }) {
         // the answer as the engine gave it: each uses a try; a counter lowers the price (the next try halves the gap
         // again, so it is not his last word), and what can be done next is said only if it can be
         const left = l.bargainsLeft - 1, ask = r.error.params?.ask ?? l.askPrice, afford = G.cash >= ask + l.transport;
-        const more = `تسوم مرة ثانية (باقي لك ${count(left, 'bid')})`;
+        const more = `تسوم مرة ثانية (باقي لك\u00a0${count(left, 'bid')})`;
         const then = afford
           ? [her(c, `تقدر تشتريها بـ ${n0(ask)}`, `تقدر تشتريه بـ ${n0(ask)}`), left > 0 ? `أو ${more}` : 'وما عاد يقبل منك سوم']
           : [`رصيدك ما يكفي\u00a0${n0(ask + l.transport)} ريال مع النقل`, left > 0 ? `بس تقدر ${more}` : 'وما عاد يقبل منك سوم'];
