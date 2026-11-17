@@ -384,9 +384,9 @@ the first frame of the clip it hands to, beside the largest step inside that cli
 | tail, tail.L, tail.R | 3 | the tail lifts and drops; its two halves fan out (the flare, the mantle) |
 | fold, fold_tip (each side) | 4 | the folded mesh's wing opens at the shoulder and its primaries swing out to meet the swap |
 | wing_up, wing_fore, wing_hand (each side) | 6 | the beat at the shoulder; the flex at the elbow and wrist on the upstroke; the hand's twist |
-| shank, tarsus (each side) | 4 | the legs: reach, push, tuck; the foot planted; the trousers' skirt below the ankle goes with the tarsus (blended from 3 mm above the ankle to 20 mm below), so it covers the tarsus's top however the ankle bends; in the air the toes turned back to lie along the tarsus as before the rest leg moved (about 89°, worked out from the two rest legs) |
+| shank, tarsus (each side) | 4 | the legs: reach, push, tuck; the foot planted; the trousers' skirt below the ankle goes with the tarsus (blended from 3 mm above the ankle to 20 mm below), so it covers the tarsus's top however the ankle bends; in the air the toes set where the rig put them before the rest leg moved (the old chain replayed: the shank aimed from its old rest as the body carries it, the tarsus from its old rest; within 3.6 mm of the earlier file in every air frame) |
 | two per toe, four toes (each side) | 16 | each toe lies on the rounded cuff its own way, its talon hooked in |
-| five per jess (each side) | 10 | the jesses sag between the anklet and the fist, swing and trail as soft cords |
+| five per jess (each side) | 10 | the jesses sag between the anklet and the fist, swing and trail as soft cords, kept out of the body (a point inside the section nearest it goes straight down to just under it: at the cast-off's push they swung up through the torso, over her back and before her face) |
 
 The houbara has a three-bone neck and a crest bone, the stone-curlew a two-bone neck; both have three toes (no
 hind toe) and no hood or jesses. At most two bones a vertex.
@@ -454,6 +454,8 @@ reviewer's own tools):
     (`saker_legs_close.jpg`).
   - Left: at the cast-off's push (frames 11-16, planted) one vertex at the tarsus's foot 0.5-0.7 mm inside the cuff's
     leather, as two are on the perch.
+- **The jesses below the body:** the build prints each flying clip's highest jess point above the body's long axis:
+  cast_off -18 mm, flight -40, glide -40, stoop -39, the landings -13 (it was 95-97 mm above at cast_off 27).
 - **Swaps:** STEP in the file (the build fails otherwise); overlaps as in the table above.
 - **Feet out of sight in flight:** no toe or tarsus vertex outside the body in any saker frame meant drawn up
   (`flight`, `glide`, `stoop`, `cast_off` from 24, the landings until 16). The houbara and the stone-curlew fly
@@ -467,7 +469,7 @@ reviewer's own tools):
   wing and the start of `bind`; 70 at the swaps.
 - **Skin stretch** (the shown mesh, the reviewer's measure): in `flight` the triangles' area stays between 0.07
   and 3.7 of rest; near the swaps, for one to four frames, down to 0.007 at the tightly folded wrist.
-- **Clip data:** 410 KB for the saker's fifteen clips, 112 KB the houbara's five, 84 KB the stone-curlew's
+- **Clip data:** 409 KB for the saker's fifteen clips, 112 KB the houbara's five, 84 KB the stone-curlew's
   (bones thinned within 0.0002 of the quaternion and 0.01 mm, so the chain from the root to a talon stays within a
   millimetre; morph weights and the hood kept as steps).
 - **The same code writes the same files twice** (each bird built twice and compared byte for byte).

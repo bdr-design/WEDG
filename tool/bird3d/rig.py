@@ -405,7 +405,7 @@ class Cord:
         self.p = [V3(start) + V3((0, 0, -self.seg * i)) for i in range(n)]
         self.q = [x.copy() for x in self.p]
 
-    def step(self, anchor, air, dt=1.0 / FPS, sub=4, end=None):
+    def step(self, anchor, air, dt=1.0 / FPS, sub=4, end=None, keep_out=None):
         g = V3((0, 0, -9810.0))
         for _ in range(sub):
             h = dt / sub
@@ -432,7 +432,48 @@ class Cord:
                     else:
                         self.p[i - 1] = self.p[i - 1] + corr * 0.5
                         self.p[i] = self.p[i] - corr * 0.5
+                if keep_out is not None:
+                    for i in range(1, len(self.p)):
+                        if end is None or i < len(self.p) - 1:
+                            self.p[i] = keep_out(self.p[i])
         return self.p
+
+
+class BodyKeepOut:
+    """Keeps a point (mm, armature space) out of the bird's body: in the body's rest frame, a point inside the section
+    nearest along the body is moved straight down (along the section's -u) to just under its lower edge. The cords
+    had no collision: at the cast-off's push they swung up through the torso and stood over her back and before her
+    face (the reviews)."""
+
+    MARGIN = 4.0
+
+    def __init__(self, body):
+        self.secs = [(np.array(tuple(sc.c)), np.array(tuple(sc.u)), np.array(tuple(sc.v)), sc.au, sc.ad, sc.bl, sc.br)
+                     for sc in body.secs]
+        self.C = np.array([q[0] for q in self.secs])
+        self.T = np.array([np.cross(q[1], q[2]) for q in self.secs])
+
+    def frame(self, M):
+        """[M]: the body bone's posed matrix @ its rest matrix's inverse (armature space, Blender units)."""
+        self.M = M
+        self.Mi = M.inverted()
+        return self
+
+    def __call__(self, p):
+        q = self.Mi @ (V3(p) * MM) / MM
+        x = np.array(tuple(q))
+        i = int(np.argmin(np.abs(np.einsum('ij,ij->i', x - self.C, self.T))))
+        c, u, v, au, ad, bl, br = self.secs[i]
+        d = x - c
+        a, b = d @ u, d @ v
+        ha = au if a >= 0 else ad
+        hb = bl if b >= 0 else br
+        k = (a / ha) ** 2 + (b / hb) ** 2
+        if k >= 1.0:
+            return p
+        a2 = -ad * math.sqrt(max(0.0, 1.0 - (b / hb) ** 2)) - self.MARGIN
+        x2 = x + u * (a2 - a)
+        return (self.M @ (V3(tuple(x2)) * MM)) / MM
 
 
 # ------------------------------------------------------------------ the saker's clips
@@ -612,7 +653,7 @@ class SakerClips:
         sp = {'pitch': pitch, 'tb': tb, 'feet': feet, 'mesh': 'open', 'wing': w, 'neck': (0, -20, -10) if f < 20 else None,
               'tail_spread': lerp(1.3, 1.05, ramp(f, 16, 38)), 'jess_hold': f < 20, 'clench': ramp(f, 21, 24),
               'tail_lift': keys(f, [(15, 0), (18, 26), (27, 26), (33, 0)]),      # the tail raised clear of the fist
-              'air': V3((-(20000 - (1100 + 5000 * t)) * ramp(f, 24, 36), 0, 0)),
+              'air': V3((-(20000 - (1100 + 5000 * t)) * ramp(f, 20, 32), 0, 0)),      # (from the push: from 24 the cords flicked up over her back as the feet drew up)
               'settle_to': 'flight', 'settle': ramp(f, 31, 38)}      # the cords' air eased to the flight loop's
         if sp['neck'] is None:
             del sp['neck']
@@ -850,21 +891,31 @@ class Applier:
         return (W @ (V3(p) * MM)) / MM
 
     def toes_air(self, P, s, side):
-        """The toes' turn (deg, about the side axis) in the air: back to where they lay along the tarsus when the rest
-        leg hung with the foot at HANG_FOOT (the rest leg is now the perched one, the tarsus turned about 89 degrees from
-        that, and the toes, posed from their rest, stood out at a right angle from the drawn-up legs)."""
-        cache = self.__dict__.setdefault('_toes_air', {})
-        if s not in cache:
-            rest = P.rest[f'tarsus.{s}']
-            ankle = rest.translation / MM
-            knee = P.rest[f'shank.{s}'].translation / MM
-            l1 = P.pb[f'shank.{s}'].bone.length / MM
-            l2 = P.pb[f'tarsus.{s}'].bone.length / MM
-            hang = V3(HANG_FOOT) * V3((1, side, 1))
-            old = hang - bird.two_bone(knee, hang, l1, l2, V3((-1, 0, 0)))
-            new = rest.to_3x3() @ V3((0, 1, 0))
-            cache[s] = math.degrees(math.atan2(old.z, old.x) - math.atan2(new.z, new.x))      # (a turn about +y takes x toward -z)
-        return cache[s]
+        """The toes in the air set where the rig put them when its rest leg hung with the foot at HANG_FOOT: the old
+        chain replayed (the shank aimed from its old rest, the tarsus from the old rest carried by it), its turn given
+        to the toes' rest. The rest leg is now the perched one; the toes, posed from it, stood out of the drawn-up legs
+        (a turn about the side axis alone left them up to 76 mm off: the tarsus's twist about its length differs too)."""
+        bpy.context.view_layer.update()
+        knee = P.rest[f'shank.{s}'].translation / MM
+        l1 = P.pb[f'shank.{s}'].bone.length / MM
+        l2 = P.pb[f'tarsus.{s}'].bone.length / MM
+        hang = V3(HANG_FOOT) * V3((1, side, 1))
+        ankle0 = bird.two_bone(knee, hang, l1, l2, V3((-1, 0, 0)))
+        s0, t0 = (ankle0 - knee).normalized(), (hang - ankle0).normalized()
+        ms, mt = P.pb[f'shank.{s}'].matrix, P.pb[f'tarsus.{s}'].matrix
+        s1 = (ms.to_3x3() @ V3((0, 1, 0))).normalized()
+        t1 = (mt.to_3x3() @ V3((0, 1, 0))).normalized()
+        pbb = P.pb['body']
+        Rb = (pbb.matrix @ pbb.bone.matrix_local.inverted()).to_3x3()      # the body's turn carries the shank before it is aimed
+        A = (Rb @ s0).rotation_difference(s1).to_matrix() @ Rb
+        Bm = (A @ t0).rotation_difference(t1).to_matrix()
+        T = (Bm @ A).to_4x4()
+        for nm in ('toeM', 'toeI', 'toeO', 'toeH'):
+            b = f'{nm}1.{s}'
+            head = P.pb[b].matrix.translation.copy()
+            rest = P.rest[b].translation
+            P.place(b, Matrix.Translation(head) @ T @ Matrix.Translation(-rest))
+        bpy.context.view_layer.update()
 
     def toes_on(self, s, side, surface, foot_target):
         """Lay each toe, joint by joint, on the surface z = surface(x, y) (the exported cuff's own top, sampled; or the
@@ -975,10 +1026,9 @@ class Applier:
                 P.leg(s, target, pole)
                 cl = sp.get('clench', 0.0)
                 op = sp.get('open_toes', 0.0)
-                air = self.toes_air(P, s, side)
+                self.toes_air(P, s, side)
                 for nm, sign in (('toeM', 1), ('toeI', 1), ('toeO', 1), ('toeH', -1)):
                     bpy.context.view_layer.update()
-                    P.turn(f'{nm}1.{s}', V3((0, 1, 0)), air)
                     ax = P.rest[f"{nm}1.{s}"].to_3x3() @ V3((1, 0, 0))      # each toe bends about its own axis
                     P.turn(f'{nm}1.{s}', ax, -(75 * cl - 18 * op))
                     P.turn(f'{nm}2.{s}', ax, -(95 * cl - 10 * op))
@@ -993,6 +1043,10 @@ class Applier:
         if self.cords is None:
             self.cords = {s: Cord(P.head_of(f'jess1.{s}')) for s in ('L', 'R')}
             self.gust = 0
+        if getattr(self, '_keep_out', None) is None:
+            self._keep_out = BodyKeepOut(BODY[0])
+        pbb = P.pb['body']
+        self.keep_out = self._keep_out.frame(pbb.matrix @ pbb.bone.matrix_local.inverted())
         for side, s in ((1, 'L'), (-1, 'R')):
             anchor = P.head_of(f'jess1.{s}')
             # a little turbulence in the air, so a trailing cord swings and does not lie as a rod
@@ -1002,7 +1056,7 @@ class Applier:
             if sp.get('jess_take') is not None:      # the falconer's fingers taking the free ends to his fist
                 k = sp['jess_take']
                 hold = self.cords[s].p[-1].lerp(V3(FIST_JESS) * V3((1, side, 1)), k) if k > 0 else None
-            pts = self.cords[s].step(anchor, V3(air) + wob, end=hold)
+            pts = self.cords[s].step(anchor, V3(air) + wob, end=hold, keep_out=self.keep_out)
             st = sp.get('settle', 0.0)
             key_ = sp.get('settle_to') or (sp['feet'] if isinstance(sp['feet'], str) else None)
             ref = getattr(self.C, 'perch_cords', {}).get(key_)
@@ -1964,14 +2018,35 @@ def trouser_checks(arm, meshes, frames_mesh, clips=('perch_idle', 'perch_hooded'
         print(f'{name}: the tarsus\'s top outside the trousers: {cnt} vertex-frames' + (f', the farthest {worst:.1f} mm from the nearest trouser vertex (frame {wf})' if cnt else ''))
 
 
+def jess_checks(arm, clips=('cast_off', 'flight', 'glide', 'stoop', 'land_cuff', 'land_perch')):
+    """The free cords stream back and below: each clip's highest jess point above the body's long axis (mm, in the
+    body's frame, up from her back's line), and its frame. A cord over her back reads wrong (the review: cast_off 26)."""
+    sc = bpy.context.scene
+    pb = arm.pose.bones
+    for name in clips:
+        if name not in CLIPS:
+            continue
+        use_clip(arm, name)
+        worst, wf = -1e9, None
+        for f in range(CLIPS[name][0]):
+            sc.frame_set(f)
+            M = (pb['body'].matrix @ pb['body'].bone.matrix_local.inverted()).inverted()
+            for s in ('L', 'R'):
+                for j in range(1, JESS_N + 1):
+                    z = (M @ pb[f'jess{j}.{s}'].tail).z / MM
+                    if z > worst:
+                        worst, wf = z, f
+        print(f'{name}: the jesses\' highest point above the body\'s axis {worst:.0f} mm (frame {wf})')
+
+
 def motion_checks(arm, meshes, frames_mesh, clips, body):
     """The build's own checks, per clip: the swap's silhouette overlap, the feet out of sight in flight, the
     wing's flex in the beat."""
     sc = bpy.context.scene
     trouser_checks(arm, meshes, frames_mesh)
-    notO, notF = set(mat_set(meshes['open'], 'shank')), set(mat_set(meshes['fold'], 'shank'))
-    feetO = np.array([i for i in group_set(meshes['open'], ('toe', 'tarsus')) if i not in notO], int)      # (the trousers' skirt goes with the tarsus now)
-    feetF = np.array([i for i in group_set(meshes['fold'], ('toe', 'tarsus')) if i not in notF], int)
+    feetO = group_set(meshes['open'], ('toe', 'tarsus'))      # (with the trousers' skirt, which goes with the tarsus)
+    feetF = group_set(meshes['fold'], ('toe', 'tarsus'))
+    jess_checks(arm)
     wingO = np.array(sorted(group_set(meshes['open'], ('wing_fore', 'wing_hand'))), int)
     for name, (n, fn, loop) in CLIPS.items():
         if name in CUFF_CLIPS or name in PERCH_CLIPS:
