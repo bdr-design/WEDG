@@ -4,17 +4,18 @@ These are the owner's standing rules for this project. Follow them in every sess
 
 ## How we work
 
-- **Agents build; Claude directs and reviews** (the owner's rule of
-  13 Nov 2026; before it, Claude built and agents only reviewed).
-  - Every piece of building or fixing is done by a worker agent, from a
-    written brief. Claude does not build or fix itself.
-  - Each worker agent has its own reviewer agent, started alongside it: the
-    reviewer prepares the baseline and the checks while the worker builds,
-    then reviews the worker's commits. Its findings go back to the worker,
-    and the pair repeats until the reviewer finds nothing.
-  - Claude writes the briefs, directs the pairs, re-measures or reproduces
-    what they report, and reviews the result itself before it is shown to
-    the owner or committed as done.
+- **Claude builds everything; two reviewer agents check each piece of work,
+  before the fix and after it** (the owner's rule of 17 Nov 2026, in his
+  words: «وقف الوكلاء وخلي مراجعين معاك اثنين بكل عمل قبل الاصلاح وبعد الاصلاح
+  وانت اشتغل كل شي». It replaces the rule of 13 Nov, under which worker agents
+  built and Claude directed).
+  - No worker agents. Claude does every piece of building and fixing itself.
+  - Each piece of work has two reviewer agents. Before the fix they take the
+    baseline, find what is wrong and write the checks; after the fix they
+    check Claude's commits. Their findings come back to Claude, and the round
+    repeats until both find nothing.
+  - Claude re-measures what the reviewers report and reviews the result itself
+    before it is shown to the owner or committed as done.
   - The sub-agents' model is set in `.claude/settings.json`.
 - **Show the design before adopting it.** Present screenshots or a published
   prototype. Decisions that are the owner's (layout rules, scope, trade-offs

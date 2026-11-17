@@ -1,5 +1,9 @@
 # How the agents are directed
 
+**From 17 Nov 2026 the rule is different (CLAUDE.md): Claude builds everything itself, and two reviewer agents check
+each piece of work, before the fix and after it. There are no worker agents. The briefs below are the record of the
+earlier way of working (13–14 Nov).**
+
 The owner's rule of 13 Nov 2026 (CLAUDE.md): agents build and fix, each with its own reviewer agent started
 alongside it; the session directs, re-measures and reviews. These are the working papers of that day, kept here so
 they survive the work machine (they lived in its scratch folder, which a restart can clear).
