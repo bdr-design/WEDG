@@ -33,6 +33,10 @@ BIRD = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] in ('saker', 'peregrine'
 import importlib  # noqa: E402
 SP = importlib.import_module(BIRD)
 RIG = getattr(SP, 'RIG', {})
+# the rest pose's foot, body frame (the tail base at the origin): where the perched clips put it, so the legs are made
+# in the approved perched bird's own shape and the perched clips barely bend them (made with the foot thrust forward
+# and down, the trousers' skirt pointed away from the tarsus, whose top stood out behind them in every perched pose)
+REST_FOOT = RIG.get('rest_foot', (-36.0, 22.0, -64.0))
 
 
 # ------------------------------------------------------------------ the saker's rest meshes, tagged
@@ -41,7 +45,7 @@ def saker_rest(wings, level=0):
     {'body': [(piece, tag)], 'hood': [...], 'jesses': [...]}, the named points (mm) and the body."""
     saker = SP
     pose = dict(saker.POSES['flight'])
-    pose.update({'wings': wings, 'tucked': False, 'foot': RIG.get('rest_foot', (75, 22, -125)), 'foot_turn': 8, 'tail_droop': 0,
+    pose.update({'wings': wings, 'tucked': False, 'foot': REST_FOOT, 'foot_turn': 8, 'tail_droop': 0,
                  'tail_spread': 1.0, 'wing_dihedral': 0.0, 'fluff': 1.05})      # as the approved perched birds
     det = bird.Detail(level)
     body = bird.Body(saker.stations(pose), pose, det, head_weight=2.0)
@@ -818,7 +822,7 @@ CLIPS = {      # name: (frames, method, loops)
 
 
 # ------------------------------------------------------------------ applying a pose
-REST_FOOT = RIG.get('rest_foot', (75.0, 22.0, -125.0))        # the rest pose's foot, body frame (the tail base at the origin)
+HANG_FOOT = (75.0, 22.0, -125.0)      # a free leg's hanging foot, body frame (the tail base at the origin)
 TUCK_FOOT = RIG.get('tuck_foot', (150.0, 8.0, -14.0))         # drawn up into the breast and belly feathers, the toes clenched: out of sight
 REACH_FOOT = RIG.get('reach_foot', (150.0, 26.0, -120.0))
 PUSH_FOOT = RIG.get('push_foot', (-10.0, 20.0, -95.0))        # straight back and down at the end of the kick      # thrown forward to take the cuff when landing
@@ -844,6 +848,23 @@ class Applier:
 
     def to_world(self, W, p):
         return (W @ (V3(p) * MM)) / MM
+
+    def toes_air(self, P, s, side):
+        """The toes' turn (deg, about the side axis) in the air: back to where they lay along the tarsus when the rest
+        leg hung with the foot at HANG_FOOT (the rest leg is now the perched one, the tarsus turned about 89 degrees from
+        that, and the toes, posed from their rest, stood out at a right angle from the drawn-up legs)."""
+        cache = self.__dict__.setdefault('_toes_air', {})
+        if s not in cache:
+            rest = P.rest[f'tarsus.{s}']
+            ankle = rest.translation / MM
+            knee = P.rest[f'shank.{s}'].translation / MM
+            l1 = P.pb[f'shank.{s}'].bone.length / MM
+            l2 = P.pb[f'tarsus.{s}'].bone.length / MM
+            hang = V3(HANG_FOOT) * V3((1, side, 1))
+            old = hang - bird.two_bone(knee, hang, l1, l2, V3((-1, 0, 0)))
+            new = rest.to_3x3() @ V3((0, 1, 0))
+            cache[s] = math.degrees(math.atan2(old.z, old.x) - math.atan2(new.z, new.x))      # (a turn about +y takes x toward -z)
+        return cache[s]
 
     def toes_on(self, s, side, surface, foot_target):
         """Lay each toe, joint by joint, on the surface z = surface(x, y) (the exported cuff's own top, sampled; or the
@@ -938,7 +959,7 @@ class Applier:
                 self.toes_on(s, side, self.C.cuff if feet == 'cuff' else flat_surface, target)
             else:
                 mode, kf = feet
-                hang = V3(REST_FOOT) * V3((1, side, 1))
+                hang = V3(HANG_FOOT) * V3((1, side, 1))
                 tuck = V3(TUCK_FOOT) * V3((1, side, 1))
                 reach = V3(REACH_FOOT) * V3((1, side, 1))
                 if mode == 'free':
@@ -954,8 +975,10 @@ class Applier:
                 P.leg(s, target, pole)
                 cl = sp.get('clench', 0.0)
                 op = sp.get('open_toes', 0.0)
+                air = self.toes_air(P, s, side)
                 for nm, sign in (('toeM', 1), ('toeI', 1), ('toeO', 1), ('toeH', -1)):
                     bpy.context.view_layer.update()
+                    P.turn(f'{nm}1.{s}', V3((0, 1, 0)), air)
                     ax = P.rest[f"{nm}1.{s}"].to_3x3() @ V3((1, 0, 0))      # each toe bends about its own axis
                     P.turn(f'{nm}1.{s}', ax, -(75 * cl - 18 * op))
                     P.turn(f'{nm}2.{s}', ax, -(95 * cl - 10 * op))

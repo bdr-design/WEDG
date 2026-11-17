@@ -297,12 +297,12 @@ stone-curlew) build them. The static GLBs above stay as the approved look; the r
 
 | File | Meshes (triangles) | Bones | Clips |
 |---|---|---|---|
-| `saker_rig.glb` | near: folded 5,896, spread 6,232, hood 724, jesses 580; far (the T11 far meshes, 256 px): folded 1,204, spread 1,300 | 49 | 13 |
+| `saker_rig.glb` | near: folded 5,976, spread 6,312, hood 724, jesses 580; far (the T11 far level's code, 256 px, its legs as the near's): folded 1,232, spread 1,328 | 49 | 15 |
 | `houbara_rig.glb` | near: folded 5,716, spread 6,772 (the crest tuft added); far: 1,084 / 1,468 | 36 | 5 |
 | `curlew_rig.glb` | near: folded 5,084, spread 5,420; far: 1,120 / 1,216 | 34 | 5 |
 
 **One skeleton, two meshes, swapped where their outlines match.** Each bird is built in a rest pose (the saker with
-the body level and the legs down; the quarry in their approved alert stance), once with the wings folded and once
+the body level and the legs as they stand on the fist, so the perched clips barely bend them; the quarry in their approved alert stance), once with the wings folded and once
 spread. Both meshes are skinned to the same skeleton. Folding the spread wing all the way by bones was tried: past
 about two thirds the feathers cross the body and the hand pokes out past the tail, so the close views need the
 folded mesh. So the folded wing has two bones (the shoulder and the primaries) and opens a little, the spread wing
@@ -384,7 +384,7 @@ the first frame of the clip it hands to, beside the largest step inside that cli
 | tail, tail.L, tail.R | 3 | the tail lifts and drops; its two halves fan out (the flare, the mantle) |
 | fold, fold_tip (each side) | 4 | the folded mesh's wing opens at the shoulder and its primaries swing out to meet the swap |
 | wing_up, wing_fore, wing_hand (each side) | 6 | the beat at the shoulder; the flex at the elbow and wrist on the upstroke; the hand's twist |
-| shank, tarsus (each side) | 4 | the legs: reach, push, tuck; the foot planted; the trousers' skirt below the ankle goes with the tarsus (blended from 3 mm above the ankle to 20 mm below), so it covers the tarsus's top however the ankle bends |
+| shank, tarsus (each side) | 4 | the legs: reach, push, tuck; the foot planted; the trousers' skirt below the ankle goes with the tarsus (blended from 3 mm above the ankle to 20 mm below), so it covers the tarsus's top however the ankle bends; in the air the toes turned back to lie along the tarsus as before the rest leg moved (about 89°, worked out from the two rest legs) |
 | two per toe, four toes (each side) | 16 | each toe lies on the rounded cuff its own way, its talon hooked in |
 | five per jess (each side) | 10 | the jesses sag between the anklet and the fist, swing and trail as soft cords |
 
@@ -433,13 +433,27 @@ reviewer's own tools):
 - **Nothing through the support:** in every frame of every clip on the cuff or the perch, before the feet take it
   and after they leave, no vertex of the shown body inside the cuff, a 45 mm forearm 400 mm behind it, or the
   perch (the landings now come in from the side; the cast-off lifts the tail clear before she drops). Once
-  planted, only the tail on the fist (see What is unsure) and, on the perch, two tarsus vertices under 1 mm.
-- **The tarsus's top under the trousers:** the saker's feathered shank runs through the ankle and on down the tarsus
-  (from the knee straight to its end it cut the heel's corner, and the tarsus's top stood out behind it, 11.6 mm
-  clear, in every perched pose: the review). The build tests every third frame of the perched, landing, mantle and
-  bind clips: each bare-skin vertex within 0.3 of the tarsus from the ankle inside the trousers' closed tube (its
-  winding number): none outside (the old file: 720 vertex-frames in `perch_idle` alone). `legs_close.py FILE.glb
-  OUT.jpg` renders the legs close from four sides in six poses (`design/birds/motion/saker_legs_close.jpg`).
+  planted, only the tail on the fist (see What is unsure) and, on the perch, two tarsus vertices under 1 mm (on the cuff, one at the cast-off's push, 0.7 mm).
+- **The tarsus's top under the trousers, the look held:** the approved bird's trousers run from the shank
+  straight to their end a third of the way down the tarsus, cutting the heel's corner, so the tarsus's top comes out
+  through their back wall (a small grey stub behind the heel even in the approved `saker_fist.glb`); the rig made it
+  worse, its legs built with the foot thrust forward and down, so on the fist the trousers pointed away from the
+  tarsus and its cut top stood 11.6 mm clear (the review). Now the rest leg is the perched one (the foot where the
+  perched clips put it, -36, 22, -64 mm in the body's frame; a free leg still hangs at the old place), the trousers'
+  tube passes through the ankle (bird.py, only where a spec has `trouser`: the saker and the peregrine; the static
+  GLBs are not rebuilt by this), and their skirt goes with the tarsus. A first try (the tube through the ankle on the
+  old rest leg) covered the top but made the trousers a thick bent sleeve, 69 mm deep against 23: sent back.
+  - The build tests every third frame of the perched, landing, mantle and bind clips: each bare-skin vertex within
+    0.3 of the tarsus from the ankle inside the trousers' closed tube (its winding number): none outside.
+  - `legs_vs_static.py STATIC.glb RIG.glb OUT.jpg` renders the rig on the fist beside the approved static from the
+    same cameras: the legs' silhouette overlap 0.76 side, 0.98 front, 0.84 three-quarter, 0.96 back (the file
+    before: 0.81, 0.97, 0.85, 0.95; the sent-back sleeve: 0.70, 0.97, 0.79, 0.94). From the side the skirt now bends
+    forward a little with the tarsus at the heel where the static's hangs straight, and the clips' foot sits a little
+    further back on the cuff than the static's (as before): the owner sees the pair; `design/birds/motion/
+    saker_legs_vs_static.jpg`. `legs_close.py FILE.glb OUT.jpg` renders the legs close in six poses
+    (`saker_legs_close.jpg`).
+  - Left: at the cast-off's push (frames 11-16, planted) one vertex at the tarsus's foot 0.5-0.7 mm inside the cuff's
+    leather, as two are on the perch.
 - **Swaps:** STEP in the file (the build fails otherwise); overlaps as in the table above.
 - **Feet out of sight in flight:** no toe or tarsus vertex outside the body in any saker frame meant drawn up
   (`flight`, `glide`, `stoop`, `cast_off` from 24, the landings until 16). The houbara and the stone-curlew fly
