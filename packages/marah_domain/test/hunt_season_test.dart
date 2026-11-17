@@ -80,6 +80,42 @@ AwayRun night(Game g) {
   return run;
 }
 
+/// Runs the trip's next leg by the away call (the drive out, a night, the
+/// drive home), as the engine's tripNight does.
+AwayRun leg(Game g) {
+  final l = Trips.leg(g)!;
+  final run = AwayRun(g, l.plan);
+  while (!run.done) {
+    run.step();
+  }
+  return run;
+}
+
+/// Starts a trip at midnight and runs its legs till he is at the ground at
+/// [minute] (the drive out is game time: task T18, finding 1).
+Trip camp(Game g, TripKind k, Ground gr, int nights, {int minute = 400}) {
+  final r = g.dispatch(StartTrip(g.me.id, k, gr, nights));
+  expect(r.ok, isTrue, reason: '${why(r)}');
+  final t = g.me.hunt.trip!;
+  while (!t.there(g.today, minute)) {
+    leg(g);
+  }
+  return t;
+}
+
+/// Breaks camp and drives home, the days passing as the game's own (the
+/// drive home is game time too).
+void goHome(Game g) {
+  expect(g.dispatch(EndTrip(g.me.id)).ok, isTrue);
+  while (g.me.hunt.trip != null) {
+    if (Trips.leg(g) != null) {
+      leg(g);
+    } else {
+      g.advanceDays(1);
+    }
+  }
+}
+
 const at = HuntAt.ground;
 const dawn = 400; // 06:40, in October's dawn window (first light 05:39)
 
@@ -180,10 +216,7 @@ void main() {
       expect(g.me.hunt.has(Gear.supplies), 9);
       expect(run.summary.extra['nights'], 1);
       expect(run.summary.milk, greaterThanOrEqualTo(0));
-      expect(
-        Trips.landingMinute(g.me.falconry!.trip, g.today),
-        HuntSun.dawn(g.today),
-      );
+      expect(Trips.leg(g)!.landing, HuntSun.dawn(g.today + 1));
       expect(Trips.night(g)!.card['groundName'], 'الحماد');
     });
     test('the camp\'s own stops: the chosen end, supplies out, the season\'s '
@@ -195,12 +228,12 @@ void main() {
       final r = night(g);
       expect(r.stop!.kind, AwayStopKind.extra);
       expect(r.stop!.extra, 'tripEnd');
-      g.dispatch(EndTrip(g.me.id));
+      goHome(g);
 
       hand(g, Gear.supplies, 1);
       g.dispatch(StartTrip(g.me.id, TripKind.trapping, Ground.hamad, 10));
       expect(night(g).stop!.extra, 'suppliesOut');
-      g.dispatch(EndTrip(g.me.id));
+      goHome(g);
 
       g.advanceTo(d(2026, 11, 29));
       hand(g, Gear.supplies, 10);
@@ -286,7 +319,7 @@ void main() {
     });
     test('a lure with no falcon seen: nothing came, the pigeon back', () {
       final g = trapper();
-      g.dispatch(StartTrip(g.me.id, TripKind.trapping, Ground.hamad, 5));
+      camp(g, TripKind.trapping, Ground.hamad, 5);
       final r = g.dispatch(
         ReleaseLure(g.me.id, at(Ground.hamad), Lure.pigeon, minute: dawn),
       );
@@ -299,9 +332,20 @@ void main() {
     test('every bird the net can hold, by the rules: the فرخ held, the rest '
         'released with their lines', () {
       final seen = <String>{};
-      for (var seed = 1; seed < 400 && seen.length < 6; seed++) {
+      const want = {
+        'netted',
+        'passagePeregrineQ',
+        'mountainPeregrineQ',
+        'lannerQ',
+      };
+      for (
+        var seed = 1;
+        seed < 400 &&
+            !(seen.containsAll(want) && seen.any((x) => x.startsWith('saker')));
+        seed++
+      ) {
         final g = trapper(seed: seed);
-        g.dispatch(StartTrip(g.me.id, TripKind.trapping, Ground.lith, 60));
+        camp(g, TripKind.trapping, Ground.lith, 60);
         for (var day = 0; day < 60; day++) {
           final p = TrapOdds.passer(g.state.world.seed, Ground.lith, g.today);
           if (p != null) {
@@ -378,7 +422,7 @@ void main() {
     });
     test('the same day gives the same falcon however often he looks', () {
       final g = trapper();
-      g.dispatch(StartTrip(g.me.id, TripKind.trapping, Ground.hamad, 5));
+      camp(g, TripKind.trapping, Ground.hamad, 5);
       final a = [
         for (var i = 0; i < 3; i++)
           g
@@ -447,7 +491,10 @@ void main() {
       expect(f.passport, isNotNull);
       expect(f.trapDoc, isNotNull);
       expect(g.me.hunt.falcons, contains(f));
-      expect(why(g.dispatch(EnterTrapAuction(g.me.id, f.id))), 'notHeld');
+      expect(
+        why(g.dispatch(EnterTrapAuction(g.me.id, f.id))),
+        'keptNotForSale',
+      );
     });
     test(
       'kept needs a free place; held without a room till sold (Q-13/15)',
@@ -506,6 +553,15 @@ void main() {
 
     int noon(Game g) => HuntSun.sunrise(g.today) + 120;
 
+    /// On a falconry trip at [gr], there by the hunting day's first hour.
+    void out(Game g, Ground gr, {int nights = 3}) => camp(
+      g,
+      TripKind.falconry,
+      gr,
+      nights,
+      minute: HuntSun.sunrise(g.today) + 60,
+    );
+
     test('banned places, each with its words; no fine', () {
       final g = falconer();
       final f = g.me.hunt.falcons.single;
@@ -536,6 +592,7 @@ void main() {
     test('by day only, and never from a moving car (Q-26)', () {
       final g = falconer();
       final f = g.me.hunt.falcons.single;
+      out(g, Ground.nafudEdge);
       final rise = HuntSun.sunrise(g.today);
       expect(
         why(
@@ -583,16 +640,24 @@ void main() {
       expect(quarryAtDay(Ground.estate, d(2026, 11, 1)), Quarry.houbara);
       expect(quarryAtDay(Ground.estate, d(2027, 1, 31)), Quarry.houbara);
       expect(quarryAtDay(Ground.nafudEdge, d(2026, 12, 15)), isNull);
-      final g = falconer(on: d(2026, 12, 15));
-      final f = g.me.hunt.falcons.single;
+      final g0 = falconer(on: d(2026, 12, 15));
+      out(g0, Ground.nafudEdge);
       expect(
         why(
-          g.dispatch(
-            CastFalcon(g.me.id, f.id, at(Ground.nafudEdge), minute: noon(g)),
+          g0.dispatch(
+            CastFalcon(
+              g0.me.id,
+              g0.me.hunt.falcons.single.id,
+              at(Ground.nafudEdge),
+              minute: noon(g0),
+            ),
           ),
         ),
         'noQuarry',
       );
+      final g = falconer(on: d(2026, 12, 15));
+      final f = g.me.hunt.falcons.single;
+      out(g, Ground.estate);
       expect(
         g
             .dispatch(
@@ -613,6 +678,7 @@ void main() {
     });
     test('a falcon not through its الدعو is not cast', () {
       final g = falconer();
+      out(g, Ground.nafudEdge);
       final f = g.me.hunt.falcons.single..dauDays = 27;
       expect(
         why(
@@ -626,7 +692,7 @@ void main() {
     test('three flights a day on a trip', () {
       final g = falconer();
       final f = g.me.hunt.falcons.single;
-      g.dispatch(StartTrip(g.me.id, TripKind.falconry, Ground.nafudEdge, 3));
+      out(g, Ground.nafudEdge);
       var ok = 0;
       for (var i = 0; i < 5; i++) {
         final r = g.dispatch(
@@ -635,7 +701,64 @@ void main() {
         if (r.ok) ok++;
         if (f.where == FalconWhere.lost) break;
       }
-      expect(ok, lessThanOrEqualTo(TrapOdds.flightsADay));
+      expect(ok, lessThanOrEqualTo(3));
+      expect(TrapOdds.flightsADay, 3);
+    });
+    test(
+      'a cast off a trip, or at another ground than the trip\'s: refused',
+      () {
+        final g = falconer();
+        final f = g.me.hunt.falcons.single;
+        final m = HuntSun.sunrise(g.today) + 60;
+        expect(
+          why(
+            g.dispatch(CastFalcon(g.me.id, f.id, at(Ground.estate), minute: m)),
+          ),
+          'notOnTrip',
+        );
+        expect(
+          why(
+            g.dispatch(
+              CastFalcon(
+                g.me.id,
+                f.id,
+                const HuntAt.off(HuntOff.open),
+                minute: m,
+              ),
+            ),
+          ),
+          'notOnTrip',
+        );
+        out(g, Ground.nafudEdge);
+        expect(
+          why(
+            g.dispatch(CastFalcon(g.me.id, f.id, at(Ground.estate), minute: m)),
+          ),
+          'notOnTrip',
+        );
+      },
+    );
+    test('the cast\'s draw is the falcon\'s, the day\'s and the flight\'s: '
+        'no hour re-rolls it', () {
+      CastOutcome first(int minute) {
+        final g = falconer();
+        final f = g.me.hunt.falcons.single;
+        out(g, Ground.nafudEdge);
+        return g
+            .dispatch(
+              CastFalcon(g.me.id, f.id, at(Ground.nafudEdge), minute: minute),
+            )
+            .events
+            .whereType<CastResult>()
+            .single
+            .outcome;
+      }
+
+      final g = falconer();
+      final a = first(HuntSun.sunrise(g.today) + 60);
+      for (final m in [noon(g), noon(g) + 60, HuntSun.sunset(g.today) - 61]) {
+        expect(first(m), a);
+      }
     });
     test('lost rarely, found mostly, more with the tracker', () {
       var lost = 0, flights = 0;
@@ -643,35 +766,30 @@ void main() {
         true: [0, 0],
         false: [0, 0],
       };
-      for (var seed = 1; seed <= 120; seed++) {
-        final g = falconer();
-        final f = g.me.hunt.falcons.single;
+      for (var seed = 1; seed <= 60; seed++) {
+        final g = trapper(seed: seed);
+        final f = trainedFalcon(g);
+        g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
         final tracked = seed.isEven;
-        hand(g, Gear.tracker, tracked ? 1 : 0);
-        for (var day = 0; day < 40; day++) {
-          g.state.world.day = d(2026, 10, 1) + day + seed * 400;
-          if (PermitKind.hunting.seasonOn(g.today) == null) continue;
-          g.me.hunt.permits[PermitKind.hunting] = PermitKind.hunting.seasonOn(
-            g.today,
-          )!;
-          final r = g.dispatch(
-            CastFalcon(
-              g.me.id,
-              f.id,
-              const HuntAt.off(HuntOff.open),
-              minute: noon(g),
-            ),
-          );
-          if (!r.ok) continue;
-          flights++;
-          if (f.where == FalconWhere.lost) {
-            lost++;
-            final s = g.dispatch(SearchFalcon(g.me.id, f.id));
-            final fate = s.events.whereType<FalconFate>().single.fate;
-            found[tracked]![0]++;
-            if (fate == Fate.found) found[tracked]![1]++;
-            if (fate == Fate.gone) break;
+        f.tracker = tracked;
+        out(g, Ground.nafudEdge, nights: 50);
+        for (var day = 0; day < 40 && f.where != FalconWhere.lost; day++) {
+          for (var i = 0; i < TrapOdds.flightsADay; i++) {
+            final r = g.dispatch(
+              CastFalcon(g.me.id, f.id, at(Ground.nafudEdge), minute: noon(g)),
+            );
+            if (!r.ok) break;
+            flights++;
+            if (f.where == FalconWhere.lost) {
+              lost++;
+              final s = g.dispatch(SearchFalcon(g.me.id, f.id));
+              final fate = s.events.whereType<FalconFate>().single.fate;
+              found[tracked]![0]++;
+              if (fate == Fate.found) found[tracked]![1]++;
+              break;
+            }
           }
+          g.state.world.day = g.today + 1; // (the next day, untimed)
         }
       }
       expect(lost / flights, closeTo(TrapOdds.lost, 0.01));

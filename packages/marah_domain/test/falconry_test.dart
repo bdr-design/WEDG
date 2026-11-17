@@ -196,7 +196,7 @@ void main() {
       final r = g.dispatch(OrderGear(g.me.id, Gear.binoculars, 1));
       expect(why(r), 'gearFull');
       expect((r as Err).error.params['room'], 0);
-      expect(FalconLines.refusal(r.error), 'ما تقدر تطلب أكثر منها');
+      expect(FalconLines.refusal(r.error), 'عندك كفايتك منها');
       expect(g.dispatch(OrderGear(g.me.id, Gear.pigeonNet, 1)).ok, isTrue);
       expect(
         why(g.dispatch(OrderGear(g.me.id, Gear.pigeonNet, 1))),
@@ -205,7 +205,7 @@ void main() {
       expect(g.dispatch(OrderGear(g.me.id, Gear.pigeon, 15)).ok, isTrue);
       final p = g.dispatch(OrderGear(g.me.id, Gear.pigeon, 6));
       expect((p as Err).error.params['room'], 5);
-      expect(FalconLines.refusal(p.error), 'تقدر تطلب 5 بس');
+      expect(FalconLines.refusal(p.error), 'تقدر تطلب 5 حمامات بس');
       expect(g.dispatch(OrderGear(g.me.id, Gear.supplies, 60)).ok, isTrue);
       expect(why(g.dispatch(OrderGear(g.me.id, Gear.supplies, 1))), 'gearFull');
       expect(
