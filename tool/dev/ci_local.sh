@@ -4,6 +4,7 @@
 # Then, separately: `dart test` in packages/marah_data and marah_store, and in packages/marah_runtime with
 # `--concurrency=1` (its 10,000-head timing budgets fail under parallel load on a small shared machine).
 set -u
+command -v dart >/dev/null || export PATH=/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:$PATH
 ROOT=${1:-$(cd "$(dirname "$0")/../.." && pwd)}
 T=$(mktemp -d)
 cd "$ROOT" || exit 2
