@@ -152,6 +152,9 @@ def smooth01(x):
     return x * x * (3 - 2 * x)
 
 
+TROUSER_BAND = (3.0, 20.0)      # mm above and below the ankle over which the trousers pass from the shank to the tarsus
+
+
 def blend(a, b, t):
     """Two bones' weights: t=0 all a, t=1 all b."""
     t = smooth01(t)
@@ -223,14 +226,20 @@ def weights_for(pc, tag, body, B):
     if kind == 'shank':
         knee, ankle = B[f'shank.{s}'][0], B[f'shank.{s}'][1]
         L = (ankle - knee).length
-        return [blend('body', f'shank.{s}', ((q - knee).dot((ankle - knee).normalized())) / (0.35 * L)) for q in pc.V]
-    if kind == 'tarsus':
-        # its top (the first fifth from the ankle) blended into the shank, so it stays inside the feathered thigh
-        # however the ankle bends (it came out of it, the cut end showing, in every perched pose: the review)
-        ankle, foot = B[f'tarsus.{s}'][0], B[f'tarsus.{s}'][1]
-        L = (foot - ankle).length
+        foot = B[f'tarsus.{s}'][1]
         d = (foot - ankle).normalized()
-        return [blend(f'shank.{s}', f'tarsus.{s}', ((q - ankle).dot(d)) / (0.2 * L)) for q in pc.V]
+        out = []
+        for q in pc.V:
+            w = blend('body', f'shank.{s}', ((q - knee).dot((ankle - knee).normalized())) / (0.35 * L))
+            u = (q - ankle).dot(d)
+            if u > -TROUSER_BAND[0] and w == {f'shank.{s}': 1.0}:
+                # the trousers' skirt, below the ankle, goes with the tarsus: the feathers hang over its top however
+                # the ankle bends (on the shank they swung away from it and the tarsus's top showed: the review)
+                w = blend(f'shank.{s}', f'tarsus.{s}', (u + TROUSER_BAND[0]) / sum(TROUSER_BAND))
+            out.append(w)
+        return out
+    if kind == 'tarsus':
+        return [{f'tarsus.{s}': 1.0} for _ in pc.V]      # rigid (its top blended into the shank only sheared it)
     if kind == 'anklet':
         return [{f'tarsus.{s}': 1.0} for _ in pc.V]
     if kind in ('toe', 'claw'):
@@ -261,13 +270,20 @@ def weights_for(pc, tag, body, B):
     raise ValueError(kind)
 
 
+PART_VERTS = {}      # each skinned mesh's vertices by the part they came from (the checks' own use)
+
+
 def skinned_mesh(name, tagged, body, B, atlas, mat, arm):
     pieces = [p for p, t in tagged]
     me = common.to_mesh(name, pieces, atlas)
     o = common.obj(name, me, mat, arm)
     groups = {}
     vi = 0
+    parts = PART_VERTS.setdefault(name, {})
     for pc, tag in tagged:
+        parts.setdefault(tag[0], []).extend(range(vi, vi + len(pc.V)))
+        if len(tag) > 1 and tag[1] in (1, -1):
+            parts.setdefault(tag[:2], []).extend(range(vi, vi + len(pc.V)))
         for w in weights_for(pc, tag, body, B):
             for bname, val in sorted(w.items()):
                 g = groups.get(bname)
@@ -1126,6 +1142,7 @@ def build_saker(out, sheets=False):
         sl = [e[4] for e in log if e[0] == name and e[1] == 'slide']
         if sl:
             print(f'{name}: a planted foot\'s distance from its place, max {max(sl):.2f} mm over {len(sl) // 2} frames')
+            assert max(sl) <= 5.0, f'{name}: a planted foot misses its place by {max(sl):.1f} mm'      # (the build fails: the toes came off the legs once)
     path = os.path.join(out, f'{BIRD}_rig.glb')
     bpy.ops.object.select_all(action='DESELECT')
     for o in [arm, *meshes.values(), *far.values()]:      # the far level in the same file, on the same skeleton
@@ -1859,12 +1876,79 @@ def inside_body(body, Q):
     return out
 
 
+def mat_set(o, kind):
+    """The vertices of a skinned mesh's parts of one kind ('shank', 'tarsus')."""
+    return np.array(sorted(PART_VERTS[o.data.name if o.data.name in PART_VERTS else o.name].get(kind, [])), int)
+
+
+def winding(V, F, P):
+    """The generalised winding number of points P (N x 3) about the closed triangle mesh (V, F): about 1 inside, 0 out."""
+    out = np.zeros(len(P))
+    for i, p in enumerate(P):
+        a, b, c = V[F[:, 0]] - p, V[F[:, 1]] - p, V[F[:, 2]] - p
+        la, lb, lc = (np.linalg.norm(x, axis=1) for x in (a, b, c))
+        num = np.einsum('ij,ij->i', a, np.cross(b, c))
+        den = la * lb * lc + np.einsum('ij,ij->i', a, b) * lc + np.einsum('ij,ij->i', b, c) * la + np.einsum('ij,ij->i', c, a) * lb
+        out[i] = np.arctan2(num, den).sum() / (2 * np.pi)
+    return out
+
+
+def trouser_checks(arm, meshes, frames_mesh, clips=('perch_idle', 'perch_hooded', 'fist_idle', 'fist_hooded', 'rouse',
+                                                    'land_cuff', 'land_perch', 'mantle', 'bind')):
+    """The tarsus's top stays under the trousers: its bare skin within 0.3 of its length from the ankle, each vertex
+    tested inside the trousers' closed tube (the winding number) in the posed mesh; outside, its distance to the tube."""
+    sc = bpy.context.scene
+    dg = bpy.context.evaluated_depsgraph_get()
+    sets = {}
+    for k in ('fold', 'open'):
+        o = meshes[k]
+        PV = PART_VERTS[o.name]
+        rest = np.array([tuple(v.co) for v in o.data.vertices]) / MM
+        tris = np.array([tuple(p.vertices) for p in o.data.polygons], int)
+        for side, s in ((1, 'L'), (-1, 'R')):
+            sk = np.array(sorted(PV[('tarsus', side)]), int)
+            shank = set(PV[('shank', side)])
+            F = tris[np.all(np.isin(tris, list(shank)), axis=1)]
+            b = arm.data.bones[f'tarsus.{s}']
+            h = np.array(tuple(arm.matrix_world @ b.head_local)) / MM
+            t = np.array(tuple(arm.matrix_world @ b.tail_local)) / MM
+            L = np.linalg.norm(t - h)
+            top = sk[((rest[sk] - h) @ ((t - h) / L)) < 0.3 * L]
+            sets[(k, s)] = (top, F)
+    for name in clips:
+        if name not in CLIPS:
+            continue
+        n = CLIPS[name][0]
+        use_clip(arm, name)
+        worst, wf, cnt = 0.0, None, 0
+        for f in range(0, n, 3):
+            sc.frame_set(f)
+            k = frames_mesh[name][f]
+            ev = meshes[k].evaluated_get(dg)
+            me = ev.to_mesh()
+            co = np.empty(len(me.vertices) * 3)
+            me.vertices.foreach_get('co', co)
+            ev.to_mesh_clear()
+            co = co.reshape(-1, 3) / MM
+            for s in ('L', 'R'):
+                top, F = sets[(k, s)]
+                w = winding(co, F, co[top])
+                for p in co[top][w < 0.5]:
+                    cnt += 1
+                    dist = float(np.sqrt(((co[np.unique(F)] - p) ** 2).sum(1)).min())
+                    if dist > worst:
+                        worst, wf = dist, f
+        print(f'{name}: the tarsus\'s top outside the trousers: {cnt} vertex-frames' + (f', the farthest {worst:.1f} mm from the nearest trouser vertex (frame {wf})' if cnt else ''))
+
+
 def motion_checks(arm, meshes, frames_mesh, clips, body):
     """The build's own checks, per clip: the swap's silhouette overlap, the feet out of sight in flight, the
     wing's flex in the beat."""
     sc = bpy.context.scene
-    feetO = group_set(meshes['open'], ('toe', 'tarsus'))
-    feetF = group_set(meshes['fold'], ('toe', 'tarsus'))
+    trouser_checks(arm, meshes, frames_mesh)
+    notO, notF = set(mat_set(meshes['open'], 'shank')), set(mat_set(meshes['fold'], 'shank'))
+    feetO = np.array([i for i in group_set(meshes['open'], ('toe', 'tarsus')) if i not in notO], int)      # (the trousers' skirt goes with the tarsus now)
+    feetF = np.array([i for i in group_set(meshes['fold'], ('toe', 'tarsus')) if i not in notF], int)
     wingO = np.array(sorted(group_set(meshes['open'], ('wing_fore', 'wing_hand'))), int)
     for name, (n, fn, loop) in CLIPS.items():
         if name in CUFF_CLIPS or name in PERCH_CLIPS:
@@ -1961,6 +2045,8 @@ def all_sheets(arm, meshes, frames_mesh, out, q, only=None):
         d = 1.15 if far else 0.75
         side = lambda f, r, d=d: ((r.x + 0.1, r.y + 4, r.z + 0.2), (r.x + 0.1, r.y, r.z + 0.2), d)
         tq = lambda f, r, d=d: ((r.x + 1.2 * d, r.y + 1.0 * d, r.z + 0.2 + 0.55 * d), (r.x + 0.08, r.y, r.z + 0.18), None)
+        if name in CUFF_CLIPS and not far:      # the frame lowered so the cuff shows whole (it was cut at the bottom)
+            side = lambda f, r, d=d: ((r.x + 0.1, r.y + 4, r.z + 0.14), (r.x + 0.1, r.y, r.z + 0.14), d)
         if name in FLYING:
             side = lambda f, r, d=d: ((r.x + 0.1, r.y + 4, r.z), (r.x + 0.1, r.y, r.z), d)
             tq = lambda f, r, d=d: ((r.x + 1.3 * d, r.y - 1.1 * d, r.z + 0.6 * d), (r.x + 0.1, r.y, r.z), None)

@@ -380,10 +380,17 @@ def legs(body, spec, pose, det):
         # the shank: feathered, thick, from inside the belly to the ankle
         # the feathers of the shank ('trousers') hang over the tarsus' top for [trouser] of its length
         low = ankle.lerp(foot, L.get('trouser', 0.0))
-        sh = smooth_path([knee, knee.lerp(ankle, 0.55), low], 5 if det.level == 0 else 3)
         rad = [L['shank_r'][0], L['shank_r'][1], L['shank_r'][2], L['shank_r'][3], L['shank_r'][4]]
-        if det.level != 0:
-            rad = [rad[0], rad[2], rad[4]]
+        if L.get('trouser', 0.0) > 0:
+            # through the ankle and on down the tarsus: from the knee straight to [low] the tube cut the heel's
+            # corner and the tarsus's top stood out behind it, 11 mm clear, in every pose (the review)
+            r0, r1, r2, r3, r4 = rad
+            sh = smooth_path([knee, knee.lerp(ankle, 0.55), ankle, low], 7 if det.level == 0 else 4)
+            rad = [r0, r1, r2, 0.5 * (r2 + r3), r3, 0.5 * (r3 + r4), r4] if det.level == 0 else [r0, r2, r3, r4]
+        else:
+            sh = smooth_path([knee, knee.lerp(ankle, 0.55), low], 5 if det.level == 0 else 3)
+            if det.level != 0:
+                rad = [rad[0], rad[2], rad[4]]
         out['shank'].append(tube('thigh', sh, rad, det.limb_ring + 2, up=V3((0, side, 0)), caps=(True, True)))
         # the tarsus: bare scaled skin, a little deeper than wide; the stone-curlew's 'thick knee' is its ankle
         tp = smooth_path([ankle, ankle.lerp(foot, 0.5), foot], 4 if det.level == 0 else 2)

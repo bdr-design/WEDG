@@ -314,7 +314,7 @@ frame. Measured by the build (the lower of the side and three-quarter overlap, i
 | saker `cast_off`, frame 14 | 0.911 |
 | saker `land_cuff` / `land_perch`, frame 38 | 0.893 / 0.891 |
 | stone-curlew `take_off`, frame 14 | 0.909 |
-| houbara `take_off` and `escape`, frames 14 and 36 | 0.931 (searched with the body level at the swap) |
+| houbara `take_off` and `escape`, frames 14 and 38 | 0.930 (searched with the body level at the swap) |
 
 **The swap is in the file.** Each body mesh has a morph target `hidden` that gathers its vertices to one point
 inside the body; every clip keys it (1 hidden, 0 shown) with STEP interpolation, so a mixer plays the swap with no
@@ -384,7 +384,7 @@ the first frame of the clip it hands to, beside the largest step inside that cli
 | tail, tail.L, tail.R | 3 | the tail lifts and drops; its two halves fan out (the flare, the mantle) |
 | fold, fold_tip (each side) | 4 | the folded mesh's wing opens at the shoulder and its primaries swing out to meet the swap |
 | wing_up, wing_fore, wing_hand (each side) | 6 | the beat at the shoulder; the flex at the elbow and wrist on the upstroke; the hand's twist |
-| shank, tarsus (each side) | 4 | the legs: reach, push, tuck; the foot planted |
+| shank, tarsus (each side) | 4 | the legs: reach, push, tuck; the foot planted; the trousers' skirt below the ankle goes with the tarsus (blended from 3 mm above the ankle to 20 mm below), so it covers the tarsus's top however the ankle bends |
 | two per toe, four toes (each side) | 16 | each toe lies on the rounded cuff its own way, its talon hooked in |
 | five per jess (each side) | 10 | the jesses sag between the anklet and the fist, swing and trail as soft cords |
 
@@ -408,12 +408,12 @@ hind toe) and no hood or jesses. At most two bones a vertex.
 | saker | `land_cuff`, `land_perch` | 46 each | she comes in from the side away from the falconer's body, beating down to about 300 mm under the fist, then swoops up to it on spread wings (as Harris' hawks swoop down and up to a perch: KleinHeerenbrink et al. 2022, *Nature*, known from summaries of it, not opened), turning a quarter to face along the fist, rises clear of the cuff and forearm, flares (the tail fanned, the wings forward braking) and drops onto it: contact at 28, the wings folded along the back to the swap at 38, the perched pose at 45. The side, the heights and the turn are game choices; the build measures the path clear of the support |
 | houbara | `stand` (loop) | 120 | alert, one foot back, the head turning, the crest lifting |
 | houbara | `run` (loop) | 16 | low and level, the neck forward; a stride every 8 frames at 3 m/s (game choice: no measured speed found) |
-| houbara | `take_off` | 40 | two strides, a crouch, the spring, deep beats, the legs trailing behind the body with the feet closed |
+| houbara | `take_off` | 40 | two strides at the run's speed (its own root motion), lowering, the spring at that speed, the feet leaving the ground over four frames into the trailing place, deep beats |
 | houbara | `flight` (loop) | 14 | 7-frame beats (4.3 Hz, inside the 4.2–4.7 Hz predicted), the neck stretched |
-| houbara | `escape` | 62 | it runs first, jinking, and flies when pressed (Encyclopaedia Iranica, from a search summary; the jinks are a game choice) |
+| houbara | `escape` | 64 | it runs first, jinking, each planted foot staying where it came down, and flies when pressed (the take-off from its frame 0) (Encyclopaedia Iranica, from a search summary; the jinks are a game choice) |
 | stone-curlew | `stand` (loop) | 120 | alert, one foot back, the head turning |
 | stone-curlew | `run` (loop) | 12 | a stride every 6 frames at 2 m/s (game choice) |
-| stone-curlew | `crouch` | 60 | down flat, the neck along the ground, held still, up again (crouch, freeze, then run: search summaries) |
+| stone-curlew | `crouch` | 60 | down on its heels, the body on the ground, the neck and head stretched forward low, held still, back to the stand by frame 58 (crouch, freeze, then run: search summaries) |
 | stone-curlew | `take_off` | 40 | as the houbara's |
 | stone-curlew | `flight` (loop) | 10 | 5-frame beats (6 Hz, inside the 5.9–7.4 Hz predicted) |
 
@@ -434,6 +434,12 @@ reviewer's own tools):
   and after they leave, no vertex of the shown body inside the cuff, a 45 mm forearm 400 mm behind it, or the
   perch (the landings now come in from the side; the cast-off lifts the tail clear before she drops). Once
   planted, only the tail on the fist (see What is unsure) and, on the perch, two tarsus vertices under 1 mm.
+- **The tarsus's top under the trousers:** the saker's feathered shank runs through the ankle and on down the tarsus
+  (from the knee straight to its end it cut the heel's corner, and the tarsus's top stood out behind it, 11.6 mm
+  clear, in every perched pose: the review). The build tests every third frame of the perched, landing, mantle and
+  bind clips: each bare-skin vertex within 0.3 of the tarsus from the ankle inside the trousers' closed tube (its
+  winding number): none outside (the old file: 720 vertex-frames in `perch_idle` alone). `legs_close.py FILE.glb
+  OUT.jpg` renders the legs close from four sides in six poses (`design/birds/motion/saker_legs_close.jpg`).
 - **Swaps:** STEP in the file (the build fails otherwise); overlaps as in the table above.
 - **Feet out of sight in flight:** no toe or tarsus vertex outside the body in any saker frame meant drawn up
   (`flight`, `glide`, `stoop`, `cast_off` from 24, the landings until 16). The houbara and the stone-curlew fly
@@ -497,7 +503,7 @@ flight). `hood_off` and `hood_on` are held back: they come with the man's hand r
 - **The houbara's escape.** It runs jinking, then takes off; the rising spiral the falcon meets (en.wikipedia,
   Asian houbara: "rises into the air and spirals") is the flight path the game steers with the flight loop, not a
   clip.
-- **The take-off's legs.** They go from the push to trailing in one frame (16 to 17); a three-frame blend is owed.
+- **The take-off's legs.** The feet leave the ground with the push and are drawn into the trailing place over four frames (15–18).
 - **Hand slivers in the stoop.** Seen from below, a few forearm and hand vertices pass inside the flank in the
   drawn-in wing (58 at most, frame 12, after turning the wing 10°; 75 before); the same outline at the swaps (70).
 

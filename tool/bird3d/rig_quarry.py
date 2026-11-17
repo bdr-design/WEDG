@@ -338,6 +338,24 @@ class QApplier:
         # the legs: each foot a world target; planted feet with their toes on the ground, swinging ones curled
         for side, s in ((1, 'L'), (-1, 'R')):
             target, planted, curl = sp['feet'][s]
+            if isinstance(target, tuple) and target and target[0] == 'lift':
+                # leaving the ground: from where the foot was (world) to the trailing place behind the body, over
+                # a few frames, the toes curling as it goes (they went from planted to trailing in one frame)
+                _, start, k = target
+                k = smooth01(k)
+                tx, ty, tz = self.trail
+                tb = W @ (bird.torso_point(self.body, tx, tz, ty * side) * MM) / MM
+                pole0 = Matrix.Rotation(math.radians(self.yaw), 3, 'Z') @ V3((-1, 0, -0.1))
+                pole1 = W.to_3x3() @ V3((-1, 0, 0.6))
+                # (lifted clear on an arc, the toes curling first, so none drags through the ground)
+                arc = V3((0, 0, 45 * math.sin(math.pi * min(1.0, 1.5 * k))))
+                P.leg(s, lerp(V3(start) + V3((0, 0, Q_FOOT_LIFT)), tb, k) + arc, pole0.lerp(pole1, k))
+                kc = min(1.0, 2.0 * k)
+                for nm in TOES:
+                    ax = P.rest[f'{nm}1.{s}'].to_3x3() @ V3((1, 0, 0))
+                    P.turn(f'{nm}1.{s}', ax, -60 * kc)
+                    P.turn(f'{nm}2.{s}', ax, -80 * kc)
+                continue
             if target == 'trail':
                 tx, ty, tz = self.trail
                 tb = W @ (bird.torso_point(self.body, tx, tz, ty * side) * MM) / MM      # behind the body, in its own frame
@@ -489,10 +507,13 @@ class Clips:
         sp = {'mesh': 'open', 'wing': w, 'pitch': keys(f, [(swap, self.swap_pitch), (swap + 4, 18), (swap + 12, 8), (n_total - 1, 3)]),
               'root': root, 'bob': bob, 'neck': tuple(lerp(a, b, ramp(f, swap, swap + 10)) for a, b in zip(self.run_neck, self.fly_neck)),
               'tail_spread': lerp(1.25, 1.05, ramp(f, n_total - 10, n_total - 1))}
-        if f < swap + 3:
+        last = self.take_off(swap - 1)['feet']
+        if f == swap:
             # the push off the last planted stride, where the run-up left the feet
-            last = self.take_off(swap - 1)['feet']
-            sp['feet'] = {s_: (p, True, 0) for s_, (p, pl, c) in last.items()}
+            sp['feet'] = {s_: (p, pl, c) for s_, (p, pl, c) in last.items()}
+        elif f <= swap + 4:
+            # then the feet leave with the push, drawn into the trailing place over four frames
+            sp['feet'] = {s_: (('lift', p, (f - swap) / 4.0), False, 0) for s_, (p, pl, c) in last.items()}
         else:
             sp['feet'] = {'L': ('trail', False, 1), 'R': ('trail', False, 1)}
         if f == swap:
@@ -510,12 +531,17 @@ class Clips:
         take-off."""
         if f < 24:
             r = self.run(f)
-            yaw = 18 * math.sin(2 * math.pi * f / 16.0)
-            r['yaw'] = yaw
-            Rz = Matrix.Rotation(math.radians(yaw), 3, 'Z')
-            x = self.run_v * f / FPS      # its own root motion, as the take-off's run-up
-            r['root'] = V3((x, 0, 0))
-            r['feet'] = {s_: (Rz @ p + V3((x, 0, 0)), pl, c) for s_, (p, pl, c) in r['feet'].items()}      # the stride turns with the body
+            r['yaw'] = self._jink_yaw(f)
+            r['root'] = V3((self.run_v * f / FPS, 0, 0))      # its own root motion, as the take-off's run-up
+            # the stride turns with the body; a planted foot stays where it came down (turned with the body it
+            # skidded sideways 7-32 mm a frame: the review)
+            feet = {}
+            for s_, (p, pl, c) in r['feet'].items():
+                g = f
+                while pl and g > 0 and self.run(g - 1)['feet'][s_][1]:
+                    g -= 1
+                feet[s_] = (self._jink_foot(g if pl else f, s_), pl, c)
+            r['feet'] = feet
             return r
         # the take-off from its own frame 0 (it restarted two frames on: the feet jumped 266 mm: the review); the
         # jinking run's distance carried in front of it
@@ -526,6 +552,16 @@ class Clips:
         if isinstance(r.get('feet'), dict):
             r['feet'] = {s_: ((V3((p.x + x, p.y, p.z)) if isinstance(p, V3) else p), pl, c) for s_, (p, pl, c) in r['feet'].items()}
         return r
+
+    def _jink_yaw(self, f):
+        return 18 * math.sin(2 * math.pi * f / 16.0)
+
+    def _jink_foot(self, f, s_):
+        """Where the escape's stride puts foot [s_] at frame [f]: the run's foot turned with the body's jink,
+        carried with the root."""
+        p = self.run(f)['feet'][s_][0]
+        Rz = Matrix.Rotation(math.radians(self._jink_yaw(f)), 3, 'Z')
+        return Rz @ p + V3((self.run_v * f / FPS, 0, 0))
 
     def flutter(self, f):
         """The tethered decoy (game choice from how trappers use it: the pigeon on its line, made to flap where the
@@ -656,6 +692,7 @@ def build(name, out, clips_wanted=None):
         sl = [e[4] for e in logs if e[0] == cname and e[1] == 'slide']
         if sl:
             print(f'{cname}: a planted foot\'s distance from its place, max {max(sl):.2f} mm over {len(sl)} foot-frames')
+            assert max(sl) <= 5.0, f'{cname}: a planted foot misses its place by {max(sl):.1f} mm'      # (the build fails: the toes came off the legs once)
     path = os.path.join(out, f'{name}_rig.glb')
     bpy.ops.object.select_all(action='DESELECT')
     for o in [arm, *meshes.values(), *far.values()]:      # the far level in the same file, on the same skeleton
