@@ -450,7 +450,9 @@ Result endTrip(Sim sim, PlayerState p, EndTrip cmd) {
 
 Result moveCamp(Sim sim, PlayerState p, MoveCamp cmd) {
   final t = p.falconry?.trip;
-  if (t == null) return refuse(sim, HuntRefusal.noTrip);
+  if (t == null || t.home(sim.today, cmd.minute ?? 0)) {
+    return refuse(sim, HuntRefusal.noTrip);
+  }
   if (t.returning) return refuse(sim, HuntRefusal.homeward);
   if (t.kind != TripKind.trapping || t.oneDay) {
     return refuse(sim, HuntRefusal.notOnTrip);

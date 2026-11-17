@@ -1337,6 +1337,12 @@ void main() {
         why(g.dispatch(EndTrip(g.me.id, minute: t.homeMinute! + 1))),
         'noTrip',
       );
+      expect(
+        why(
+          g.dispatch(MoveCamp(g.me.id, Ground.hail, minute: t.homeMinute! + 1)),
+        ),
+        'noTrip',
+      );
     });
   });
 
