@@ -224,7 +224,14 @@ def weights_for(pc, tag, body, B):
         knee, ankle = B[f'shank.{s}'][0], B[f'shank.{s}'][1]
         L = (ankle - knee).length
         return [blend('body', f'shank.{s}', ((q - knee).dot((ankle - knee).normalized())) / (0.35 * L)) for q in pc.V]
-    if kind in ('tarsus', 'anklet'):
+    if kind == 'tarsus':
+        # its top (the first fifth from the ankle) blended into the shank, so it stays inside the feathered thigh
+        # however the ankle bends (it came out of it, the cut end showing, in every perched pose: the review)
+        ankle, foot = B[f'tarsus.{s}'][0], B[f'tarsus.{s}'][1]
+        L = (foot - ankle).length
+        d = (foot - ankle).normalized()
+        return [blend(f'shank.{s}', f'tarsus.{s}', ((q - ankle).dot(d)) / (0.2 * L)) for q in pc.V]
+    if kind == 'anklet':
         return [{f'tarsus.{s}': 1.0} for _ in pc.V]
     if kind in ('toe', 'claw'):
         nm = TOE_NAMES[tag[2]]
@@ -685,6 +692,16 @@ class SakerClips:
         return {'pitch': 66 + 0.8 * math.sin(3 * c), 'tb': PERCH_TB + V3((0, 0, 1.0 * math.sin(3 * c))), 'feet': 'perch',
                 'mesh': 'fold', 'head_yaw': yaw, 'head_pitch': 1.5 * math.sin(c), 'settle': 1.0}
 
+    def fist_idle(self, f):
+        """The perched idle on the fist: the same shifts and looks, the feet on the cuff and the jesses in the
+        falconer's grip (perch_idle stands on the block with them hanging: from the fist it jumped)."""
+        # (no tail flick: on the fist it dipped into the glove)
+        return {**self.perch_idle(f), 'feet': 'cuff', 'jess_hold': True, 'tail_drop': 0.0}
+
+    def fist_hooded(self, f):
+        """Hooded on the fist, quiet, as perch_hooded, on the cuff with the jesses held."""
+        return {**self.perch_hooded(f), 'feet': 'cuff', 'jess_hold': True}
+
     def rouse(self, f):
         """The rouse: every contour feather raised at once (the morph 'fluff', 2-6), the whole bird shaken through
         for about half a second (roll and head at 7 Hz, the folded wings lifted, the tail fanned with it), then the
@@ -744,9 +761,13 @@ class SakerClips:
         tb = V3((900 * (1 - (1 - s_) ** 2), 0, -150 * s_))
         # the feet thrown forward from the stoop's tuck over the first four frames (they started out struck
         # forward at frame 0: a 176 mm jump at the hand-over, the review)
+        # and the head (in line with the dive), the tail (closed) and the toes (clenched in the tuck) eased out of
+        # the stoop's last frame over the same four frames (they snapped at the hand-over: the review)
+        hp0 = self.stoop(39)['head_pitch']
         return {'pitch': pitch, 'tb': tb, 'feet': ('reach', ramp(f, 0, 4)), 'mesh': 'open', 'wing': w,
-                'tail_spread': 1.4 - 0.2 * ramp(f, 12, 24), 'tail_drop': 14 * ramp(f, 2, 8),
-                'clench': ramp(f, 9, 11), 'open_toes': ramp(f, 0, 6) * (1 - ramp(f, 9, 11))}
+                'head_pitch': hp0 * (1 - ramp(f, 0, 4)),
+                'tail_spread': lerp(1.0, 1.4, ramp(f, 0, 4)) - 0.2 * ramp(f, 12, 24), 'tail_drop': 14 * ramp(f, 2, 8),
+                'clench': max(1 - ramp(f, 0, 4), ramp(f, 9, 11)), 'open_toes': ramp(f, 2, 6) * (1 - ramp(f, 9, 11))}
 
     def mantle(self, f):
         """Mantling on the kill (on the ground): the wings spread and drooped to hide it, the tail fanned and down,
@@ -761,8 +782,10 @@ class SakerClips:
 HOOD_CLIPS = ('hood_off', 'hood_on')      # the only clips that key the hood
 HANDOVERS = (('land_perch', 'perch_idle'), ('land_perch', 'perch_hooded'), ('land_perch', 'rouse'), ('rouse', 'perch_idle'),
              ('perch_idle', 'rouse'), ('perch_hooded', 'perch_idle'), ('land_cuff', 'hood_on'), ('land_cuff', 'cast_off'),
-             ('hood_off', 'cast_off'), ('cast_off', 'flight'), ('flight', 'glide'), ('glide', 'stoop'), ('stoop', 'bind'))
-HOODED_CLIPS = ('perch_hooded',)          # drawn with the hood on (the hood itself is game state)
+             ('hood_off', 'cast_off'), ('cast_off', 'flight'), ('flight', 'glide'), ('glide', 'stoop'), ('stoop', 'bind'),
+             ('land_cuff', 'fist_idle'), ('fist_idle', 'cast_off'), ('hood_on', 'fist_hooded'), ('fist_hooded', 'hood_off'),
+             ('fist_hooded', 'fist_idle'))
+HOODED_CLIPS = ('perch_hooded', 'fist_hooded')          # drawn with the hood on (the hood itself is game state)
 
 
 def saker_mod():
@@ -770,7 +793,8 @@ def saker_mod():
 
 
 CLIPS = {      # name: (frames, method, loops)
-    'perch_idle': (120, 'perch_idle', True), 'perch_hooded': (150, 'perch_hooded', True), 'rouse': (36, 'rouse', False), 'hood_off': (30, 'hood_off', False),
+    'perch_idle': (120, 'perch_idle', True), 'perch_hooded': (150, 'perch_hooded', True),
+    'fist_idle': (120, 'fist_idle', True), 'fist_hooded': (150, 'fist_hooded', True), 'rouse': (36, 'rouse', False), 'hood_off': (30, 'hood_off', False),
     'hood_on': (30, 'hood_on', False), 'cast_off': (39, 'cast_off', False), 'flight': (14, 'flight', True),
     'glide': (60, 'glide', True), 'stoop': (40, 'stoop', False), 'bind': (24, 'bind', False),
     'mantle': (60, 'mantle', True), 'land_cuff': (46, 'land_cuff', False), 'land_perch': (46, 'land_perch', False),
@@ -871,16 +895,16 @@ class Applier:
             if w:
                 P.turn(f'wing_up.{s}', (side, 0, 0), w['up'])
                 P.turn(f'wing_up.{s}', (0, 0, side), w['sweep'])
-                P.turn(f'wing_up.{s}', (0, side, 0), w.get('twist', 0.0))
+                P.turn(f'wing_up.{s}', (0, 1, 0), w.get('twist', 0.0))      # (about the span: the same turn on both sides)
                 P.turn(f'wing_fore.{s}', (0, 0, side), w['fore'])
                 P.turn(f'wing_hand.{s}', (0, 0, side), w['hand'])
                 P.turn(f'wing_hand.{s}', (side, 0, 0), w.get('hand_up', 0.0))
-                P.turn(f'wing_hand.{s}', (0, side, 0), w.get('hand_twist', 0.0))
+                P.turn(f'wing_hand.{s}', (0, 1, 0), w.get('hand_twist', 0.0))
             fp = sp.get('fold')
             if fp:
                 P.turn(f'fold.{s}', (0, 0, -side), fp.get('out', 0.0))
                 P.turn(f'fold.{s}', (side, 0, 0), fp.get('up', 0.0))
-                P.turn(f'fold.{s}', (0, side, 0), fp.get('twist', 0.0))
+                P.turn(f'fold.{s}', (0, 1, 0), fp.get('twist', 0.0))
                 P.turn(f'fold_tip.{s}', (0, 0, -side), fp.get('tip_out', 0.0))
                 P.turn(f'fold_tip.{s}', (side, 0, 0), fp.get('tip_up', 0.0))
             lift = sp.get('fold_lift', 0.0)
@@ -1321,6 +1345,7 @@ def glb_checks(path, hood_clips=()):
         raw = fh.read()
     jl = struct.unpack('<I', raw[12:16])[0]
     g = json.loads(raw[20:20 + jl])
+    bin0 = 20 + jl + 8      # the binary chunk's data
     names = [nd.get('name', '') for nd in g.get('nodes', [])]
     joints = sorted(set(names[j] for sk in g.get('skins', []) for j in sk['joints']))
     acc, bad, hood, nweights, missing = set(), [], [], 0, []
@@ -1336,9 +1361,15 @@ def glb_checks(path, hood_clips=()):
                     bad.append((an['name'], node))
             if ch['target']['path'] == 'rotation':
                 rot.add(node)
-            if node == 'hood' and ch['target']['path'] == 'scale':
+            if node == 'hood' and ch['target']['path'] in ('scale', 'translation'):
+                # by the values themselves (the exporter writes no min and max for an animation's output)
                 acc_o = g['accessors'][smp['output']]
-                if acc_o.get('min') != acc_o.get('max'):
+                bv = g['bufferViews'][acc_o['bufferView']]
+                n = acc_o['count'] * 3
+                at = bin0 + bv.get('byteOffset', 0) + acc_o.get('byteOffset', 0)
+                vals = struct.unpack_from(f'<{n}f', raw, at)
+                if max(vals[k::3][i] - vals[k::3][0] for k in range(3) for i in range(len(vals[k::3]))) > 1e-6 or \
+                        min(vals[k::3][i] - vals[k::3][0] for k in range(3) for i in range(len(vals[k::3]))) < -1e-6:
                     hood.append(an['name'])
         miss = [j for j in joints if j not in rot]
         if miss:
@@ -1588,8 +1619,10 @@ def handover_checks(arm, pairs, clips, skip=()):
         pa = bone_heads(arm)
         use_clip(arm, b)
         nb = clips[b][0]
+        # the gap is held against the clip's own steps over its first five frames, not its largest anywhere (a
+        # violent clip's wingbeat hid a pop at its start: the review)
         prev, inner = None, 0.0
-        for f in range(nb):
+        for f in range(min(nb, 5)):
             sc.frame_set(f)
             p = bone_heads(arm)
             if f == 0:
@@ -1600,7 +1633,7 @@ def handover_checks(arm, pairs, clips, skip=()):
         gap, bone = pose_gap(pa, p0, skip)
         both_loop = clips[a][2] and clips[b][2]      # two loops (the flight's beat into the glide): the page cross-fades
         print(f'hand-over {a} (last frame) -> {b} (first): the pose differs by {gap:.1f} mm at most ({bone}); '
-              f'the largest step inside {b} {inner:.1f} mm' + ('' if gap <= max(inner, 2.0) + 0.5 else
+              f'the largest step in {b}\'s first frames {inner:.1f} mm' + ('' if gap <= max(inner, 2.0) + 0.5 else
                                                                '  (two loops: cross-faded by the page)' if both_loop else '  ** too large **'))
         res.append((a, b, gap, inner))
     return res
@@ -1890,7 +1923,7 @@ def motion_checks(arm, meshes, frames_mesh, clips, body):
             print(f'flight: shoulder to wingtip {min(d):.0f} to {max(d):.0f} mm ({100 * min(d) / max(d):.0f}% at the most flexed)')
 
 
-CUFF_CLIPS = ('hood_off', 'hood_on', 'cast_off', 'land_cuff')
+CUFF_CLIPS = ('hood_off', 'hood_on', 'cast_off', 'land_cuff', 'fist_idle', 'fist_hooded')
 PERCH_CLIPS = ('perch_idle', 'perch_hooded', 'rouse', 'land_perch')
 FLYING = ('flight', 'glide', 'stoop', 'bind')
 
@@ -1967,6 +2000,10 @@ if __name__ == '__main__':
     if mode in ('sheets', 'quick'):
         all_sheets(arm, meshes, frames_mesh, OUT, mode == 'quick', only)
         if not only or 'feet' in only:
+            # (the cuff shown and the perch hidden: the last clip's sheet left the perch up, under a sheet named for the cuff)
+            bpy.data.objects['dass'].hide_render = False
+            bpy.data.objects['wakr'].hide_render = True
+            bpy.data.objects['sand'].hide_render = True
             contact_sheet(arm, meshes, frames_mesh, 'cast_off', [0, 12], OUT, res=(480, 360), samples=12,
                           cam=lambda f, r: ((0.35, 0.3, 0.08), (0.0, 0.0, 0.0), None), label='the feet on the cuff', tag='feet')
         if os.environ.get('GIFS'):

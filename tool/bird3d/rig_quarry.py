@@ -324,11 +324,11 @@ class QApplier:
             if w:
                 P.turn(f'wing_up.{s}', (side, 0, 0), w['up'])
                 P.turn(f'wing_up.{s}', (0, 0, side), w['sweep'])
-                P.turn(f'wing_up.{s}', (0, side, 0), w.get('twist', 0.0))
+                P.turn(f'wing_up.{s}', (0, 1, 0), w.get('twist', 0.0))      # (about the span: the same turn on both sides)
                 P.turn(f'wing_fore.{s}', (0, 0, side), w['fore'])
                 P.turn(f'wing_hand.{s}', (0, 0, side), w['hand'])
                 P.turn(f'wing_hand.{s}', (side, 0, 0), w.get('hand_up', 0.0))
-                P.turn(f'wing_hand.{s}', (0, side, 0), w.get('hand_twist', 0.0))
+                P.turn(f'wing_hand.{s}', (0, 1, 0), w.get('hand_twist', 0.0))
             fp = sp.get('fold')
             if fp:
                 P.turn(f'fold.{s}', (0, 0, -side), fp.get('out', 0.0))
@@ -414,6 +414,7 @@ class Clips:
         self.swap_pitch = 0.0 if name == 'houbara' else -14.0
         self.trail = (-70, 30, -45) if name == 'houbara' else (-90, 16, -30)      # torso frame: the feet behind, under the tail
         self.fly_amp = 52 if name == 'houbara' else 44
+        self.run_v = {'houbara': 3000.0, 'curlew': 2000.0}.get(name, 0.0)      # mm/s, the run's own speed
 
     def flap(self, ph, amp, mean):
         up = mean + amp * math.cos(2 * math.pi * ph)
@@ -451,17 +452,20 @@ class Clips:
         """Two strides of run, a crouch, the spring with the wings opening (the folded mesh to 13, the spread mesh
         matched from 14), the first heavy beats low over the ground, the legs trailing back."""
         swap = 14
+        v = self.run_v
         if f < swap:
+            # the run-up carries its own root motion at the run's speed (it ran on the spot before, the feet sliding:
+            # the review), the stride planted in the world; the crouch is the body lowered as it runs on
             r = self.run(f)
+            x = v * f / FPS
+            r['root'] = V3((x, 0, 0))
+            r['feet'] = {s_: (V3((p.x + x, p.y, p.z)), pl, c) for s_, (p, pl, c) in r['feet'].items()}
             r['pitch'] = lerp(-6, self.swap_pitch, ramp(f, 8, 13))      # the chest lifted level as the wings open
             r['bob'] += -18 * ramp(f, 8, 13)
             if f >= 9:
-                r['fold'] = {k: v * ramp(f, 9, 13) for k, v in self.swap_fold.items()}
+                r['fold'] = {k: vv * ramp(f, 9, 13) for k, vv in self.swap_fold.items()}
             if f == 13:
                 r['wing'] = dict(self.swap_open)
-            # the feet in place under the body from the crouch on
-            if f >= 10:
-                r['feet'] = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((-10, -self.hw, 0)), True, 0)}
             return r
         k = ramp(f, swap, swap + 5)
         raised = {'up': 60, 'sweep': 18, 'fore': -12, 'hand': 14, 'twist': 0}
@@ -475,8 +479,10 @@ class Clips:
             # flight loop's beat by the clip's end
             g = ramp(f, start, n_total - 2)
             w = self.flap(((f - start) / self.beat) % 1.0, lerp(30, famp, g), lerp(26, fmean, g))
-        t = max(0.0, (f - swap - 1) / FPS)
-        root = V3((1800 * t + 0.5 * 3000 * t * t, 0, 0.5 * 4200 * t * t))
+        # on from the run-up at its speed, accelerating and climbing (the speed carried, no stop)
+        t = (f - swap + 1) / FPS
+        x0 = v * (swap - 1) / FPS
+        root = V3((x0 + v * t + 0.5 * 3000 * t * t, 0, 0.5 * 4200 * max(0.0, t - 2 / FPS) ** 2))
         ph = ((f - start) / self.beat) % 1.0
         bob0 = self.run(swap - 1)['bob'] - 18      # where the crouch left the body
         bob = lerp(bob0, 0.0, ramp(f, swap, swap + 8)) + (-10 * math.cos(2 * math.pi * ph)) * ramp(f, n_total - 10, n_total - 1)
@@ -484,7 +490,9 @@ class Clips:
               'root': root, 'bob': bob, 'neck': tuple(lerp(a, b, ramp(f, swap, swap + 10)) for a, b in zip(self.run_neck, self.fly_neck)),
               'tail_spread': lerp(1.25, 1.05, ramp(f, n_total - 10, n_total - 1))}
         if f < swap + 3:
-            sp['feet'] = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((-10, -self.hw, 0)), True, 0)}
+            # the push off the last planted stride, where the run-up left the feet
+            last = self.take_off(swap - 1)['feet']
+            sp['feet'] = {s_: (p, True, 0) for s_, (p, pl, c) in last.items()}
         else:
             sp['feet'] = {'L': ('trail', False, 1), 'R': ('trail', False, 1)}
         if f == swap:
@@ -505,9 +513,19 @@ class Clips:
             yaw = 18 * math.sin(2 * math.pi * f / 16.0)
             r['yaw'] = yaw
             Rz = Matrix.Rotation(math.radians(yaw), 3, 'Z')
-            r['feet'] = {s_: (Rz @ p, pl, c) for s_, (p, pl, c) in r['feet'].items()}      # the stride turns with the body
+            x = self.run_v * f / FPS      # its own root motion, as the take-off's run-up
+            r['root'] = V3((x, 0, 0))
+            r['feet'] = {s_: (Rz @ p + V3((x, 0, 0)), pl, c) for s_, (p, pl, c) in r['feet'].items()}      # the stride turns with the body
             return r
-        return self.take_off(f - 24 + 2)
+        # the take-off from its own frame 0 (it restarted two frames on: the feet jumped 266 mm: the review); the
+        # jinking run's distance carried in front of it
+        r = self.take_off(f - 24)
+        x = self.run_v * 24 / FPS
+        if isinstance(r.get('root'), V3):
+            r['root'] = r['root'] + V3((x, 0, 0))
+        if isinstance(r.get('feet'), dict):
+            r['feet'] = {s_: ((V3((p.x + x, p.y, p.z)) if isinstance(p, V3) else p), pl, c) for s_, (p, pl, c) in r['feet'].items()}
+        return r
 
     def flutter(self, f):
         """The tethered decoy (game choice from how trappers use it: the pigeon on its line, made to flap where the
@@ -541,15 +559,15 @@ class Clips:
         """The stone-curlew's crouch: it lies flat with the neck stretched along the ground and stays still, trusting
         its plumage (from search summaries: crouch, freeze, then run; the timing is a game choice); down by 12,
         held, up again from 48."""
-        k = ramp(f, 0, 12) * (1 - ramp(f, 48, 60))
+        k = ramp(f, 0, 12) * (1 - ramp(f, 46, 58))      # (back to the stand by the clip's last frames)
         feet = {'L': (V3((0, self.hw, 0)), True, 0), 'R': (V3((-28, -self.hw, 0)), True, 0)}      # where the stand has them
-        return {'feet': feet, 'mesh': 'fold', 'pitch': -4 * k, 'bob': -60 * k, 'neck': (-55 * k, -25 * k), 'head_pitch': 10 * k,
+        return {'feet': feet, 'mesh': 'fold', 'pitch': -2 * k, 'bob': -90 * k, 'neck': (-72 * k, 8 * k), 'head_pitch': 26 * k,
                 'tail_drop': -6 * k}
 
 
 CLIPS = {
     'houbara': {'stand': (120, 'stand', True), 'run': (16, 'run', True), 'take_off': (40, 'take_off', False),
-                'flight': (14, 'flight', True), 'escape': (62, 'escape', False)},
+                'flight': (14, 'flight', True), 'escape': (64, 'escape', False)},
     'curlew': {'stand': (120, 'stand', True), 'run': (12, 'run', True), 'crouch': (60, 'crouch', False),
                'take_off': (40, 'take_off', False), 'flight': (10, 'flight', True)},
     'pigeon': {'stand': (120, 'stand', True), 'flutter': (60, 'flutter', False)},
