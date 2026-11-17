@@ -420,6 +420,42 @@ void main() {
         expect(m.first.$3, lessThanOrEqualTo(0.6));
       }
     });
+    test('the numbers the odds rest on, pinned', () {
+      expect(TrapOdds.triesMost, 3);
+      expect(TrapOdds.november, 0.92);
+      expect(TrapOdds.groundSouth, 0.92);
+      expect(TrapOdds.groundNorth, 0.9);
+      expect(TrapOdds.passCoast, 0.0412);
+      expect(TrapOdds.passChance(Ground.lith, d(2026, 10, 10)), 0.0412);
+      expect(
+        TrapOdds.passChance(Ground.lith, d(2026, 11, 10)),
+        closeTo(0.0412 * 0.92, 1e-12),
+      );
+    });
+    test('the net at a hunting ground: the off-ground words', () {
+      final g = trapper();
+      final r = g.dispatch(
+        SpotFalcon(g.me.id, at(Ground.nafudEdge), minute: dawn),
+      );
+      expect(why(r), 'offGround');
+    });
+    test('one trapping ground a day: a camp moved or remade finds the same '
+        'day', () {
+      final g = trapper();
+      camp(g, TripKind.trapping, Ground.hail, 10);
+      expect(
+        g.dispatch(SpotFalcon(g.me.id, at(Ground.hail), minute: dawn)).ok,
+        isTrue,
+      );
+      final day = g.today;
+      expect(g.dispatch(MoveCamp(g.me.id, Ground.dibdibah)).ok, isTrue);
+      final t = g.me.hunt.trip!;
+      expect(
+        t.arriveOn > day || t.arriveMinute > HuntSun.sunset(day),
+        isTrue,
+        reason: 'the drive to the new ground is game time',
+      );
+    });
     test('the same day gives the same falcon however often he looks', () {
       final g = trapper();
       camp(g, TripKind.trapping, Ground.hamad, 5);
@@ -703,6 +739,19 @@ void main() {
       }
       expect(ok, lessThanOrEqualTo(3));
       expect(TrapOdds.flightsADay, 3);
+    });
+    test('a falconry trip with no falcon ready: refused', () {
+      final g = trapper();
+      trainedFalcon(g).dauDays = 10;
+      g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
+      expect(
+        why(
+          g.dispatch(
+            StartTrip(g.me.id, TripKind.falconry, Ground.nafudEdge, 2),
+          ),
+        ),
+        'notReady',
+      );
     });
     test(
       'a cast off a trip, or at another ground than the trip\'s: refused',

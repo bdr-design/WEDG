@@ -37,10 +37,12 @@ class TrapOdds {
   /// window) catches a sellable bird with [bestDay], so that no season of 61
   /// days can pass two in 3 (the owner's «موسمين من كل 3», never beyond).
   static const passCoast = 0.0412;
-  // (measured by tool/trap_odds.dart over 20,000 seasons: the bare beginner
-  // 0.160, the well equipped 0.647)
+  // (the inland south set so that the design's bare beginner, hunting.md
+  // 9.3: a few pigeons, one net, no binoculars, السليل, 20 days, the
+  // trappers' hours, comes to about one season in 6; measured by
+  // tool/trap_odds.dart over 20,000 seasons: see GDD 15)
   static const groundNorth = 0.9;
-  static const groundSouth = 0.85;
+  static const groundSouth = 0.92;
   static const november = 0.92;
 
   /// The best day's chance: 1 − (1/3)^(1/61).

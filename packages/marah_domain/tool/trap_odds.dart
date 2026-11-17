@@ -34,14 +34,17 @@ class Profile {
 }
 
 const profiles = [
+  // the design's bare beginner (docs/proposals/hunting.md 9.3): a few
+  // pigeons, one kind of net, no binoculars, an inland ground, a short camp,
+  // and the trappers' own hours (dawn to 10 and the evening hour [204])
   Profile(
     'bare beginner',
     'about 1 in 6 (0.167); sources 1 in 12.5 (0.08)',
-    Ground.hail,
+    Ground.sulayyil,
     15,
-    30,
+    20,
     {Gear.pigeon: 6, Gear.pigeonNet: 1},
-    [TrapWindow.dawn],
+    [TrapWindow.dawn, TrapWindow.evening],
   ),
   Profile(
     'middle',
@@ -118,11 +121,12 @@ void main(List<String> args) {
         if (PermitKind.trapping.seasonOn(today) == null) break;
         for (final w in pr.windows) {
           final m = minuteIn(w, today);
-          final seen = g
-              .dispatch(SpotFalcon(me, HuntAt.ground(pr.ground), minute: m))
-              .events
-              .whereType<TrapResult>()
-              .single;
+          // (on the road out the net is refused: the drive is game time)
+          final spot = g.dispatch(
+            SpotFalcon(me, HuntAt.ground(pr.ground), minute: m),
+          );
+          if (!spot.ok) continue;
+          final seen = spot.events.whereType<TrapResult>().single;
           if (seen.outcome != TrapOutcome.inSight) continue;
           // he tries what he has: the pigeon, then the bird net, then a
           // pigeon again
