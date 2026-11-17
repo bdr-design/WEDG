@@ -135,7 +135,10 @@ class HuntBalance {
     final floor = worth[route]!.first.$2;
     final lo = floor * 6 ~/ 10;
     final mid = floor;
-    final top = floor * 2;
+    // (twice the floor, but never above the route's median: at the breeders
+    // twice the floor sat just under the dear line and marked it)
+    final median = worthAt(route, 0.5);
+    final top = floor * 2 < median ? floor * 2 : median;
     final step = route == FalconRoute.breeders ? 1000 : 5000;
     final low = rng.chance(0.75);
     final u = rng.nextDouble();

@@ -514,7 +514,7 @@ void main() {
         }
         expect(all, greaterThan(0), reason: r.name);
         worst[r] = 0;
-        for (final b in bands.values.where((b) => b[0] >= 300)) {
+        for (final b in bands.values.where((b) => b[0] >= 100)) {
           final share = b[1] / b[0];
           if (share > worst[r]!) worst[r] = share;
         }

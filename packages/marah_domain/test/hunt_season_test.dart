@@ -1346,6 +1346,167 @@ void main() {
     });
   });
 
+  group('the second fix round (reviewer A)', () {
+    test('a falcon lost in play is lost at its trip\'s ground: looked for '
+        'there by day, not by night, not from another ground', () {
+      Game? g;
+      Falcon? f;
+      for (var seed = 1; seed <= 300 && f == null; seed++) {
+        final gg = trapper(seed: seed);
+        final ff = trainedFalcon(gg);
+        gg.dispatch(BuyPermit(gg.me.id, PermitKind.hunting));
+        camp(
+          gg,
+          TripKind.falconry,
+          Ground.nafudEdge,
+          10,
+          minute: HuntSun.sunrise(gg.today) + 60,
+        );
+        for (var i = 0; i < 3; i++) {
+          gg.dispatch(
+            CastFalcon(
+              gg.me.id,
+              ff.id,
+              at(Ground.nafudEdge),
+              minute: HuntSun.sunrise(gg.today) + 120,
+            ),
+          );
+        }
+        if (ff.where == FalconWhere.lost) {
+          g = gg;
+          f = ff;
+        }
+      }
+      expect(f, isNotNull);
+      expect(f!.lostAt, Ground.nafudEdge, reason: 'recorded by the cast');
+      leg(g!);
+      final noon = HuntSun.sunrise(g.today) + 240;
+      expect(
+        why(g.dispatch(SearchFalcon(g.me.id, f.id, minute: 30))),
+        'searchThere',
+        reason: 'by night',
+      );
+      goHome(g);
+      expect(
+        why(g.dispatch(SearchFalcon(g.me.id, f.id, minute: noon))),
+        'searchThere',
+        reason: 'from home',
+      );
+    });
+    test('looked for from a trip at another ground: refused', () {
+      final g = trapper();
+      final f = trainedFalcon(g);
+      final f2 = trainedFalcon(g);
+      g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
+      f2
+        ..where = FalconWhere.lost
+        ..lostOn = g.today
+        ..lostAt = Ground.nafudEdge;
+      g.state.world.day = d(2026, 11, 10);
+      g.me.hunt.permits[PermitKind.hunting] = PermitKind.hunting.seasonOn(
+        g.today,
+      )!;
+      f.caredOn = g.today;
+      f2.lostOn = g.today;
+      camp(
+        g,
+        TripKind.falconry,
+        Ground.estate,
+        3,
+        minute: HuntSun.sunrise(g.today) + 60,
+      );
+      expect(
+        why(
+          g.dispatch(
+            SearchFalcon(
+              g.me.id,
+              f2.id,
+              minute: HuntSun.sunrise(g.today) + 120,
+            ),
+          ),
+        ),
+        'searchThere',
+      );
+    });
+    test('the chance of finding it halves each day it is lost', () {
+      double rate(int daysLost) {
+        var found = 0, tries = 0;
+        for (var seed = 1; seed <= 400; seed++) {
+          final g = trapper(seed: seed);
+          final f = trainedFalcon(g);
+          g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
+          camp(
+            g,
+            TripKind.falconry,
+            Ground.nafudEdge,
+            10,
+            minute: HuntSun.sunrise(g.today) + 60,
+          );
+          f
+            ..where = FalconWhere.lost
+            ..lostOn = g.today - daysLost
+            ..lostAt = Ground.nafudEdge;
+          final r = g.dispatch(
+            SearchFalcon(g.me.id, f.id, minute: HuntSun.sunrise(g.today) + 120),
+          );
+          tries++;
+          if (r.events.whereType<FalconFate>().single.fate == Fate.found) {
+            found++;
+          }
+        }
+        return found / tries;
+      }
+
+      expect(rate(0), closeTo(TrapOdds.foundWithout, 0.07));
+      expect(rate(1), closeTo(TrapOdds.foundWithout / 2, 0.07));
+      expect(rate(2), closeTo(TrapOdds.foundWithout / 4, 0.06));
+    });
+    test('moving the camp leaves at the engine\'s minute', () {
+      int at(int minute) {
+        final g = trapper();
+        camp(g, TripKind.trapping, Ground.wajh, 5);
+        g.dispatch(MoveCamp(g.me.id, Ground.sharurah, minute: minute));
+        final t = g.me.hunt.trip!;
+        return t.arriveOn.value * 1440 + t.arriveMinute;
+      }
+
+      expect(at(900), greaterThan(at(600)));
+    });
+    test('a tracker for a falcon gone is dropped, not kept waiting', () {
+      final g = trapper();
+      final f = trainedFalcon(g);
+      g.dispatch(OrderGear(g.me.id, Gear.tracker, 1, falcon: f.id));
+      g.me.hunt.falcons.remove(f);
+      g.advanceDays(Balance.deliveryDays);
+      expect(g.me.hunt.coming, isEmpty);
+    });
+    test('home only at the drive\'s end: still on the road the day it '
+        'started when it runs into the next', () {
+      final g = trapper();
+      camp(g, TripKind.trapping, Ground.jazan, 5);
+      g.dispatch(EndTrip(g.me.id, minute: 1200));
+      final t = g.me.hunt.trip!;
+      expect(t.homeOn, g.today + 1);
+      g.advanceDays(1);
+      expect(g.me.hunt.trip, isNotNull, reason: 'the home day itself');
+      expect(
+        why(g.dispatch(CareFalcons(g.me.id, minute: t.homeMinute! - 1))),
+        anyOf('awayFromFarm', 'noFalcons'),
+      );
+      g.advanceDays(1);
+      expect(g.me.hunt.trip, isNull);
+    });
+    test('the drive out\'s leg lands at the arrival minute', () {
+      final g = trapper();
+      g.dispatch(
+        StartTrip(g.me.id, TripKind.trapping, Ground.jazan, 5, minute: 1300),
+      );
+      final t = g.me.hunt.trip!;
+      expect(t.arriveOn, greaterThan(g.today));
+      expect(Trips.leg(g)!.landing, t.arriveMinute);
+    });
+  });
+
   group('views', () {
     test('no hidden value: a held bird\'s worth, a falcon\'s skill', () {
       final g = trapper();
