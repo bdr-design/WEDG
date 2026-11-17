@@ -6,7 +6,7 @@ import '../common/money.dart';
 import '../common/result.dart';
 import '../common/rng.dart';
 import '../events.dart';
-import '../handlers/falconry.dart' show endTripNow;
+import '../handlers/falconry.dart' show endTripNow, workStart, driveMinutes;
 import '../handlers/handlers.dart' show placeOrder, treatCamel;
 import '../model/camel.dart';
 import '../model/contest.dart';

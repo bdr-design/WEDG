@@ -224,6 +224,10 @@ class EngineCore {
         return (EndTrip(actor, minute: minuteOfDay()), null);
       case CareFalcons(:final actor):
         return (CareFalcons(actor, minute: minuteOfDay()), null);
+      case MoveCamp(:final actor, :final ground):
+        return (MoveCamp(actor, ground, minute: minuteOfDay()), null);
+      case SearchFalcon(:final actor, :final falcon):
+        return (SearchFalcon(actor, falcon, minute: minuteOfDay()), null);
       default:
         break;
     }
@@ -383,11 +387,23 @@ class EngineCore {
     final g = _game;
     final leg = g == null ? null : Trips.leg(g);
     if (g == null || leg == null) {
+      // no trip at all; or the drive home (or a day's outing) ends today:
+      // the clock brings him home, no night to sleep
+      final t = g?.me.falconry?.trip;
       return (
         run: null,
-        refused: const DomainError(ErrorCode.huntRefused, {
-          'reason': 'notOnTrip',
-        }),
+        refused: DomainError(
+          ErrorCode.huntRefused,
+          t == null
+              ? const {'reason': 'noTrip'}
+              : t.returning
+              ? {
+                  'reason': 'driving',
+                  'day': t.homeOn!.value,
+                  'minute': t.homeMinute!,
+                }
+              : const {'reason': 'noTime'},
+        ),
       );
     }
     return away(

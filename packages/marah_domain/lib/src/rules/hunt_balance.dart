@@ -125,14 +125,18 @@ class HuntBalance {
   /// about 0.3, measured in the tests); inside the trapping auction's
   /// 30,000 to 150,000 [217], its top third left out so that a high opening
   /// does not tell a dear bird. At the other two routes the same shares of
-  /// their own floor (game choice). To the nearest 5,000 (1,000 under
-  /// 20,000).
+  /// their own floor (game choice). To the nearest 5,000 (1,000 at the
+  /// breeders').
   static int opening(FalconRoute route, int value, Rng rng) {
+    // the same rule at every route, from its own floor: 0.6 to 1 times the
+    // floor three times in four, else the floor up to twice it, never above
+    // the worth; the step the route's own, never the worth's (a step chosen by
+    // the worth told the breeders' cheap birds apart: fix-round review)
     final floor = worth[route]!.first.$2;
-    final lo = route == FalconRoute.trapping ? 30000 : floor * 6 ~/ 10;
-    final mid = route == FalconRoute.trapping ? 50000 : floor;
-    final top = route == FalconRoute.trapping ? 100000 : value;
-    final step = value < 20000 ? 1000 : 5000;
+    final lo = floor * 6 ~/ 10;
+    final mid = floor;
+    final top = floor * 2;
+    final step = route == FalconRoute.breeders ? 1000 : 5000;
     final low = rng.chance(0.75);
     final u = rng.nextDouble();
     final hi = value < top ? value : top;

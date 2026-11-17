@@ -46,6 +46,7 @@ class Falcon {
     this.flownOn,
     this.flownToday = 0,
     this.lostOn,
+    this.lostAt,
     this.searchedOn,
     this.tracker = false,
   }) : taken = taken ?? {};
@@ -111,8 +112,10 @@ class Falcon {
   GameDay? flownOn;
   int flownToday;
 
-  /// The day it was lost, and the last day he looked for it.
+  /// The day it was lost, the ground it was lost at, and the last day he
+  /// looked for it.
   GameDay? lostOn;
+  Ground? lostAt;
   GameDay? searchedOn;
 
   /// It wears its own tracker (fitted to it when the one ordered for it
@@ -153,6 +156,7 @@ class Falcon {
     if (flownOn != null) 'flownOn': flownOn!.value,
     if (flownToday != 0) 'flownToday': flownToday,
     if (lostOn != null) 'lostOn': lostOn!.value,
+    if (lostAt != null) 'lostAt': lostAt!.name,
     if (searchedOn != null) 'searchedOn': searchedOn!.value,
     if (tracker) 'tracker': true,
   };
@@ -195,6 +199,9 @@ class Falcon {
     flownOn: j['flownOn'] == null ? null : GameDay(j['flownOn']! as int),
     flownToday: (j['flownToday'] as int?) ?? 0,
     lostOn: j['lostOn'] == null ? null : GameDay(j['lostOn']! as int),
+    lostAt: j['lostAt'] == null
+        ? null
+        : Ground.values.byName(j['lostAt']! as String),
     searchedOn: j['searchedOn'] == null
         ? null
         : GameDay(j['searchedOn']! as int),
@@ -241,6 +248,7 @@ class Trip {
     required this.arriveMinute,
     this.homeOn,
     this.homeMinute,
+    this.outOfSupplies,
     this.caught = 0,
     this.released = 0,
     this.stooped = 0,
@@ -265,6 +273,9 @@ class Trip {
   int arriveMinute;
   GameDay? homeOn;
   int? homeMinute;
+
+  /// The morning the supplies were out and the camp broken for them.
+  GameDay? outOfSupplies;
 
   bool get returning => homeOn != null;
 
@@ -295,6 +306,7 @@ class Trip {
     'arriveMinute': arriveMinute,
     if (homeOn != null) 'homeOn': homeOn!.value,
     'homeMinute': ?homeMinute,
+    if (outOfSupplies != null) 'outOfSupplies': outOfSupplies!.value,
     'caught': caught,
     'released': released,
     'stooped': stooped,
@@ -313,6 +325,9 @@ class Trip {
     arriveMinute: j['arriveMinute']! as int,
     homeOn: j['homeOn'] == null ? null : GameDay(j['homeOn']! as int),
     homeMinute: j['homeMinute'] as int?,
+    outOfSupplies: j['outOfSupplies'] == null
+        ? null
+        : GameDay(j['outOfSupplies']! as int),
     caught: j['caught']! as int,
     released: j['released']! as int,
     stooped: j['stooped']! as int,

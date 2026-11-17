@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:marah_domain/marah_domain.dart';
+import 'package:marah_domain/src/handlers/falconry.dart' show driveMinutes;
 import 'package:marah_domain/src/sim.dart';
 import 'package:test/test.dart';
 
@@ -826,7 +827,9 @@ void main() {
             flights++;
             if (f.where == FalconWhere.lost) {
               lost++;
-              final s = g.dispatch(SearchFalcon(g.me.id, f.id));
+              final s = g.dispatch(
+                SearchFalcon(g.me.id, f.id, minute: noon(g)),
+              );
               final fate = s.events.whereType<FalconFate>().single.fate;
               found[tracked]![0]++;
               if (fate == Fate.found) found[tracked]![1]++;
@@ -1071,6 +1074,209 @@ void main() {
       }
       expect(run!.stop!.kind, AwayStopKind.falconCare);
       expect(run.stop!.name, f2.name);
+    });
+  });
+
+  group('the fix round\'s pins (reviewer A)', () {
+    String js(Game g) => jsonEncode(g.state.toJson());
+    test('one trapping ground a day: worked at dawn, home, out to another the '
+        'same day: the net refused there, nothing changed', () {
+      final g = trapper();
+      final me = g.me.id;
+      camp(g, TripKind.trapping, Ground.hail, 3);
+      expect(
+        g.dispatch(SpotFalcon(me, at(Ground.hail), minute: dawn)).ok,
+        isTrue,
+      );
+      final day = g.today;
+      g.dispatch(EndTrip(me, minute: dawn + 1));
+      final home = g.me.hunt.trip!.homeMinute!;
+      expect(g.me.hunt.trip!.homeOn, day);
+      final r = g.dispatch(
+        StartTrip(me, TripKind.trapping, Ground.rafha, 3, minute: home),
+      );
+      expect(r.ok, isTrue, reason: '${why(r)}');
+      final t = g.me.hunt.trip!;
+      expect(t.arriveOn, day, reason: 'there the same afternoon');
+      final m = t.arriveMinute;
+      final s = js(g);
+      expect(
+        why(g.dispatch(SpotFalcon(me, at(Ground.rafha), minute: m + 10))),
+        'oneGroundADay',
+      );
+      expect(js(g), s);
+    });
+    test('the day\'s trapping is the day\'s, at any ground: what was looked '
+        'at is not looked at again after moving', () {
+      final g = trapper();
+      camp(g, TripKind.trapping, Ground.hail, 3);
+      g.dispatch(SpotFalcon(g.me.id, at(Ground.hail), minute: dawn));
+      final w = g.me.hunt.work!;
+      expect(w.day, g.today);
+      expect(w.ground, Ground.hail);
+      expect(w.looked, contains(TrapWindow.dawn));
+    });
+    test(
+      'the drive home takes its hours: home only when the road is driven',
+      () {
+        final g = trapper();
+        final me = g.me.id;
+        camp(g, TripKind.trapping, Ground.hamad, 3);
+        g.dispatch(EndTrip(me, minute: 600));
+        final t = g.me.hunt.trip!;
+        final drive = driveMinutes(g.me, Ground.hamad);
+        expect(
+          t.homeOn!.value * 1440 + t.homeMinute!,
+          g.today.value * 1440 + 600 + drive,
+        );
+        expect(drive, greaterThan(9 * 60));
+        // StartTrip settles a drive home already over (and only then)
+        final early = g.dispatch(
+          StartTrip(
+            me,
+            TripKind.trapping,
+            Ground.hail,
+            2,
+            minute: t.homeMinute! - 1,
+          ),
+        );
+        expect(why(early), 'onTrip');
+        final r = g.dispatch(
+          StartTrip(
+            me,
+            TripKind.trapping,
+            Ground.hail,
+            2,
+            minute: t.homeMinute,
+          ),
+        );
+        expect(r.ok, isTrue, reason: '${why(r)}');
+        expect(
+          r.events.whereType<TripChanged>().map((e) => e.what),
+          containsAll([TripChange.ended, TripChange.started]),
+        );
+      },
+    );
+    test('the drive out lands at the arrival minute, not the day\'s first '
+        'working minute', () {
+      final g = trapper();
+      g.dispatch(
+        StartTrip(g.me.id, TripKind.trapping, Ground.hamad, 3, minute: 300),
+      );
+      final t = g.me.hunt.trip!;
+      final drive = driveMinutes(g.me, Ground.hamad);
+      expect(t.arriveOn, g.today);
+      expect(t.arriveMinute, 300 + drive);
+      expect(t.arriveMinute, greaterThan(HuntSun.dawn(g.today)));
+    });
+    test('the camp\'s supplies out: the camp is broken that morning and he '
+        'drives home; the stop said', () {
+      final g = trapper();
+      hand(g, Gear.supplies, 1);
+      camp(g, TripKind.trapping, Ground.hail, 20);
+      final first = leg(g);
+      expect(first.stop!.extra, 'suppliesOut', reason: 'the last one eaten');
+      expect(g.me.hunt.has(Gear.supplies), 0);
+      expect(
+        g.me.hunt.trip!.returning,
+        isFalse,
+        reason: 'today he still works',
+      );
+      final r = leg(g);
+      expect(r.stop!.kind, AwayStopKind.extra);
+      expect(r.stop!.extra, 'suppliesOut');
+      final t = g.me.hunt.trip!;
+      expect(t.returning, isTrue);
+      expect(
+        why(g.dispatch(SpotFalcon(g.me.id, at(Ground.hail), minute: 600))),
+        'notOnTrip',
+      );
+      while (g.me.hunt.trip != null) {
+        if (Trips.leg(g) != null) {
+          leg(g);
+        } else {
+          g.advanceDays(1);
+        }
+      }
+      expect(g.me.hunt.trip, isNull);
+    });
+    test('gear ordered from the camp waits at the farm till he is home', () {
+      final g = trapper(full: false);
+      final me = g.me.id;
+      camp(g, TripKind.trapping, Ground.hail, 5);
+      expect(g.dispatch(OrderGear(me, Gear.binoculars, 1)).ok, isTrue);
+      leg(g);
+      leg(g);
+      expect(g.me.hunt.has(Gear.binoculars), 0);
+      goHome(g);
+      g.advanceDays(1);
+      expect(g.me.hunt.has(Gear.binoculars), 1);
+    });
+    test('a tracker for a lost falcon is refused; one on its way is fitted '
+        'only once the falcon is home', () {
+      final g = trapper();
+      final f = trainedFalcon(g)..where = FalconWhere.lost;
+      expect(
+        why(g.dispatch(OrderGear(g.me.id, Gear.tracker, 1, falcon: f.id))),
+        'falconAway',
+      );
+      f.where = FalconWhere.home;
+      expect(
+        g.dispatch(OrderGear(g.me.id, Gear.tracker, 1, falcon: f.id)).ok,
+        isTrue,
+      );
+      f.where = FalconWhere.lost;
+      g.advanceDays(Balance.deliveryDays);
+      expect(f.tracker, isFalse);
+      f.where = FalconWhere.home;
+      g.advanceDays(1);
+      expect(f.tracker, isTrue);
+    });
+    test('a lost falcon: looked for where it was lost, by day; the chance '
+        'halves each day; gone after the third', () {
+      final g = trapper();
+      final f = trainedFalcon(g);
+      g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
+      camp(
+        g,
+        TripKind.falconry,
+        Ground.nafudEdge,
+        10,
+        minute: HuntSun.sunrise(g.today) + 60,
+      );
+      final lost = g.today;
+      f
+        ..where = FalconWhere.lost
+        ..lostOn = lost
+        ..lostAt = Ground.nafudEdge;
+      expect(TrapOdds.searchDays, 3);
+      expect(TrapOdds.lost, 0.02);
+      // at night: refused
+      expect(
+        why(g.dispatch(SearchFalcon(g.me.id, f.id, minute: 60))),
+        'searchThere',
+      );
+      for (var day = 1; day <= 3; day++) {
+        leg(g);
+        expect(f.where, FalconWhere.lost, reason: 'day $day');
+      }
+      leg(g);
+      expect(g.me.hunt.falcons, isNot(contains(f)), reason: 'gone on day 4');
+      expect(g.today.daysSince(lost), 4);
+    });
+    test('moving the camp drives from the camp, at the engine\'s minute', () {
+      final g = trapper();
+      camp(g, TripKind.trapping, Ground.wajh, 5);
+      final km = Ground.wajh.kmTo(Ground.sharurah);
+      expect(km, greaterThan(Ground.sharurah.kmFrom(Region.qassim)));
+      g.dispatch(MoveCamp(g.me.id, Ground.sharurah, minute: 600));
+      final t = g.me.hunt.trip!;
+      final drive = (km / Ground.kmPerHour * 60).round();
+      final reach = g.today.value * 1440 + 600 + drive;
+      expect(
+        t.arriveOn.value * 1440 + t.arriveMinute,
+        greaterThanOrEqualTo(reach),
+      );
     });
   });
 

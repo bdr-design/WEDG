@@ -32,21 +32,31 @@ class FalconrySystem implements DailySystem {
     );
   }
 
-  /// The gear on its way arrives, as feed does.
+  /// The gear on its way arrives at the farm, as feed does: while he is
+  /// away it waits there till he is home (it never reaches the camp). A
+  /// tracker is fitted to the falcon it was ordered for once that falcon is
+  /// at home; for a falcon gone it is dropped.
   static void _deliver(Sim sim, PlayerState p, Falconry h) {
-    if (h.coming.isEmpty) return;
+    if (h.coming.isEmpty || h.trip != null) return;
+    final done = <GearDelivery>[];
     for (final d in h.coming.where((d) => d.arrivesOn <= sim.today)) {
       if (d.gear == Gear.tracker) {
-        // fitted to the falcon it was ordered for (if it is still his)
-        h.falcon(d.falcon!)?.tracker = true;
+        final f = h.falcon(d.falcon!);
+        if (f == null) {
+          done.add(d);
+          continue;
+        }
+        if (f.where != FalconWhere.home) continue;
+        f.tracker = true;
       } else {
         h.gear[d.gear] = h.has(d.gear) + d.units;
       }
+      done.add(d);
       sim.emit(
         GearDelivered(sim.today, owner: p.id, gear: d.gear, units: d.units),
       );
     }
-    h.coming.removeWhere((d) => d.arrivesOn <= sim.today);
+    h.coming.removeWhere(done.contains);
   }
 
   /// A night out: a day of the camp's supplies used; a day's outing not
@@ -60,12 +70,30 @@ class FalconrySystem implements DailySystem {
       endTripNow(sim, p);
       return;
     }
-    // a night at the ground: a day of the camp's supplies
+    // a night at the ground: a day of the camp's supplies; with none left he
+    // cannot stay another night: the camp is broken that morning and he
+    // drives home (the reviewer's finding: the camp ran on without them)
     if (!t.returning && sim.today > t.arriveOn) {
       final left = h.has(Gear.supplies);
       if (left > 0) {
         h.gear[Gear.supplies] = left - 1;
         t.suppliesUsed++;
+      } else {
+        final at = workStart(t.kind, sim.today) + driveMinutes(p, t.ground);
+        t
+          ..outOfSupplies = sim.today
+          ..homeOn = sim.today + at ~/ 1440
+          ..homeMinute = at % 1440;
+        sim.emit(
+          TripChanged(
+            sim.today,
+            owner: p.id,
+            what: TripChange.homeward,
+            kind: t.kind,
+            ground: t.ground,
+            lines: {'homeOn': t.homeOn!.value, 'homeMinute': t.homeMinute!},
+          ),
+        );
       }
     }
   }

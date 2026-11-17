@@ -343,6 +343,25 @@ enum Ground {
     return road < 25 ? 25 : road;
   }
 
+  /// The road from another ground [g] (moving the camp: the same rule).
+  int kmTo(Ground g) {
+    if (km != null || g.km != null) {
+      return (kmFrom(Region.qassim) - g.kmFrom(Region.qassim)).abs() + 25;
+    }
+    const r = 6371.0;
+    double rad(double d) => d * math.pi / 180;
+    final dLat = rad(lat - g.lat);
+    final dLon = rad(lon - g.lon);
+    final a =
+        math.pow(math.sin(dLat / 2), 2) +
+        math.cos(rad(g.lat)) *
+            math.cos(rad(lat)) *
+            math.pow(math.sin(dLon / 2), 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final road = (r * c * 1.25).round();
+    return road < 25 ? 25 : road;
+  }
+
   /// Near enough for a one-day outing, back the same evening (the owner's
   /// answer of 14 Nov 2026): within [oneDayKm] by road (game choice).
   bool oneDayFrom(Region farm) => kmFrom(farm) <= oneDayKm;

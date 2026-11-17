@@ -87,7 +87,9 @@ Result orderGear(Sim sim, PlayerState p, OrderGear cmd) {
   if (cmd.gear == Gear.tracker) {
     // one for one named falcon of his, without one and none on its way
     final f = cmd.falcon == null ? null : p.falconry?.falcon(cmd.falcon!);
-    if (f == null) return refuse(sim, HuntRefusal.falconAway);
+    if (f == null || f.where != FalconWhere.home) {
+      return refuse(sim, HuntRefusal.falconAway);
+    }
     if (cmd.units != 1) {
       return Err(const DomainError(ErrorCode.invalidAmount), sim.drain());
     }
@@ -273,9 +275,10 @@ int driveMinutes(PlayerState p, Ground g) =>
   TripKind kind,
   Ground g,
   GameDay day,
-  int minute,
-) {
-  final t = minute + driveMinutes(p, g);
+  int minute, {
+  int? drive,
+}) {
+  final t = minute + (drive ?? driveMinutes(p, g));
   var d = day + t ~/ _day;
   var m = t % _day;
   if (m < workStart(kind, d)) m = workStart(kind, d);
@@ -442,14 +445,23 @@ Result moveCamp(Sim sim, PlayerState p, MoveCamp cmd) {
   }
   if (p.hunt.has(Gear.mobileTent) == 0) return refuse(sim, HuntRefusal.noTent);
   if (!cmd.ground.trapping) return refuse(sim, HuntRefusal.offGround);
-  // the drive to the new ground is game time too: there the next working
-  // hour it can be reached, and no ground worked twice in a day
+  // the drive to the new ground is game time too, from the camp he breaks
+  // (or, on the road out, from the ground he was going to) at the engine's
+  // minute: there the next working hour it can be reached, and no ground
+  // worked twice in a day
+  final from = cmd.minute ?? workEnd(t.kind, sim.today);
+  final leave = t.there(sim.today, from)
+      ? from
+      : (t.arriveOn == sim.today && t.arriveMinute > from
+            ? t.arriveMinute
+            : from);
   final (d, m) = arrival(
     p,
     t.kind,
     cmd.ground,
-    sim.today,
-    workEnd(t.kind, sim.today),
+    t.arriveOn > sim.today ? t.arriveOn : sim.today,
+    t.arriveOn > sim.today ? t.arriveMinute : leave,
+    drive: (t.ground.kmTo(cmd.ground) / Ground.kmPerHour * 60).round(),
   );
   t
     ..ground = cmd.ground
@@ -843,7 +855,8 @@ Result castFalcon(Sim sim, PlayerState p, CastFalcon cmd) {
   if (rng.chance(TrapOdds.lost)) {
     f
       ..where = FalconWhere.lost
-      ..lostOn = sim.today;
+      ..lostOn = sim.today
+      ..lostAt = g;
     sim.emit(
       CastResult(
         sim.today,
@@ -879,6 +892,15 @@ Result searchFalcon(Sim sim, PlayerState p, SearchFalcon cmd) {
   if (f == null || f.where != FalconWhere.lost) {
     return refuse(sim, HuntRefusal.notLost);
   }
+  final t = h!.trip;
+  final minute = cmd.minute ?? 0;
+  if (f.lostAt != null &&
+      (t == null ||
+          t.ground != f.lostAt ||
+          !t.there(sim.today, minute) ||
+          !HuntSun.huntingHours(sim.today, minute))) {
+    return refuse(sim, HuntRefusal.searchThere);
+  }
   if (f.searchedOn == sim.today) return refuse(sim, HuntRefusal.searchedToday);
   f.searchedOn = sim.today;
   // each day lost halves the chance of finding it; after
@@ -891,7 +913,8 @@ Result searchFalcon(Sim sim, PlayerState p, SearchFalcon cmd) {
   if (found) {
     f
       ..where = FalconWhere.home
-      ..lostOn = null;
+      ..lostOn = null
+      ..lostAt = null;
   }
   sim.emit(
     FalconFate(

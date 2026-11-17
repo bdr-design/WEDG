@@ -486,6 +486,42 @@ void main() {
       // it, no more (measured: about twice the dear share)
       expect(high[1] / high[0], lessThan(0.4));
     });
+    test('at every route no band of openings reads out a dear bird (the top '
+        'sixth of its worth), and the step is the route\'s own', () {
+      final worst = <FalconRoute, double>{};
+      for (final r in FalconRoute.values) {
+        final dear = HuntBalance.worthAt(r, 0.85);
+        final width = r == FalconRoute.breeders ? 1000 : 10000;
+        final bands = <int, List<int>>{};
+        var all = 0, allDear = 0;
+        for (var seed = 1; seed <= 400; seed++) {
+          for (var day = d(2026, 8, 1); day <= d(2026, 11, 30); day += 1) {
+            for (final l in FalconMarket.lots(seed, r, day)) {
+              final b = bands.putIfAbsent(l.opening ~/ width, () => [0, 0]);
+              b[0]++;
+              all++;
+              if (l.value >= dear) {
+                b[1]++;
+                allDear++;
+              }
+              expect(
+                l.opening % (r == FalconRoute.breeders ? 1000 : 5000),
+                0,
+                reason: '${r.name} ${l.opening}',
+              );
+            }
+          }
+        }
+        expect(all, greaterThan(0), reason: r.name);
+        worst[r] = 0;
+        for (final b in bands.values.where((b) => b[0] >= 300)) {
+          final share = b[1] / b[0];
+          if (share > worst[r]!) worst[r] = share;
+        }
+        expect(worst[r], lessThan(0.35), reason: '${r.name}: $worst');
+        expect(allDear / all, closeTo(0.15, 0.03), reason: r.name);
+      }
+    });
     test('lots a night at the trapping auction: 0 to 3, as weighted', () {
       final n = [0, 0, 0, 0];
       for (var seed = 1; seed <= 200; seed++) {

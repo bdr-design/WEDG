@@ -121,6 +121,9 @@ enum HuntRefusal {
 
   /// No trip or outing at all (a cast, the net or breaking camp with none).
   noTrip,
+
+  /// A lost falcon is looked for at the ground it was lost at, by day.
+  searchThere,
 }
 
 class FalconLines {
@@ -194,6 +197,7 @@ class FalconLines {
       HuntRefusal.hasTracker => 'عليه جهاز تتبع',
       HuntRefusal.trackerComing => 'جهازه بالطريق',
       HuntRefusal.noTrip => 'ما انت بطلعة الحين',
+      HuntRefusal.searchThere => 'دوّره بالأرض اللي ضاع فيها، بالنهار',
       HuntRefusal.searchedToday => 'دوّرته اليوم: دوّره بكرة',
     };
   }

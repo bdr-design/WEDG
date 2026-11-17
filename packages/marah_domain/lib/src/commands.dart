@@ -331,8 +331,11 @@ final class EndTrip extends Command {
 
 /// Moves the trapping camp to another trapping ground with the mobile tent.
 final class MoveCamp extends Command {
-  const MoveCamp(super.actor, this.ground);
+  const MoveCamp(super.actor, this.ground, {this.minute});
   final Ground ground;
+
+  /// The game's minute he breaks camp (stamped by the engine).
+  final int? minute;
 }
 
 /// Looks for a falcon (with the binoculars if he has them) where he stands,
@@ -392,8 +395,11 @@ final class CastFalcon extends Command {
 
 /// Looks for a lost falcon (by the tracker's signal if it wears one).
 final class SearchFalcon extends Command {
-  const SearchFalcon(super.actor, this.falcon);
+  const SearchFalcon(super.actor, this.falcon, {this.minute});
   final FalconId falcon;
+
+  /// The game's minute (stamped by the engine): he looks where it was lost.
+  final int? minute;
 }
 
 /// الدعو: today's care for every falcon in the room (one tap).

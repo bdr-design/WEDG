@@ -21,6 +21,9 @@ class Trips {
   /// season's end, the day he chose to be back by. Each a reason's name.
   static String? campStop(Game g) {
     final t = g.me.falconry?.trip;
+    // the supplies' last night eaten (told while he can still break camp
+    // himself), and the morning the camp was broken for them
+    if (t != null && t.outOfSupplies == g.today) return 'suppliesOut';
     if (t == null || t.returning || g.today < t.arriveOn) return null;
     final today = g.today;
     if (!t.oneDay && g.me.hunt.has(Gear.supplies) == 0) return 'suppliesOut';

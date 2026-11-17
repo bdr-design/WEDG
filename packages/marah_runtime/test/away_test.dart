@@ -333,7 +333,8 @@ void main() {
     expect(card!['groundName'], 'الحماد');
     expect((await e.falconCatalog())!['grounds'], isNotEmpty);
     await e.dispatch(EndTrip(me));
-    expect((await e.tripNight()).refused!.params['reason'], 'notOnTrip');
+    // on the road home, which ends today: no night to sleep
+    expect((await e.tripNight()).refused!.params['reason'], 'driving');
     await e.close();
   });
 }

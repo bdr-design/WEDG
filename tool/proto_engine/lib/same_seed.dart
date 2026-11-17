@@ -383,8 +383,10 @@ Iterable<String> huntLines({int seed = huntSeed, Set<String>? covered}) sync* {
               ),
             );
             if (f.where == FalconWhere.lost) {
-              send(SearchFalcon(me, f.id));
-              send(SearchFalcon(me, f.id)); // (twice a day: refused)
+              final m = HuntSun.sunrise(g.today) + 120 + 90 * k;
+              send(SearchFalcon(me, f.id, minute: m));
+              // (twice a day: refused)
+              send(SearchFalcon(me, f.id, minute: m + 1));
             }
           }
         }
