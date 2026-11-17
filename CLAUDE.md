@@ -14,6 +14,8 @@ These are the owner's standing rules for this project. Follow them in every sess
     baseline, find what is wrong and write the checks; after the fix they
     check Claude's commits. Their findings come back to Claude, and the round
     repeats until both find nothing.
+  - **Only two agents run at a time** (the owner's word of 17 Nov: «فقط
+    ويكيلين يعملون فقط»): one piece of work's two reviewers, then the next's.
   - Claude re-measures what the reviewers report and reviews the result itself
     before it is shown to the owner or committed as done.
   - The sub-agents' model is set in `.claude/settings.json`.
