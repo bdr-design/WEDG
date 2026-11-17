@@ -1280,6 +1280,66 @@ void main() {
     });
   });
 
+  group('the second fix round (reviewer B)', () {
+    test('his only falcon lost on a day\'s outing: he may go back to that '
+        'ground to look for it', () {
+      final g = trapper();
+      final f = trainedFalcon(g);
+      g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
+      f
+        ..where = FalconWhere.lost
+        ..lostOn = g.today
+        ..lostAt = Ground.nafudEdge;
+      final m = HuntSun.sunrise(g.today);
+      expect(
+        why(
+          g.dispatch(
+            StartTrip(g.me.id, TripKind.falconry, Ground.estate, 0, minute: m),
+          ),
+        ),
+        'notReady',
+      );
+      final r = g.dispatch(
+        StartTrip(g.me.id, TripKind.falconry, Ground.nafudEdge, 0, minute: m),
+      );
+      expect(r.ok, isTrue, reason: '${why(r)}');
+      final s = g.dispatch(SearchFalcon(g.me.id, f.id, minute: m + 120));
+      expect(s.ok, isTrue, reason: '${why(s)}');
+    });
+    test('gear ordered the day of a day\'s outing comes the next day', () {
+      final g = trapper();
+      trainedFalcon(g);
+      g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
+      final before = g.me.hunt.has(Gear.pigeon);
+      expect(g.dispatch(OrderGear(g.me.id, Gear.pigeon, 0 + 1)).ok, isFalse);
+      hand(g, Gear.pigeon, 10);
+      expect(g.dispatch(OrderGear(g.me.id, Gear.pigeon, 2)).ok, isTrue);
+      final m = HuntSun.sunrise(g.today);
+      g.dispatch(
+        StartTrip(g.me.id, TripKind.falconry, Ground.nafudEdge, 0, minute: m),
+      );
+      g.advanceDays(Balance.deliveryDays);
+      expect(g.me.hunt.trip, isNull);
+      expect(g.me.hunt.has(Gear.pigeon), 12);
+      expect(before, 20);
+    });
+    test('the words for breaking or moving camp on the road home', () {
+      final g = trapper();
+      camp(g, TripKind.trapping, Ground.hamad, 3);
+      g.dispatch(EndTrip(g.me.id, minute: 600));
+      expect(why(g.dispatch(EndTrip(g.me.id, minute: 601))), 'homeward');
+      expect(
+        why(g.dispatch(MoveCamp(g.me.id, Ground.hail, minute: 601))),
+        'homeward',
+      );
+      final t = g.me.hunt.trip!;
+      expect(
+        why(g.dispatch(EndTrip(g.me.id, minute: t.homeMinute! + 1))),
+        'noTrip',
+      );
+    });
+  });
+
   group('views', () {
     test('no hidden value: a held bird\'s worth, a falcon\'s skill', () {
       final g = trapper();

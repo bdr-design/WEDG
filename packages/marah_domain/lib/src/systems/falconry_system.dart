@@ -12,9 +12,11 @@ class FalconrySystem implements DailySystem {
     for (final p in sim.state.players.values) {
       final h = p.falconry;
       if (h == null) continue;
-      _deliver(sim, p, h);
       _keep(sim, p, h);
+      // (the trip first: a day's outing or a drive home ended with the day is
+      // home before today's gear comes)
       _trip(sim, p, h);
+      _deliver(sim, p, h);
       _auction(sim, p, h);
       _neglect(sim, p, h);
       _lost(sim, p, h);

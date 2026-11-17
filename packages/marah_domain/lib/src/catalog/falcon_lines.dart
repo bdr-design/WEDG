@@ -124,6 +124,12 @@ enum HuntRefusal {
 
   /// A lost falcon is looked for at the ground it was lost at, by day.
   searchThere,
+
+  /// On the road home already (breaking or moving camp again).
+  homeward,
+
+  /// A day's outing: no night to sleep out.
+  dayOuting,
 }
 
 class FalconLines {
@@ -198,6 +204,8 @@ class FalconLines {
       HuntRefusal.trackerComing => 'جهازه بالطريق',
       HuntRefusal.noTrip => 'ما انت بطلعة الحين',
       HuntRefusal.searchThere => 'دوّره بالأرض اللي ضاع فيها، بالنهار',
+      HuntRefusal.homeward => 'انت بطريقك للعزبة',
+      HuntRefusal.dayOuting => 'طلعة اليوم ما فيها مبيت',
       HuntRefusal.searchedToday => 'دوّرته اليوم: دوّره بكرة',
     };
   }

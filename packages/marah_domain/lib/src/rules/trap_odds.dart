@@ -75,7 +75,9 @@ class TrapOdds {
     ];
   }
 
-  static bool _redSeaSouth(Ground g) => g.coast && !g.north && g.lon < 43;
+  // (the Hijaz and Asir coast south of about 22 N: الليث, القنفذة, جازان)
+  static bool _redSeaSouth(Ground g) =>
+      g.coast && !g.north && g.lon < 43 && g.lat < 22;
 
   static double passChance(Ground g, GameDay day) {
     final ground = g.coast ? 1.0 : (g.north ? groundNorth : groundSouth);

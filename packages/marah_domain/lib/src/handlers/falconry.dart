@@ -326,8 +326,17 @@ DomainError? cannotStart(
     if (!(h?.holds(PermitKind.hunting, today) ?? false)) {
       return _no(HuntRefusal.noPermit, {'kind': 'hunting'});
     }
-    if (!(h?.falcons.any(ready) ?? false)) return _no(HuntRefusal.notReady);
-    if (quarryAt(ground, today) == null) return _no(HuntRefusal.noQuarry);
+    // to look for a falcon lost there he may go with none ready and no
+    // quarry (else a falconer whose only falcon is lost could never search)
+    final searching =
+        h?.falcons.any(
+          (f) => f.where == FalconWhere.lost && f.lostAt == ground,
+        ) ??
+        false;
+    if (!searching) {
+      if (!(h?.falcons.any(ready) ?? false)) return _no(HuntRefusal.notReady);
+      if (quarryAt(ground, today) == null) return _no(HuntRefusal.noQuarry);
+    }
   }
   if (nights == 0) {
     if (!ground.oneDayFrom(p.farm.region)) return _no(HuntRefusal.tooFar);
@@ -415,8 +424,10 @@ void endTripNow(Sim sim, PlayerState p) {
 Result endTrip(Sim sim, PlayerState p, EndTrip cmd) {
   final minute = cmd.minute ?? 0;
   final t = p.falconry?.trip;
-  if (t == null) return refuse(sim, HuntRefusal.noTrip);
-  if (t.returning) return refuse(sim, HuntRefusal.notOnTrip);
+  if (t == null || t.home(sim.today, minute)) {
+    return refuse(sim, HuntRefusal.noTrip);
+  }
+  if (t.returning) return refuse(sim, HuntRefusal.homeward);
   // the whole road home (from the ground, or from the road out: game
   // choice, the same time back)
   final at = minute + driveMinutes(p, t.ground);
@@ -440,7 +451,8 @@ Result endTrip(Sim sim, PlayerState p, EndTrip cmd) {
 Result moveCamp(Sim sim, PlayerState p, MoveCamp cmd) {
   final t = p.falconry?.trip;
   if (t == null) return refuse(sim, HuntRefusal.noTrip);
-  if (t.kind != TripKind.trapping || t.oneDay || t.returning) {
+  if (t.returning) return refuse(sim, HuntRefusal.homeward);
+  if (t.kind != TripKind.trapping || t.oneDay) {
     return refuse(sim, HuntRefusal.notOnTrip);
   }
   if (p.hunt.has(Gear.mobileTent) == 0) return refuse(sim, HuntRefusal.noTent);

@@ -402,7 +402,7 @@ class EngineCore {
                   'day': t.homeOn!.value,
                   'minute': t.homeMinute!,
                 }
-              : const {'reason': 'noTime'},
+              : const {'reason': 'dayOuting'},
         ),
       );
     }
