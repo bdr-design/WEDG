@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:marah_domain/marah_domain.dart';
+import 'package:marah_domain/src/handlers/falconry.dart' show gearRoom;
 import 'package:marah_domain/testing.dart';
 
 import 'commands_json.dart';
@@ -272,11 +273,17 @@ int textHash(String s) {
 }
 
 /// The hunting season's paths (task T18), on a game of their own so the main
-/// run above stays the base's: the room, the permits, the gear, a falcon
-/// bought, الدعو, a camp of nights by the away call with the trapping's
-/// commands each dawn, birds entered and sold or kept, a day's outing with
-/// casts. A line each week of the run, on both platforms.
-Iterable<String> huntLines({int seed = 11}) sync* {
+/// run above stays the base's. The seed and the grounds are chosen so that
+/// every path runs (the reviewer's finding 8): birds netted on the coast, one
+/// kept, one entered and sold, one left neither and set free at the
+/// auction's close; birds released by their lines; the camp's supplies out
+/// and a falcon left at the farm stopping a night; الدعو; a trip of days at
+/// the estate with casts till a falcon is lost and looked for with its
+/// tracker; the kept peregrine set free in February; and a refusal of each
+/// kind the commands can meet. A line at each stage, on both platforms;
+/// [covered] (when given) collects what ran, for the test that each path
+/// did (test/proto_engine_test.dart).
+Iterable<String> huntLines({int seed = huntSeed, Set<String>? covered}) sync* {
   final g = Game.create(
     seed: seed,
     playerName: 'اللاعب',
@@ -286,98 +293,324 @@ Iterable<String> huntLines({int seed = 11}) sync* {
     startDay: GameDay.ofDate(DateTime.utc(2026, 9, 20)),
     startedAt: DateTime.utc(2026, 11, 1),
   );
-  grant(g, 3000000);
+  grant(g, 5000000);
   final me = g.me.id;
+  final seen = covered ?? <String>{};
   var ok = 0, refused = 0;
-  void send(Command c) => g.dispatch(c).ok ? ok++ : refused++;
+  void note(Iterable<DomainEvent> events) {
+    for (final e in events) {
+      switch (e) {
+        case TrapResult(:final outcome, :final species):
+          seen.add('trap:${outcome.name}');
+          if (outcome == TrapOutcome.released) {
+            seen.add(
+              species == FalconSpecies.mountainPeregrine ||
+                      species == FalconSpecies.lanner
+                  ? 'released:resident'
+                  : 'released:${species!.name}',
+            );
+          }
+        case CastResult(:final outcome):
+          seen.add('cast:${outcome.name}');
+        case FalconFate(:final fate):
+          seen.add('fate:${fate.name}');
+          if (fate == Fate.found || fate == Fate.notFound) seen.add('searched');
+        default:
+          break;
+      }
+    }
+  }
+
+  void send(Command c) {
+    final r = g.dispatch(c);
+    note(r.events);
+    if (r is Err) {
+      refused++;
+      if (r.error.code == ErrorCode.huntRefused) {
+        seen.add('refused:${r.error.params['reason']}');
+      }
+    } else {
+      ok++;
+    }
+  }
+
+  void days(int n) => note(g.advanceDays(n));
   String line(String what) {
     final text = canonicalJson(g.state.toJson());
     return 'hunt $what day ${g.today.value} cash ${g.me.cash.value} '
         'ok $ok refused $refused length ${text.length} hash ${textHash(text)}';
   }
 
+  /// The trip's legs by the away call till it is over or a camp's own stop;
+  /// the dawn's work each day at the ground.
+  void camp(Ground ground, {required bool trapping}) {
+    final at = HuntAt.ground(ground);
+    for (var i = 0; i < 80 && g.me.hunt.trip != null; i++) {
+      final t = g.me.hunt.trip!;
+      if (trapping && t.there(g.today, HuntSun.dawn(g.today) + 30)) {
+        for (final w in TrapWindow.values) {
+          final m = switch (w) {
+            TrapWindow.dawn => HuntSun.dawn(g.today) + 30,
+            TrapWindow.midday => 720,
+            TrapWindow.evening => HuntSun.sunset(g.today) - 30,
+          };
+          send(SpotFalcon(me, at, minute: m));
+          for (final l in [Lure.pigeon, Lure.birdNet, Lure.pigeon]) {
+            send(ReleaseLure(me, at, l, minute: m));
+          }
+        }
+        // the first bird kept, the second entered, the third left to the
+        // close
+        final h = g.me.hunt;
+        for (final f in [...h.held]) {
+          if (h.falcons.where((x) => x.keep).isEmpty) {
+            send(KeepBird(me, f.id));
+          } else if (!seen.contains('fate:entered')) {
+            send(EnterTrapAuction(me, f.id));
+          }
+        }
+        send(CareFalcons(me)); // (from the camp: refused)
+      }
+      if (!trapping && t.there(g.today, HuntSun.sunrise(g.today) + 60)) {
+        for (final f in [...g.me.hunt.falcons]) {
+          for (var k = 0; k < 4; k++) {
+            send(
+              CastFalcon(
+                me,
+                f.id,
+                at,
+                minute: HuntSun.sunrise(g.today) + 90 + 90 * k,
+              ),
+            );
+            if (f.where == FalconWhere.lost) {
+              send(SearchFalcon(me, f.id));
+              send(SearchFalcon(me, f.id)); // (twice a day: refused)
+            }
+          }
+        }
+      }
+      final l = Trips.leg(g);
+      if (l == null) {
+        days(1);
+        continue;
+      }
+      final plan = AwayPlan(
+        l.plan.target,
+        extra: l.plan.extra,
+        counters: [...l.plan.counters, (game, events, summary) => note(events)],
+        card: l.plan.card,
+      );
+      final run = AwayRun(g, plan);
+      while (!run.done) {
+        run.step();
+      }
+      final stop = run.stop!;
+      seen.add(
+        'stop:${stop.kind.name}${stop.extra == null ? '' : ':${stop.extra}'}',
+      );
+      for (final k in stop.also) {
+        seen.add('stop:${k.name}');
+      }
+      if (stop.kind == AwayStopKind.extra) send(EndTrip(me));
+    }
+  }
+
+  // refusals before anything is had
+  send(StartTrip(me, TripKind.trapping, Ground.lith, 5)); // (out of season)
+  send(BuyPermit(me, PermitKind.hunting)); // (no falcon with a passport)
+  send(CareFalcons(me)); // (no falcons)
   send(BuildFacility(me, Facility.falconRoom));
   send(BuyPermit(me, PermitKind.trapping));
+  send(BuyPermit(me, PermitKind.trapping)); // (held)
   for (final (x, n) in [
     (Gear.pigeon, 20),
     (Gear.pigeonNet, 1),
     (Gear.birdNet, 1),
     (Gear.binoculars, 1),
     (Gear.mobileTent, 1),
-    (Gear.supplies, 40),
-    (Gear.tracker, 1),
+    (Gear.supplies, 30),
   ]) {
     send(OrderGear(me, x, n));
   }
+  send(OrderGear(me, Gear.binoculars, 1)); // (enough)
+  send(BuyFalcon(me, 'breeders:${g.today.value}:0', 100000)); // (closed)
   g.advanceTo(GameDay.ofDate(DateTime.utc(2026, 10)));
   yield line('ready');
-  // a falcon from the exhibition, and one from the trapping auction
-  for (final r in [FalconRoute.exhibition, FalconRoute.trapping]) {
-    for (var i = 0; i < 6; i++) {
-      final lots = FalconMarket.lots(g.state.world.seed, r, g.today);
-      if (lots.isNotEmpty) {
-        send(BuyFalcon(me, lots.first.key, 400000));
-        break;
-      }
-      g.advanceDays(1);
-    }
+  // a falcon from the exhibition, with its tracker
+  for (var i = 0; i < 6 && g.me.hunt.falcons.isEmpty; i++) {
+    final lots = FalconMarket.lots(
+      g.state.world.seed,
+      FalconRoute.exhibition,
+      g.today,
+    );
+    if (lots.isNotEmpty) send(BuyFalcon(me, lots.first.key, 1000000));
+    if (g.me.hunt.falcons.isEmpty) days(1);
+  }
+  send(BuyFalcon(me, 'trapping:${g.today.value}:9', 100000)); // (no lot)
+  final bought = g.me.hunt.falcons.first;
+  send(OrderGear(me, Gear.tracker, 1, falcon: bought.id));
+  send(OrderGear(me, Gear.tracker, 1, falcon: bought.id)); // (has one)
+  send(ReleaseFalcon(me, bought.id)); // (not his to free: bought)
+  send(EnterTrapAuction(me, bought.id)); // (not a held bird)
+  send(SearchFalcon(me, bought.id)); // (not lost)
+  send(
+    CastFalcon(me, bought.id, const HuntAt.off(HuntOff.farm), minute: 600),
+  ); // (by the farm)
+  send(StartTrip(me, TripKind.trapping, Ground.estate, 3)); // (off ground)
+  send(StartTrip(me, TripKind.trapping, Ground.lith, 0)); // (too far)
+  // three days' الدعو for it, so that left at the farm it would step back
+  for (var i = 0; i < 3; i++) {
+    send(CareFalcons(me));
+    days(1);
+  }
+  yield line('bought');
+  // the first camp: the coast, 50 nights on 30 days' supplies (the supplies
+  // run out); the falcon at the farm uncared stops a night on the way
+  send(StartTrip(me, TripKind.trapping, Ground.lith, 50));
+  send(StartTrip(me, TripKind.trapping, Ground.lith, 5)); // (on a trip)
+  send(
+    SpotFalcon(
+      me,
+      const HuntAt.ground(Ground.lith),
+      minute: HuntSun.dawn(g.today) + 30,
+    ),
+  ); // (still on the road)
+  send(SpotFalcon(me, const HuntAt.ground(Ground.lith), minute: 60)); // night
+  send(
+    SpotFalcon(
+      me,
+      const HuntAt.ground(Ground.nafudEdge),
+      minute: HuntSun.dawn(g.today) + 30,
+    ),
+  ); // (a hunting ground: off the trapping grounds)
+  camp(Ground.lith, trapping: true);
+  while (g.me.hunt.trip != null) {
+    days(1);
+  }
+  yield line('home');
+  // the second camp, to the season's end at القنفذة
+  send(OrderGear(me, Gear.supplies, 40));
+  days(1);
+  send(StartTrip(me, TripKind.trapping, Ground.qunfudhah, 60));
+  camp(Ground.qunfudhah, trapping: true);
+  while (g.me.hunt.trip != null) {
+    days(1);
+  }
+  // the auction's close: a bird neither sold nor kept is set free
+  if (g.today < GameDay.ofDate(DateTime.utc(2026, 12, 2))) {
+    note(g.advanceTo(GameDay.ofDate(DateTime.utc(2026, 12, 2))));
+  }
+  if (g.me.ledger.any((e) => e.category == LedgerCategory.falconSale)) {
+    seen.add('fate:sold');
+  }
+  send(StartTrip(me, TripKind.trapping, Ground.lith, 5)); // (out of season)
+  yield line('season');
+  // الدعو for four weeks, then the hunting permit and a trip at the estate
+  for (var i = 0; i < HuntBalance.dauDaysNeeded + 1; i++) {
+    send(CareFalcons(me));
+    days(1);
   }
   send(BuyPermit(me, PermitKind.hunting));
-  yield line('bought');
-  // the camp: 20 nights at الحماد, the dawn's work each day
-  send(StartTrip(me, TripKind.trapping, Ground.hamad, 20));
-  const at = HuntAt.ground(Ground.hamad);
-  for (var night = 0; night < 20; night++) {
-    final m = HuntSun.dawn(g.today) + 30;
-    send(SpotFalcon(me, at, minute: m));
-    for (final l in [Lure.pigeon, Lure.birdNet, Lure.pigeon]) {
-      send(ReleaseLure(me, at, l, minute: m));
-    }
-    for (final f in [...g.me.hunt.held]) {
-      send(
-        g.me.hunt.falcons.length < 3
-            ? KeepBird(me, f.id)
-            : EnterTrapAuction(me, f.id),
-      );
-    }
-    send(CareFalcons(me));
-    final plan = Trips.night(g);
-    if (plan == null) break;
-    final run = AwayRun(g, plan);
-    while (!run.done) {
-      run.step();
-    }
-    if (night % 5 == 4) yield line('camp ${run.stop!.kind.name}');
-    if (run.stop!.kind == AwayStopKind.extra) break;
+  send(StartTrip(me, TripKind.falconry, Ground.estate, 30));
+  send(
+    CastFalcon(
+      me,
+      bought.id,
+      const HuntAt.ground(Ground.estate),
+      inCar: true,
+      moving: true,
+      minute: HuntSun.sunrise(g.today) + 90,
+    ),
+  ); // (from a moving car)
+  send(
+    CastFalcon(
+      me,
+      bought.id,
+      const HuntAt.ground(Ground.estate),
+      minute: HuntSun.sunrise(g.today) + 30,
+    ),
+  ); // (before the hunting hour)
+  camp(Ground.estate, trapping: false);
+  while (g.me.hunt.trip != null) {
+    days(1);
   }
-  send(EndTrip(me));
-  yield line('home');
-  // الدعو for four weeks, then a day's outing at the estate in November
-  for (var w = 0; w < 5; w++) {
-    send(CareFalcons(me));
-    g.advanceDays(7);
+  yield line('falconry');
+  // the winter: a kept peregrine set free in February, not before
+  final kept = g.me.hunt.falcons.where((f) => f.keep).toList();
+  for (final f in kept) {
+    send(ReleaseFalcon(me, f.id)); // (January: refused)
+    send(EnterTrapAuction(me, f.id)); // (kept: not for sale)
   }
-  send(CareFalcons(me));
-  send(StartTrip(me, TripKind.falconry, Ground.estate, 0));
-  for (final f in [...g.me.hunt.falcons]) {
-    for (var i = 0; i < 3; i++) {
-      send(
-        CastFalcon(
-          me,
-          f.id,
-          const HuntAt.ground(Ground.estate),
-          minute: HuntSun.sunrise(g.today) + 90 + 60 * i,
-        ),
-      );
-      if (f.where == FalconWhere.lost) send(SearchFalcon(me, f.id));
-    }
-  }
-  g.advanceDays(1);
-  yield line('outing');
-  // the season out, the auction's close, the winter, a kept bird set free
-  g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 2, 2)));
-  for (final f in [...g.me.hunt.falcons.where((f) => f.keep)]) {
+  note(g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 2, 2))));
+  for (final f in kept) {
     send(ReleaseFalcon(me, f.id));
   }
+  note(g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 6, 2))));
+  send(CareFalcons(me)); // (the moult)
   yield line('spring');
+  // a second autumn on the north coast's sister, all season: what the first
+  // did not net it may (a bird left at the close, those released)
+  note(g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 9, 25))));
+  send(BuyPermit(me, PermitKind.trapping));
+  send(OrderGear(me, Gear.supplies, 60));
+  send(OrderGear(me, Gear.pigeon, gearRoom(g.me, Gear.pigeon)));
+  note(g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 10))));
+  send(StartTrip(me, TripKind.trapping, Ground.wajh, 60));
+  camp(Ground.wajh, trapping: true);
+  while (g.me.hunt.trip != null) {
+    days(1);
+  }
+  note(g.advanceTo(GameDay.ofDate(DateTime.utc(2027, 12, 2))));
+  yield line('second autumn');
 }
+
+/// The seed whose hunting run covers every path (chosen by
+/// tool/hunt_seed.dart; the test checks it still does).
+const huntSeed = 261;
+
+/// The paths the hunting run must cover (huntLines' [covered]).
+const huntPaths = {
+  'trap:netted',
+  'trap:released',
+  'trap:stooped',
+  'trap:nothingCame',
+  'released:saker',
+  'released:resident',
+  'fate:kept',
+  'fate:entered',
+  'fate:sold',
+  'fate:freedAtClose',
+  'fate:freed',
+  'fate:cared',
+  'searched',
+  'cast:lost',
+  'cast:caught',
+  'cast:missed',
+  'stop:extra:suppliesOut',
+  'stop:extra:seasonEnd',
+  'stop:falconCare',
+  'refused:outOfSeason',
+  'refused:needsFalcon',
+  'refused:noFalcons',
+  'refused:permitHeld',
+  'refused:gearFull',
+  'refused:routeClosed',
+  'refused:notALot',
+  'refused:hasTracker',
+  'refused:notKept',
+  'refused:notHeld',
+  'refused:notLost',
+  'refused:nearFarm',
+  'refused:offGround',
+  'refused:tooFar',
+  'refused:onTrip',
+  'refused:driving',
+  'refused:night',
+  'refused:awayFromFarm',
+  'refused:movingCar',
+  'refused:notByDay',
+  'refused:releaseMonths',
+  'refused:keptNotForSale',
+  'refused:moult',
+  'refused:searchedToday',
+};

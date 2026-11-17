@@ -24,6 +24,14 @@ const params = NewGameParams(
 DateTime fixedNow() => DateTime.utc(2026, 11, 12, 9);
 
 void main() {
+  test('the same-seed hunting run covers every path (the review\'s finding '
+      '8)', () {
+    final covered = <String>{};
+    final lines = huntLines(covered: covered).toList();
+    expect(lines, isNotEmpty);
+    expect(huntPaths.difference(covered), isEmpty);
+  });
+
   group('commands from JSON', () {
     // One of every command (commandToJson's switch is exhaustive over the
     // sealed Command, so a new one cannot be missing from here unnoticed for
