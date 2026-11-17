@@ -742,7 +742,9 @@ class SakerClips:
             w = self.wings_flap(((f - 10) / 6.0) % 1.0, amp=50, mean=10)
         s_ = min(f / 24.0, 1.0)
         tb = V3((900 * (1 - (1 - s_) ** 2), 0, -150 * s_))
-        return {'pitch': pitch, 'tb': tb, 'feet': ('reach', 1.0), 'mesh': 'open', 'wing': w,
+        # the feet thrown forward from the stoop's tuck over the first four frames (they started out struck
+        # forward at frame 0: a 176 mm jump at the hand-over, the review)
+        return {'pitch': pitch, 'tb': tb, 'feet': ('reach', ramp(f, 0, 4)), 'mesh': 'open', 'wing': w,
                 'tail_spread': 1.4 - 0.2 * ramp(f, 12, 24), 'tail_drop': 14 * ramp(f, 2, 8),
                 'clench': ramp(f, 9, 11), 'open_toes': ramp(f, 0, 6) * (1 - ramp(f, 9, 11))}
 
@@ -1023,6 +1025,7 @@ def build_saker(out, sheets=False):
     frames_mesh = {}
     log = []
     toe_verts = toe_vertex_sets(meshes['fold'])
+    end_cords = {}      # each clip's cords at its last frame (anchor, points), for the clip it hands over to
     for name, (n, fn, loop) in CLIPS.items():
         act = bpy.data.actions.new(name)
         arm.animation_data.action = act
@@ -1034,8 +1037,21 @@ def build_saker(out, sheets=False):
             for f in range(2 * n):
                 A.apply(spec_fn(f % n), 0)
         else:         # let the cords settle in the first frame's pose (its air included) before recording
-            for _ in range(20):
-                A.apply(spec_fn(0), 0)
+            prev = next((a for a, b in HANDOVERS if b == name and a in FLYING and a in end_cords), None)
+            if prev:
+                # in the air after another clip (the stoop after the glide, the bind after the stoop): the cords
+                # go on from where that clip left them, carried to the anklet, not settled afresh (a pop of up to
+                # 294 mm at the bind's first frame, the review's hand-over check)
+                A.apply(spec_fn(0), 0, key=False)
+                for s_ in ('L', 'R'):
+                    a0, p0 = end_cords[prev][s_]
+                    a1 = A.P.head_of(f'jess1.{s_}')
+                    pts = [q + (a1 - a0) for q in p0]
+                    A.cords[s_].p = [q.copy() for q in pts]
+                    A.cords[s_].q = [q.copy() for q in pts]
+            else:
+                for _ in range(20):
+                    A.apply(spec_fn(0), 0)
             A.prev_root = None
         frames_mesh[name] = []
         FRAMES_FEET[name] = []
@@ -1060,6 +1076,7 @@ def build_saker(out, sheets=False):
             ft = sp['feet']
             HIDDEN_FEET[name].append(not isinstance(ft, str) and ((ft[0] in ('free', 'push') and ft[1] >= 0.999) or (ft[0] == 'reach' and ft[1] <= 0.001)))
         log += [(name,) + e for e in A.log]
+        end_cords[name] = {s_: (A.P.head_of(f'jess1.{s_}'), [q.copy() for q in A.cords[s_].p]) for s_ in ('L', 'R')}
         act.use_fake_user = True
         arm.animation_data.action = None
         for k, sk in keys_shape.items():
@@ -1581,8 +1598,10 @@ def handover_checks(arm, pairs, clips, skip=()):
                 inner = max(inner, pose_gap(prev, p, skip)[0])
             prev = p
         gap, bone = pose_gap(pa, p0, skip)
+        both_loop = clips[a][2] and clips[b][2]      # two loops (the flight's beat into the glide): the page cross-fades
         print(f'hand-over {a} (last frame) -> {b} (first): the pose differs by {gap:.1f} mm at most ({bone}); '
-              f'the largest step inside {b} {inner:.1f} mm' + ('' if gap <= max(inner, 2.0) + 0.5 else '  ** too large **'))
+              f'the largest step inside {b} {inner:.1f} mm' + ('' if gap <= max(inner, 2.0) + 0.5 else
+                                                               '  (two loops: cross-faded by the page)' if both_loop else '  ** too large **'))
         res.append((a, b, gap, inner))
     return res
 

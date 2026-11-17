@@ -351,6 +351,10 @@ the first frame of the clip it hands to, beside the largest step inside that cli
 - **Bounds.** three.js culls a skinned mesh by its rest-pose bounds, and `cast_off` and the landings move the root
   by up to 3 m. Recommended: `frustumCulled = false` on the bird's meshes (one to three meshes, a few birds: cheaper
   than recomputing bounds each frame).
+- **Loop into loop.** The flight's beat and the glide are two loops: the page cross-fades from one to the other
+  over about a quarter of a second (their poses differ by up to 480 mm at a wingtip, mid-beat against the glide's
+  spread wings). Every other hand-over (a transition into a loop, a landing into the perched idle, the stoop into the
+  bind) starts where the clip before it ends: the build prints each gap beside the clip's own largest step.
 - **Root motion.** `flight`, `glide`, `stoop`, `mantle` and the quarry's loops are in place (the game moves the
   bird). `cast_off`, `land_cuff`, `land_perch`, `take_off`, `escape` and `bind` carry their own root motion,
   because they start or end on a fixed support (the fist, the perch, the ground, the quarry): the game puts the
