@@ -677,16 +677,11 @@ void main() {
       expect(quarryAtDay(Ground.estate, d(2027, 1, 31)), Quarry.houbara);
       expect(quarryAtDay(Ground.nafudEdge, d(2026, 12, 15)), isNull);
       final g0 = falconer(on: d(2026, 12, 15));
-      out(g0, Ground.nafudEdge);
+      // no lawful quarry there in its dates: the trip itself is refused
       expect(
         why(
           g0.dispatch(
-            CastFalcon(
-              g0.me.id,
-              g0.me.hunt.falcons.single.id,
-              at(Ground.nafudEdge),
-              minute: noon(g0),
-            ),
+            StartTrip(g0.me.id, TripKind.falconry, Ground.nafudEdge, 3),
           ),
         ),
         'noQuarry',
@@ -763,7 +758,7 @@ void main() {
           why(
             g.dispatch(CastFalcon(g.me.id, f.id, at(Ground.estate), minute: m)),
           ),
-          'notOnTrip',
+          'noTrip',
         );
         expect(
           why(
@@ -776,7 +771,7 @@ void main() {
               ),
             ),
           ),
-          'notOnTrip',
+          'noTrip',
         );
         out(g, Ground.nafudEdge);
         expect(
@@ -859,6 +854,223 @@ void main() {
       expect(f.dauDays, 1);
       g.state.world.day = d(2027, 6, 1);
       expect(why(g.dispatch(CareFalcons(g.me.id))), 'moult');
+    });
+  });
+
+  group('the fix round\'s pins (reviewer B)', () {
+    String js(Game g) => jsonEncode(g.state.toJson());
+    test('الدعو refused on the road out, at camp, on the road home and on a '
+        'day\'s outing; at the minute he is home it works; each refusal '
+        'changes nothing', () {
+      final g = trapper();
+      final f = trainedFalcon(g)
+        ..dauDays = 3
+        ..caredOn = g.today - 1;
+      final me = g.me.id;
+      expect(
+        g.dispatch(StartTrip(me, TripKind.trapping, Ground.hamad, 5)).ok,
+        isTrue,
+      );
+      final t = g.me.hunt.trip!;
+      var s = js(g);
+      final r = g.dispatch(CareFalcons(me, minute: 300));
+      expect(why(r), 'awayFromFarm');
+      expect(
+        FalconLines.refusal((r as Err).error),
+        'الدعو بغرفة الصقور، وانت برا العزبة',
+      );
+      expect(js(g), s);
+      leg(g);
+      s = js(g);
+      expect(why(g.dispatch(CareFalcons(me, minute: 600))), 'awayFromFarm');
+      expect(js(g), s);
+      expect(g.dispatch(EndTrip(me, minute: 600)).ok, isTrue);
+      final home = t.homeMinute!;
+      while (g.today < t.homeOn!) {
+        leg(g);
+      }
+      s = js(g);
+      expect(
+        why(g.dispatch(CareFalcons(me, minute: home - 1))),
+        'awayFromFarm',
+      );
+      expect(js(g), s);
+      final before = f.dauDays;
+      expect(g.dispatch(CareFalcons(me, minute: home)).ok, isTrue);
+      expect(g.me.hunt.trip, isNull);
+      expect(f.dauDays, greaterThan(before));
+      g.dispatch(BuyPermit(me, PermitKind.hunting));
+      f.dauDays = HuntBalance.dauDaysNeeded;
+      g.advanceDays(1);
+      final m = HuntSun.sunrise(g.today);
+      expect(
+        g
+            .dispatch(
+              StartTrip(me, TripKind.falconry, Ground.nafudEdge, 0, minute: m),
+            )
+            .ok,
+        isTrue,
+      );
+      s = js(g);
+      expect(why(g.dispatch(CareFalcons(me, minute: m + 120))), 'awayFromFarm');
+      expect(js(g), s);
+    });
+    test('a refusal settles nothing, even with a drive home over', () {
+      final g = trapper();
+      final me = g.me.id;
+      g.dispatch(StartTrip(me, TripKind.trapping, Ground.hail, 2));
+      g.dispatch(EndTrip(me));
+      final t = g.me.hunt.trip!;
+      final s = js(g);
+      final r = g.dispatch(CareFalcons(me, minute: t.homeMinute! + 1));
+      expect(why(r), 'noFalcons');
+      expect(js(g), s);
+      expect(r.events.whereType<TripChanged>(), isEmpty);
+    });
+    test('a tracker fitted to a named falcon shows on that falcon only; the '
+        'gear rows hold no tracker', () {
+      final g = trapper();
+      final f = trainedFalcon(g);
+      final f2 = trainedFalcon(g);
+      final me = g.me.id;
+      expect(
+        g.dispatch(OrderGear(me, Gear.tracker, 1, falcon: f2.id)).ok,
+        isTrue,
+      );
+      var facts = falconFacts(g.state, me);
+      var fs = {for (final x in facts['falcons']! as List) (x as Map)['id']: x};
+      expect(fs[f2.id.value]!['trackerComing'], isTrue);
+      expect(
+        why(g.dispatch(OrderGear(me, Gear.tracker, 1, falcon: f2.id))),
+        'trackerComing',
+      );
+      g.advanceDays(Balance.deliveryDays);
+      facts = falconFacts(g.state, me);
+      fs = {for (final x in facts['falcons']! as List) (x as Map)['id']: x};
+      expect(fs[f2.id.value]!['tracker'], isTrue);
+      expect(fs[f.id.value]!.containsKey('tracker'), isFalse);
+      expect((facts['gear']! as Map).containsKey('tracker'), isFalse);
+      expect(
+        why(g.dispatch(OrderGear(me, Gear.tracker, 1, falcon: f2.id))),
+        'hasTracker',
+      );
+    });
+    test('three flights a day exactly, the fourth refused; three again the '
+        'next day', () {
+      var checked = 0;
+      for (var seed = 1; seed <= 40 && checked < 5; seed++) {
+        final g = trapper(seed: seed);
+        final f = trainedFalcon(g);
+        g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
+        camp(
+          g,
+          TripKind.falconry,
+          Ground.nafudEdge,
+          3,
+          minute: HuntSun.sunrise(g.today) + 60,
+        );
+        final m = HuntSun.sunrise(g.today) + 120;
+        final res = <String>[];
+        for (var i = 0; i < 4 && f.where != FalconWhere.lost; i++) {
+          final r = g.dispatch(
+            CastFalcon(g.me.id, f.id, at(Ground.nafudEdge), minute: m),
+          );
+          res.add(r.ok ? 'ok' : why(r)!);
+        }
+        if (f.where == FalconWhere.lost) continue;
+        expect(res, ['ok', 'ok', 'ok', 'flownOut']);
+        checked++;
+        leg(g);
+        final m2 = HuntSun.sunrise(g.today) + 120;
+        final r = g.dispatch(
+          CastFalcon(g.me.id, f.id, at(Ground.nafudEdge), minute: m2),
+        );
+        expect(r.ok, isTrue, reason: '${why(r)}');
+      }
+      expect(checked, 5);
+    });
+    test('the lure: three tries, the third refusal sends it away, no fourth '
+        'draw; a pigeon used only on a draw', () {
+      var seen = 0;
+      for (var seed = 1; seed <= 400 && seen < 3; seed++) {
+        final g = trapper(seed: seed);
+        const gr = Ground.lith;
+        GameDay? day;
+        Passer? p;
+        for (var i = 0; i < 60 && p == null; i++) {
+          p = TrapOdds.passer(g.state.world.seed, gr, g.today + i);
+          if (p != null) day = g.today + i;
+        }
+        if (p == null || day!.daysSince(g.today) < 2) continue;
+        g.advanceTo(day - 2);
+        hand(g, Gear.pigeon, 20);
+        hand(g, Gear.supplies, 30);
+        g.dispatch(StartTrip(g.me.id, TripKind.trapping, gr, 5));
+        final t = g.me.hunt.trip!;
+        while (g.today < day && Trips.leg(g) != null) {
+          leg(g);
+        }
+        final m = switch (p.window) {
+          TrapWindow.dawn => HuntSun.dawn(day) + 30,
+          TrapWindow.midday => 720,
+          TrapWindow.evening => HuntSun.sunset(day) - 30,
+        };
+        if (g.today != day || !t.there(day, m)) continue;
+        final spot = g.dispatch(SpotFalcon(g.me.id, at(gr), minute: m));
+        if (spot.events.whereType<TrapResult>().single.outcome !=
+            TrapOutcome.inSight) {
+          continue;
+        }
+        final out = <TrapOutcome>[];
+        final pig0 = g.me.hunt.has(Gear.pigeon);
+        for (var i = 0; i < 5; i++) {
+          out.add(
+            g
+                .dispatch(ReleaseLure(g.me.id, at(gr), Lure.pigeon, minute: m))
+                .events
+                .whereType<TrapResult>()
+                .single
+                .outcome,
+          );
+        }
+        final draws = out.where((o) => o != TrapOutcome.nothingCame).length;
+        expect(draws, lessThanOrEqualTo(3));
+        expect(pig0 - g.me.hunt.has(Gear.pigeon), draws);
+        if (out.contains(TrapOutcome.refusedAndWent)) {
+          expect(out.indexOf(TrapOutcome.refusedAndWent), 2);
+          seen++;
+        }
+      }
+      expect(seen, greaterThan(0));
+    });
+    test('on a falconry trip a falcon that has not flown stops a night the '
+        'morning before it would step back', () {
+      final g = trapper();
+      final f = trainedFalcon(g);
+      final f2 = trainedFalcon(g)..dauDays = 10;
+      g.dispatch(BuyPermit(g.me.id, PermitKind.hunting));
+      camp(
+        g,
+        TripKind.falconry,
+        Ground.nafudEdge,
+        30,
+        minute: HuntSun.sunrise(g.today) + 60,
+      );
+      AwayRun? run;
+      for (var i = 0; i < 20; i++) {
+        g.dispatch(
+          CastFalcon(
+            g.me.id,
+            f.id,
+            at(Ground.nafudEdge),
+            minute: HuntSun.sunrise(g.today) + 120,
+          ),
+        );
+        run = leg(g);
+        if (run.stop!.kind == AwayStopKind.falconCare) break;
+      }
+      expect(run!.stop!.kind, AwayStopKind.falconCare);
+      expect(run.stop!.name, f2.name);
     });
   });
 

@@ -1,5 +1,5 @@
 // The hunting season's numbers (task T18). Each is sourced ("[n]", docs/
-// research-realism.md section 8) or a game choice; docs/GDD.md section 13
+// research-realism.md section 8) or a game choice; docs/GDD.md section 15
 // lists them all.
 import '../catalog/falconry.dart';
 import '../common/rng.dart';
@@ -76,7 +76,8 @@ class HuntBalance {
   ///   [185][211][213]: the floor taken as the share); 361,000 at 0.975 and
   ///   400,000 at 0.995 (the dearest of 2025 and 2024 [216][221]: about one
   ///   bird in 40 above 361,000, as one of 2025's 40); the record 650,000
-  ///   [187][199] the end. Its mean is about 145,000: 2025's level (about
+  ///   [187][199] the end; 158,000 at 0.7 a game choice between the median and
+  ///   the dear floor. Its mean is about 149,000: 2025's level (about
   ///   160,000 [213]) more than 2020-25's (about 100,000 [213]); the steps
   ///   between the points are a game choice.
   static const worth = {
@@ -143,10 +144,11 @@ class HuntBalance {
   }
 
   /// A passage peregrine of the year's length and width in quarter inches
-  /// and its weight in grams: 15 to 16 inches and 950 to 1,122 g, as the
-  /// sales read give them [187][199][209][216] (the spread a game choice);
-  /// a male (تبع, at the breeders' and the exhibition only) a third smaller
-  /// (game choice: falcons' males are smaller).
+  /// and its weight in grams: 15 to 16 inches and 940 to 1,130 g, a little
+  /// around the 950 to 1,122 g the sales read give [187][199][209][216] (the
+  /// spread a game choice); a male (تبع, at the breeders' and the exhibition
+  /// only) 15% shorter and a quarter lighter (game choice: falcons' males are
+  /// smaller). The other species' sizes are game choices too.
   static (int, int, int) sizeOf(FalconSpecies s, bool female, Rng rng) {
     final (lo, hi, glo, ghi) = switch (s) {
       FalconSpecies.saker => (64, 70, 1000, 1300),

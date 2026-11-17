@@ -3,7 +3,6 @@
 // camp of days will. It only advances days and reads conditions: what the
 // days do is the daily pipeline's, the same code a played day runs (a
 // caller's daily work belongs there too, keyed by state, never here).
-import 'catalog/falconry.dart';
 import 'common/result.dart';
 import 'common/time.dart';
 import 'events.dart';
@@ -361,10 +360,10 @@ class AwayRun {
         herd.any((c) => Eligibility.femaleCanBreed(c, today) == null)) {
       at(AwayStopKind.breeding);
     }
-    // his falcons left at the farm (on a falconry trip they are with him)
+    // his falcons not cared for (on a falconry trip a falcon that flew today
+    // counts as cared for; one that did not would step back as at the farm)
     final h = me.falconry;
     if (h != null &&
-        h.trip?.kind != TripKind.falconry &&
         !HuntBalance.moultMonths.contains(today.month) &&
         !HuntBalance.moultMonths.contains((today + 1).month)) {
       for (final f in h.falcons) {

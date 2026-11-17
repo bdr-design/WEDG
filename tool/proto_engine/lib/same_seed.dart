@@ -449,7 +449,7 @@ Iterable<String> huntLines({int seed = huntSeed, Set<String>? covered}) sync* {
   send(BuyFalcon(me, 'trapping:${g.today.value}:9', 100000)); // (no lot)
   final bought = g.me.hunt.falcons.first;
   send(OrderGear(me, Gear.tracker, 1, falcon: bought.id));
-  send(OrderGear(me, Gear.tracker, 1, falcon: bought.id)); // (has one)
+  send(OrderGear(me, Gear.tracker, 1, falcon: bought.id)); // (on its way)
   send(ReleaseFalcon(me, bought.id)); // (not his to free: bought)
   send(EnterTrapAuction(me, bought.id)); // (not a held bird)
   send(SearchFalcon(me, bought.id)); // (not lost)
@@ -463,6 +463,14 @@ Iterable<String> huntLines({int seed = huntSeed, Set<String>? covered}) sync* {
     send(CareFalcons(me));
     days(1);
   }
+  send(OrderGear(me, Gear.tracker, 1, falcon: bought.id)); // (it has one)
+  send(
+    SpotFalcon(
+      me,
+      const HuntAt.ground(Ground.lith),
+      minute: HuntSun.dawn(g.today) + 30,
+    ),
+  ); // (no trip at all)
   yield line('bought');
   // the first camp: the coast, 50 nights on 30 days' supplies (the supplies
   // run out); the falcon at the farm uncared stops a night on the way
@@ -597,6 +605,8 @@ const huntPaths = {
   'refused:routeClosed',
   'refused:notALot',
   'refused:hasTracker',
+  'refused:trackerComing',
+  'refused:noTrip',
   'refused:notKept',
   'refused:notHeld',
   'refused:notLost',

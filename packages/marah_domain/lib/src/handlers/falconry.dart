@@ -88,10 +88,12 @@ Result orderGear(Sim sim, PlayerState p, OrderGear cmd) {
     // one for one named falcon of his, without one and none on its way
     final f = cmd.falcon == null ? null : p.falconry?.falcon(cmd.falcon!);
     if (f == null) return refuse(sim, HuntRefusal.falconAway);
-    if (cmd.units != 1 ||
-        f.tracker ||
-        p.hunt.coming.any((d) => d.falcon == f.id)) {
-      return refuse(sim, HuntRefusal.hasTracker);
+    if (cmd.units != 1) {
+      return Err(const DomainError(ErrorCode.invalidAmount), sim.drain());
+    }
+    if (f.tracker) return refuse(sim, HuntRefusal.hasTracker);
+    if (p.hunt.coming.any((d) => d.falcon == f.id)) {
+      return refuse(sim, HuntRefusal.trackerComing);
     }
   } else {
     final room = gearRoom(p, cmd.gear);
@@ -322,6 +324,7 @@ DomainError? cannotStart(
       return _no(HuntRefusal.noPermit, {'kind': 'hunting'});
     }
     if (!(h?.falcons.any(ready) ?? false)) return _no(HuntRefusal.notReady);
+    if (quarryAt(ground, today) == null) return _no(HuntRefusal.noQuarry);
   }
   if (nights == 0) {
     if (!ground.oneDayFrom(p.farm.region)) return _no(HuntRefusal.tooFar);
@@ -341,9 +344,15 @@ DomainError? cannotStart(
 
 Result startTrip(Sim sim, PlayerState p, StartTrip cmd) {
   final minute = cmd.minute ?? 0;
-  settleTrip(sim, p, minute);
+  // a drive home already over counts as home; it is settled only if the new
+  // trip goes ahead (a refusal changes nothing)
+  final h = p.falconry, was = h?.trip;
+  final over = was != null && was.home(sim.today, minute);
+  if (over) h!.trip = null;
   final no = cannotStart(sim, p, cmd.kind, cmd.ground, cmd.nights, minute);
+  if (over) h!.trip = was;
   if (no != null) return Err(no, sim.drain());
+  settleTrip(sim, p, minute);
   final (d, m) = arrival(p, cmd.kind, cmd.ground, sim.today, minute);
   p.hunt.trip = Trip(
     kind: cmd.kind,
@@ -403,7 +412,8 @@ void endTripNow(Sim sim, PlayerState p) {
 Result endTrip(Sim sim, PlayerState p, EndTrip cmd) {
   final minute = cmd.minute ?? 0;
   final t = p.falconry?.trip;
-  if (t == null || t.returning) return refuse(sim, HuntRefusal.notOnTrip);
+  if (t == null) return refuse(sim, HuntRefusal.noTrip);
+  if (t.returning) return refuse(sim, HuntRefusal.notOnTrip);
   // the whole road home (from the ground, or from the road out: game
   // choice, the same time back)
   final at = minute + driveMinutes(p, t.ground);
@@ -426,7 +436,8 @@ Result endTrip(Sim sim, PlayerState p, EndTrip cmd) {
 
 Result moveCamp(Sim sim, PlayerState p, MoveCamp cmd) {
   final t = p.falconry?.trip;
-  if (t == null || t.kind != TripKind.trapping || t.oneDay || t.returning) {
+  if (t == null) return refuse(sim, HuntRefusal.noTrip);
+  if (t.kind != TripKind.trapping || t.oneDay || t.returning) {
     return refuse(sim, HuntRefusal.notOnTrip);
   }
   if (p.hunt.has(Gear.mobileTent) == 0) return refuse(sim, HuntRefusal.noTent);
@@ -476,10 +487,8 @@ DomainError? cannotTrap(Sim sim, PlayerState p, HuntAt at, int minute) {
   }
   if (!HuntSun.trappingHours(today, minute)) return _no(HuntRefusal.night);
   final t = h!.trip;
-  if (t == null ||
-      t.kind != TripKind.trapping ||
-      t.ground != g ||
-      t.returning) {
+  if (t == null) return _no(HuntRefusal.noTrip);
+  if (t.kind != TripKind.trapping || t.ground != g || t.returning) {
     return _no(HuntRefusal.notOnTrip);
   }
   if (!t.there(today, minute)) {
@@ -537,10 +546,20 @@ Result releaseLure(Sim sim, PlayerState p, ReleaseLure cmd) {
   final no = cannotTrap(sim, p, cmd.at, minute);
   if (no != null) return Err(no, sim.drain());
   final h = p.hunt;
-  final has = cmd.lure == Lure.pigeon
-      ? h.has(Gear.pigeon) > 0 && h.has(Gear.pigeonNet) > 0
-      : h.has(Gear.birdNet) > 0;
-  if (!has) return refuse(sim, HuntRefusal.noLure, {'lure': cmd.lure.name});
+  final missing = cmd.lure == Lure.birdNet
+      ? (h.has(Gear.birdNet) > 0 ? null : 'birdNet')
+      : switch ((h.has(Gear.pigeon) > 0, h.has(Gear.pigeonNet) > 0)) {
+          (true, true) => null,
+          (false, true) => 'pigeon',
+          (true, false) => 'pigeonNet',
+          _ => 'both',
+        };
+  if (missing != null) {
+    return refuse(sim, HuntRefusal.noLure, {
+      'lure': cmd.lure.name,
+      'missing': missing,
+    });
+  }
   final g = cmd.at.ground!;
   final t = h.trip!;
   final work = workOn(sim, h, g);
@@ -748,7 +767,9 @@ DomainError? cannotCast(
     case HuntOff.reserve:
       return _no(HuntRefusal.reserve);
     case HuntOff.open:
-      return _no(HuntRefusal.notOnTrip);
+      return p.falconry?.trip == null
+          ? _no(HuntRefusal.noTrip)
+          : _no(HuntRefusal.notOnTrip);
     case null:
       break;
   }
@@ -763,10 +784,8 @@ DomainError? cannotCast(
   }
   if (!HuntSun.huntingHours(today, minute)) return _no(HuntRefusal.notByDay);
   final t = h!.trip;
-  if (t == null ||
-      t.kind != TripKind.falconry ||
-      t.ground != g ||
-      t.returning) {
+  if (t == null) return _no(HuntRefusal.noTrip);
+  if (t.kind != TripKind.falconry || t.ground != g || t.returning) {
     return _no(HuntRefusal.notOnTrip);
   }
   if (!t.there(today, minute)) {
@@ -887,14 +906,19 @@ Result searchFalcon(Sim sim, PlayerState p, SearchFalcon cmd) {
 }
 
 Result careFalcons(Sim sim, PlayerState p, CareFalcons cmd) {
-  settleTrip(sim, p, cmd.minute ?? 0);
+  final minute = cmd.minute ?? 0;
   final h = p.falconry;
   if (h == null || h.falcons.isEmpty) return refuse(sim, HuntRefusal.noFalcons);
-  // الدعو is done in the room: not from a camp or a drive
-  if (h.trip != null) return refuse(sim, HuntRefusal.awayFromFarm);
+  // الدعو is done in the room: not from a camp or a drive (a drive home over
+  // by now is home)
+  final t = h.trip;
+  if (t != null && !t.home(sim.today, minute)) {
+    return refuse(sim, HuntRefusal.awayFromFarm);
+  }
   if (HuntBalance.moultMonths.contains(sim.today.month)) {
     return refuse(sim, HuntRefusal.moult);
   }
+  settleTrip(sim, p, minute);
   for (final f in h.falcons.where((f) => f.where == FalconWhere.home)) {
     final gap = f.caredOn == null ? 1 : sim.today.daysSince(f.caredOn!);
     if (gap <= 0) continue;

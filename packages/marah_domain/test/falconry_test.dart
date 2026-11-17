@@ -196,7 +196,7 @@ void main() {
       final r = g.dispatch(OrderGear(g.me.id, Gear.binoculars, 1));
       expect(why(r), 'gearFull');
       expect((r as Err).error.params['room'], 0);
-      expect(FalconLines.refusal(r.error), 'عندك كفايتك منها');
+      expect(FalconLines.refusal(r.error), 'عندك كفايتك منه');
       expect(g.dispatch(OrderGear(g.me.id, Gear.pigeonNet, 1)).ok, isTrue);
       expect(
         why(g.dispatch(OrderGear(g.me.id, Gear.pigeonNet, 1))),

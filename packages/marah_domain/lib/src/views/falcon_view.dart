@@ -172,9 +172,11 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
           'cannot': cannotBuyPermit(sim, p, k)?.params['reason'],
         },
     ],
+    // (the tracker is each falcon's own: on the falcon below, not a count)
     'gear': {
       for (final g in Gear.values)
-        g.name: [h?.has(g) ?? 0, h?.onTheWay(g) ?? 0, gearRoom(p, g)],
+        if (g != Gear.tracker)
+          g.name: [h?.has(g) ?? 0, h?.onTheWay(g) ?? 0, gearRoom(p, g)],
     },
     'room': {
       'built': farm.has(Facility.falconRoom) > 0,
@@ -195,7 +197,8 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
         _falcon(
           f,
           today,
-          tracked: (h!.falcons.indexOf(f)) < h.has(Gear.tracker),
+          tracked: f.tracker,
+          trackerComing: h!.coming.any((d) => d.falcon == f.id),
         ),
     ],
     'held': [
@@ -257,34 +260,39 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
   };
 }
 
-Map<String, Object?> _falcon(Falcon f, GameDay today, {bool tracked = false}) =>
-    {
-      'id': f.id.value,
-      'name': f.name,
-      'species': f.species.name,
-      'speciesName': f.species.label,
-      'female': f.female,
-      'age': f.ageOn(today).label,
-      'how': f.how.name,
-      'on': f.on.value,
-      if (f.route != null) 'route': f.route!.label,
-      'price': ?f.price,
-      if (f.ground != null) 'ground': f.ground!.label,
-      'size': '${inches(f.lengthQ)} × ${inches(f.widthQ)}',
-      'weight': f.weightG,
-      'passport': ?f.passport,
-      if (f.ring) 'ring': true,
-      'trapDoc': ?f.trapDoc,
-      'dauDays': f.dauDays,
-      'dauNeeded': HuntBalance.dauDaysNeeded,
-      'caredOn': f.caredOn?.value,
-      'flights': f.flights,
-      'taken': {for (final e in f.taken.entries) e.key.label: e.value},
-      'where': f.where.name,
-      if (f.keep) 'keep': true,
-      'ready': ready(f),
-      if (tracked) 'tracker': true,
-      // the day it steps back without الدعو (none in the moult's months)
-      if (f.caredOn != null && f.dauDays > 0)
-        'stepsBackOn': (f.caredOn! + HuntBalance.stepBackDays).value,
-    };
+Map<String, Object?> _falcon(
+  Falcon f,
+  GameDay today, {
+  bool tracked = false,
+  bool trackerComing = false,
+}) => {
+  'id': f.id.value,
+  'name': f.name,
+  'species': f.species.name,
+  'speciesName': f.species.label,
+  'female': f.female,
+  'age': f.ageOn(today).label,
+  'how': f.how.name,
+  'on': f.on.value,
+  if (f.route != null) 'route': f.route!.label,
+  'price': ?f.price,
+  if (f.ground != null) 'ground': f.ground!.label,
+  'size': '${inches(f.lengthQ)} × ${inches(f.widthQ)}',
+  'weight': f.weightG,
+  'passport': ?f.passport,
+  if (f.ring) 'ring': true,
+  'trapDoc': ?f.trapDoc,
+  'dauDays': f.dauDays,
+  'dauNeeded': HuntBalance.dauDaysNeeded,
+  'caredOn': f.caredOn?.value,
+  'flights': f.flights,
+  'taken': {for (final e in f.taken.entries) e.key.label: e.value},
+  'where': f.where.name,
+  if (f.keep) 'keep': true,
+  'ready': ready(f),
+  if (tracked) 'tracker': true,
+  if (trackerComing) 'trackerComing': true,
+  // the day it steps back without الدعو (none in the moult's months)
+  if (f.caredOn != null && f.dauDays > 0)
+    'stepsBackOn': (f.caredOn! + HuntBalance.stepBackDays).value,
+};

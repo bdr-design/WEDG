@@ -61,16 +61,10 @@ class TrapOdds {
       (FalconSpecies.saker, true, g.north ? 0.14 : 0.06),
       (FalconSpecies.saker, false, g.north ? 0.06 : 0.04),
       // the residents, young and old alike (half each: game choice)
-      (
-        FalconSpecies.mountainPeregrine,
-        true,
-        g.coast && !g.north ? 0.025 : 0.01,
-      ),
-      (
-        FalconSpecies.mountainPeregrine,
-        false,
-        g.coast && !g.north ? 0.025 : 0.01,
-      ),
+      // more on the Red Sea's southern coast under the mountains, where it
+      // breeds (the flat east coast as inland)
+      (FalconSpecies.mountainPeregrine, true, _redSeaSouth(g) ? 0.025 : 0.01),
+      (FalconSpecies.mountainPeregrine, false, _redSeaSouth(g) ? 0.025 : 0.01),
     ];
     // the lanner, resident inland, the rest (the shares sum to 1)
     final rest = 1.0 - m.fold(0.0, (a, x) => a + x.$3);
@@ -80,6 +74,8 @@ class TrapOdds {
       (FalconSpecies.lanner, false, rest / 2),
     ];
   }
+
+  static bool _redSeaSouth(Ground g) => g.coast && !g.north && g.lon < 43;
 
   static double passChance(Ground g, GameDay day) {
     final ground = g.coast ? 1.0 : (g.north ? groundNorth : groundSouth);

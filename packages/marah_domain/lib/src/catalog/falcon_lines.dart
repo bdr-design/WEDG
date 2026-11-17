@@ -82,10 +82,9 @@ enum HuntRefusal {
   /// The lure he has not got ({'lure'}).
   noLure,
 
-  /// Not a bird held for sale; the trapping auction closed; not a kept
-  /// peregrine; not in the months to set it free; not lost.
+  /// Not a bird held for sale; not a kept peregrine; not in the months to
+  /// set it free; not lost.
   notHeld,
-  auctionClosed,
   notKept,
   releaseMonths,
   notLost,
@@ -116,6 +115,12 @@ enum HuntRefusal {
 
   /// He has looked for the lost falcon today already.
   searchedToday,
+
+  /// A tracker for this falcon is on its way already.
+  trackerComing,
+
+  /// No trip or outing at all (a cast, the net or breaking camp with none).
+  noTrip,
 }
 
 class FalconLines {
@@ -150,7 +155,7 @@ class FalconLines {
         'الطرح بأرض طرح بس وبموسمه، والشبك برا أرض الطرح غرامته 100,000 ريال.',
       HuntRefusal.nearFarm => 'الصيد بالمزارع وحولها ممنوع، وغرامته 5,000 ريال لو انمسكت. ابعد عن العزب والقرى وأرسله.',
       HuntRefusal.coast => 'الساحل ممنوع الصيد فيه لين 20 كيلو داخل البر',
-      HuntRefusal.reserve => 'المحميات ممنوع الصيد فيها',
+      HuntRefusal.reserve => 'المحميات والمشاريع الكبرى ممنوع الصيد فيها',
       HuntRefusal.notHuntingGround => 'هذي أرض طرح، مو أرض مقناص',
       HuntRefusal.outOfSeason =>
         e.params['kind'] == 'trapping'
@@ -169,12 +174,13 @@ class FalconLines {
       HuntRefusal.notReady => 'صقرك ما خلص الدعو',
       HuntRefusal.falconAway => 'صقرك مو معك',
       HuntRefusal.flownOut => 'صقرك طار كفايته اليوم',
-      HuntRefusal.noLure =>
-        e.params['lure'] == 'birdNet'
-            ? 'ما عندك شبك الطيور والجربوع'
-            : 'ما عندك حمام وشبك الحمام',
+      HuntRefusal.noLure => switch (e.params['missing']) {
+        'pigeon' => 'ما عندك حمام',
+        'pigeonNet' => 'ما عندك شبك الحمام',
+        'birdNet' => 'ما عندك شبك الطيور والجربوع',
+        _ => 'ما عندك حمام وشبك الحمام',
+      },
       HuntRefusal.notHeld => 'هالطير مو للبيع',
-      HuntRefusal.auctionClosed => 'مزاد الطرح من 1 أكتوبر لين 30 نوفمبر بس',
       HuntRefusal.notKept => 'تطلق بس الشاهين اللي طرحته وخليته لك',
       HuntRefusal.releaseMonths => 'تطلقه من أول فبراير لين آخر أبريل',
       HuntRefusal.notLost => 'صقرك مو ضايع',
@@ -186,6 +192,8 @@ class FalconLines {
       HuntRefusal.noFalcons => 'ما عندك صقور',
       HuntRefusal.keptNotForSale => 'الطير اللي تخليه لك ما ينعرض للبيع',
       HuntRefusal.hasTracker => 'عليه جهاز تتبع',
+      HuntRefusal.trackerComing => 'جهازه بالطريق',
+      HuntRefusal.noTrip => 'ما انت بطلعة الحين',
       HuntRefusal.searchedToday => 'دوّرته اليوم: دوّره بكرة',
     };
   }
@@ -193,7 +201,9 @@ class FalconLines {
   /// What still fits of a gear, its counting noun in its four forms (1, 2,
   /// 3 to 10, 11 and up); none: «عندك كفايتك منها».
   static String _room(int n, String? gear) {
-    if (n <= 0) return 'عندك كفايتك منها';
+    // the binoculars and the nets are masculine (دربيل، شبك), the tent feminine
+    final masc = const {'binoculars', 'pigeonNet', 'birdNet'}.contains(gear);
+    if (n <= 0) return masc ? 'عندك كفايتك منه' : 'عندك كفايتك منها';
     final (one, two, few, many) = switch (gear) {
       'pigeon' => ('حمامة وحدة', 'حمامتين', 'حمامات', 'حمامة'),
       'supplies' => (
@@ -202,6 +212,7 @@ class FalconLines {
         'أيام مؤونة',
         'يوم مؤونة',
       ),
+      _ when masc => ('واحد', 'ثنين', '', ''),
       _ => ('وحدة', 'ثنتين', '', ''),
     };
     final what = switch (n) {
