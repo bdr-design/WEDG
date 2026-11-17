@@ -1847,18 +1847,16 @@ function clubMine() {
   const room = H.room;
   const where = room.built ? `بغرفة الصقور · ${fs.length ? count(fs.length, 'falcon') : 'ما فيها صقر'} من ${hold}` : room.building.length ? `غرفة الصقور تنبني، تخلص ${fdayShort(room.building[0])}` : 'ما عندك غرفة صقور: تنبنى من العزبة';
   const item = (f) => {
-    const third = [f.passport ? 'جوازه باسمك' : '', f.where === 'lost' ? 'ضايع' : dauWord(f), f.tracker ? 'عليه جهاز تتبع' : '', takenWord(f)].filter(Boolean).join(' · ');
+    const third = [f.passport ? 'جوازه باسمك' : '', f.where === 'lost' ? 'ضايع' : dauWord(f), f.tracker ? 'عليه جهاز تتبع' : f.trackerComing ? 'جهازه بالطريق' : '', takenWord(f)].filter(Boolean).join(' · ');
     return `<div class="it two" data-go="train" data-id="${esc(f.id)}" role="button" tabindex="0">${birdPic(f.species)}<b>${esc(f.name)} · ${esc(f.speciesName)} ${esc(f.age)}</b><small>${howCame(f)}</small><small>${third}</small></div>`;
   };
   const cared = room.wantCare.length === 0, moult = room.moult, home = fs.filter((f) => f.where === 'home').length;
   const care = !fs.length ? '' : moult ? `<button class="btn wide" disabled>بالمقيض ما فيه دعو</button>` : cared ? `<button class="btn wide" disabled>${home > 1 ? 'دعيتهم اليوم' : 'دعيته اليوم'}</button>` : `<button class="btn pri wide" data-act="care">${home > 1 ? 'ادعهم اليوم' : 'ادعه اليوم'}</button>`;
-  // the trackers: one each falcon (the engine counts them by the falcons' order)
-  const tr = H.gear.tracker, price = FC.cat.gear.find((g) => g.gear === 'tracker').price, can = tr[2] > 0 && G.cash >= price, key = 'tracker';
-  const trackerRow = fs.length ? `<div class="group"><div class="row r3"><span class="lead">${svg('chip')}</span><b>جهاز التتبع</b>${tr[2] > 0 ? rushLike(key, 'data-act="tracker"', 'اطلب', `اطلب جهاز تتبع بـ ${n0(price)} ريال`, can) : ''}<small>${tr[0] ? `عندك ${tr[0]}` : 'ما عندك'}${tr[1] ? ` · ${tr[1]} توصل بكرة` : ''} · الجهاز ${n0(price)} لكل صقر${tr[2] > 0 && G.cash < price ? ' · رصيدك ما يكفي' : ''}</small>${HJ.sure === key ? `<small class="rush now">تدفع ${n0(price)} ريال، ويوصل بكرة</small>` : ''}</div></div>` : '';
+  // (each falcon's own tracker is ordered from its own page: the engine fits it to the named falcon)
   return `${cards}<div class="note" style="margin-top:-4px">${where}</div>
     ${fs.length ? `<div class="lst flat">${fs.map(item).join('')}</div>` : '<div class="note">ما عندك صقر للحين: تشتريه من المزاد بشهره، أو تطرحه وتخليه لك.</div>'}
     <div class="group">${fcRow2('rule', 'الطير اللي تطرحه وتخليه لك ما ينعرض للبيع بعدين', 'ما لقينا له طريق نظامي')}</div>
-    ${trackerRow}${care}`;
+    ${care}`;
 }
 // view 4: الطرح: the trapping permit, the gear he has, has coming and lacks, with prices, ordered here (cash, next day)
 const GEAR_LINE = { pigeon: 'الحمامة', pigeonNet: 'الشبك على ظهر الحمامة', birdNet: 'لو الصقر ما يبي الحمام', binoculars: 'تشوف الصقر من بعيد', mobileTent: 'تلحق الصقور لأرض ثانية', supplies: 'ماء وأكل وبنزين' };
@@ -1991,6 +1989,15 @@ function hammerScreen() {
 }
 // view 8: الدعو by the engine's rule (the days since count; two weeks left steps back; none in the moult); releasing a
 // kept trapped peregrine in its months
+// its own tracker (one for each falcon, fitted to it when it comes: the engine, Q-27): on it, on its way, or two taps to
+// order it, for a falcon at the farm
+function trackerRow(f) {
+  const price = FC.cat.gear.find((g) => g.gear === 'tracker').price, key = `tracker:${f.id}`;
+  const can = f.where === 'home' && !f.tracker && !f.trackerComing && G.cash >= price;
+  const line = f.tracker ? 'عليه جهازه: لو ضاع غالبًا تلقاه' : f.trackerComing ? 'جهازه بالطريق، يوصل عزبتك بكرة' : `الجهاز بـ ${n0(price)} ريال لكل صقر، يوصل بكرة${f.where !== 'home' ? '' : G.cash < price ? ' · رصيدك ما يكفي' : ''}`;
+  const act = f.tracker || f.trackerComing || f.where !== 'home' ? '' : rushLike(key, `data-act="tracker" data-id="${esc(f.id)}"`, 'اطلب', `اطلب جهاز تتبع لـ ${esc(f.name)} بـ ${n0(price)} ريال`, can);
+  return `<div class="group"><div class="row r3"><span class="lead">${svg('chip')}</span><b>جهاز التتبع</b>${act}<small>${line}</small>${HJ.sure === key ? `<small class="rush now">تدفع ${n0(price)} ريال، ويوصل بكرة</small>` : ''}</div></div>`;
+}
 function trainScreen() {
   const back = fcNav('club');
   const H = HF();
@@ -2015,6 +2022,7 @@ function trainScreen() {
     ${lost}
     <div class="group">${[0, 1, 2, 3].map(step).join('')}${readyRow}</div>
     <div class="group">${fcRow('scale', 'الميزان', 'تزنه كل يوم قبل أكله', `${n0(f.weight)} غرام`)}</div>
+    ${trackerRow(f)}
     ${care}
     <div class="note">مرة باليوم لكل صقور الغرفة، وتنحسب لك الأيام اللي فاتت لين أسبوعين. ولو تركته أسبوعين يرجع أسبوع. وبالمقيض من مايو لين أغسطس ما فيه دعو.${back2}</div>
     ${release}</div>`;
@@ -2487,7 +2495,7 @@ export function createPhone({ host }) {
       // the rush and التقويم (T15): money spent now, a contract, days that will not come back
       treatAll: 'treatAll', rushBuild: `rushBuild:${t.dataset.f}`, buildNow: `buildNow:${t.dataset.f}`, rushWater: 'rushWater', rushFeed: 'rushFeed', tankerNow: `tankerNow:${t.dataset.t}`, feedNow: 'feedNow', rushTruck: `rushTruck:${t.dataset.id}`, buyNow: `buyNow:${HJ.listing}`, vetSign: 'vetSign', vetCancel: 'vetCancel', calGo: 'calGo',
       // the hunting season (T18): money spent, a bird entered or kept for good, a falcon set free, days that will not come back
-      buyFalcon: `buyFalcon:${t.dataset.id}`, enterBird: `enterBird:${t.dataset.id}`, keepBird: `keepBird:${t.dataset.id}`, permit: `permit:${t.dataset.k}`, gearOrder: 'gearOrder', tracker: 'tracker', release: `release:${t.dataset.id}`, tripGo: 'tripGo' }[kind];
+      buyFalcon: `buyFalcon:${t.dataset.id}`, enterBird: `enterBird:${t.dataset.id}`, keepBird: `keepBird:${t.dataset.id}`, permit: `permit:${t.dataset.k}`, gearOrder: 'gearOrder', tracker: `tracker:${t.dataset.id}`, release: `release:${t.dataset.id}`, tripGo: 'tripGo' }[kind];
     if (!LOCAL && (twice == null || HJ.sure === twice) && keyOf(t) === orderKey && at - orderAt < DOUBLE_TAP) return;
     // الحراج: a sale asked twice (the first tap readies it: HJ.sure); any other tap stands it down. [next]: the screen
     // to go to once the order is done (a camel bought or sold goes back to the market's list)
@@ -2609,7 +2617,7 @@ export function createPhone({ host }) {
         let paid = 0;
         for (const k of Object.keys(o)) {
           if (!o[k] || ERR) continue;
-          const command = { type: 'orderGear', gear: k, units: o[k] }, r = await engine.dispatch(command);
+          const command = { type: 'orderGear', gear: k, units: o[k], ...(kind === 'tracker' ? { falcon: t.dataset.id } : {}) }, r = await engine.dispatch(command);
           if (r.ok) { paid += ((r.events || []).find((e) => e.type === 'gearOrdered') || {}).cost || 0; o[k] = 0; } else ERR = fcRefusal(r, command);
         }
         if (paid) FC.msg = { good: true, title: kind === 'tracker' ? `طلبت جهاز تتبع بـ ${n0(paid)} ريال` : `طلبت العدة بـ ${n0(paid)} ريال`, line: 'من رصيدك، وتوصل عزبتك بكرة.' };
