@@ -396,6 +396,8 @@ sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 // the page loaded again. three makes a new shadow map object then (the page's settings and wrappers on the old one
 // gone: with the depth texture left standing in for the colour the yard drew black, the review), and much the page made
 // once is not made again (with the wrappers set again, the grass and walls drew dark and the pen floors went: tried)
+let glLost = false;      // (nothing drawn from the loss to the reload: three made its shaders again and drew the broken shadow pass for a page about to go, 8-9 s of it, the review)
+renderer.domElement.addEventListener('webglcontextlost', () => { glLost = true; });
 renderer.domElement.addEventListener('webglcontextrestored', async () => {
   try { await Promise.race([window.marahEngine?.flush?.(), new Promise((r) => setTimeout(r, 2000))]); } catch (_) { /* (saved on the way to the background as well) */ }
   location.reload();
@@ -2053,7 +2055,7 @@ const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array
 if (meter) {
   renderer.info.autoReset = false;
   const gl = renderer.getContext(), bsd = gl.bufferSubData.bind(gl), tsi = gl.texSubImage2D.bind(gl);
-  gl.bufferSubData = function (t, off, data, srcOff, len) { meter.up += len !== undefined ? len * (data.BYTES_PER_ELEMENT || 1) : data.byteLength - (srcOff || 0) * (data.BYTES_PER_ELEMENT || 1); return bsd.apply(null, arguments); };
+  gl.bufferSubData = function (t, off, data, srcOff, len) { meter.up += len !== undefined ? len * (data.BYTES_PER_ELEMENT || 1) : data.byteLength - (srcOff || 0) * (data.BYTES_PER_ELEMENT || 1); return bsd(t, off, data, srcOff || 0, len || 0); };
   gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && typeof px === 'object') meter[meter.fresh.has(bound[unit]) ? 'upNew' : 'up'] += px.byteLength !== undefined ? Math.min(px.byteLength, a[4] * a[5] * 16) : (px.width | 0) * (px.height | 0) * 4; return tsi.apply(null, arguments); };      // (a picture: its pixels, 4 bytes each)
   // a texture's first upload counted apart: right after something is built it is a one-off of some MB, not what each
   // frame sends (the review). The textures given their storage this frame, known by the one bound on the active unit
@@ -2275,11 +2277,11 @@ function tick(now) {
   if (shadowMoved || carMoving || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
   if (!playing) { controls.dampingFactor = 1 - Math.exp(-dt * 3.1); controls.update(); placeLabels(); }      // (OrbitControls eases by the frame: 0.05 a frame at 60 fps, the same in seconds at any rate)
   const tDraw = cpu ? performance.now() : 0;
-  if (HERD && !phone.big) HERD.draw(camera);
-  if (!phone.big) { renderer.render(scene, camera); printWhole = false; }      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
+  if (HERD && !phone.big && !glLost) HERD.draw(camera);
+  if (!phone.big && !glLost) { renderer.render(scene, camera); printWhole = false; }      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
   if (cpu && meter.ready && now >= meter.ready && !phone.big) { const g = tDraw - tGame, d = performance.now() - tDraw; cpu.game[Math.min(399, Math.round(g * 4))]++; cpu.draw[Math.min(399, Math.round(d * 4))]++; cpu.sg += g; cpu.sd += d; cpu.n++; }      // (not while the enlarged phone stops the drawing)
   requestAnimationFrame(tick);
 }
 tick();
-addEventListener('resize', () => { renderer.setSize(stage.clientWidth, stage.clientHeight); camera.aspect = stage.clientWidth / stage.clientHeight; camera.updateProjectionMatrix(); if (phone.big) renderer.render(scene, camera); });      // (under the enlarged phone nothing else redraws the canvas the resize cleared)
+addEventListener('resize', () => { renderer.setSize(stage.clientWidth, stage.clientHeight); camera.aspect = stage.clientWidth / stage.clientHeight; camera.updateProjectionMatrix(); if (phone.big && !glLost) renderer.render(scene, camera); });      // (under the enlarged phone nothing else redraws the canvas the resize cleared)
 </script>
