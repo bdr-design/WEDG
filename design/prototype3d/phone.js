@@ -295,9 +295,10 @@ const CSS = `
   .tank .v.w { letter-spacing: normal; }      /* (a word, not a figure: no tracking on Arabic, the audit) */
   .row.ceil { grid-template-columns: 36px 1fr; row-gap: 4px; } .row.ceil .stp { grid-column: 2; justify-self: start; } .row.ceil small { grid-column: 2; }
   /* the ceiling's ready amounts (the owner's choice, 18 Nov: «أرقام جاهزة + ضبط»), then the stepper for the exact figure */
-  .row.ceil .pre { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; }
-  .row.ceil .pre button { height: 32px; padding-inline: 10px; border-radius: 10px; background: var(--acc-soft); color: var(--acc); font-weight: 700; font-size: 12px; white-space: nowrap; }
-  .row.ceil .pre button b { font: 700 13px/1 "Marah Figures", "Alexandria", sans-serif; font-variant-numeric: tabular-nums; }
+  /* (in threes, each its word over its figure: six in a wrapping row took five lines, the review) */
+  .row.ceil .pre { grid-column: 2; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .row.ceil .pre button { min-height: 44px; padding: 4px 2px; border-radius: 10px; background: var(--acc-soft); color: var(--acc); font-weight: 700; font-size: 11px; line-height: 1.25; display: grid; place-content: center; white-space: nowrap; }
+  .row.ceil .pre button b { font: 700 13px/1.1 "Marah Figures", "Alexandria", sans-serif; font-variant-numeric: tabular-nums; }
   .row.ceil .pre button[aria-pressed="true"] { background: var(--acc); color: #fff; }
   .row.ceil .pre button[disabled] { background: #eeeef1; color: #b8b8bd; cursor: default; }
   .fg .row.ord .stp .n { min-width: 34px; }
@@ -1852,7 +1853,7 @@ function clubAuction() {
   const rows = order.map((r) => { const w = when(r); return `<div class="row r3"${isOpen(r.route) ? ` data-go="lots" data-k="${r.route}" role="button" tabindex="0" aria-label="${r.name}، طيور اليوم"` : ''}><span class="lead">${svg(ICON[r.route])}</span><b>${r.name}</b><span class="qty">${w}</span><small>${LINE[r.route]}</small></div>`; }).join('');
   return `${newsCards}
     ${held ? `<div class="sec">طيرك المطروح</div><div class="group">${held}</div>` : ''}
-    <div class="open"${open ? ` data-go="lots" data-k="trapping" role="button" tabindex="0"` : ''}><span class="tag${open ? '' : ' amb'}">${open ? 'مفتوح الحين' : `يفتح ${md(tr.from)}`}</span><b>مزاد الطرح</b><small>ملهم · من ${md(tr.from)} لين ${md(tr.to)}، كل ليلة</small><small>فروخ الشاهين البحري المطروحة بالمملكة بس</small><small>تبيع فيه طيرك اللي طرحته، أو تشتري</small></div>
+    <div class="open"${open ? ` data-go="lots" data-k="trapping" data-p="card" role="button" tabindex="0"` : ''}><span class="tag${open ? '' : ' amb'}">${open ? 'مفتوح الحين' : `يفتح ${md(tr.from)}`}</span><b>مزاد الطرح</b><small>ملهم · من ${md(tr.from)} لين ${md(tr.to)}، كل ليلة</small><small>فروخ الشاهين البحري المطروحة بالمملكة بس</small><small>تبيع فيه طيرك اللي طرحته، أو تشتري</small></div>
     <div class="sec">وصقرك له ثلاث طرق، كل وحدة بشهرها</div>
     <div class="group">${rows}</div>
     <div class="tank"><small>مزاد الطرح ما يقبل الحر ولا القرناس</small><div class="kind"><span>حرين مستوردة بالمعرض</span><span class="d">700,000 و100,000 ريال</span></div><div class="kind"><span>حر المزارع</span><span class="d">حوالي 19,000 ريال</span></div></div>`;
@@ -1901,7 +1902,7 @@ function clubTrap() {
   const row = (k) => {
     const [has, way, room] = H.gear[k], name = C.gear.find((g) => g.gear === k).name, p = price(k), many = k === 'pigeon' || k === 'supplies';
     // what he has of the counted gear in its small line (beside the stepper it ran off the card: the review)
-    const line = k === 'pigeon' ? `${has ? `عندك ${count(has, 'pigeon')} · ` : ''}الحمامة ${n0(p)}` : k === 'supplies' ? `${has ? `عندك تكفي ${days(has)}` : GEAR_LINE[k]} · ${n0(p)} لليوم` : `${GEAR_LINE[k]} · ${n0(p)}`;
+    const line = k === 'pigeon' ? `${has ? `عندك ${count(has, 'pigeon')} · ` : ''}الحمامة ${n0(p)}` : k === 'supplies' ? `${has ? `عندك مؤونة تكفي ${days(has)}` : GEAR_LINE[k]} · ${n0(p)} لليوم` : `${GEAR_LINE[k]} · ${n0(p)}`;
     const said = has && !many ? 'عندك' : '';
     const coming = way ? `<small class="rush">${many ? `${count(way, k === 'pigeon' ? 'pigeon' : 'day')} ` : ''}${arrives}</small>` : '';
     let right = '';
@@ -1975,9 +1976,9 @@ function lotScreen() {
     if (v < l.opening || v > top || pres.some((x) => x[1] === v)) continue;
     pres.push([label, v]);
   }
-  const preRow = can && pres.length > 1 ? `<span class="pre" role="group" aria-label="مبالغ جاهزة">${pres.map(([label, v]) => `<button data-act="upSet" data-v="${v}" aria-pressed="${FC.upTo === v}" aria-label="${label}: ${n0(v)} ريال">${label} <b>${n0(v)}</b></button>`).join('')}</span>` : '';
+  const preRow = can && pres.length > 1 ? `<span class="pre" role="group" aria-label="مبالغ جاهزة">${pres.map(([label, v]) => `<button data-act="upSet" data-v="${v}" aria-pressed="${FC.upTo === v}" aria-label="${label}: ${n0(v)} ريال">${label}<b>${n0(v)}</b></button>`).join('')}</span>` : '';
   const kUp = stepOf(FC.upTo), kDown = stepOf(Math.max(l.opening, FC.upTo - 1));
-  const stepRow = `<div class="group"><div class="row ceil"><span class="lead">${svg('gavel')}</span><b>أعلى مبلغ تدفعه</b>${preRow}<span class="stp"><button data-act="upStep" data-d="-1" aria-label="أقل بـ ${n0(kDown)}" ${can && FC.upTo > l.opening ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(FC.upTo)}</b> <span>ريال</span></span><button data-act="upStep" data-d="1" aria-label="أكثر بـ ${n0(kUp)}" ${can && FC.upTo + kUp <= G.cash ? '' : 'disabled'}>${svg('plus')}</button></span><small>${G.cash < 0 ? `عليك دين ${n0(-G.cash)} ريال` : poor ? `رصيدك ${n0(G.cash)} ريال ما يوصل الافتتاح` : `من الافتتاح لين رصيدك ${n0(top)} ريال`}</small></div></div>`;      // (his balance as «كل رصيدك» rounds it)
+  const stepRow = `<div class="group"><div class="row ceil"><span class="lead">${svg('gavel')}</span><b>أعلى مبلغ تدفعه</b>${preRow}<span class="stp"><button data-act="upStep" data-d="-1" aria-label="أقل بـ ${n0(kDown)}" ${can && FC.upTo > l.opening ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(FC.upTo)}</b> <span>ريال</span></span><button data-act="upStep" data-d="1" aria-label="أكثر بـ ${n0(kUp)}" ${can && FC.upTo + kUp <= G.cash ? '' : 'disabled'}>${svg('plus')}</button></span><small>${G.cash < 0 ? `عليك دين ${n0(-G.cash)} ريال` : poor ? `رصيدك ${n0(G.cash)} ريال ما يوصل الافتتاح` : `من الافتتاح لين رصيدك ${n0(G.cash)} ريال`}</small></div></div>`;
   return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${trap ? 'مزاد الليلة' : esc(routeOf(l.route).name)}</div>${fcMsg()}${errCard()}
     <div class="it big">${birdPic(l.species)}${facts}</div>
     ${why}${stepRow}
@@ -2051,7 +2052,7 @@ function trainScreen() {
   const release = f.keep && f.species === 'passagePeregrine' ? `<div class="sec">تطلقه للبر</div><div class="group"><div class="row r3"><span class="lead">${svg('falcon')}</span><b>تطلق ${esc(f.name)}</b>${rushLike(rKey, `data-act="release" data-id="${esc(f.id)}"`, 'اطلقه', `اطلق ${esc(f.name)}`, inMonths)}<small>من ${md([rel[0], rel[1]])} لين ${md([rel[2], rel[3]])} مع رجعة الشاهين للشمال، أو يبقى عندك</small>${HJ.sure === rKey ? '<small class="rush now">ينطلق للأبد وما يرجع</small>' : ''}</div></div>` : '';
   const lost = f.where === 'lost' ? `<div class="warn"><span class="lead">${svg('alert')}</span><b>${esc(f.name)} ضايع</b><small>${f.tracker ? 'عليه جهاز تتبع: غالبًا تلقاه.' : 'ما عليه جهاز تتبع: تدوره بعيونك.'}</small></div><button class="btn pri wide" data-act="search" data-id="${esc(f.id)}">دوّره</button>` : '';
   const C = FC.cat, mo = C.moultMonths, moult = `من ${MONTH[mo[0] - 1]} لين ${MONTH[mo[mo.length - 1] - 1]}`;
-  const back2 = f.stepsBackOn != null && !room.moult ? ` ولو ما دعيته يرجع ${stretch(C.stepBack)} ${fdayShort(f.stepsBackOn)}.` : '';
+  const back2 = f.stepsBackOn != null && !room.moult ? ` ولو ما دعيته، يرجع ${stretch(C.stepBack)} يوم ${fdayShort(f.stepsBackOn)}.` : '';
   return `<div class="body">${back}<div class="title">الدعو · ${esc(f.name)}</div>${fcMsg()}${errCard()}
     <div class="note" style="margin-top:-4px">${f.ready ? `دعيته ${stretch(need)}، وهو جاهز للمقناص` : `صقر جديد يبي ${stretch(need)} دعو قبل أول طلعة · ${f.dauDays ? `دعيته ${days(f.dauDays)}` : 'ما دعيته للحين'}`}</div>
     ${lost}
@@ -2147,7 +2148,7 @@ function tripSumRows(m) {
   const x = m.extra || {};
   if (!Object.keys(x).length) return '';
   const rows = [];
-  if (x.caught) rows.push(`<div class="row r2"><span class="lead">${svg('net')}</span><b>${x.caught === 1 ? 'طرحت فرخ شاهين بحري' : `طرحت ${count(x.caught, 'farkh')} شاهين بحري`}</b><small>شوفه بنادي الصقور: تعرضه أو تخليه لك</small></div>`);
+  if (x.caught) rows.push(`<div class="row r2"><span class="lead">${svg('net')}</span><b>${x.caught === 1 ? 'طرحت فرخ شاهين بحري' : `طرحت ${count(x.caught, 'farkh')} شاهين بحري`}</b><small>${x.caught === 1 ? 'شوفه بنادي الصقور: تعرضه أو تخليه لك' : 'شوفهم بنادي الصقور: تعرضهم أو تخليهم لك'}</small></div>`);
   if (x.released) rows.push(`<div class="row r2"><span class="lead">${svg('falcon')}</span><b>طلقت ${count(x.released, 'bird')}</b><small>المزاد ما يقبلها</small></div>`);
   if (x.stooped) rows.push(`<div class="row r2"><span class="lead">${svg('falcon')}</span><b>نزل على الطعم وما علق ${count(x.stooped, 'time')}</b><small>بالمخيم</small></div>`);
   if (x.flights) rows.push(`<div class="row r2"><span class="lead">${svg('falcon')}</span><b>طلعات الصقر ${n0(x.flights)}</b><small>${x.taken ? `صاد ${count(x.taken, 'time')}` : 'وما صاد شي'}</small></div>`);
@@ -2572,8 +2573,8 @@ export function createPhone({ host }) {
     if (kind === 'mzsel') { MZ.sel = t.dataset.id; done(); return; }
     if (kind === 'calPick') { CAL.day = Number(t.dataset.day); done(); return; }
     if (kind === 'fcTab') { FC.tab = t.dataset.p; shownAt = now; done(); return; }      // (a quick second tap lands on nothing of the new tab, as a screen's change)
-    if (kind === 'upStep') { const l = HF() && HF().lots.find((x) => x.lot === FC.lot); if (l) { const v = FC.upTo ?? l.opening, d = Number(t.dataset.d); FC.upTo = d > 0 ? v + stepOf(v) : Math.max(l.opening, v - stepOf(Math.max(l.opening, v - 1))); } done(); return; }      // (by the figure's own step: 500 under 50,000, then 1,000, then 5,000)
-    if (kind === 'upSet') { FC.upTo = Number(t.dataset.v); done(); return; }
+    if (kind === 'upStep') { const l = HF() && HF().lots.find((x) => x.lot === FC.lot); if (l) { const v = FC.upTo ?? l.opening, d = Number(t.dataset.d); FC.upTo = d > 0 ? v + stepOf(v) : Math.max(l.opening, v - stepOf(Math.max(l.opening, v - 1))); sr.textContent = ''; } done(); return; }      // (by the figure's own step: 500 under 50,000, then 1,000, then 5,000)
+    if (kind === 'upSet') { FC.upTo = Number(t.dataset.v); sr.textContent = ''; done(); return; }      // (a buy readied before stands down: its words in the live region with it)
     if (kind === 'gearStep' || kind === 'gearPick') { if (HF() && FC.cat) { const o = gearOrder(), k = t.dataset.k; o[k] = kind === 'gearPick' ? (o[k] ? 0 : 1) : Math.max(0, o[k] + Number(t.dataset.d)); } done(); return; }
     if (kind === 'calMonth') { CAL.month = Math.max(0, Math.min(12, (CAL.month ?? 0) + Number(t.dataset.d))); done(); return; }
     if (kind === 'bidStep') { const l = listingOf(HJ.listing); if (l) HJ.bid += Number(t.dataset.d) * stepOf(l.askPrice); done(); return; }
