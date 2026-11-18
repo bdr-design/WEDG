@@ -2232,8 +2232,13 @@ const LOBBY = (() => {
     warmHold = true;
     try {
       renderer.setRenderTarget(null);
+      // (to a budget of 8 ms a frame, not one object a frame: that set a floor of 136 frames on every start, the review)
       const kids = [...scene.children];
-      for (let i = 0; i < kids.length; i++) { renderer.compile(kids[i], camera, scene); warmFrac = 0.3 + 0.6 * (i + 1) / kids.length; draw(); await nextFrame(); }
+      for (let i = 0; i < kids.length;) {
+        const t0 = performance.now();
+        do renderer.compile(kids[i++], camera, scene); while (i < kids.length && performance.now() - t0 < 8);
+        warmFrac = 0.3 + 0.6 * i / kids.length; draw(); await nextFrame();
+      }
       for (const o of hidden) o.visible = false;
       renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
     } finally {
@@ -2290,6 +2295,7 @@ const LOBBY = (() => {
   el('lb-go').addEventListener('click', () => {
     if (el('lb-go').disabled) return;
     lobbyOn = false; root.classList.remove('lobby-on'); el('lobby').hidden = true;
+    view('drone');      // (the map from its own view, not where the lobby's turn left it: a minute in the lobby left it 120° round, and a pin hidden by the overlap rule, the review)
     if (engine) engine.hold(false).catch(() => {});
     if (meter) meter.ready = 0;      // (the meter counts from play, not from the lobby)
     renderer.shadowMap.needsUpdate = true; refreshLabels(); measureHud();
@@ -2557,7 +2563,10 @@ function tick(now) {
 // 1.5 s froze the lobby: the review), then the frames run
 (async () => {
   startHold = true;
-  try { for (const o of [...scene.children]) { renderer.compile(o, camera, scene); await new Promise((r) => requestAnimationFrame(r)); } } catch (err) { console.warn('first frame:', err); }
+  try {
+    const kids = [...scene.children];
+    for (let i = 0; i < kids.length;) { const t0 = performance.now(); do renderer.compile(kids[i++], camera, scene); while (i < kids.length && performance.now() - t0 < 8); await new Promise((r) => requestAnimationFrame(r)); }
+  } catch (err) { console.warn('first frame:', err); }
   startHold = false;
 })();
 requestAnimationFrame(tick);

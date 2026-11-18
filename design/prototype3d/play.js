@@ -140,8 +140,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
       it.visible = false;
     }).catch(() => { cabinLoading = null; cabinFailed = performance.now(); }));
   }
-  // its shaders compiled and its textures sent to the GPU as the player walks up to the car (not on every page load:
-  // the 33 MB of textures stay off the GPU until then), so the door opening does not stall
+  // its shaders compiled and its textures sent to the GPU (under the lobby, prepare; or as the player walks up to the car
+  // if that came first), so the door opening does not stall (its textures are two small palettes now)
   function warmCabin() {
     if (cabinWarm || !model.interior) return cabinWarm || Promise.resolve();
     const it = model.interior; it.visible = true;
