@@ -860,7 +860,18 @@ Measured here (WebGL calls a frame, test herd of 40, variant 0; bytes a frame):
 | Walking by the pens | 746 -> 325 | 103,765 -> 12,474 | 34,584 -> 12,322 |
 | In the car by the pens | 1,339 -> 871 | 93,389 -> 1,378 | 43,288 -> 9,705 |
 
-The CPU variant now sends 97,280 bytes a frame (40 rows). Left for the owner's eye, with pictures: folding the blended
-ground decals (the yard's dirt and the pen floors, a third of the fragments shaded by the herd on a tile GPU) into the
-terrain's shader, and the shadows' 17 taps as four hardware-compared ones.
+The CPU variant now sends 97,280 bytes a frame (40 rows).
+
+Then, the owner's choice of 18 Nov 2026 on the two that change pixels, shown the review's crops before and after:
+- **The ground decals painted into the terrain's shader** («أرسمها مع الأرض»). The compound's dirt and the six pen
+  floors were blended planes over the ground: each a second full lit fragment with its shadow taps (a third of the
+  fragments shaded by the herd on a tile GPU). Each is now lit with the ground's own light inside its shader and blended
+  after tone mapping and sRGB, where the view ray meets its plane; the planes stay, not drawn, for the facilities'
+  visibility (a pen floor stands once its pen is built). 1-2% of pixels differ (the straw's filtering, shadow edges).
+- **The sun's shadow read by the GPU's own comparison** («ظلال أخف»): four bilinear taps of a compared depth texture in
+  place of three r170's 17 point taps of the RGBA-packed copy (about 70% of the texture reads by the herd). The shader
+  chunks are changed before any shader is made; the shadow map is a render target with that depth texture, given to the
+  lit materials as the map's texture after the pass. Made by the page, the map keeps its camera's projection only if the
+  page updates it (three does it when it makes the map itself: left at its default 10 m frame, the shadows fell only near
+  its middle in the first build). 0.1-0.3% of pixels differ, on shadow edges.
 

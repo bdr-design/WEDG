@@ -270,7 +270,7 @@ import { createPlay } from './play.js';
 import { createPhone } from './phone.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { buildWorld, LAYOUT, PEN_FACILITY, VEHICLES, drapeOnTerrain, updateScatter } from './world.js';
+import { buildWorld, LAYOUT, PEN_FACILITY, VEHICLES, DECALS, drapeOnTerrain, updateScatter } from './world.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildTerrain } from './terrain.js';
 
@@ -354,6 +354,43 @@ sun.castShadow = true;
 sun.shadow.mapSize.set(1536, 1536);
 Object.assign(sun.shadow.camera, { left: -72, right: 72, top: 72, bottom: -72, near: 1, far: 320 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
+// The sun's shadow read by the GPU's own comparison: four bilinear taps of a depth texture compared in the sampler, half
+// a texel apart (about the footprint of the 3x3-texel tent), in place of three r170's 17 point taps of the RGBA-packed
+// copy (about 70% of the GPU's texture reads by the herd: the review). The owner's choice, 18 Nov 2026 («ظلال أخف»):
+// 0.1-0.3% of pixels differ, on shadow edges only. The shader chunks are changed before any shader is made; the shadow
+// map is a render target with a compared depth texture, given to the lit materials in place of its colour.
+{
+  const C = THREE.ShaderChunk, hw = `float getShadowHW( highp sampler2DShadow shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord ) {
+		float shadow = 1.0;
+		shadowCoord.xyz /= shadowCoord.w;
+		shadowCoord.z += shadowBias;
+		bool inFrustum = shadowCoord.x >= 0.0 && shadowCoord.x <= 1.0 && shadowCoord.y >= 0.0 && shadowCoord.y <= 1.0;
+		if ( inFrustum && shadowCoord.z <= 1.0 ) {
+			vec2 t = 0.5 * shadowRadius / shadowMapSize;
+			shadow = 0.25 * ( texture( shadowMap, vec3( shadowCoord.xy + vec2( - t.x, - t.y ), shadowCoord.z ) ) + texture( shadowMap, vec3( shadowCoord.xy + vec2( t.x, - t.y ), shadowCoord.z ) )
+				+ texture( shadowMap, vec3( shadowCoord.xy + vec2( - t.x, t.y ), shadowCoord.z ) ) + texture( shadowMap, vec3( shadowCoord.xy + vec2( t.x, t.y ), shadowCoord.z ) ) );
+		}
+		return mix( 1.0, shadow, shadowIntensity );
+	}
+	float getShadow( sampler2D shadowMap,`;
+  const swap = (k, a, b) => { if (!C[k].includes(a)) throw new Error('shadow chunk ' + k + ' changed'); C[k] = C[k].replace(a, b); };
+  swap('shadowmap_pars_fragment', 'uniform sampler2D directionalShadowMap[ NUM_DIR_LIGHT_SHADOWS ];', 'uniform highp sampler2DShadow directionalShadowMap[ NUM_DIR_LIGHT_SHADOWS ];');
+  swap('shadowmap_pars_fragment', 'float getShadow( sampler2D shadowMap,', hw);
+  swap('lights_fragment_begin', 'getShadow( directionalShadowMap[ i ]', 'getShadowHW( directionalShadowMap[ i ]');
+  swap('shadowmask_pars_fragment', 'getShadow( directionalShadowMap[ i ]', 'getShadowHW( directionalShadowMap[ i ]');
+  const sz = sun.shadow.mapSize, dt = new THREE.DepthTexture(sz.x, sz.y, THREE.UnsignedIntType);
+  dt.compareFunction = THREE.LessEqualCompare; dt.minFilter = dt.magFilter = THREE.LinearFilter;
+  sun.shadow.map = new THREE.WebGLRenderTarget(sz.x, sz.y, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthTexture: dt });
+  sun.shadow.map.texture.name = 'sun.shadowMap';
+  sun.shadow.camera.updateProjectionMatrix();      // (three does it only when it makes the map itself: left at its default 10 m frame, the shadows fell only near its middle)
+  // the lit materials read `map.texture` (in the lights' setup, after the shadow pass): the depth texture stands in for
+  // the colour then; during the pass (and the target's own setup in it) `texture` is the target's own again
+  const map = sun.shadow.map, pass = renderer.shadowMap.render;
+  renderer.shadowMap.render = function (...args) {
+    delete map.texture;
+    try { return pass.apply(this, args); } finally { Object.defineProperty(map, 'texture', { get: () => dt, configurable: true }); }
+  };
+}
 scene.add(sun, sun.target);
 
 // ------------------------------------------------------------ the world (ground, roads, farm, trees, grass)
@@ -457,6 +494,7 @@ function bakeStaticShadows() {
 // GAME: the engine's latest snapshot (null until it starts: the start's farm is shown). The facilities stand only once
 // built (the owner, 13 Nov 2026: the farm starts small and grows by what is bought): world.js tags each piece; hidden
 // here, with its merged meshes and its shadows. The camels are the engine's (syncYard).
+const FOLD = { on: [] };      // (the pen floors painted into the terrain: which stand; foldDecals)
 let GAME = null, facSig = null, placesReady = false, onFacilities = null;      // (onFacilities: play mode's obstacles, once it is made)
 const builtCount = (f) => (GAME ? GAME.farm.facilities.find((x) => x.facility === f)?.has ?? 0 : 0);
 const facVisible = (fac) => fac === 'start' || (fac === 'graze' ? camels.some((c) => c.home === 'graze') : fac.startsWith('pen') ? builtCount('pen') >= +fac.slice(3) : builtCount(fac) > 0);
@@ -465,6 +503,7 @@ function applyFacilities(force) {
   if (!force && sig === facSig) return;
   facSig = sig;
   for (const o of scene.children) { const f = o.userData.facility; if (f) o.visible = facVisible(f); }
+  if (FOLD.on.length) foldFacilities();
   recombine();
   renderer.shadowMap.needsUpdate = true;
   if (placesReady) placeFacilities();
@@ -583,7 +622,53 @@ function mergeStatic(roots) {
   }
   for (const o of drop) o.removeFromParent();
 }
-const terrainReady = buildTerrain(scene, renderer, sand).then((t) => { drapeOnTerrain(t.heightAt); groundAt = t.heightAt; return t; });
+const terrainReady = buildTerrain(scene, renderer, sand).then((t) => { drapeOnTerrain(t.heightAt); groundAt = t.heightAt; foldDecals(t.mat); return t; });
+// The yard's blended ground decals (the compound's dirt, the six pen floors) painted inside the terrain's own shader:
+// drawn as their own blended planes, each was a second full lit fragment, with its 17 shadow taps, over ground already
+// shaded (a third of the fragments shaded by the herd on a tile GPU, the review). Each is lit here with the ground's own
+// light (the same diffuse and specular: both roughness 1, metalness 0) and blended after tone mapping and sRGB, as the
+// canvas blended its fragment, where the view ray meets the decal's plane (the dirt 2 cm up, the floors 3 cm). The
+// owner's choice, 18 Nov 2026 («أرسمها مع الأرض»): 1-2% of pixels differ, the straw's filtering and shadow edges.
+function foldDecals(tmat) {
+  const pens = DECALS.pens, d = DECALS.dirt, n = pens.length;
+  if (!d || !n) return;
+  const v4 = (r) => new THREE.Vector4(r[0], r[1], r[2], r[3]);
+  const U = {
+    foldPen: { value: pens[0].tex }, foldRects: { value: pens.map((p) => v4(p.rect)) }, foldOn: { value: pens.map(() => 0) },
+    foldDirt: { value: d.material.color.clone() }, foldBox: { value: v4(DECALS.dirtRect) }, foldDirtA: { value: d.material.opacity },
+    foldY: { value: new THREE.Vector2(d.position.y, pens[0].mesh.position.y) },
+  };
+  FOLD.on = U.foldOn.value;
+  for (const m of [d, ...pens.map((p) => p.mesh)]) { m.material.visible = false; m.receiveShadow = false; }      // (the planes stay for the facilities' visibility, drawn no more)
+  const prev = tmat.onBeforeCompile;
+  tmat.onBeforeCompile = (sh, r) => {
+    prev.call(tmat, sh, r);
+    Object.assign(sh.uniforms, U);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+uniform sampler2D foldPen; uniform vec4 foldRects[${n}]; uniform float foldOn[${n}]; uniform vec3 foldDirt; uniform vec4 foldBox; uniform float foldDirtA; uniform vec2 foldY;
+vec3 foldOut(vec3 c) {
+#ifdef TONE_MAPPING
+  c = toneMapping(c);
+#endif
+  return linearToOutputTexel(vec4(c, 1.0)).rgb;
+}`).replace('#include <tonemapping_fragment>', `{
+  vec3 Dw = totalDiffuse / max(diffuseColor.rgb, vec3(1e-4)), S = outgoingLight - diffuseColor.rgb * Dw, outc = foldOut(outgoingLight);
+  vec3 ray = vWorldP - cameraPosition;
+  vec2 q = cameraPosition.xz + ray.xz * ((foldY.x - cameraPosition.y) / ray.y);
+  if (q.x > foldBox.x && q.x < foldBox.z && q.y > foldBox.y && q.y < foldBox.w) outc = mix(outc, foldOut(foldDirt * Dw + S), foldDirtA);
+  q = cameraPosition.xz + ray.xz * ((foldY.y - cameraPosition.y) / ray.y);
+  for (int k = 0; k < ${n}; k++) { vec4 R = foldRects[k]; if (foldOn[k] > 0.5 && q.x > R.x && q.x < R.z && q.y > R.y && q.y < R.w) { vec4 t = texture2D(foldPen, vec2((q.x - R.x) / 6.0, (R.w - q.y) / 6.0)); outc = mix(outc, foldOut(t.rgb * Dw + S), t.a); } }
+  gl_FragColor.rgb = outc;
+}`).replace('#include <colorspace_fragment>', '');
+  };
+  tmat.customProgramCacheKey = () => 'terrain+decals';
+  tmat.needsUpdate = true;
+  foldFacilities();
+}
+// which pen floors stand (built), read off their planes' visibility (the facilities set it)
+function foldFacilities() {
+  DECALS.pens.forEach((p, i) => { let v = true; for (let o = p.mesh; o; o = o.parent) if (!o.visible) v = false; FOLD.on[i] = v ? 1 : 0; });
+}
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
@@ -1950,6 +2035,7 @@ const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array
 // the bytes sent to the GPU each frame, counted for the meter (the herd's uploads were the one cost found only by the
 // herd: the review); two calls wrapped, nothing else, and only with the meter on
 if (meter) {
+  renderer.info.autoReset = false;
   const gl = renderer.getContext(), bsd = gl.bufferSubData.bind(gl), tsi = gl.texSubImage2D.bind(gl);
   gl.bufferSubData = function (t, off, data, srcOff, len) { meter.up += len !== undefined ? len * (data.BYTES_PER_ELEMENT || 1) : data.byteLength - (srcOff || 0) * (data.BYTES_PER_ELEMENT || 1); return bsd(...arguments); };
   gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && px.byteLength !== undefined) meter.up += Math.min(px.byteLength, a[4] * a[5] * 16); return tsi(...arguments); };
@@ -2005,7 +2091,7 @@ function meterFrame(now) {
   // counts only after the yard has loaded and 3 s of warm-up (shaders compile on first use);
   // a gap over a second means the app was in the background, not a stutter
   if (now === undefined || !$('status').hidden) return;
-  if (!meter.ready) { meter.ready = now + 3000; meter.el.textContent = 'يسخّن…'; return; }
+  if (!meter.ready) { meter.ready = now + 3000; meter.el.textContent = 'يسخّن…'; meter.html = null; return; }      // (written straight: the next text is written whatever it is)
   if (now < meter.ready) { meter.last = now; meter.start = now; return; }
   const ft = now - meter.last; meter.last = now;
   if (ft > 1000) return;
@@ -2058,7 +2144,7 @@ function meterText(html) {
   meter.html = all; meter.el.innerHTML = all;
 }
 function tick(now) {
-  if (meter) meterFrame(now);
+  if (meter) { meterFrame(now); renderer.info.reset(); }      // (the frame's draws counted over both passes: three resets them at each render, the shadow pass's left out)
   const tGame = cpu ? performance.now() : 0;
   const dt = Math.min(clock.getDelta(), 0.05);
   for (const c of camels) c.update(dt, camera.position);

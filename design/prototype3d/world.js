@@ -139,6 +139,8 @@ const tamariskTexture = () => canvasTex(256, 256, (g, w, h) => {
 // 205 draws; 50 m cells take 10 to 19 draws fewer in every view for 2k to 7k triangles more.
 const GRASS_CELL = 50, BUSH_CELL = 160, STONE_CELL = 50;
 export const DRAPE = [];
+// the blended ground decals (the compound's dirt, the pen floors), for the page to paint into the terrain's own shader
+export const DECALS = { dirt: null, dirtRect: null, pens: [] };
 // ground cover is cut into cells; each cell draws all, part or none of its instances by distance
 export const SCATTER = [];
 function scatterCells(geo, mat, items, { cell = 25, bands, cast = false, receive = true }) {
@@ -261,7 +263,8 @@ export function buildWorld(scene, renderer, sandTex) {
       new THREE.MeshStandardMaterial({ color, roughness: 1, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }));
     m.position.set((x0 + x1) / 2, 0.02, (z0 + z1) / 2); m.receiveShadow = true; add(m); return m;
   };
-  dirt(LAYOUT.compound.x0, LAYOUT.compound.z0, LAYOUT.compound.x1, LAYOUT.compound.z1, '#8c6a47', 0.16);
+  DECALS.dirt = dirt(LAYOUT.compound.x0, LAYOUT.compound.z0, LAYOUT.compound.x1, LAYOUT.compound.z1, '#8c6a47', 0.16);
+  DECALS.dirtRect = [LAYOUT.compound.x0, LAYOUT.compound.z0, LAYOUT.compound.x1, LAYOUT.compound.z1];
   const penFloor = canvasTex(256, 256, (g, w, h) => {
     g.fillStyle = 'rgba(96,66,40,0.55)'; g.fillRect(0, 0, w, h);
     for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${200 + rand() * 40},${170 + rand() * 40},${80 + rand() * 30},${0.35 + rand() * 0.4})`; g.save(); g.translate(rand() * w, rand() * h); g.rotate(rand() * 6.28); g.fillRect(0, 0, 6 + rand() * 8, 1.2); g.restore(); }
@@ -274,6 +277,7 @@ export function buildWorld(scene, renderer, sandTex) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(p.x1 - p.x0, p.z1 - p.z0).rotateX(-Math.PI / 2),
       new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
     m.position.set((p.x0 + p.x1) / 2, 0.03, (p.z0 + p.z1) / 2); m.receiveShadow = true; add(m);
+    DECALS.pens.push({ mesh: m, rect: [p.x0, p.z0, p.x1, p.z1], tex: t });
   }
   FAC = null;
 

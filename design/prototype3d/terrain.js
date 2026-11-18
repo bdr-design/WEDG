@@ -63,5 +63,5 @@ export async function buildTerrain(scene, renderer, sandTex) {
   // two surfaces lies at the same height and flickers
   grid(-6000, 6000, -6000, 6000, 120, 120, inside(1999)).renderOrder = 0.1;
   grid(meta.xWest, meta.xEast, meta.zNorth, meta.zSouth, 128, 121, inside(5999)).renderOrder = 0.2;
-  return { meta, heightAt };
+  return { meta, heightAt, mat };
 }
