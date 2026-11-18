@@ -51,3 +51,6 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
     (kept on the device, a new game included).
 15. «كيف اقنص؟»: told that the outing on the map (the camp, the trapping, casting the falcon: T18 part C) is not built
     yet, only the phone's side. When: «بعد اللوبي مباشرة» (designed and shown before it is built).
+16. The full loading, two trade-offs: the facilities not built yet (the room's interior, the caravan, the tractor:
+    +12 MB of textures) «أشكالها بس» (their shaders made under the lobby, their textures sent when built); a shadows
+    change «يجهّزها لما تغيّر» (only the chosen variant made; a change in the lobby makes them again before «كمّل»).
