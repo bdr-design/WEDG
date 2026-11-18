@@ -23,3 +23,9 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
    figure).
 8. The public repository (a signed IPA carries his device ids and Apple team): «خلّه خاص». The owner makes the change
    in GitHub's settings himself; the steps were given to him.
+9. The hunting phone shown from engine games (design/ui/phone_falcon_engine.jpg, on wt/t18b), four questions:
+   - a lot's result told at once, not «يرسى الليلة»: «على طول»;
+   - his trapped bird's two ways, «خله لك» off with the reason when there is no room or it is full: «يناسبني»;
+   - the trapping tab's + and − for the pigeons and supplies and a switch for the rest, ordered on the same page
+     (the approved design showed the quantity only): «أعتمده»;
+   - the card before leaving (الحماد 843 km, about 10 hours): «كذا زين».
