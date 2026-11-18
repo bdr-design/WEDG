@@ -208,3 +208,19 @@ Under a contract each treatment still goes on account. All figures are marked ga
   15 to 20), and the phone test of a long jump.
 - Batch 5: the before/after pictures of the larger text (item 1) and of the figures' face (item 3); the darker
   colours (item 2); the long press tried on his phone (only his phone can confirm it).
+
+## Night of 18-19 Nov, batch N1: names (the owner's item 17 of 18 Nov)
+
+Pictures: the new-game card with the two name fields (scratchpad lobby_names.png, then design/ui/lobby.jpg's card).
+1. **New game:** the card «لعبة جديدة؟» takes two fields, «اسم عزبتك» and «اسمك», filled with the current names;
+   an empty one refuses the second tap with «اكتب الاسم»; in landscape the card scrolls so the field and the button
+   stay above the keyboard; selecting text works inside the fields only.
+2. **A camel:** a pencil beside its name in the Sadu card; a tap makes the name a field with «احفظ» (one tap: a rename
+   costs nothing and can be changed again). The pencil's look and place: provisional, his eye.
+3. **A falcon:** the same pencil at the top of its page in the phone (نادي الصقور ← صقوري ← its page), any time.
+4. **The farm:** the same pencil at the top of the phone's «العزبة» app, besides the new-game field.
+5. **The player:** a field «اسمك» in the lobby's settings card (saved with the game, not with the device settings),
+   besides the new-game field.
+6. **The rule for every name:** 1-24 characters, trimmed, any letters, repeats allowed, empty refused with
+   «اكتب الاسم».
+7. **Default names:** the engine's names stay as defaults (a birth, a purchase, a catch), renamable any time.
