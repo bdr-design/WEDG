@@ -2039,20 +2039,22 @@ let shadowFrame = 0;
 // histogram of 0.25 ms steps (the slowest 1% read off it, nothing sorted or made): it used to sort every frame time of
 // the session once a second, which on a phone took a few ms after some minutes and itself made one slow frame a second,
 // near 2% of the frames, so the slowest 1% it showed was partly its own
-const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0, up: 0, upNew: 0, fresh: false, upFrames: 0 } : null;
+const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0, up: 0, upNew: 0, fresh: new Set(), upFrames: 0, calls: 0, callsMax: 0 } : null;
 // the bytes sent to the GPU each frame, counted for the meter (the herd's uploads were the one cost found only by the
 // herd: the review); two calls wrapped, nothing else, and only with the meter on
 if (meter) {
   renderer.info.autoReset = false;
   const gl = renderer.getContext(), bsd = gl.bufferSubData.bind(gl), tsi = gl.texSubImage2D.bind(gl);
   gl.bufferSubData = function (t, off, data, srcOff, len) { meter.up += len !== undefined ? len * (data.BYTES_PER_ELEMENT || 1) : data.byteLength - (srcOff || 0) * (data.BYTES_PER_ELEMENT || 1); return bsd(...arguments); };
-  gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && typeof px === 'object') meter[meter.fresh ? 'upNew' : 'up'] += px.byteLength !== undefined ? Math.min(px.byteLength, a[4] * a[5] * 16) : (px.width | 0) * (px.height | 0) * 4; return tsi(...arguments); };      // (a picture: its pixels, 4 bytes each)
-  // a texture's first upload (three makes its storage, then fills it, on the same binding) counted apart: right after
-  // something is built it is a one-off of some MB, not what each frame sends (the review)
-  const tst = gl.texStorage2D.bind(gl), btx = gl.bindTexture.bind(gl), atx = gl.activeTexture.bind(gl);
-  gl.texStorage2D = function () { meter.fresh = true; return tst(...arguments); };
-  gl.bindTexture = function () { meter.fresh = false; return btx(...arguments); };
-  gl.activeTexture = function () { meter.fresh = false; return atx(...arguments); };
+  gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && typeof px === 'object') meter[meter.fresh.has(bound[unit]) ? 'upNew' : 'up'] += px.byteLength !== undefined ? Math.min(px.byteLength, a[4] * a[5] * 16) : (px.width | 0) * (px.height | 0) * 4; return tsi(...arguments); };      // (a picture: its pixels, 4 bytes each)
+  // a texture's first upload counted apart: right after something is built it is a one-off of some MB, not what each
+  // frame sends (the review). The textures given their storage this frame, known by the one bound on the active unit
+  // (three's state skips a bind of the texture already bound, so a flag cleared by the binds could miss one)
+  const tst = gl.texStorage2D.bind(gl), btx = gl.bindTexture.bind(gl), atx = gl.activeTexture.bind(gl), bound = [];
+  let unit = 0;
+  gl.texStorage2D = function () { meter.fresh.add(bound[unit]); return tst(...arguments); };
+  gl.bindTexture = function (t, tex) { bound[unit] = tex; return btx(...arguments); };
+  gl.activeTexture = function (u) { unit = u - gl.TEXTURE0; return atx(...arguments); };
   // the meter's own size watched, not read after each rewrite (a forced layout once a second: 0.5-2.4 ms, in the slowest 1%)
   new ResizeObserver(() => measureHud()).observe(meter.el);
 }
@@ -2105,8 +2107,12 @@ function meterFrame(now) {
   // counts only after the yard has loaded and 3 s of warm-up (shaders compile on first use);
   // a gap over a second means the app was in the background, not a stutter
   if (now === undefined || !$('status').hidden) return;
+  // the draws of the last two frames, the larger shown: the shadow map is drawn every other frame, and one frame read once
+  // a second fell always on the same of the two (79 or 100 in two loads of the same yard: the review)
+  meter.fresh.clear();
+  meter.callsMax = Math.max(meter.calls, renderer.info.render.calls); meter.calls = renderer.info.render.calls;
   if (!meter.ready) { meter.ready = now + 3000; meter.el.textContent = 'يسخّن…'; meter.html = null; meter.up = meter.upNew = 0; return; }      // (written straight: the next text is written whatever it is)
-  if (now < meter.ready) { meter.last = now; meter.start = now; meter.up = meter.upNew = 0; return; }      // (the bytes of frames not counted dropped: the first reading was 3-4 times too high, the review)
+  if (now < meter.ready) { meter.last = now; meter.start = now; meter.shown = now; meter.up = meter.upNew = 0; return; }      // (the bytes of frames not counted dropped, and the first line a second after: it was 3-4 times too high, then one frame's, the reviews)
   const ft = now - meter.last; meter.last = now;
   if (ft > 1000) { meter.up = 0; return; }
   const bin = Math.min(399, Math.round(ft * 4));
@@ -2120,7 +2126,7 @@ function meterFrame(now) {
   const p99 = pct(meter.hist, meter.n, 0.99);
   const secs = Math.round((now - meter.start) / 1000);
   const upKb = meter.upFrames ? meter.up / meter.upFrames / 1000 : 0, newKb = meter.upNew / 1000; meter.up = 0; meter.upNew = 0; meter.upFrames = 0;
-  const line5 = `يرسل للكرت ${upKb < 10 ? upKb.toFixed(1) : Math.round(upKb)} ك.ب باللقطة${newKb >= 1 ? ` (+ صور جديدة ${Math.round(newKb)} ك.ب مرة وحدة)` : ''} · ${renderer.info.render.calls} رسمة`;
+  const line5 = `يرسل للكرت ${upKb < 10 ? upKb.toFixed(1) : Math.round(upKb)} ك.ب باللقطة${newKb >= 1 ? ` (+ صور جديدة ${Math.round(newKb)} ك.ب مرة وحدة)` : ''} · ${meter.callsMax} رسمة`;
   const line3 = cpu.n ? `الحساب ${(cpu.sg / cpu.n).toFixed(1)} · تجهيز الرسم ${(cpu.sd / cpu.n).toFixed(1)} م.ث بالمعدل · أبطأ 1٪: ${Math.round(pct(cpu.game, cpu.n, 0.99))} و${Math.round(pct(cpu.draw, cpu.n, 0.99))}` : '';
   // the engine's cost to the page (its own work is on its thread): reading each new view of the game, and the save
   const es = window.marahEngine?.stats;
