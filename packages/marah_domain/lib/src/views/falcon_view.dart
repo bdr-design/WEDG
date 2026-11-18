@@ -129,6 +129,7 @@ Map<String, Object?> falconCatalogOf(GameState state, OwnerId viewer) {
           const DomainError(ErrorCode.huntRefused, {
             'reason': 'noLure',
             'lure': 'birdNet',
+            'missing': 'birdNet',
           }),
         ),
         for (final r in FalconRoute.values)
