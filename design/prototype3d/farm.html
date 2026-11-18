@@ -1273,14 +1273,27 @@ function buildHerd(T) {
     },
     // under the loading screen: each draw's shader made and its mesh sent to the GPU once (drawn first when the herd came
     // near, a mesh went up and a shader was made mid-play: the owner's phone stuttered by the herd, 12 Nov)
-    warm() {
+    // (under the lobby, a draw's programs a frame and its textures a few a frame, the frames held meanwhile, then the
+    // one drawn frame: in one task it was 0.8-1.0 s that froze the lobby, the review)
+    async warm() {
       const m4 = new THREE.Matrix4().makeTranslation(-24.5, 0, -13.5);
       for (const m of meshes) { m.count = 1; m.visible = true; m4.toArray(m.instanceMatrix.array, 0); m.userData.anim.set([start.idle, start.idle + 1, 0, -1]); m.instanceMatrix.needsUpdate = true; m.geometry.attributes.herdAnim.needsUpdate = true; }
       // and the footfall dust's draw (its shader was made at the first puff, mid-play)
       dustMesh.count = 1; dustMesh.visible = true; m4.toArray(dustMesh.instanceMatrix.array, 0); dustOp.array[0] = 0; dustMesh.instanceMatrix.needsUpdate = true; dustOp.needsUpdate = true;
-      renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
-      for (const m of meshes) { m.count = 0; m.visible = false; }
-      dustMesh.count = 0; dustMesh.visible = false;
+      const frame = () => new Promise((r) => requestAnimationFrame(r));
+      herdHold = true;
+      try {
+        for (const m of [...meshes, dustMesh]) { renderer.compile(m, camera, scene); await frame(); }
+        const tex = new Set();
+        for (const m of [...meshes, dustMesh]) for (const mat of [].concat(m.material)) { for (const k in mat) if (mat[k] && mat[k].isTexture) tex.add(mat[k]); if (mat.uniforms) for (const k in mat.uniforms) { const v = mat.uniforms[k] && mat.uniforms[k].value; if (v && v.isTexture) tex.add(v); } }
+        const list = [...tex];
+        for (let i = 0; i < list.length; i += 3) { for (const t of list.slice(i, i + 3)) renderer.initTexture(t); await frame(); }
+        renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
+      } finally {
+        for (const m of meshes) { m.count = 0; m.visible = false; }
+        dustMesh.count = 0; dustMesh.visible = false;
+        herdHold = false;
+      }
     },
   };
 }
@@ -2073,14 +2086,14 @@ function tapWorld(x, y) {
 
 // ------------------------------------------------------------ load and run
 // (the middle level is the 4k one: the owner's choice of 14 Nov, «النسخة الوسط الأخف الحين»; the 8k lod1.json is kept)
-const herdReady = Promise.all(['lod0.json', 'lod1_4k.json', 'lod2.json'].map(loadLod)).then((T) => {
+const herdReady = Promise.all(['lod0.json', 'lod1_4k.json', 'lod2.json'].map(loadLod)).then(async (T) => {
   shareCoatMaps(T);
   LODS = T;
   HERD = buildHerd(T);
   // the drawing's variant: ?herd=0, 1 or 2 in the address, else the one chosen on the meter, else as built
   { let m = new URLSearchParams(location.search).get('herd'); try { if (m === null) m = localStorage.getItem('marah.herdMode'); } catch { /* (none kept) */ }
     if (m !== null && +m >= 0 && +m < HERD_MODES.length) HERD.mode = +m; }
-  HERD.warm();
+  await HERD.warm();
   syncYard();
   renderer.shadowMap.needsUpdate = true;
   $('status').hidden = true;
@@ -2428,9 +2441,9 @@ function meterText(html) {
   if (all === meter.html) return;      // (written only when it changed)
   meter.html = all; meter.el.innerHTML = all;
 }
-let warmHold = false, startHold = false;      // (the lobby's warm, or the first frame's programs, under way: the frame stands still)
+let warmHold = false, startHold = false, herdHold = false;      // (the lobby's warm, the first frame's programs or the herd's, under way: the frame stands still)
 function tick(now) {
-  if (warmHold || startHold) { requestAnimationFrame(tick); return; }
+  if (warmHold || startHold || herdHold) { requestAnimationFrame(tick); return; }
   if (meter) { meterFrame(now); renderer.info.reset(); }      // (the frame's draws counted over both passes: three resets them at each render, the shadow pass's left out)
   const tGame = cpu ? performance.now() : 0;
   const dt = Math.min(clock.getDelta(), 0.05);
