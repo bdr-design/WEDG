@@ -54,6 +54,9 @@ Map<String, Object?> falconCatalogOf(GameState state, OwnerId viewer) {
         {'gear': g.name, 'name': g.label, 'price': g.price, 'most': g.most},
     ],
     'deliveryDays': Balance.deliveryDays,
+    // (the map's ground card: the gear a trapping camp needs, as the card
+    // before leaving counts it)
+    'trapGear': [for (final g in Gear.trapping) g.name],
     'grounds': [
       for (final g in Ground.values)
         {
@@ -66,6 +69,11 @@ Map<String, Object?> falconCatalogOf(GameState state, OwnerId viewer) {
           'quarry': [for (final q in g.quarry) q.label],
           if (g.coast) 'coast': true,
           if (g.north) 'north': true,
+          // (where it is, for the map's pin at its bearing: the far grounds'
+          // coordinates; the two near grounds have none, their places the
+          // design's, design/hunt/trip.cjs)
+          if (g.lat != 0) 'lat': g.lat,
+          if (g.lon != 0) 'lon': g.lon,
         },
     ],
     'quarry': [

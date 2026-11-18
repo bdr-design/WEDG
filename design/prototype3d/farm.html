@@ -141,6 +141,12 @@
   .pop .who { flex: none; display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 16px 12px; }
   .pop .who .sw { width: 48px; height: 48px; }
   .pop .who h2 { font-size: 24px; line-height: 30px; }
+  /* a ground's nights (T18 part C): − N + in the card, under its figures */
+  .pop .nights { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 0 16px 12px; }
+  .pop .nights button { width: 44px; height: 40px; border: 1px solid var(--hair-2); border-radius: 2px; background: transparent; color: var(--wool); font: 700 20px var(--ui); }
+  .pop .nights button[disabled] { opacity: 0.35; }
+  .pop .nights span { min-width: 88px; text-align: center; color: var(--wool-2); font: 500 14px var(--ui); }
+  .pop .nights b { color: var(--wool); font: 700 20px var(--display); }
   .pop .note { display: flex; align-items: center; gap: 8px; margin: 0 16px 14px; padding: 10px 12px; border-inline-start: 3px solid var(--hair-2); background: rgba(239, 230, 214, 0.06); color: var(--wool-2); font: 500 13.5px/20px var(--ui); }
   .pop .note.warn { border-color: var(--zafaran); background: rgba(217, 149, 47, 0.12); color: var(--zafaran-ink); }
   .pop .note svg.i { width: 18px; height: 18px; }
@@ -1478,6 +1484,7 @@ function setGame(snap) {
   GAME = snap;
   applyFacilities();
   syncYard();
+  if (placesReady) placeGrounds();
   if (pop) renderCard(); else refreshLabels();
 }
 
@@ -1582,6 +1589,10 @@ const ICONS = {
   gate: '<path d="M4 21V5M20 21V5M4 7l6 3v9l-6-2M20 7l-6 3v9l6-2"/>',
   camp: '<rect x="2" y="8" width="13" height="8" rx="1.5"/><path d="M15 11h3.5l2.5 3v2h-6"/><circle cx="6" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/>',
   mountain: '<path d="M2 19l7-11 4 6 3-4 6 9z"/><path d="M7.5 10.5 9 12l1.5-1.5"/>',
+  // the hunting season's grounds (design/hunt/trip.cjs): a falcon for a hunting ground, a flag for the estate, a net for trapping
+  falcon: '<path d="M2.5 10c3 0 5.5 1 7.5 3l2-3 2 3c2-2 4.5-3 7.5-3-2.8 1.8-4.8 3.6-6.6 4.6L14 19h-4l-.9-4.4C7.3 13.6 5.3 11.8 2.5 10z"/>',
+  estate: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
+  net: '<path d="M4 4h16v16H4z"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16M14.6 4v16"/>',
   market: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
   festival: '<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M12 14v3M8.5 20h7l-1-3h-5z"/>',
   herd: '<path d="M2.6 12.6c0-1.9 1.3-3 3-3.1.9-2.6 2.5-4 4.3-4 1.9 0 3.2 1.6 3.8 3.7.8.2 1.6-.1 2.1-.9l1.9-3.4c.4-.8 1.3-1.2 2.2-1l1.6.4c.5.1.5.8 0 1l-1.3.4-2.2 5.2c-.4 1-1.100 1.8-2 2.3v5.6h-1.5l-.3-4.9c-1.9.5-4.4.5-6.2 0l-.4 4.9H6.1l-.2-5.5c-1.9-.4-3.3-1.4-3.3-2.7z"/>',
@@ -1651,6 +1662,92 @@ function refreshLabels() {
 placesReady = true;
 placeFacilities();
 document.fonts.ready.then(refreshLabels);
+// a place added after the start (the hunting season's grounds, once the catalog comes): its pin made as the start's
+function addPlace(pl) {
+  const el = document.createElement('button'); el.type = 'button';
+  el.addEventListener('click', (e) => { e.stopPropagation(); openPlace(pl); });
+  labelLayer.appendChild(el); pl.el = el; pl.off = pl.shown ? !pl.shown() : false;
+  PLACES.push(pl); labels.push(pl); order.push(pl);
+  return pl;
+}
+
+// ------------------------------------------------------------ the hunting season's grounds (T18 part C, the approved
+// storyboard design/hunt/trip.cjs frames 1-3): a pin for each of the engine's grounds, its card with the nights and
+// «اطلع», which opens the phone's card before leaving (the calendar's own); its «اطلع» starts the trip (StartTrip) and
+// the drive is the calendar's jump (the engine's Trips.leg), under the phone's screen under way
+const HUNT = { cat: null, nights: {} };
+// the two near grounds where the design put them west of the yard (their places a game choice: the engine has their
+// distances only); the far ones at their real bearing from the yard (terrain.json's farmLat/farmLon), on the horizon
+const NEAR_AT = { nafudEdge: [-14000, 1500], estate: [-16000, -5000] };
+const FARM_LL = [25.8148, 42.9015];
+const COMPASS = ['شمال', 'شمال شرق', 'شرق', 'جنوب شرق', 'جنوب', 'جنوب غرب', 'غرب', 'شمال غرب'];
+const compassOf = (dx, dz) => COMPASS[Math.round(((Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360) / 45) % 8];
+const permitOf = (kind) => GAME?.falcons?.permits?.find((x) => x.kind === kind);
+const onTrip = () => !!GAME?.falcons?.trip;
+const nightsWord = (n) => (n === 0 ? ['طلعة', 'يوم'] : count(n, 'ليلة', 'ليلتين', 'ليالي', 'ليلة'));
+const DATE_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+const dayMonth = (day) => { const d = new Date(Date.parse(GAME.date + 'T00:00:00Z') + (day - GAME.today) * 864e5); return `${d.getUTCDate()} ${DATE_MONTHS[d.getUTCMonth()]}`; };      // (as the phone's dShortAt)
+function groundPlace(g) {
+  const trap = g.use === 'trapping', kind = trap ? 'trapping' : 'falconry';
+  let x, z;
+  if (NEAR_AT[g.ground]) [x, z] = NEAR_AT[g.ground];
+  else { const e = (g.lon - FARM_LL[1]) * 111.32 * Math.cos(FARM_LL[0] * Math.PI / 180), n = (g.lat - FARM_LL[0]) * 110.57, k = 60000 / Math.hypot(e, n); x = e * k; z = -n * k; }
+  const where = compassOf(x, z);
+  const pl = {
+    key: `ground:${g.ground}`, ground: g, name: trap ? `${g.name} · أرض طرح` : g.name, icon: trap ? 'net' : g.ground === 'estate' ? 'estate' : 'falcon',
+    p: new THREE.Vector3(x, NEAR_AT[g.ground] ? 80 : 200, z), min: 900, cls: 'far', edge: !trap,
+    // (the trapping grounds only while its season is open, the proxy's answer; none while he is out on a trip)
+    shown: () => !!HUNT.cat && !onTrip() && (!trap || !!permitOf('trapping')?.open),
+    text: () => `${pl.name} · ${g.km.toLocaleString('en-US')} كم ${where}`,
+    open() {
+      const permit = permitOf(trap ? 'trapping' : 'hunting');
+      const least = !trap && g.oneDay ? 0 : 1, most = HUNT.cat.mostNights;
+      const n = Math.min(most, Math.max(least, HUNT.nights[g.ground] ?? (trap ? 7 : g.oneDay ? 0 : 3)));
+      HUNT.nights[g.ground] = n;
+      const gear = GAME?.falcons?.gear || {}, lacks = trap ? HUNT.cat.trapGear.filter((k) => k !== 'supplies' && !(gear[k]?.[0] > 0)) : [];      // (the supplies are the card before leaving's own row)
+      const quarry = GAME?.falcons?.today?.quarry?.[g.ground];
+      const stats = [['المسافة', g.km.toLocaleString('en-US'), 'كم'],
+        trap ? ['الطرح', permit?.open ? `لين ${dayMonth(permit.closes)}` : 'مسكّر', '', permit?.open ? '' : 'warn'] : ['الطريدة', quarry || 'ما فيه الحين', '', quarry ? '' : 'warn'],
+        ...(trap ? [['عدتك', lacks.length ? 'ناقصة' : 'كاملة', '', lacks.length ? 'warn' : 'good']] : [])];      // (a hunting ground's nights are the stepper's)
+      const [nv, nu] = nightsWord(n);
+      const step = `<div class="nights" role="group" aria-label="الليالي"><button type="button" data-nights="-1" aria-label="ليلة أقل"${n <= least ? ' disabled' : ''}>−</button><span aria-live="polite"><b class="num">${nv}</b> ${nu}</span><button type="button" data-nights="1" aria-label="ليلة زيادة"${n >= most ? ' disabled' : ''}>+</button></div>`;
+      const note = `<div class="note">${trap ? 'الجوال يوريك عدتك ومؤونة المخيم وكم يكفي العلف والماء قبل ما تطلع.' : 'الجوال يوريك كم يكفي العلف والماء قبل ما تطلع.'}</div>`;      // (short: the card before leaving says the rest, and a long note was cut in a small card)
+      return { sub: `${trap ? 'مخيم أيام' : n === 0 ? 'مقناص · طلعة يوم' : 'مقناص · رحلة أيام'} · ${where} العزبة`, stats, html: step + note,
+        actions: [{ label: trap ? 'اطلع للمخيم' : n === 0 ? 'اطلع' : 'اطلع للرحلة', primary: true, run: () => { closePop(); phone.openTrip(kind, g.ground, n, () => startTrip(kind, g.ground, n)); } },
+          ...(trap && lacks.length ? [{ label: 'كمّل عدتك', run: () => { closePop(); phone.openApp('club'); } }] : [])] };
+    },
+  };
+  return pl;
+}
+// «اطلع» on the phone's card: the trip starts in the engine; the drive out is the calendar's jump (a day's outing on a
+// near ground has none: the clock brings him there)
+async function startTrip(kind, ground, nights) {
+  const e = window.marahEngine;
+  if (!e) return;
+  let r = null;
+  try { r = await e.dispatch({ type: 'startTrip', kind, ground, nights }); } catch (err) { console.warn('trip:', err); }
+  if (!r || !r.ok) { phone.tripRefused(r); return; }
+  phone.runTrip();
+}
+// the grounds once the catalog comes (asked by the lobby); shown or hidden as the season and the trip change
+async function loadGrounds() {
+  if (HUNT.cat) return;
+  await phone.loadCatalog();
+  const cat = phone.catalog;
+  if (!cat || HUNT.cat) return;
+  HUNT.cat = cat;
+  for (const g of cat.grounds) addPlace(groundPlace(g));
+  refreshLabels();
+}
+let groundsKey = '';
+function placeGrounds() {
+  const k = [!!HUNT.cat, onTrip(), !!permitOf('trapping')?.open].join('|');
+  if (k === groundsKey) return;
+  groundsKey = k;
+  for (const pl of PLACES) if (pl.ground) pl.off = !pl.shown();
+  if (pop && pop.place.off) closePop();
+  refreshLabels();
+}
 // the free map between the HUD pieces, in px; measured on resize and when a card opens or closes
 const hud = { w: 1, h: 1, x0: 0, x1: 1, y0: 0, y1: 1 };
 const SIDE = () => document.body.classList.contains('land');      // the place card docks on the side
@@ -1689,9 +1786,9 @@ function placeLabels() {
     const dx = x - ox, dy = y - l.hh - oy;
     const k = Math.max(Math.abs(dx) / Math.max(1, (x1 - x0) / 2 - l.hw), Math.abs(dy) / Math.max(1, (y1 - y0) / 2 - l.hh), 1e-6);
     if (l.edge) {
-      // always shown: on the horizon when in view, otherwise on the edge of the free map pointing the way
-      vis = true;
-      if (behind || k > 1) {
+      // always shown (unless off): on the horizon when in view, otherwise on the edge of the free map pointing the way
+      vis = !l.off;
+      if (vis && (behind || k > 1)) {
         edge = true; x = ox + dx / k; y = oy + dy / k;
         const ang = Math.atan2(dy, dx);
         if (Math.abs(ang - (l.ang ?? 9)) > 0.02) { l.arrow.style.transform = `rotate(${ang}rad)`; l.ang = ang; }
@@ -1822,6 +1919,7 @@ $('pop').addEventListener('click', (e) => {
   if (b.hasAttribute('data-close')) closePop();
   else if (b.hasAttribute('data-back')) { stopFollow(); pop.camel = null; renderCard(); }
   else if (b.dataset.camel) openCamel(camels[+b.dataset.camel]);
+  else if (b.dataset.nights && pop.place.ground) { const g = pop.place.ground.ground; HUNT.nights[g] = (HUNT.nights[g] ?? 0) + Number(b.dataset.nights); renderCard(); }      // (the card's open() keeps it inside the ground's nights)
   else if (b.dataset.act) popActs[+b.dataset.act].run();
 });
 // the glide: the target slides and the camera keeps its angle (or turns toward a far place); no allocation per frame
@@ -2306,7 +2404,7 @@ const LOBBY = (() => {
     // the engine started: its clock held at once (the lobby stands it still); none: the game goes on without it
     engine(e) {
       engine = e; if (e) e.hold(true).catch(() => {}); if (!e || e.snapshot) done(ENGINE);
-      Promise.all([pictures, e ? phone.loadCatalog() : null]).then(() => done(PHONE));
+      Promise.all([pictures, e ? phone.loadCatalog() : null]).then(() => { if (e) loadGrounds(); done(PHONE); });      // (and the hunting season's grounds on the map)
     },
     game(snap) { G = snap; if (engine) done(ENGINE); draw(); },
     rewarm() { WARM.done = false; draw(); if (warming) again = true; else maybeWarm(); },

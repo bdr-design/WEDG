@@ -2509,14 +2509,23 @@ export function createPhone({ host }) {
   // التقويم's jump (T15): the engine runs it (EngineCore.away); its progress redraws the screen under way a few times a
   // second at most; at its end the stop or the summary
   const AWAY_NO = { notAhead: 'اختار يوم بعد اليوم.', tooFar: 'التقويم يمشي سنة بالكثير.', sick: 'عندك حلال مريض: عالجه أول، أو اتعاقد مع البيطري.', round: 'شوطك اليوم ما خلص: تمشي بعد ما تخلص مراحله.' };
-  async function runAway(target) {
+  async function runAway(target, run = () => engine.away(target)) {
     let r = null;
-    try { r = await engine.away(target); } catch (err) { console.warn('phone:', err); }
+    try { r = await run(); } catch (err) { console.warn('phone:', err); }
     CAL.running = false; CAL.progress = null;
-    if (!r || !r.ok) {
-      ERR = r && r.error ? (AWAY_NO[r.error.params?.reason] || 'ما مشى التقويم، جرّب مرة ثانية.') : 'ما مشى التقويم، جرّب مرة ثانية.';
+    if (target == null && r && !r.ok && r.error?.params?.reason === 'dayOuting') { if (live()) set('closed'); return; }      // (a trip's leg: a day's outing has none, the clock brings him there)
+    if (target == null && (!r || !r.ok)) {      // (a trip's leg refused: in the engine's own words)
+      const why = r && r.error ? refusal(r, { type: 'tripNight' }) : 'ما مشى التقويم، جرّب مرة ثانية.';
       if (live()) show('calCard');
-      sr.textContent = ERR;
+      ERR = why; if (live()) redraw();      // (after the screen's change, which clears it)
+      sr.textContent = why;
+      return;
+    }
+    if (!r || !r.ok) {
+      const why = r && r.error ? (AWAY_NO[r.error.params?.reason] || 'ما مشى التقويم، جرّب مرة ثانية.') : 'ما مشى التقويم، جرّب مرة ثانية.';
+      if (live()) show('calCard');
+      ERR = why; if (live()) redraw();      // (set after the screen's change, which clears it: the refusal never showed)
+      sr.textContent = why;
       return;
     }
     CAL.result = r.away;
@@ -2685,7 +2694,7 @@ export function createPhone({ host }) {
         else if (fate === 'found') FC.msg = { good: true, title: `لقيت ${esc(f ? f.name : '')}`, line: 'رجع لغرفة الصقور.' };
         else if (fate === 'gone') { FC.msg = { title: `${esc(f ? f.name : '')} راح`, line: 'دوّرته وما لقيته.' }; FC.tab = 'mine'; next = 'club'; }
       }
-      else if (kind === 'tripGo') { const go = FC.trip && FC.trip.onGo; if (go) { FC.trip = null; next = 'home'; go(); } }
+      else if (kind === 'tripGo') { const go = FC.trip && FC.trip.onGo; if (go) { FC.last = FC.trip; FC.trip = null; next = 'home'; go(); } }      // (kept: a refused start shows the card again with the engine's words)
       else if (kind === 'list' || kind === 'quick') await sell(kind, t.dataset.p === 'declared');
       else if (kind === 'vet') {
         const l = listingOf(t.dataset.id);
@@ -2847,6 +2856,26 @@ export function createPhone({ host }) {
     setPlay: (on) => { st.play = on; if (st.state !== 'closed') layout(); },
     /** Asks the engine for the hunting season's catalog now (the lobby: not at the club's first opening). */
     loadCatalog: () => loadCat(),
+    /** The hunting season's catalog once it came (the map's grounds), or null. */
+    get catalog() { return FC.cat; },
+    /** A trip's next leg by the calendar's jump (T18 part C: the drive out or home, a night at camp), under the screen
+     *  under way, then the summary or the stop, as a jump of the calendar's own. */
+    runTrip: () => {
+      if (!engine || !engine.tripNight || CAL.running || !G) return;
+      CAL.day = null; CAL.from = G.today; CAL.progress = null; CAL.result = null; CAL.running = true;
+      if (st.state === 'closed') set('small');
+      bigAt = performance.now(); set('big'); show('calGoing'); focusIn(scr.querySelector('[data-act="calStop"]') || dev);
+      runAway(null, () => engine.tripNight());
+    },
+    /** A trip the engine would not start: the card before leaving again, with its words. */
+    tripRefused: (r) => {
+      const why = r && r.error ? refusal(r, { type: 'startTrip' }) : 'ما وصل الطلب، جرّب مرة ثانية.';
+      if (FC.last) FC.trip = FC.last;
+      if (st.state === 'closed') set('small');
+      bigAt = performance.now(); set('big'); show(FC.trip ? 'tripCard' : 'home');
+      ERR = why; redraw();
+      sr.textContent = why;
+    },
     /** Fetches the phone's pictures once and keeps them (the lobby waits for it); its wallpaper set from the copy. */
     loadPictures: () => Promise.all(PICS.map((f) => fetch(`phone/${f}`).then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`${f}: ${r.status}`)))).then((b) => { PIC[f] = URL.createObjectURL(b); }))).then(() => { box.style.setProperty('--wall', `url("${PIC['wall_camel.png']}")`); }),
     /** A game's day as the home screen says it, for the lobby: «الأحد 4 أكتوبر 2026 · سهيل». */
