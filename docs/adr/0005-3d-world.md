@@ -877,8 +877,8 @@ Then, the owner's choice of 18 Nov 2026 on the two that change pixels, shown the
 
 
 After the fix, two reviews (the pictures and the GPU's work; the calls, the uploads and what could break):
-- **Fragments a screen pixel** on a tile GPU, over the pens 2.16 -> 1.19 and walking 1.92 -> 1.28 (3 MSAA-free
-  passes counted); 77 draws over the pens and 70 walking, plus 21 on the shadow map's frames. No shader made in play.
+- **Fragments shaded a screen pixel** on a tile GPU, over the pens 2.16 -> 1.19 and walking 1.92 -> 1.28; 77 draws
+  over the pens and 70 walking, plus 21 on the shadow map's frames. No shader made in play.
 - **A built yard** (all six pens) made 651 / 602 / 1,259 calls a frame (over the pens / walking / in the car): the six
   pens shared their posts', rails' and panels' three geometries. Each pen has its own now: 400 / 385 / 1,113.
 - **The shadow taps in the car view** change 1.7% of pixels, not the 0.1-0.3% of the herd's shots: the 17 point taps
