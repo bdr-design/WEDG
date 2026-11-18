@@ -15,7 +15,7 @@ from common import (V3, Piece, Sec, angle_profile, bent_line, frame, loft, mirro
 
 
 class Detail:
-    def __init__(self, level):
+    def __init__(self, level, near=None):
         self.level = level
         hi = level == 0
         self.body_ring = 24 if hi else 10
@@ -31,6 +31,9 @@ class Detail:
         self.beak_stations = 9 if hi else 4
         self.eye_ring = 14 if hi else 6
         self.eye_stations = 7 if hi else 3
+        for k, v in (near or {}).items():      # a small bird's near level: fewer rings where they do not show
+            if hi:
+                setattr(self, k, v)
 
 
 class Body:
@@ -156,10 +159,9 @@ def beak(body, spec, det):
         # the cere: bare skin over the beak's root, from inside the face onto the horn, a little fuller than it
         L = b['cere']
         cs = []
-        for f in (0.0, 0.35, 0.7, 1.0):
+        for f, k in ((0.0, 0.92), (0.3, 1.10), (0.65, 1.08), (1.0, 0.99)):      # rising out of the face, not a collar
             q = o + t * (L * f - 8) + u * 0.6
             au, ad, bl, br = sizes[0]
-            k = 1.16 - 0.18 * f
             cs.append(Sec(q, u, v, au * k, ad * 0.85, bl * k, br * k, p=2.2))
         out.append(loft('skin', cs, det.beak_ring, caps=(True, True)))
     return out
@@ -378,10 +380,17 @@ def legs(body, spec, pose, det):
         # the shank: feathered, thick, from inside the belly to the ankle
         # the feathers of the shank ('trousers') hang over the tarsus' top for [trouser] of its length
         low = ankle.lerp(foot, L.get('trouser', 0.0))
-        sh = smooth_path([knee, knee.lerp(ankle, 0.55), low], 5 if det.level == 0 else 3)
         rad = [L['shank_r'][0], L['shank_r'][1], L['shank_r'][2], L['shank_r'][3], L['shank_r'][4]]
-        if det.level != 0:
-            rad = [rad[0], rad[2], rad[4]]
+        if L.get('trouser', 0.0) > 0:
+            # through the ankle and on down the tarsus: from the knee straight to [low] the tube cut the heel's
+            # corner and the tarsus's top stood out behind it, 11 mm clear, in every pose (the review)
+            r0, r1, r2, r3, r4 = rad
+            sh = smooth_path([knee, knee.lerp(ankle, 0.55), ankle, low], 7 if det.level == 0 else 4)
+            rad = [r0, r1, r2, 0.5 * (r2 + r3), r3, 0.5 * (r3 + r4), r4] if det.level == 0 else [r0, r2, r3, r4]
+        else:
+            sh = smooth_path([knee, knee.lerp(ankle, 0.55), low], 5 if det.level == 0 else 3)
+            if det.level != 0:
+                rad = [rad[0], rad[2], rad[4]]
         out['shank'].append(tube('thigh', sh, rad, det.limb_ring + 2, up=V3((0, side, 0)), caps=(True, True)))
         # the tarsus: bare scaled skin, a little deeper than wide; the stone-curlew's 'thick knee' is its ankle
         tp = smooth_path([ankle, ankle.lerp(foot, 0.5), foot], 4 if det.level == 0 else 2)
@@ -431,7 +440,7 @@ def foot_parts(foot, toes, heading, side, det, pose):
             # the toe lies on the surface and bends down over its last joint
             ang = bend * smoothstep(0.55, 1.0, f) if tucked else 0.0
             q = foot + d * (length * f - 2.0) + V3((0, 0, r * 0.9))      # from just behind the foot's middle
-            knuckle = 1.0 + 0.22 * math.sin(f * math.pi * 3) ** 2 if det.level == 0 else 1.0
+            knuckle = 1.0 + 0.30 * math.sin(f * math.pi * 3) ** 2 if det.level == 0 else 1.0
             rad.append(r * (1.1 - 0.35 * f) * knuckle)
             if grip and not tucked:
                 # the toe follows the support's surface: it grips the fist rather than overhangs it or sinks in

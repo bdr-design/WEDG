@@ -6,6 +6,8 @@ from paint import body_coords, eye_place, plumage, soft, band, streaks
 
 
 def painter(name, body, size):
+    if name == 'pigeon':
+        return PigeonPaint(body, size)
     return HoubaraPaint(body, size) if name == 'houbara' else CurlewPaint(body, size)
 
 
@@ -308,3 +310,107 @@ class CurlewPaint(Base):
     def horn_p(self, S, T):
         col = lerp_col(np.broadcast_to(self.YELLOW, S.shape + (3,)), self.BLACK, soft(S, 0.45, 0.6))
         return col, 0.4 * np.ones_like(S), np.ones_like(S)
+
+
+# ------------------------------------------------------------------ the trapping pigeon
+class PigeonPaint(Base):
+    """A domestic pigeon of the wild rock dove's pattern (en.wikipedia, Rock dove): blue-grey, the head darker, the
+    neck glossed green and purple, two black bars across each wing, a white rump, a dark band at the tail's end with
+    white outer edges, the underwing pale; the iris orange-red; the bill dark with a white cere; the feet red."""
+    GREY = C(0.58, 0.60, 0.65)           # blue-grey
+    DARK = C(0.40, 0.42, 0.48)           # the head and the flight feathers' darker grey
+    BAR = C(0.08, 0.08, 0.09)            # the black wing bars and tail band
+    WHITE = C(0.92, 0.92, 0.93)          # the rump, the underwing
+    GREEN = C(0.30, 0.48, 0.36)          # the neck's gloss
+    PURPLE = C(0.46, 0.33, 0.50)
+    IRIS = C(0.86, 0.38, 0.12)
+    PUPIL = 0.975
+    LEG = C(0.78, 0.30, 0.30)            # red feet
+    CLAW = C(0.20, 0.18, 0.17)
+    BILL = C(0.20, 0.19, 0.20)
+    CERE = C(0.90, 0.88, 0.84)           # the white fleshy cere at the bill's base
+    STRAP = C(0.66, 0.52, 0.34)          # the harness: soft tan cloth (game choice)
+    LINE = C(0.80, 0.84, 0.86)           # clear nylon, drawn pale
+
+    def __init__(self, body, size):
+        super().__init__(body, size, 53)
+        import pigeon
+        self.spec = pigeon.SPEC
+
+    def painters(self):
+        return {'body': self.body_p, 'wing_fold': self.fold_p, 'wing_open': self.open_p, 'tail': self.tail_p,
+                'thigh': self.thigh_p, 'skin': lambda S, T: skin(S, T, self.LEG, self.n, 0.5),
+                'horn': self.horn_p, 'claw': self.claw_p, 'eye': self.eye_p,
+                'strap': self.strap_p, 'line': self.line_p}
+
+    def body_p(self, S, T):
+        D, Y, P, tt, au, ad, b = body_coords(self.body, S, T)
+        nz = self.n(D + 300, Y + 300, 5.0)
+        col, _, occ = plumage(-D, Y, 7, 5, self.GREY, self.GREY * 1.03, self.GREY, 0.0, 0.0, nz, shade=0.05)
+        # the white rump on the lower back, above the tail
+        rump = (1 - soft(D, 28, 42)) * (1 - soft(tt, 0.12, 0.2))
+        col = lerp_col(col, self.WHITE, rump * 0.9)
+        # the neck: glossed green above and at the sides, purple below and on the breast's top
+        neck = soft(D, 118, 132) * (1 - soft(D, 168, 176))
+        gloss = lerp_col(np.broadcast_to(self.GREEN, D.shape + (3,)), self.PURPLE, soft(tt, 0.22, 0.38))
+        gloss = gloss * (0.9 + 0.2 * soft(self.n(D * 2 + 7, Y * 2 + 7, 3.0), -0.6, 0.6))[..., None]
+        col = lerp_col(col, gloss, neck * 0.85)
+        # the head darker grey
+        col = lerp_col(col, self.DARK, soft(D, 170, 180))
+        return col, 0.82 + 0.05 * nz, occ
+
+    def fold_p(self, S, T):
+        L = 194.0
+        X = (1 - S) * L
+        tt = np.minimum(T, 1 - T) * 2
+        H = 45 * (1 - 0.75 * soft(X, 100, 194))
+        Yv = tt * H
+        nz = self.n(X + 50, Yv + 50, 5.0)
+        col, _, occ = plumage(X, Yv, 9, 8, self.GREY * 1.04, self.GREY * 1.08, self.GREY, 0.0, 0.05, nz, shade=0.06)
+        # two black bars across the closed wing: on the greater coverts and on the tertials
+        bars = band(X, 52, 60, 2.0) + band(X, 74, 84, 2.0)
+        col = lerp_col(col, self.BAR, np.clip(bars, 0, 1) * soft(Yv, 6, 12) * 0.9)
+        prim = self.DARK[None, None, :] * (0.95 + 0.1 * nz[..., None])
+        col = lerp_col(col, prim, soft(X, 105, 130))
+        return col, 0.85 + 0.05 * nz, occ
+
+    def open_p(self, S, T):
+        Y, c, Xc, upper = open_coords(self.spec, S, T)
+        nz = self.n(Y + 20, Xc + 20, 6.0)
+        hand = soft(Y, 100, 125)
+        up = self.GREY[None, None, :] * (1 + 0.04 * nz[..., None])
+        # the bars across the inner wing, the primaries and secondaries' dark tips
+        bars = (band(c, 0.42, 0.50, 0.03) + band(c, 0.58, 0.68, 0.03)) * (1 - hand)
+        up = lerp_col(up, self.BAR, np.clip(bars, 0, 1) * 0.9)
+        up = lerp_col(up, self.DARK, np.maximum(hand * soft(c, 0.3, 0.5), soft(c, 0.88, 0.97)))
+        dn = np.broadcast_to(self.WHITE, Y.shape + (3,)).copy()
+        dn = lerp_col(dn, self.DARK * 1.2, np.maximum(soft(c, 0.86, 0.96), hand * soft(c, 0.5, 0.8)) * 0.8)
+        return np.where(upper[..., None], up, dn), 0.85 + 0.05 * nz, np.ones_like(S)
+
+    def tail_p(self, S, T):
+        X = S * 120.0
+        top = T < 0.5
+        a = np.where(top, np.abs(T * 4 - 1), np.abs((T - 0.5) * 4 - 1))
+        nz = self.n(X + 9, a * 40 + 9, 5.0)
+        col = self.DARK[None, None, :] * 1.08 * (1 + 0.04 * nz[..., None])
+        col = lerp_col(col, self.BAR, band(X, 96, 112, 2.0) * 0.95)
+        col = lerp_col(col, self.WHITE, soft(a, 0.85, 0.95) * (1 - soft(X, 95, 100)) * 0.8)      # the outer webs' white edges
+        return col, 0.85 * np.ones_like(S), np.ones_like(S)
+
+    def thigh_p(self, S, T):
+        col = np.broadcast_to(self.GREY, S.shape + (3,)).copy()
+        col = lerp_col(col, self.LEG, soft(S, 0.5, 0.6))
+        return col, 0.85 - 0.3 * soft(S, 0.5, 0.6), np.ones_like(S)
+
+    def horn_p(self, S, T):
+        col = lerp_col(np.broadcast_to(self.CERE, S.shape + (3,)), self.BILL, soft(S, 0.25, 0.4))
+        return col, 0.45 * np.ones_like(S), np.ones_like(S)
+
+    def strap_p(self, S, T):
+        nz = self.n(S * 80 + 3, T * 60 + 3, 2.0)
+        weave = np.abs(((S * 90) % 1.0) - 0.5) < 0.2
+        col = self.STRAP[None, None, :] * (0.92 + 0.08 * nz[..., None]) * (1 - 0.1 * weave[..., None])
+        return col, 0.8 * np.ones_like(S), np.ones_like(S)
+
+    def line_p(self, S, T):
+        return np.broadcast_to(self.LINE, S.shape + (3,)).copy(), 0.25 * np.ones_like(S), np.ones_like(S)
