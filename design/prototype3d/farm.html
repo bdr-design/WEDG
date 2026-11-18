@@ -346,6 +346,18 @@
 } }
 </script>
 <script type="module">
+// The game's rules engine started first, before the page's own script (work started at the page's start is the only
+// that came early: started from it, the engine's worker came at the window's load, 5-6 s in, and the lobby's summary
+// and the clock's hold with it: the review). Its views are kept here until the page connects to them. Without its file
+// (a copy of the page without engine.js) the yard goes on without it.
+const kept = [], away = [];
+let toPage = null, awayToPage = null;
+window.__early = {
+  engine: import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => (toPage ? toPage(snap) : kept.push(snap)), onAway: (m) => (awayToPage ? awayToPage(m) : away.push(m)) })),
+  connect(onSnap, onAway) { toPage = onSnap; awayToPage = onAway; for (const s of kept.splice(0)) onSnap(s); for (const m of away.splice(0)) onAway(m); },
+};
+</script>
+<script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -355,11 +367,6 @@ import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWorld, LAYOUT, PEN_FACILITY, VEHICLES, DECALS, drapeOnTerrain, updateScatter } from './world.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-// the engine first: its script and its worker's ahead of the models and pictures (fetched with them, the 9 KB script
-// waited 4 s behind the 6 MB models on the browser's few connections, and the lobby's summary and the clock's hold
-// came 7 s in: the review). The big fetches wait for it to have started, 4 s at most.
-let engineGo = null;
-const engineFirst = new Promise((r) => { engineGo = r; setTimeout(r, 4000); });
 import { buildTerrain } from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
@@ -737,7 +744,7 @@ function mergeStatic(roots) {
   }
   for (const o of drop) o.removeFromParent();
 }
-const terrainReady = engineFirst.then(() => buildTerrain(scene, renderer, sand)).then((t) => { drapeOnTerrain(t.heightAt); groundAt = t.heightAt; foldDecals(t.mat); return t; });
+const terrainReady = buildTerrain(scene, renderer, sand).then((t) => { drapeOnTerrain(t.heightAt); groundAt = t.heightAt; foldDecals(t.mat); return t; });
 // The yard's blended ground decals (the compound's dirt, the six pen floors) painted inside the terrain's own shader:
 // drawn as their own blended planes, each was a second full lit fragment, with its 17 shadow taps, over ground already
 // shaded (a third of the fragments shaded by the herd on a tile GPU, the review). Each is lit here with the ground's own
@@ -870,7 +877,6 @@ const SPEED = 1.15;            // the walk clip plants each foot and moves it ba
 const LOD_D = [8, 48], LOD_NEAR_OPEN = 16;
 
 async function loadLod(file) {
-  await engineFirst;
   const { glb } = await (await fetch(file)).json();
   const str = atob(glb), bin = new Uint8Array(str.length);
   for (let i = 0; i < str.length; i++) bin[i] = str.charCodeAt(i);          // (a plain loop: Uint8Array.from with a callback took about 0.5 s for the 6.5 MB interior)
@@ -1998,12 +2004,12 @@ $('cam-view').addEventListener('click', () => view(viewKind === 'near' ? 'drone'
 // stand open together (they share the right side)
 const phone = createPhone({ host: root });
 window.__phone = phone;      // (the browser tests open it)
-// the game's rules engine, in its worker (docs/plan-gameplay.md, G2), started at once (the lobby shows the save's farm,
-// day and balance from its first view, and its clock is held there; started after the yard, its worker and the save
-// came 5-6 s into the load: the review). Its views reach the yard once the camels' models are in. The phone's apps
-// show the game from it and send it the player's orders (G3). Without its file (not built) the yard goes on without it.
+// the game's rules engine, in its worker (docs/plan-gameplay.md, G2), started by the small script before this one (see
+// it); its views go to the lobby at once and to the yard once the camels' models are in. The phone's apps show the
+// game from it and send it the player's orders (G3).
 const toYard = (snap) => herdReady.then(() => { phone.setGame(snap); setGame(snap); }, () => {});
-import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => { LOBBY.game(snap); toYard(snap); }, onAway: (m) => phone.onAway(m) })).then((e) => { engineGo(); window.marahEngine = e; phone.setEngine(e); LOBBY.engine(e); if (e.snapshot) { LOBBY.game(e.snapshot); toYard(e.snapshot); } }, (err) => { engineGo(); window.marahEngineError = String(err.message || err); console.warn('engine:', err); LOBBY.engine(null); });      // (imported, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
+window.__early.connect((snap) => { LOBBY.game(snap); toYard(snap); }, (m) => phone.onAway(m));
+window.__early.engine.then((e) => { window.marahEngine = e; phone.setEngine(e); LOBBY.engine(e); if (e.snapshot) { LOBBY.game(e.snapshot); toYard(e.snapshot); } }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); LOBBY.engine(null); });
 $('phone-btn').addEventListener('click', () => { if (phone.state === 'closed') closePop(); phone.toggle(); });
 phone.onChange((state) => { $('phone-btn').setAttribute('aria-pressed', String(state !== 'closed')); document.body.classList.toggle('phone-open', state === 'small'); });
 
@@ -2203,7 +2209,7 @@ const LOBBY = (() => {
     const textures = new Set(), seen = (m) => { for (const k in m) if (m[k] && m[k].isTexture) textures.add(m[k]); if (m.uniforms) for (const k in m.uniforms) { const v = m.uniforms[k] && m.uniforms[k].value; if (v && v.isTexture) textures.add(v); } };
     (function walk(o) { if (unbuilt(o)) return; if (o.material) for (const m of [].concat(o.material)) seen(m); for (const c of o.children) walk(c); })(scene);
     const list = [...textures];
-    for (let i = 0; i < list.length; i += 6) { for (const t of list.slice(i, i + 6)) renderer.initTexture(t); await nextFrame(); }
+    for (let i = 0; i < list.length; i += 6) { for (const t of list.slice(i, i + 6)) renderer.initTexture(t); warmFrac = 0.3 * Math.min(1, (i + 6) / list.length); draw(); await nextFrame(); }
     const hidden = scene.children.filter(unbuilt), shown = [], unculled = [], counts = [];
     scene.traverse((o) => {
       if (!o.visible) { shown.push(o); o.visible = true; }
@@ -2213,7 +2219,8 @@ const LOBBY = (() => {
     warmHold = true;
     try {
       renderer.setRenderTarget(null);
-      for (const o of scene.children) { renderer.compile(o, camera, scene); await nextFrame(); }
+      const kids = [...scene.children];
+      for (let i = 0; i < kids.length; i++) { renderer.compile(kids[i], camera, scene); warmFrac = 0.3 + 0.6 * (i + 1) / kids.length; draw(); await nextFrame(); }
       for (const o of hidden) o.visible = false;
       renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
     } finally {
@@ -2228,10 +2235,12 @@ const LOBBY = (() => {
   let warming = null, again = false;      // (again: the shadows changed while warming: warm once more for the new state)
   function maybeWarm() {
     if (warming || WARM.done || steps.some((x) => x !== WARM && !x.done)) return;
+    warmFrac = 0;
     warming = warmScene().catch((err) => console.warn('lobby: warm', err)).then(() => { warming = null; if (again) { again = false; maybeWarm(); } else done(WARM); });
   }
-  const pct = () => Math.round(100 * steps.reduce((n, x) => n + (x.done ? x.w : 0), 0) / total);
-  const heads = (n) => (n === 1 ? 'راس واحد' : n === 2 ? 'راسين' : n <= 10 ? `${n} روس` : `${n} راس`);
+  let warmFrac = 0;      // (the warm's own share done: the bar moves through it)
+  const pct = () => Math.round(100 * steps.reduce((n, x) => n + (x.done ? x.w : x === WARM ? x.w * Math.min(1, warmFrac) : 0), 0) / total);
+  const heads = (n) => (n === 0 ? 'ما عندك حلال' : n === 1 ? 'راس واحد' : n === 2 ? 'راسين' : n <= 10 ? `${n} روس` : `${n} راس`);
   function draw() {
     const ready = steps.every((x) => x.done), now = steps.find((x) => !x.done), p = pct();
     el('lb-bar').style.width = `${p}%`; el('lb-bar').parentElement.setAttribute('aria-valuenow', String(p));
@@ -2239,6 +2248,7 @@ const LOBBY = (() => {
     el('lb-what').textContent = failed ? 'ما قدرت أحمّل العزبة. حدّث الصفحة.' : now ? `يحمّل: ${now.what}` : 'تحمّل كل شي';
     el('lb-load').hidden = ready;
     const go = el('lb-go'); go.disabled = !ready; go.textContent = ready ? 'كمّل' : 'يحمّل…';
+    el('lb-new').disabled = !!warming;      // (a new game's yard must not come while the warm has things shown: it puts them back after)
     el('lb-farm').innerHTML = G ? `<b>${esc(G.farm.name)}</b><small>${phone.dayLine(G)}</small><small>رصيدك <span class="num">${Math.round(G.cash).toLocaleString('en-US')}</span> ريال · ${heads(G.herd.total)}</small>` : '<b>…</b>';      // (the herd's total: the yard's list stops at 40)
   }
   function card(which) { for (const [id, k] of [['lb-main', 'main'], ['lb-confirm', 'new'], ['lb-set', 'set']]) el(id).hidden = k !== which; }
@@ -2260,6 +2270,7 @@ const LOBBY = (() => {
     try {
       await engine.startOver(G ? { playerName: G.playerName, farmName: G.farm.name, region: G.farm.region } : {});
       await engine.hold(true);
+      LOBBY.rewarm();      // (the new game's yard made ready too)
     } catch (err) { console.warn('lobby: new game', err); }
     b.disabled = false; card('main'); el('lb-go').focus();
   });
@@ -2529,6 +2540,6 @@ function tick(now) {
   if (cpu && meter.ready && now >= meter.ready && !phone.big) { const g = tDraw - tGame, d = performance.now() - tDraw; cpu.game[Math.min(399, Math.round(g * 4))]++; cpu.draw[Math.min(399, Math.round(d * 4))]++; cpu.sg += g; cpu.sd += d; cpu.n++; }      // (not while the enlarged phone stops the drawing)
   requestAnimationFrame(tick);
 }
-tick();
+requestAnimationFrame(tick);      // (the first frame on the next one: drawn inside the page's first task, its shaders froze the lobby a second more)
 addEventListener('resize', () => { renderer.setSize(stage.clientWidth, stage.clientHeight); camera.aspect = stage.clientWidth / stage.clientHeight; camera.updateProjectionMatrix(); if (phone.big && !glLost) renderer.render(scene, camera); });      // (under the enlarged phone nothing else redraws the canvas the resize cleared)
 </script>
