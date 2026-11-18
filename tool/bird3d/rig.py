@@ -405,7 +405,7 @@ class Cord:
         self.p = [V3(start) + V3((0, 0, -self.seg * i)) for i in range(n)]
         self.q = [x.copy() for x in self.p]
 
-    def step(self, anchor, air, dt=1.0 / FPS, sub=4, end=None, keep_out=None):
+    def step(self, anchor, air, dt=1.0 / FPS, sub=4, end=None, keep_out=None, damp=0.92):
         g = V3((0, 0, -9810.0))
         for _ in range(sub):
             h = dt / sub
@@ -413,7 +413,7 @@ class Cord:
             if end is not None:
                 self.p[-1] = V3(end)
             for i in range(1, len(self.p)):
-                v = (self.p[i] - self.q[i]) * 0.92
+                v = (self.p[i] - self.q[i]) * damp
                 self.q[i] = self.p[i].copy()
                 drag = (V3(air) - v / h) * 0.5 * h      # pulled toward moving with the air
                 self.p[i] = self.p[i] + v + (g * h * h) + drag * h * 5
@@ -441,7 +441,8 @@ class Cord:
 
 class BodyKeepOut:
     """Keeps a point (mm, armature space) out of the bird's body: in the body's rest frame, a point inside the section
-    nearest along the body is moved straight down (along the section's -u) to just under its lower edge. The cords
+    nearest along the body is moved out to its edge: under the body's axis along its own line, over it straight down
+    (along the section's -u) to just under the lower edge, never onto her back. The cords
     had no collision: at the cast-off's push they swung up through the torso and stood over her back and before her
     face (the reviews)."""
 
@@ -471,8 +472,12 @@ class BodyKeepOut:
         k = (a / ha) ** 2 + (b / hb) ** 2
         if k >= 1.0:
             return p
-        a2 = -ad * math.sqrt(max(0.0, 1.0 - (b / hb) ** 2)) - self.MARGIN
-        x2 = x + u * (a2 - a)
+        if a < 0:      # under the axis: out along its own direction to the edge (a straight drop left kinks)
+            r = 1.0 / math.sqrt(max(k, 1e-9))
+            a2, b2 = a * r - self.MARGIN * (a / ha) / math.sqrt(max(k, 1e-9)), b * r
+        else:          # over it: straight down to under the lower edge (never out onto her back)
+            a2, b2 = -ad * math.sqrt(max(0.0, 1.0 - (b / hb) ** 2)) - self.MARGIN, b
+        x2 = x + u * (a2 - a) + v * (b2 - b)
         return (self.M @ (V3(tuple(x2)) * MM)) / MM
 
 
@@ -654,7 +659,8 @@ class SakerClips:
               'tail_spread': lerp(1.3, 1.05, ramp(f, 16, 38)), 'jess_hold': f < 20, 'clench': ramp(f, 21, 24),
               'tail_lift': keys(f, [(15, 0), (18, 26), (27, 26), (33, 0)]),      # the tail raised clear of the fist
               'air': V3((-(20000 - (1100 + 5000 * t)) * ramp(f, 20, 32), 0, 0)),      # (from the push: from 24 the cords flicked up over her back as the feet drew up)
-              'settle_to': 'flight', 'settle': ramp(f, 31, 38)}      # the cords' air eased to the flight loop's
+              'settle_to': 'flight', 'settle': ramp(f, 31, 38),      # the cords' air eased to the flight loop's
+              'cord_damp': lerp(0.92, 0.7, ramp(f, 19, 21) * (1 - ramp(f, 26, 30)))}      # (damped while the feet draw up: they flung forward under her face)
         if sp['neck'] is None:
             del sp['neck']
         if f == 14:
@@ -699,7 +705,7 @@ class SakerClips:
         if f < 19:
             # beating down the slope, then the wings held spread on the swoop up (Harris' hawks to a perch:
             # KleinHeerenbrink et al. 2022, Nature, from summaries of it, not opened)
-            fl = self.wings_flap((f / self.beat) % 1.0, amp=36, mean=5)
+            fl = self.wings_flap((f / self.beat) % 1.0, amp=lerp(40, 36, ramp(f, 0, 6)), mean=5)      # (from the flight loop's beat)
             k = ramp(f, 9, 13)
             w = {kk: lerp(fl.get(kk, 0.0), glide.get(kk, 0.0), k) for kk in set(fl) | set(glide)}
         else:
@@ -715,8 +721,15 @@ class SakerClips:
         reach = ramp(f, 16, 24)
         feet = surface if f >= 28 else ('reach', reach)
         sp = {'pitch': pitch, 'yaw': yaw, 'tb': tb_air, 'feet': feet, 'mesh': mesh, 'wing': w,
-              'tail_spread': lerp(1.0, 1.5, brake) if f < 32 else lerp(1.5, 1.0, ramp(f, 32, 42)),
-              'tail_drop': 18 * brake, 'open_toes': reach * (1 - ramp(f, 27, 29))}
+              'tail_spread': lerp(lerp(1.05, 1.0, ramp(f, 0, 8)), 1.5, brake) if f < 32 else lerp(1.5, 1.0, ramp(f, 32, 42)),
+              'tail_drop': 18 * brake, 'open_toes': reach * (1 - ramp(f, 27, 29)),
+              'clench': 1 - ramp(f, 10, 16)}      # clenched as in the flight loop, opening as the legs reach
+        if f < 12:
+            # the cords' wind eased from the flight loop's (20 m/s) to the path's own (about 5.5 m/s here): from the
+            # loop they trailed, then swung forward under her breast as the wind dropped at once
+            v = (self.land_place(f + 1)[0] - tb_air).length * FPS
+            head = Matrix.Rotation(math.radians(yaw), 3, 'Z') @ V3((1, 0, 0))
+            sp['air'] = -head * max(0.0, 20000.0 - v) * (1 - ramp(f, 0, 12))
         if f >= 37:
             sp['fold'] = {kk: v * (1 - ramp(f, 38, 45)) for kk, v in SWAP_FOLD.items()}
         if surface == 'perch':
@@ -845,7 +858,7 @@ HANDOVERS = (('land_perch', 'perch_idle'), ('land_perch', 'perch_hooded'), ('lan
              ('perch_idle', 'rouse'), ('perch_hooded', 'perch_idle'), ('land_cuff', 'hood_on'), ('land_cuff', 'cast_off'),
              ('hood_off', 'cast_off'), ('cast_off', 'flight'), ('flight', 'glide'), ('glide', 'stoop'), ('stoop', 'bind'),
              ('land_cuff', 'fist_idle'), ('fist_idle', 'cast_off'), ('hood_on', 'fist_hooded'), ('fist_hooded', 'hood_off'),
-             ('fist_hooded', 'fist_idle'))
+             ('fist_hooded', 'fist_idle'), ('flight', 'land_cuff'), ('flight', 'land_perch'))
 HOODED_CLIPS = ('perch_hooded', 'fist_hooded')          # drawn with the hood on (the hood itself is game state)
 
 
@@ -1056,7 +1069,7 @@ class Applier:
             if sp.get('jess_take') is not None:      # the falconer's fingers taking the free ends to his fist
                 k = sp['jess_take']
                 hold = self.cords[s].p[-1].lerp(V3(FIST_JESS) * V3((1, side, 1)), k) if k > 0 else None
-            pts = self.cords[s].step(anchor, V3(air) + wob, end=hold, keep_out=self.keep_out)
+            pts = self.cords[s].step(anchor, V3(air) + wob, end=hold, keep_out=self.keep_out, damp=sp.get('cord_damp', 0.92))
             st = sp.get('settle', 0.0)
             key_ = sp.get('settle_to') or (sp['feet'] if isinstance(sp['feet'], str) else None)
             ref = getattr(self.C, 'perch_cords', {}).get(key_)
@@ -1159,17 +1172,29 @@ def build_saker(out, sheets=False):
                 # in the air after another clip (the stoop after the glide, the bind after the stoop): the cords
                 # go on from where that clip left them, carried to the anklet, not settled afresh (a pop of up to
                 # 294 mm at the bind's first frame, the review's hand-over check)
+                A.apply(spec_fn(1), 0, key=False)
+                r1 = A.prev_root.copy()
                 A.apply(spec_fn(0), 0, key=False)
+                r0 = A.prev_root.copy()
+                pbb = A.P.pb['body']
+                M1 = pbb.matrix @ pbb.bone.matrix_local.inverted()
                 for s_ in ('L', 'R'):
-                    a0, p0 = end_cords[prev][s_]
+                    a0, p0, M0 = end_cords[prev][s_]
                     a1 = A.P.head_of(f'jess1.{s_}')
-                    pts = [q + (a1 - a0) for q in p0]
+                    # carried in the body's frame (the landing turns her a quarter on her path: carried as they hung
+                    # in the armature, the cords pointed sideways, a 181 mm gap), then set on the anklet
+                    T = M1 @ M0.inverted()
+                    pts = [(T @ (q * MM)) / MM for q in p0]
+                    pts = [q + (a1 - pts[0]) for q in pts]
                     A.cords[s_].p = [q.copy() for q in pts]
                     A.cords[s_].q = [q.copy() for q in pts]
+                # the first frame already moving at the clip's own speed (from rest the cords had no wind for a frame
+                # and swung forward: the landing's, out of the flight loop)
+                A.prev_root = r0 - (r1 - r0)
             else:
                 for _ in range(20):
                     A.apply(spec_fn(0), 0)
-            A.prev_root = None
+                A.prev_root = None
         frames_mesh[name] = []
         FRAMES_FEET[name] = []
         HIDDEN_FEET[name] = []
@@ -1193,7 +1218,9 @@ def build_saker(out, sheets=False):
             ft = sp['feet']
             HIDDEN_FEET[name].append(not isinstance(ft, str) and ((ft[0] in ('free', 'push') and ft[1] >= 0.999) or (ft[0] == 'reach' and ft[1] <= 0.001)))
         log += [(name,) + e for e in A.log]
-        end_cords[name] = {s_: (A.P.head_of(f'jess1.{s_}'), [q.copy() for q in A.cords[s_].p]) for s_ in ('L', 'R')}
+        pbb = A.P.pb['body']
+        Mb = (pbb.matrix @ pbb.bone.matrix_local.inverted()).copy()
+        end_cords[name] = {s_: (A.P.head_of(f'jess1.{s_}'), [q.copy() for q in A.cords[s_].p], Mb) for s_ in ('L', 'R')}
         act.use_fake_user = True
         arm.animation_data.action = None
         for k, sk in keys_shape.items():
@@ -1676,12 +1703,18 @@ def support_checks(arm, meshes, frames_mesh, name, n, kind):
     return pre, post, tdeep
 
 
-def bone_heads(arm, rel_root=True):
+def bone_heads(arm, rel_root=True, rel_body=False):
     """Every bone's head and tail (mm, armature space), relative to the root bone's head: the pose, wherever the
-    clip has carried the bird."""
+    clip has carried the bird. [rel_body]: in the body's own frame instead (its place and heading taken out)."""
     bpy.context.view_layer.update()
     r = arm.pose.bones['root'].head.copy() if rel_root else V3((0, 0, 0))
     out = {}
+    if rel_body:
+        bb = arm.pose.bones['body']
+        Mi = (bb.matrix @ bb.bone.matrix_local.inverted()).inverted()
+        for b in arm.pose.bones:
+            out[b.name] = ((Mi @ b.head) / MM, (Mi @ b.tail) / MM)
+        return out
     for b in arm.pose.bones:
         out[b.name] = ((b.head - r) / MM, (b.tail - r) / MM)
     return out
@@ -1708,9 +1741,12 @@ def handover_checks(arm, pairs, clips, skip=()):
     for a, b in pairs:
         if a not in clips or b not in clips:
             continue
+        # a landing out of flight: the page sets the landing's path where the bird is and as she heads, so the pose
+        # is held in the body's frame (against the root, the landing's quarter turn read as a 700 mm gap)
+        rb = a in FLYING and b.startswith('land')
         use_clip(arm, a)
         sc.frame_set(clips[a][0] - 1)
-        pa = bone_heads(arm)
+        pa = bone_heads(arm, rel_body=rb)
         use_clip(arm, b)
         nb = clips[b][0]
         # the gap is held against the clip's own steps over its first five frames, not its largest anywhere (a
@@ -1718,7 +1754,7 @@ def handover_checks(arm, pairs, clips, skip=()):
         prev, inner = None, 0.0
         for f in range(min(nb, 5)):
             sc.frame_set(f)
-            p = bone_heads(arm)
+            p = bone_heads(arm, rel_body=rb)
             if f == 0:
                 p0 = p
             if prev is not None:
@@ -2027,16 +2063,21 @@ def jess_checks(arm, clips=('cast_off', 'flight', 'glide', 'stoop', 'land_cuff',
         if name not in CLIPS:
             continue
         use_clip(arm, name)
-        worst, wf = -1e9, None
+        worst, wf, ahead, af = -1e9, None, -1e9, None
         for f in range(CLIPS[name][0]):
             sc.frame_set(f)
             M = (pb['body'].matrix @ pb['body'].bone.matrix_local.inverted()).inverted()
             for s in ('L', 'R'):
+                x0 = (M @ pb[f'jess1.{s}'].head).x / MM
                 for j in range(1, JESS_N + 1):
-                    z = (M @ pb[f'jess{j}.{s}'].tail).z / MM
-                    if z > worst:
-                        worst, wf = z, f
-        print(f'{name}: the jesses\' highest point above the body\'s axis {worst:.0f} mm (frame {wf})')
+                    q = (M @ pb[f'jess{j}.{s}'].tail) / MM
+                    if q.z > worst:
+                        worst, wf = q.z, f
+                    if name != 'cast_off' or f >= 20:      # (held in the falconer's grip before 20)
+                        if q.x - x0 > ahead:
+                            ahead, af = q.x - x0, f
+        print(f'{name}: the jesses\' highest point above the body\'s axis {worst:.0f} mm (frame {wf}); '
+              f'the farthest ahead of the anklet {ahead:.0f} mm (frame {af})')
 
 
 def motion_checks(arm, meshes, frames_mesh, clips, body):

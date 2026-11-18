@@ -386,7 +386,7 @@ the first frame of the clip it hands to, beside the largest step inside that cli
 | wing_up, wing_fore, wing_hand (each side) | 6 | the beat at the shoulder; the flex at the elbow and wrist on the upstroke; the hand's twist |
 | shank, tarsus (each side) | 4 | the legs: reach, push, tuck; the foot planted; the trousers' skirt below the ankle goes with the tarsus (blended from 3 mm above the ankle to 20 mm below), so it covers the tarsus's top however the ankle bends; in the air the toes set where the rig put them before the rest leg moved (the old chain replayed: the shank aimed from its old rest as the body carries it, the tarsus from its old rest; within 3.6 mm of the earlier file in every air frame) |
 | two per toe, four toes (each side) | 16 | each toe lies on the rounded cuff its own way, its talon hooked in |
-| five per jess (each side) | 10 | the jesses sag between the anklet and the fist, swing and trail as soft cords, kept out of the body (a point inside the section nearest it goes straight down to just under it: at the cast-off's push they swung up through the torso, over her back and before her face) |
+| five per jess (each side) | 10 | the jesses sag between the anklet and the fist, swing and trail as soft cords, kept out of the body (a point inside the section nearest it goes out to its edge, under the body: see the measures; at the cast-off's push they swung up through the torso, over her back and before her face) |
 
 The houbara has a three-bone neck and a crest bone, the stone-curlew a two-bone neck; both have three toes (no
 hind toe) and no hood or jesses. At most two bones a vertex.
@@ -454,8 +454,17 @@ reviewer's own tools):
     (`saker_legs_close.jpg`).
   - Left: at the cast-off's push (frames 11-16, planted) one vertex at the tarsus's foot 0.5-0.7 mm inside the cuff's
     leather, as two are on the perch.
-- **The jesses below the body:** the build prints each flying clip's highest jess point above the body's long axis:
-  cast_off -18 mm, flight -40, glide -40, stoop -39, the landings -13 (it was 95-97 mm above at cast_off 27).
+- **The jesses below the body and behind:** the build prints each flying clip's highest jess point above the body's
+  long axis and its farthest ahead of the anklet: cast_off 3 / 4 mm (from frame 20, when the falconer lets them go;
+  damped while the feet draw up), flight -1 / -8, glide -9 / -6, stoop -11 / -9, the landings -2 / 50 (the 50 at
+  contact, frame 28, as she brakes onto the support). It was 95-97 mm above at cast_off 27. The keep-out moves a
+  point under the body's axis out along its own line to the edge, one over it straight down (never onto her back).
+- **Flight into the landings:** checked in the body's frame (the page sets the landing's path where she is and as
+  she heads; the clip turns her a quarter on it): the skeleton 326 mm at the wingtip against the landing's own
+  first steps of 329 (its beat starts on the flight loop's: amplitude 40, phase 0; the toes clenched and the tail
+  as in the loop); the jesses 14 mm against 67 (carried over from the loop in the body's frame, the first frame
+  already at the path's speed, their wind eased from the loop's 20 m/s to the path's own over 12 frames). The
+  landing comes in at about 5.5 m/s: the game's flight path brings her down from the loop's speed before it.
 - **Swaps:** STEP in the file (the build fails otherwise); overlaps as in the table above.
 - **Feet out of sight in flight:** no toe or tarsus vertex outside the body in any saker frame meant drawn up
   (`flight`, `glide`, `stoop`, `cast_off` from 24, the landings until 16). The houbara and the stone-curlew fly
