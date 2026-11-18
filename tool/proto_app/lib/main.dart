@@ -35,7 +35,9 @@ Future<HttpServer> bindServer(SaveFiles saves) async {
 
 Future<void> serve(HttpRequest req, SaveFiles saves) {
   final path = req.uri.path;
-  if (path == '/save' || path.startsWith('/save/')) return saves.handle(req);
+  if (path == '/save' || path.startsWith('/save/') || path == '/settings') {
+    return saves.handle(req);
+  }
   return serveBundled(req);
 }
 
@@ -125,10 +127,14 @@ class _ProtoAppState extends State<ProtoApp> with WidgetsBindingObserver {
     _server = server;
     // #fps shows the frame meter: frames a second and the slowest 1%; a tap
     // on it opens the stutters and the engine's costs. ?save= gives the page
-    // the key to its save.
+    // the key to its save, ?settings= the player's settings as kept (read
+    // before the page makes its renderer: its own storage does not outlive
+    // the launch's port).
+    final kept = _saves.settingsNow();
     await _web.loadRequest(
       Uri.parse(
-        'http://127.0.0.1:${server.port}/index.html?save=${_saves.token}#fps',
+        'http://127.0.0.1:${server.port}/index.html?save=${_saves.token}'
+        '${kept == null ? '' : '&settings=${Uri.encodeQueryComponent(kept)}'}#fps',
       ),
     );
   }

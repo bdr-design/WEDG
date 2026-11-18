@@ -38,6 +38,21 @@ class SaveFiles {
     ].join();
   }
 
+  /// The player's settings (the lobby's: the scale, the shadows), kept apart
+  /// from the save, which a new game deletes: `GET /settings`, `PUT
+  /// /settings` (a JSON object of at most [maxSettingsBytes]). The page's
+  /// origin changes with the server's port at every launch, so its own
+  /// storage does not last: the app gives them in the page's address
+  /// ([settingsNow]).
+  static const settingsFile = 'marah.settings';
+  static const maxSettingsBytes = 4096;
+
+  /// The settings as kept, or null (read when the page's address is made).
+  String? settingsNow() {
+    final f = _file(settingsFile);
+    return f.existsSync() ? f.readAsStringSync() : null;
+  }
+
   /// A key may be a file name and nothing else.
   static bool validKey(String key) => keys.contains(key);
 
@@ -90,6 +105,31 @@ class SaveFiles {
     try {
       if (req.headers.value('x-marah-save') != token) {
         res.statusCode = HttpStatus.forbidden;
+      } else if (req.uri.path == '/settings') {
+        if (req.method == 'GET') {
+          res.headers.contentType = ContentType.json;
+          res.write(settingsNow() ?? '{}');
+        } else if (req.method == 'PUT') {
+          final body = BytesBuilder(copy: false);
+          await for (final chunk in req) {
+            body.add(chunk);
+            if (body.length > maxSettingsBytes) {
+              throw const HttpException('too large');
+            }
+          }
+          final text = utf8.decode(body.takeBytes());
+          if (jsonDecode(text) is! Map)
+            throw const FormatException('not an object');
+          res.statusCode = await _inTurn(() async {
+            await dir.create(recursive: true);
+            final tmp = File('${dir.path}/.$settingsFile.${_n++}.tmp');
+            await tmp.writeAsString(text, flush: true);
+            await tmp.rename(_file(settingsFile).path);
+            return HttpStatus.noContent;
+          });
+        } else {
+          res.statusCode = HttpStatus.methodNotAllowed;
+        }
       } else if (req.uri.path == '/save' && req.method == 'GET') {
         final all = <String, String>{};
         if (await dir.exists()) {
