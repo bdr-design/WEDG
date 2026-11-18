@@ -750,14 +750,20 @@ Result keepBird(Sim sim, PlayerState p, KeepBird cmd) {
   return Ok(sim.drain());
 }
 
-Result releaseFalcon(Sim sim, PlayerState p, ReleaseFalcon cmd) {
-  final f = p.falconry?.falcon(cmd.falcon);
-  if (f == null || !f.keep) return refuse(sim, HuntRefusal.notKept);
+/// Why [f] cannot be set free on [today], or null (the view tells the phone,
+/// which works out no months of its own).
+HuntRefusal? cannotRelease(GameDay today, Falcon? f) {
+  if (f == null || !f.keep) return HuntRefusal.notKept;
   final (fm, fd) = HuntBalance.releaseFrom;
   final (tm, td) = HuntBalance.releaseTo;
-  if (!inSpan(sim.today, fm, fd, tm, td)) {
-    return refuse(sim, HuntRefusal.releaseMonths);
-  }
+  if (!inSpan(today, fm, fd, tm, td)) return HuntRefusal.releaseMonths;
+  return null;
+}
+
+Result releaseFalcon(Sim sim, PlayerState p, ReleaseFalcon cmd) {
+  final f = p.falconry?.falcon(cmd.falcon);
+  final no = cannotRelease(sim.today, f);
+  if (no != null || f == null) return refuse(sim, no ?? HuntRefusal.notKept);
   p.hunt.falcons.remove(f);
   sim.emit(
     FalconFate(

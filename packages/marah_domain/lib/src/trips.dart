@@ -102,9 +102,19 @@ class Trips {
     final p = g.me;
     final h = p.falconry;
     final region = p.farm.region;
-    final gear = kind == TripKind.trapping
-        ? Gear.trapping
-        : const [Gear.supplies, Gear.tracker];
+    // a day's outing needs no supplies; the tracker is each falcon's own,
+    // worn by a ready falcon (none counted as gear since: the card said a
+    // falcon with its tracker lacked one, the review)
+    final gear = [
+      for (final x
+          in kind == TripKind.trapping
+              ? Gear.trapping
+              : const [Gear.supplies, Gear.tracker])
+        if (x != Gear.supplies || nights > 0) x,
+    ];
+    bool has(Gear x) => x == Gear.tracker
+        ? (h?.falcons ?? const <Falcon>[]).any((f) => ready(f) && f.tracker)
+        : (h?.has(x) ?? 0) > 0;
     return {
       'kind': kind.name,
       'ground': ground.name,
@@ -124,11 +134,11 @@ class Trips {
       'pigeons': h?.has(Gear.pigeon) ?? 0,
       'has': [
         for (final x in gear)
-          if ((h?.has(x) ?? 0) > 0) x.label,
+          if (has(x)) x.label,
       ],
       'lacks': [
         for (final x in gear)
-          if ((h?.has(x) ?? 0) == 0) x.label,
+          if (!has(x)) x.label,
       ],
       'supplyDays': h?.has(Gear.supplies) ?? 0,
       'suppliesEnough': nights == 0 || (h?.has(Gear.supplies) ?? 0) >= nights,

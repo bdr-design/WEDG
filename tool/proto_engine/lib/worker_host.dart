@@ -155,7 +155,13 @@ class WorkerHost {
           _reply(id, {
             'ok': r.ok,
             'error': r is Err
-                ? {'code': r.error.code.name, 'params': r.error.params}
+                ? {
+                    'code': r.error.code.name,
+                    'params': r.error.params,
+                    // the hunting season's refusal in the engine's words (the
+                    // phone picks no line of its own by reason)
+                    if (FalconLines.refusal(r.error) case final l?) 'line': l,
+                  }
                 : null,
             'events': [for (final e in r.events) e.toJson()],
           });

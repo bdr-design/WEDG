@@ -80,7 +80,9 @@ Map<String, Object?> falconCatalogOf(GameState state, OwnerId viewer) {
     'room': {
       'price': Facility.falconRoom.price,
       'holds': HuntBalance.roomHolds,
+      'buildDays': Balance.buildDays,
     },
+    'moultMonths': HuntBalance.moultMonths.toList()..sort(),
     'upkeepPerDay': HuntBalance.upkeepPerDay,
     'dauDaysNeeded': HuntBalance.dauDaysNeeded,
     'stepBackDays': HuntBalance.stepBackDays,
@@ -168,9 +170,12 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
           'opens': k.opens(k.seasonFor(today)).value,
           'closes': k.closes(k.seasonFor(today)).value,
           'open': k.seasonOn(today) != null,
-          'held': h?.permits[k],
+          // held for this season only: a season gone by is not held (the
+          // phone kept the first season bought and never sold another)
+          'held': h?.permits[k] == k.seasonFor(today) ? h!.permits[k] : null,
           'valid': h?.holds(k, today) ?? false,
-          'cannot': cannotBuyPermit(sim, p, k)?.params['reason'],
+          // a money refusal has no reason of its own: its code instead
+          'cannot': _why(cannotBuyPermit(sim, p, k)),
         },
     ],
     // (the tracker is each falcon's own: on the falcon below, not a count)
@@ -191,7 +196,7 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
         for (final f in h?.falcons ?? const <Falcon>[])
           if (f.where == FalconWhere.home && f.caredOn != today) f.id.value,
       ],
-      'cannot': noRoomFor(p)?.params['reason'],
+      'cannot': _why(noRoomFor(p)),
     },
     'falcons': [
       for (final f in h?.falcons ?? const <Falcon>[])
@@ -291,6 +296,8 @@ Map<String, Object?> _falcon(
   'taken': {for (final e in f.taken.entries) e.key.label: e.value},
   'where': f.where.name,
   if (f.keep) 'keep': true,
+  // a kept bird: whether it can be set free today (the season's months)
+  if (f.keep) 'releaseCannot': cannotRelease(today, f)?.name,
   'ready': ready(f),
   if (tracked) 'tracker': true,
   if (trackerComing) 'trackerComing': true,
@@ -351,3 +358,6 @@ List<Map<String, Object?>> falconNews(
   }
   return out;
 }
+
+String? _why(DomainError? e) =>
+    e == null ? null : (e.params['reason'] as String?) ?? e.code.name;

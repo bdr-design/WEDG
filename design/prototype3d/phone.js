@@ -1790,12 +1790,11 @@ const fdayShort = (day) => dShortAt(day);
 function fcRefusal(r, command) {
   const code = r.error?.code, p = r.error?.params || {};
   if (code === 'insufficientFunds') return `رصيدك ما يكفي: تبي ${n0(p.needed ?? 0)} ريال من رصيدك.`;
-  if (code === 'inDebt') return `عليك دين ${n0(-G.cash)} ريال: الصقور وعدتها نقد من رصيدك بس.`;
+  if (code === 'inDebt') return `عليك دين ${n0(-G.cash)} ريال: ${{ buyPermit: 'التصريح', orderGear: 'العدة', buyFalcon: 'الصقر' }[command.type] || 'الصقور وعدتها'} نقد من رصيدك بس.`;
   if (code !== 'huntRefused') return command.type === 'buildFacility' ? refusal(r, command) : 'جرّب مرة ثانية.';
-  const L = FC.cat ? FC.cat.lines.refusals : {};
-  const reason = p.reason;
-  if (reason === 'routeClosed') return L[`routeClosed.${p.route}`] || L.routeClosed || 'جرّب مرة ثانية.';
-  if (reason === 'gearFull' && p.room) return `تقدر تطلب ${p.room} بس`;      // (the engine's line with its figure)
+  if (r.error.line) return r.error.line;      // (the engine's own words for this refusal, its figures and nouns in them)
+  const L = FC.cat ? FC.cat.lines.refusals : {}, reason = p.reason;
+  if (reason === 'routeClosed') return L[`routeClosed.${p.route}`] || 'جرّب مرة ثانية.';
   return L[p.kind === 'trapping' ? `${reason}.trapping` : p.lure === 'birdNet' ? `${reason}.birdNet` : reason] || L[reason] || 'جرّب مرة ثانية.';
 }
 const fcNav = (to = '') => nav('', to);
@@ -2038,7 +2037,7 @@ function permitScreen() {
     const P = H.permits.find((p) => p.kind === kind), fee = C.permits.find((p) => p.kind === kind).fee, name = C.permits.find((p) => p.kind === kind).name;
     const state = P.valid ? 'ساري' : P.held != null ? 'عندك' : P.open ? 'ما عندك' : 'مسكّر';
     const key = `permit:${kind}`, sure = HJ.sure === key, can = !P.cannot && !P.valid && P.held == null;
-    const why = P.cannot && P.cannot !== 'permitHeld' ? (C.lines.refusals[P.cannot] || (P.cannot === 'insufficientFunds' ? `رصيدك ما يكفي: ${n0(fee)} ريال` : P.cannot === 'inDebt' ? `عليك دين ${n0(-G.cash)} ريال` : '')) : '';
+    const why = !P.cannot || P.cannot === 'permitHeld' ? '' : P.cannot === 'inDebt' ? `عليك دين ${n0(-G.cash)} ريال: التصريح نقد من رصيدك بس` : P.cannot === 'insufficientFunds' ? `رصيدك ما يكفي: التصريح بـ ${n0(fee)} ريال` : (C.lines.refusals[P.cannot] || '');
     const line = kind === 'hunting' ? `من ${fdayShort(P.opens)} لين ${fdayShort(P.closes)}، بالنهار بس` : `من ${fdayShort(P.opens)} لين ${fdayShort(P.closes)}، بأراضي الطرح بس`;
     const btn = P.valid || P.held != null ? '' : `<button class="btn ${!can ? '' : sure ? 'sure' : 'pri'} wide" style="margin-top:8px" data-act="permit" data-k="${kind}" ${can ? '' : 'disabled'}>${sure ? `اضغط مرة ثانية: تدفع ${n0(fee)} ريال` : `اشتره بـ ${n0(fee)} ريال`}</button>`;
     const kinds = kind === 'hunting'

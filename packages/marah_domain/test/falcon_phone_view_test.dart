@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/src/sim.dart';
+import 'package:marah_domain/src/trips.dart';
 import 'package:test/test.dart';
 
 GameDay d(int y, int m, int day) => GameDay.ofDate(DateTime.utc(y, m, day));
@@ -119,5 +120,61 @@ void main() {
     expect(news(g), hasLength(1));
     g.advanceDays(falconNewsDays + 1);
     expect(news(g), isEmpty);
+  });
+
+  Map<String, Object?> permit(Game g, PermitKind k) =>
+      ((falconFacts(g.state, g.me.id)['permits']! as List).cast<Map>())
+          .singleWhere((p) => p['kind'] == k.name)
+          .cast<String, Object?>();
+
+  test('a permit is held for its season only: a season gone by is not held, '
+      'and the next can be bought', () {
+    final g = gameOn(d(2026, 10, 1));
+    give(g, 100000);
+    expect(g.dispatch(BuyPermit(g.me.id, PermitKind.trapping)).ok, isTrue);
+    expect(permit(g, PermitKind.trapping)['held'], 2026);
+    expect(permit(g, PermitKind.trapping)['cannot'], 'permitHeld');
+    g.advanceDays(d(2027, 1, 20).daysSince(g.today));
+    final p = permit(g, PermitKind.trapping);
+    expect(p['season'], 2027);
+    expect(p['held'], isNull, reason: 'the 2026 permit is not this season\'s');
+    expect(p['cannot'], isNull);
+  });
+
+  test('a permit refused for money says why: its code', () {
+    final g = gameOn(d(2026, 10, 1));
+    give(g, -g.me.cash.value - 500);
+    expect(permit(g, PermitKind.trapping)['cannot'], 'inDebt');
+    give(g, 600);
+    expect(permit(g, PermitKind.trapping)['cannot'], 'insufficientFunds');
+  });
+
+  test('a kept bird says whether it can be set free today', () {
+    final g = gameOn(d(2027, 1, 20));
+    final f = netBird(g)..keep = true;
+    g.me.hunt.held.remove(f);
+    g.me.hunt.falcons.add(f);
+    Map<String, Object?> mine() =>
+        ((falconFacts(g.state, g.me.id)['falcons']! as List).cast<Map>()).single
+            .cast<String, Object?>();
+    expect(mine()['releaseCannot'], 'releaseMonths');
+    g.advanceDays(d(2027, 2, 2).daysSince(g.today));
+    expect(mine().containsKey('releaseCannot'), isTrue);
+    expect(mine()['releaseCannot'], isNull);
+  });
+
+  test('the falconry trip card: a ready falcon\'s own tracker counts; a '
+      'day\'s outing needs no supplies', () {
+    final g = gameOn(d(2026, 10, 1));
+    final f = netBird(g)
+      ..dauDays = HuntBalance.dauDaysNeeded
+      ..tracker = true;
+    g.me.hunt.held.remove(f);
+    g.me.hunt.falcons.add(f);
+    final day = Trips.card(g, TripKind.falconry, Ground.estate, 0);
+    expect(day['lacks'], isEmpty, reason: '${day['lacks']}');
+    expect(day['has'], [Gear.tracker.label]);
+    final camp = Trips.card(g, TripKind.falconry, Ground.estate, 3);
+    expect(camp['lacks'], [Gear.supplies.label]);
   });
 }

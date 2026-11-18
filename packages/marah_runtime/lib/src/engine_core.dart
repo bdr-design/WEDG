@@ -344,9 +344,24 @@ class EngineCore {
     if (no != null) return (run: null, refused: no);
     _cancelAway = false;
     _nextDay?.cancel();
+    // with a trip on, any stretch away watches the camp's stops and counts
+    // the trip's lines too (the calendar jumped from the camp ran its days
+    // and spent its supplies with neither: the review)
+    final onTrip = g.me.falconry?.trip != null;
     final run = AwayRun(
       g,
-      AwayPlan(target, extra: extra, counters: counters, card: card),
+      AwayPlan(
+        target,
+        extra: [
+          ...extra,
+          if (onTrip && !extra.contains(Trips.campStop)) Trips.campStop,
+        ],
+        counters: [
+          ...counters,
+          if (onTrip && !counters.contains(Trips.count)) Trips.count,
+        ],
+        card: card,
+      ),
     );
     final watch = Stopwatch()..start();
     var lastPush = Stopwatch()..start();
