@@ -339,7 +339,9 @@ function makeSky() {
   u.sunPosition.value.copy(sunDir);
   return s;
 }
-scene.add(makeSky());
+// the sky last of the opaque draws (three sorts by material before depth, and the sky, the first material made, was
+// drawn first under everything: shaded where the ground would cover it, the review)
+{ const sky = makeSky(); sky.renderOrder = 2; scene.add(sky); }
 const pmrem = new THREE.PMREMGenerator(renderer);
 const envScene = new THREE.Scene();
 envScene.add(makeSky());
@@ -600,7 +602,7 @@ printMesh.renderOrder = 2; printMesh.frustumCulled = false; scene.add(printMesh)
 const prints = Array.from({ length: PRINTS }, () => ({ age: 999, x: 0, z: 0, h: 0 }));
 const printM = new THREE.Matrix4(), printQ = new THREE.Quaternion(), printP = new THREE.Vector3(), printS = new THREE.Vector3(1, 1, 1), fade = new THREE.Color();
 for (let i = 0; i < PRINTS; i++) { printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); printMesh.setColorAt(i, fade.setScalar(0)); }
-let printNext = 0, printsLive = 0;
+let printNext = 0, printsLive = 0, printTick = 0, printAcc = 0;
 const dustTex = canvasTex(64, 64, (g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 2, w / 2, w / 2, w / 2); gr.addColorStop(0, 'rgba(226,200,160,0.9)'); gr.addColorStop(1, 'rgba(226,200,160,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); });
 // The dust a footfall raises, one draw for all of it: three.js's sprite (its quad, its SpriteMaterial and shader: turned
 // to face the camera, fogged, its colours as before), each puff an instance with its place and size in the instance
@@ -636,6 +638,10 @@ function footfall(pos, heading, near) {
   const i = printNext++ % PRINTS, p = prints[i];
   p.age = 0; printsLive = PRINTS;
   printMesh.setMatrixAt(i, printM.compose(printP.set(pos.x, 0.015, pos.z), printQ.setFromAxisAngle(UPV, heading), printS));
+  // the new print sent on its own (all 260 went up every frame while any print was fresh: the review)
+  printMesh.setColorAt(i, fade.setScalar(0.55));
+  printMesh.instanceMatrix.addUpdateRange(i * 16, 16); printMesh.instanceColor.addUpdateRange(i * 3, 3);
+  printMesh.instanceMatrix.needsUpdate = true; printMesh.instanceColor.needsUpdate = true;
   if (near) { const d = dust[dustNext++ % DUST]; d.x = pos.x; d.z = pos.z; d.live = true; d.age = 0; }
 }
 
@@ -949,6 +955,21 @@ function buildHerd(T) {
   const takeRow = (c) => { let r = 0; while (rowUsed[r]) r++; rowUsed[r] = 1; c.row = r; };      // (there is always one: a row for each camel)
   const freeRow = (c) => { rowUsed[c.row] = 0; c.row = -1; };
   // camel c into draw mi, its frames from A (a typed array, so no number is boxed passing them)
+  const sendRange = (attr, count) => { attr.clearUpdateRanges(); attr.addUpdateRange(0, count); attr.needsUpdate = true; };
+  // the rows of camels posed this frame sent: rows 0 to the highest in use (takeRow takes the lowest free row, so they stay
+  // packed at the top). The whole texture, 64 rows (155,648 bytes), went up on every frame any camel faded, and with 40
+  // camels one nearly always does (the review: 85-100% of frames in every drawing variant). three r170 updates no part
+  // of a texture, so the rows go up by texSubImage2D on the texture three made, bound through three's own state.
+  function sendRows() {
+    const tp = renderer.properties.get(liveTex);
+    if (!tp.__webglTexture) { liveTex.needsUpdate = true; return; }      // (its first upload: three makes it whole)
+    let hi = -1; for (let r = 0; r < rowUsed.length; r++) if (rowUsed[r]) hi = r;
+    if (hi < 0) return;
+    const gl = renderer.getContext();
+    renderer.state.activeTexture(gl.TEXTURE0); renderer.state.bindTexture(gl.TEXTURE_2D, tp.__webglTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, nb * 4, hi + 1, gl.RGBA, gl.FLOAT, live, 0);
+  }
   function put(mi, c) {
     const m = meshes[mi], i = n[mi]++, a = m.userData.anim;
     c.root.matrixWorld.toArray(m.instanceMatrix.array, i * 16);
@@ -979,7 +1000,7 @@ function buildHerd(T) {
         if (c.clipOut) livePose(c, c.row); else bakedPose(c, c.row);
         posed = true;
       }
-      if (posed) liveTex.needsUpdate = true;
+      if (posed) sendRows();
       for (const c of order) {
         if (c.clip !== 'walk' || c.li >= 2 || c.speed <= 0.2) continue;
         for (let f = 0; f < 4; f++) {
@@ -1007,6 +1028,8 @@ function buildHerd(T) {
         const pl = sun.shadow.getFrustum().planes;
         for (let k = 0; k < 6; k++) { SP[k * 4] = pl[k].normal.x; SP[k * 4 + 1] = pl[k].normal.y; SP[k * 4 + 2] = pl[k].normal.z; SP[k * 4 + 3] = pl[k].constant; }
       }
+      // the shadow casters only on the frames the shadow map is drawn (every other one): filled and sent every frame before
+      const shadowNow = renderer.shadowMap.needsUpdate;
       n.fill(0);
       for (const c of order) {
         const s = c.root.scale.x, p = c.root.position, y = p.y + 1.1 * s, r = 2.6 * s;      // (a sphere that covers every pose; the size from the camel's
@@ -1022,14 +1045,16 @@ function buildHerd(T) {
           if (SP[k] * p.x + SP[k + 1] * y + SP[k + 2] * p.z + SP[k + 3] < -r) lit = false;
         }
         if (seen) put(c.li, c);
-        if (lit) put(c.li === 0 ? 3 : 4, c);
+        if (lit && shadowNow) put(c.li === 0 ? 3 : 4, c);
       }
       for (let i = 0; i < meshes.length; i++) {
         const m = meshes[i], g = m.geometry;
+        if (i >= 3 && !shadowNow) continue;      // (kept from the last shadow frame)
         m.count = n[i]; m.visible = n[i] > 0;
         if (!n[i]) continue;
-        m.instanceMatrix.needsUpdate = true; g.attributes.herdAnim.needsUpdate = true;
-        if (m.instanceColor) { m.instanceColor.needsUpdate = true; g.attributes.herdRough.needsUpdate = true; }
+        // only the instances drawn sent (the whole room for 64 went up every frame)
+        sendRange(m.instanceMatrix, n[i] * 16); sendRange(g.attributes.herdAnim, n[i] * 4);
+        if (m.instanceColor) { sendRange(m.instanceColor, n[i] * 3); sendRange(g.attributes.herdRough, n[i]); }
       }
     },
     // under the loading screen: each draw's shader made and its mesh sent to the GPU once (drawn first when the herd came
@@ -1921,7 +1946,16 @@ let shadowFrame = 0;
 // histogram of 0.25 ms steps (the slowest 1% read off it, nothing sorted or made): it used to sort every frame time of
 // the session once a second, which on a phone took a few ms after some minutes and itself made one slow frame a second,
 // near 2% of the frames, so the slowest 1% it showed was partly its own
-const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0 } : null;
+const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0, up: 0, upFrames: 0 } : null;
+// the bytes sent to the GPU each frame, counted for the meter (the herd's uploads were the one cost found only by the
+// herd: the review); two calls wrapped, nothing else, and only with the meter on
+if (meter) {
+  const gl = renderer.getContext(), bsd = gl.bufferSubData.bind(gl), tsi = gl.texSubImage2D.bind(gl);
+  gl.bufferSubData = function (t, off, data, srcOff, len) { meter.up += len !== undefined ? len * (data.BYTES_PER_ELEMENT || 1) : data.byteLength - (srcOff || 0) * (data.BYTES_PER_ELEMENT || 1); return bsd(...arguments); };
+  gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && px.byteLength !== undefined) meter.up += Math.min(px.byteLength, a[4] * a[5] * 16); return tsi(...arguments); };
+  // the meter's own size watched, not read after each rewrite (a forced layout once a second: 0.5-2.4 ms, in the slowest 1%)
+  new ResizeObserver(() => measureHud()).observe(meter.el);
+}
 if (meter) {
   meter.el.hidden = false;
   // the herd's lines in the open meter, on the finger's touch (the meter's text is written again every second: a tap's
@@ -1930,9 +1964,14 @@ if (meter) {
   let lineAt = -1e9;
   meter.el.addEventListener('pointerdown', (e) => {
     const demo = e.target.closest('[data-demo]'), mode = e.target.closest('[data-herd]');
-    if (!demo && !mode) return;
+    const scale = e.target.closest('[data-scale]'), shade = e.target.closest('[data-shadows]');
+    if (!demo && !mode && !scale && !shade) return;
     lineAt = performance.now();
     if (demo) { demoHerd = !demoHerd; syncYard(); refreshLabels(); }
+    // the GPU's test (the review): the picture at 1x instead of 2x, and the shadows off; for this visit only (a reload
+    // brings 2x and the shadows back). If 1x holds 60 by the herd, the GPU's pixel work is the limit
+    if (scale) { renderer.setPixelRatio(renderer.getPixelRatio() > 1 ? 1 : Math.min(devicePixelRatio, 2)); renderer.setSize(stage.clientWidth, stage.clientHeight); }
+    if (shade) { renderer.shadowMap.enabled = !renderer.shadowMap.enabled; scene.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; }); renderer.shadowMap.needsUpdate = true; }
     if (mode && HERD) { HERD.mode = (HERD.mode + 1) % HERD_MODES.length; try { localStorage.setItem('marah.herdMode', String(HERD.mode)); } catch { /* (kept for this visit only) */ } }
     meter.hist.fill(0); meter.n = 0; meter.jank = 0; meter.recent.fill(0); meter.ready = 0;
     cpu.game.fill(0); cpu.draw.fill(0); cpu.n = 0; cpu.sg = 0; cpu.sd = 0; meter.shown = 0;
@@ -1972,7 +2011,7 @@ function meterFrame(now) {
   if (ft > 1000) return;
   const bin = Math.min(399, Math.round(ft * 4));
   meter.hist[bin]++; meter.n++; if (ft > 50) meter.jank++;
-  meter.recent[meter.ri] = ft; meter.ri = (meter.ri + 1) % meter.recent.length;
+  meter.recent[meter.ri] = ft; meter.ri = (meter.ri + 1) % meter.recent.length; meter.upFrames++;
   if (now - meter.shown < 1000) return;
   meter.shown = now;
   // fps over the last 2 s, the slowest 1% of frames, and frames slower than 50 ms (a visible stutter) since start
@@ -1980,6 +2019,8 @@ function meterFrame(now) {
   for (let i = 0; i < meter.recent.length && sum < 2000; i++) { k = (k + meter.recent.length - 1) % meter.recent.length; if (!meter.recent[k]) break; sum += meter.recent[k]; cnt++; }
   const p99 = pct(meter.hist, meter.n, 0.99);
   const secs = Math.round((now - meter.start) / 1000);
+  const upKb = meter.upFrames ? meter.up / meter.upFrames / 1000 : 0; meter.up = 0; meter.upFrames = 0;
+  const line5 = `يرسل للكرت ${upKb < 10 ? upKb.toFixed(1) : Math.round(upKb)} ك.ب باللقطة · ${renderer.info.render.calls} رسمة`;
   const line3 = cpu.n ? `الحساب ${(cpu.sg / cpu.n).toFixed(1)} · تجهيز الرسم ${(cpu.sd / cpu.n).toFixed(1)} م.ث بالمعدل · أبطأ 1٪: ${Math.round(pct(cpu.game, cpu.n, 0.99))} و${Math.round(pct(cpu.draw, cpu.n, 0.99))}` : '';
   // the engine's cost to the page (its own work is on its thread): reading each new view of the game, and the save
   const es = window.marahEngine?.stats;
@@ -1990,7 +2031,7 @@ function meterFrame(now) {
   // save could not be read (the game started over; it is kept as .broken)
   const variant = HERD ? HERD_MODES[HERD.mode] : '';
   if (!meter.el.classList.contains('open')) { meterText(`<b>${fps}</b> · ${Math.round(p99)} م.ث · ${variant}${demoHerd ? ` · <span class="bad">تجربة ${camels.length}</span>` : ''}${bad ? ' <span class="dot">●</span>' : ''}`); return; }
-  meterText(`<b>${fps}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><u data-herd>رسم القطيع: ${variant}</u> · <u data-demo>قطيع تجربة: ${demoHerd ? 'شغّال' : 'طافي'}</u> · ${camels.length} راس<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}${line4 ? '<br>' + line4 : ''}`);
+  meterText(`<b>${fps}</b> لقطة/ث · أبطأ 1٪: ${Math.round(p99)} م.ث<br><u data-herd>رسم القطيع: ${variant}</u> · <u data-demo>قطيع تجربة: ${demoHerd ? 'شغّال' : 'طافي'}</u> · ${camels.length} راس<br><span class="${meter.jank ? 'bad' : ''}">تقطيع: ${meter.jank}</span> · ${secs} ث · ${renderer.domElement.width}×${renderer.domElement.height}<br>${line3}<br>${line5}<br><u data-scale>الدقة ${renderer.getPixelRatio() > 1 ? '2x' : '1x'}</u> · <u data-shadows>الظلال ${renderer.shadowMap.enabled ? 'شغّالة' : 'طافية'}</u>${line4 ? '<br>' + line4 : ''}`);
 }
 // the meter's text, once a second; the pins measured again only when its box changed size (a read of its size a
 // second, no more)
@@ -2012,9 +2053,9 @@ function moneyLine() {
   if (u && S) u.innerHTML = moneyWords(S);
 }
 function meterText(html) {
-  meter.el.innerHTML = html + moneyText();
-  const size = meter.el.offsetWidth + 'x' + meter.el.offsetHeight;
-  if (size !== meter.size) { meter.size = size; measureHud(); }
+  const all = html + moneyText();
+  if (all === meter.html) return;      // (written only when it changed)
+  meter.html = all; meter.el.innerHTML = all;
 }
 function tick(now) {
   if (meter) meterFrame(now);
@@ -2030,9 +2071,14 @@ function tick(now) {
   else if (onGround && groundAt && !playing && ease.k >= 1) { const dy = (groundAt(controls.target.x, controls.target.z) + 1.1 - controls.target.y) * Math.min(1, dt * 4); controls.target.y += dy; camera.position.y += dy; }      // (dragged: the point turned about eases onto the ground under it)
   if (selected && selectedRing) selectedRing.position.set(selected.root.position.x, 0.03, selected.root.position.z);
   if (pop && pop.camel && pop.camel.mode !== popMode) { popMode = pop.camel.mode; const m = $('c-meta'); if (m) m.textContent = metaOf(pop.camel); }      // (only when its state word changes)
-  if (printsLive > 0) {
+  // the prints fade over 70 s, written and sent every 15th frame (every frame, all 260, before: under a level in 255
+  // changes in 15 frames); a new one goes up on its own as it is made (footfall)
+  if (printsLive > 0) printAcc += dt;
+  if (printsLive > 0 && ++printTick >= 15) {
+    const pdt = printAcc; printAcc = 0; printTick = 0;
     let live = 0;
-    for (let i = 0; i < PRINTS; i++) { const p = prints[i]; if (p.age > 70) continue; p.age += dt; live++; printMesh.setColorAt(i, fade.setScalar(0.55 * Math.max(0, 1 - p.age / 70))); if (p.age > 70) printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); }
+    for (let i = 0; i < PRINTS; i++) { const p = prints[i]; if (p.age > 70) continue; p.age += pdt; live++; printMesh.setColorAt(i, fade.setScalar(0.55 * Math.max(0, 1 - p.age / 70))); if (p.age > 70) printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); }
+    printMesh.instanceColor.clearUpdateRanges(); printMesh.instanceMatrix.clearUpdateRanges();      // (the whole buffers this time)
     printMesh.instanceColor.needsUpdate = true; printMesh.instanceMatrix.needsUpdate = true; printsLive = live;
   }
   // the dust: each puff grows, rises and fades over 1.5 s (as each sprite did), the living ones written into the draw
@@ -2051,7 +2097,10 @@ function tick(now) {
       op[n++] = 0.42 * (1 - k);
     }
     dustMesh.count = n; dustMesh.visible = n > 0;
-    if (n) { dustMesh.instanceMatrix.needsUpdate = true; dustOp.needsUpdate = true; }
+    if (n) {      // (the living puffs only: all 90 went up)
+      dustMesh.instanceMatrix.clearUpdateRanges(); dustMesh.instanceMatrix.addUpdateRange(0, n * 16); dustMesh.instanceMatrix.needsUpdate = true;
+      dustOp.clearUpdateRanges(); dustOp.addUpdateRange(0, n); dustOp.needsUpdate = true;
+    }
   }
   if (ease.k < 1 && !playing) {
     ease.k = Math.min(1, ease.k + dt / EASE_S);

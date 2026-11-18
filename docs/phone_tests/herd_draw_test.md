@@ -33,6 +33,7 @@ owner's iPhone with the page's frame meter, which the app always shows. The labe
    - «N لقطة/ث · أبطأ 1٪: N م.ث»
    - «تقطيع: N»
    - «الحساب X · تجهيز الرسم Y م.ث بالمعدل · أبطأ 1٪: a وb»
+   - «يرسل للكرت N ك.ب باللقطة · N رسمة»
 
    وإذا حسّيت إن الجوال حمي، أو شفت تقطيع، أو إن وحدة من الطرق شكل النوق فيها غريب، قل لنا.
 8. **إذا خلصت:** افتح العداد واضغط «قطيع تجربة: شغّال» لين يرجع «طافي» (أو سكّر اللعبة وافتحها). خل «رسم القطيع» على
@@ -56,7 +57,7 @@ over 50 ms («تقطيع»). The CPU line splits the frame into the game's compu
 - **0 مزج إطارين** (as built: two baked frames blended in the shader, 32 texture reads a vertex). If its slowest 1% is
   within about 1 ms of the other two in both views, the vertex fetches cost nothing on his phone: keep 0.
 - **1 أقرب إطار** (16 reads a vertex; the pose steps at 60 frames a second, up to 8 ms of a clip off) and
-  **2 كلها بالمعالج** (16 reads a vertex; every camel posed on the CPU, about 97 kB sent to the GPU a frame). If either
+  **2 كلها بالمعالج** (16 reads a vertex; every camel posed on the CPU, 97,280 bytes sent to the GPU a frame for 40 camels; since 18 Nov variants 0 and 1 send only the fading camels' rows, a few kB). If either
   is clearly smoother than 0 (a lower slowest 1%, fewer stutters, the frame rate held at 60 where 0 drops), the
   vertex fetches are the cost. Prefer 2, because its poses are exact. Choose 1 instead if 2's الحساب or تجهيز الرسم
   rises by more than it saves.

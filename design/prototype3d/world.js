@@ -152,12 +152,22 @@ function scatterCells(geo, mat, items, { cell = 25, bands, cast = false, receive
   for (const list of buckets.values()) {
     // shuffle so that any prefix is an even sample of the cell
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
-    const m = new THREE.InstancedMesh(geo, mat, list.length);
+    // its own geometry object over the shared buffers: three keys its vertex arrays by geometry, and the cells sharing one
+    // set every attribute up again at each cell's draw (vertexAttribPointer and bindBuffer: 60% of the frame's WebGL calls
+    // by the herd, the review); the GPU buffers stay shared
+    const cg = new THREE.BufferGeometry();
+    for (const k in geo.attributes) cg.setAttribute(k, geo.attributes[k]);
+    cg.setIndex(geo.index);
+    for (const gr of geo.groups) cg.addGroup(gr.start, gr.count, gr.materialIndex);
+    if (geo.boundingSphere) cg.boundingSphere = geo.boundingSphere.clone();
+    if (geo.boundingBox) cg.boundingBox = geo.boundingBox.clone();
+    const m = new THREE.InstancedMesh(cg, mat, list.length);
     let cx = 0, cz = 0;
     list.forEach((it, i) => { m.setMatrixAt(i, it.m); if (it.c) m.setColorAt(i, it.c); cx += it.x; cz += it.z; });
     cx /= list.length; cz /= list.length;
     let r = 0; for (const it of list) r = Math.max(r, Math.hypot(it.x - cx, it.z - cz));
     m.castShadow = cast; m.receiveShadow = receive;
+    if (mat.alphaTest) m.renderOrder = 1;      // (alpha-tested cards after the opaque pieces: the sky was shaded under them first)
     m.computeBoundingSphere();
     group.add(m);
     SCATTER.push({ m, n: list.length, x: cx, z: cz, r, bands, cast });
@@ -230,6 +240,8 @@ export function buildWorld(scene, renderer, sandTex) {
   const aniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
   sandTex.anisotropy = aniso;
   const metal = new THREE.MeshStandardMaterial({ color: '#aeb2b4', metalness: 0.85, roughness: 0.38 });
+  let metalCopy = null;
+  const metalInst = () => metalCopy || (metalCopy = metal.clone());
 
   // ---------- ground: near detailed patch with colour variation, far dunes
   const tint = (x, z) => {
@@ -363,14 +375,19 @@ export function buildWorld(scene, renderer, sandTex) {
     posts = []; rails = []; panels = [];
     penFence(p, 2);
     FAC = PEN_FACILITY[key];
-    const pm = new THREE.InstancedMesh(pg, metal, posts.length); posts.forEach((p, i) => pm.setMatrixAt(i, M4().makeTranslation(p.x, 0, p.z)));
+    // the instanced pieces their own copy of the metal (one material used by instanced and plain meshes both had three make
+    // its program again at every switch between them: twice a frame by the pens, the review)
+    const metalI = metalInst();
+    const pm = new THREE.InstancedMesh(pg, metalI, posts.length); posts.forEach((p, i) => pm.setMatrixAt(i, M4().makeTranslation(p.x, 0, p.z)));
     pm.castShadow = true; add(pm);
-    const rm = new THREE.InstancedMesh(rg, metal, rails.length);
+    const rm = new THREE.InstancedMesh(rg, metalI, rails.length);
     rails.forEach(([a, b], i) => { const d = b.clone().sub(a); rm.setMatrixAt(i, M4().compose(a.clone().add(b).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize()), V(1, d.length(), 1))); });
     rm.castShadow = true; add(rm);
     const plm = new THREE.InstancedMesh(plg, panelMat, panels.length);
     panels.forEach(([a, b], i) => { const d = b.clone().sub(a); plm.setMatrixAt(i, M4().compose(a.clone().add(b).multiplyScalar(0.5).setY(0.2), new THREE.Quaternion().setFromAxisAngle(UP, Math.atan2(d.x, d.z) - Math.PI / 2), V(d.length(), 1.55, 1))); });
-    plm.castShadow = true; add(plm);
+    // drawn after the opaque pieces (alpha-tested: the GPU shaded the sky under them first); no shadow of their own (the
+    // shadow kept 63 texels of 35,600 drawn: 6 shadow draws, the review)
+    plm.renderOrder = 1; plm.castShadow = false; add(plm);
   }
   FAC = null;
   // feeding troughs (concrete) with alfalfa along the south fence of the big pens
@@ -676,7 +693,7 @@ export function buildWorld(scene, renderer, sandTex) {
     const cm = new THREE.InstancedMesh(cg, new THREE.MeshStandardMaterial({ map: tt, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1 }), clumps.length * 2), col = new THREE.Color();
     let ci = 0;
     clumps.forEach(([c, s]) => { for (let r = 0; r < 2; r++) { cm.setMatrixAt(ci, M4().compose(c.clone().add(V(R(-0.3, 0.3), R(-0.2, 0.3), R(-0.3, 0.3))), new THREE.Quaternion().setFromEuler(new THREE.Euler(R(-0.15, 0.15), R(0, 6.28), R(-0.15, 0.15))), V(s * 1.15, s * 1.1, s * 1.15))); cm.setColorAt(ci++, col.setHSL(0.24 + R(-0.03, 0.03), 0.12, 0.62 + R(-0.06, 0.06))); } });
-    cm.castShadow = cm.receiveShadow = true; add(cm);
+    cm.castShadow = cm.receiveShadow = true; cm.renderOrder = 1; add(cm);      // (alpha-tested: after the opaque pieces)
   }
   // ---------- grass after the Wasm rain, shrubs, stones
   {

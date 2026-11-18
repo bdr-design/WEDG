@@ -56,10 +56,12 @@ export async function buildTerrain(scene, renderer, sandTex) {
   // three rings, each tucked a few metres under the finer one inside it (about 73k triangles in all):
   // 4 x 4 km around the yard at 50 m, 12 x 12 km at 100 m (Aban al-Asmar), the whole 70 km area at about 550 m
   const inside = (r) => (x, z) => (Math.abs(x) < r && Math.abs(z) < r ? 6 : 0);
-  grid(-2000, 2000, -2000, 2000, 80, 80);
+  // drawn near to far (the depth key was each ring's centre, the same for all three, so the coarse rings went first and the
+  // ground was shaded up to twice over on GPUs that do not sort it themselves: the review)
+  grid(-2000, 2000, -2000, 2000, 80, 80).renderOrder = 0;
   // sink every coarse vertex inside the finer ring (its edge vertices included), so no band of the
   // two surfaces lies at the same height and flickers
-  grid(-6000, 6000, -6000, 6000, 120, 120, inside(1999));
-  grid(meta.xWest, meta.xEast, meta.zNorth, meta.zSouth, 128, 121, inside(5999));
+  grid(-6000, 6000, -6000, 6000, 120, 120, inside(1999)).renderOrder = 0.1;
+  grid(meta.xWest, meta.xEast, meta.zNorth, meta.zSouth, 128, 121, inside(5999)).renderOrder = 0.2;
   return { meta, heightAt };
 }

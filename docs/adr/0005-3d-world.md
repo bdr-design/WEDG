@@ -695,7 +695,7 @@ the closed meter names the variant.
 - أقرب إطار (1): the nearest baked frame only (16 texels a vertex; the pose
   steps at 60 frames a second, up to 8 ms of a clip off).
 - كلها بالمعالج (2): every camel posed on the CPU into its own row each frame
-  (16 texels a vertex, about 97 kB sent to the GPU a frame for 40 camels, about
+  (16 texels a vertex, 97,280 bytes sent to the GPU a frame for 40 camels (40 rows), about
   0.1-0.2 ms of JavaScript here). It allocates nothing either.
 
 **Still over (the owner's decisions):**
@@ -826,3 +826,41 @@ The spike is a throwaway app, outside the repo. It must show:
 - **AI-made quadruped rigs may move badly:** mitigated by piloting one
   camel first. Simple clips (graze, couch) can be keyed by script on the
   rig if the tools lack them.
+
+## Measured again (prototype, 2026-11-18): the frame's calls and uploads by the herd
+
+Two reviews before the fix (the GPU's side and the CPU's) found the herd's frame making 750-800 WebGL calls (the car by
+the pens 1,340), not the 450-680 of 12 Nov, and sending about 170-190 kB to the GPU every frame, the one cost found only
+by the herd. On WebKit each call and each upload goes through its GPU process.
+
+- **The bone rows.** The whole texture of camels' own rows (64 rows, 155,648 bytes) went up on every frame any camel
+  faded, and with 40 camels one nearly always does: so every drawing variant sent it, not only the CPU one (the phone
+  test as written could not tell the variants apart). Now only rows 0 to the highest in use go up (three r170 updates no
+  part of a texture: a texSubImage2D on three's own texture, bound through three's state).
+- **The instances.** The herd's instance buffers went up at their room of 64, and the shadow casters' every frame though
+  the shadow map is drawn every other one: now the instances drawn only, and the casters on the shadow's frames. The dust:
+  the living puffs only. The footprints: all 260 went up every frame while one was fresh; now each new print goes up as
+  it is made and the fade is written every 15th frame (under a level in 255 changes in 15 frames).
+- **The vertex arrays.** 194 instanced cells (grass, bushes, stones) shared 9 geometries, and three keys its vertex arrays
+  by geometry: every cell's draw set its attributes up again (60% of the frame's calls). Each cell now has its own
+  geometry object over the same GPU buffers.
+- **A program made twice a frame.** The pens' instanced posts and rails shared the galvanised metal with plain meshes;
+  they have their own copy.
+- **The order.** The sky last of the opaque draws (it was first, shaded under everything), the alpha-tested cards after
+  the opaque pieces, the ground rings near to far; the pen panels cast no shadow (63 texels kept of 35,600 drawn).
+- **The meter** writes its text only when it changed and watches its size (a forced layout once a second, in the slowest
+  1%), and shows the bytes sent to the GPU a frame and the frame's draws, and two switches for the GPU's test: the
+  picture at 1x and the shadows off, for the visit.
+
+Measured here (WebGL calls a frame, test herd of 40, variant 0; bytes a frame):
+
+| Shot | Calls | Bone rows | Buffers |
+|---|---|---|---|
+| Over the pens | 802 -> 360 | 155,648 -> 8,674 | 29,513 -> 5,455 |
+| Walking by the pens | 746 -> 325 | 103,765 -> 12,474 | 34,584 -> 12,322 |
+| In the car by the pens | 1,339 -> 871 | 93,389 -> 1,378 | 43,288 -> 9,705 |
+
+The CPU variant now sends 97,280 bytes a frame (40 rows). Left for the owner's eye, with pictures: folding the blended
+ground decals (the yard's dirt and the pen floors, a third of the fragments shaded by the herd on a tile GPU) into the
+terrain's shader, and the shadows' 17 taps as four hardware-compared ones.
+
