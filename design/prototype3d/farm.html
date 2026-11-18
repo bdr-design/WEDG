@@ -2428,9 +2428,9 @@ function meterText(html) {
   if (all === meter.html) return;      // (written only when it changed)
   meter.html = all; meter.el.innerHTML = all;
 }
-let warmHold = false;      // (the lobby's warm under way: the frame stands still)
+let warmHold = false, startHold = false;      // (the lobby's warm, or the first frame's programs, under way: the frame stands still)
 function tick(now) {
-  if (warmHold) { requestAnimationFrame(tick); return; }
+  if (warmHold || startHold) { requestAnimationFrame(tick); return; }
   if (meter) { meterFrame(now); renderer.info.reset(); }      // (the frame's draws counted over both passes: three resets them at each render, the shadow pass's left out)
   const tGame = cpu ? performance.now() : 0;
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -2540,6 +2540,13 @@ function tick(now) {
   if (cpu && meter.ready && now >= meter.ready && !phone.big) { const g = tDraw - tGame, d = performance.now() - tDraw; cpu.game[Math.min(399, Math.round(g * 4))]++; cpu.draw[Math.min(399, Math.round(d * 4))]++; cpu.sg += g; cpu.sd += d; cpu.n++; }      // (not while the enlarged phone stops the drawing)
   requestAnimationFrame(tick);
 }
-requestAnimationFrame(tick);      // (the first frame on the next one: drawn inside the page's first task, its shaders froze the lobby a second more)
+// the first frame's programs made a top-level object a frame before it is drawn (made by the first frame in one task,
+// 1.5 s froze the lobby: the review), then the frames run
+(async () => {
+  startHold = true;
+  try { for (const o of [...scene.children]) { renderer.compile(o, camera, scene); await new Promise((r) => requestAnimationFrame(r)); } } catch (err) { console.warn('first frame:', err); }
+  startHold = false;
+})();
+requestAnimationFrame(tick);
 addEventListener('resize', () => { renderer.setSize(stage.clientWidth, stage.clientHeight); camera.aspect = stage.clientWidth / stage.clientHeight; camera.updateProjectionMatrix(); if (phone.big && !glLost) renderer.render(scene, camera); });      // (under the enlarged phone nothing else redraws the canvas the resize cleared)
 </script>
