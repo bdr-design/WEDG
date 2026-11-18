@@ -7,14 +7,20 @@ import 'package:marah_proto/main.dart';
 void main() {
   test('module scripts get a JavaScript type', () {
     expect(contentTypeFor('assets/web/play.js').mimeType, 'text/javascript');
-    expect(contentTypeFor('assets/web/index.html').mimeType, ContentType.html.mimeType);
+    expect(
+      contentTypeFor('assets/web/index.html').mimeType,
+      ContentType.html.mimeType,
+    );
     expect(contentTypeFor('assets/web/lod0.json').mimeType, 'application/json');
     expect(contentTypeFor('assets/web/fonts/a.woff2').mimeType, 'font/woff2');
     expect(contentTypeFor('assets/web/fonts/OFL-x.txt').mimeType, 'text/plain');
   });
   test('only files inside the bundle are served', () {
     expect(assetFor('/'), 'assets/web/index.html');
-    expect(assetFor('/three/build/three.module.js'), 'assets/web/three/build/three.module.js');
+    expect(
+      assetFor('/three/build/three.module.js'),
+      'assets/web/three/build/three.module.js',
+    );
     expect(assetFor('/../pubspec.yaml'), isNull);
     expect(assetFor('/phone/../../x'), isNull);
   });
@@ -28,7 +34,14 @@ Future<(HttpServer, SaveFiles, Directory)> saveServer() async {
   return (await bindServer(saves), saves, dir);
 }
 
-Future<(int, String)> call(HttpServer s, String method, String path, {String? token, List<int>? body, String? stamp}) async {
+Future<(int, String)> call(
+  HttpServer s,
+  String method,
+  String path, {
+  String? token,
+  List<int>? body,
+  String? stamp,
+}) async {
   final client = HttpClient();
   try {
     final req = await client.open(method, '127.0.0.1', s.port, path);
@@ -53,16 +66,49 @@ void saveTests() {
     expect(t, hasLength(32));
     expect(await call(s, 'GET', '/save', token: t), (200, '{}'));
     final text = '{"مراح":"${'x' * 300000}"}';
-    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode(text), stamp: 'E:1')).$1, 204);
-    expect((await call(s, 'PUT', '/save/marah.save.prev', token: t, body: utf8.encode('old'), stamp: 'E:1')).$1, 204);
+    expect(
+      (await call(
+        s,
+        'PUT',
+        '/save/marah.save',
+        token: t,
+        body: utf8.encode(text),
+        stamp: 'E:1',
+      )).$1,
+      204,
+    );
+    expect(
+      (await call(
+        s,
+        'PUT',
+        '/save/marah.save.prev',
+        token: t,
+        body: utf8.encode('old'),
+        stamp: 'E:1',
+      )).$1,
+      204,
+    );
     final (code, all) = await call(s, 'GET', '/save', token: t);
     expect(code, 200);
     expect(jsonDecode(all), {'marah.save': text, 'marah.save.prev': 'old'});
-    expect((await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'E:2')).$1, 204);
-    expect((await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'E:3')).$1, 204);
-    expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), {'marah.save.prev': 'old'});
+    expect(
+      (await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'E:2')).$1,
+      204,
+    );
+    expect(
+      (await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'E:3')).$1,
+      204,
+    );
+    expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), {
+      'marah.save.prev': 'old',
+    });
     // nothing half-written left behind
-    expect(Directory('${dir.path}/Documents/marah').listSync().map((f) => f.uri.pathSegments.last), ['marah.save.prev']);
+    expect(
+      Directory('${dir.path}/Documents/marah')
+          .listSync()
+          .map((f) => f.uri.pathSegments.last),
+      ['marah.save.prev'],
+    );
   });
 
   test('the save: only with the token, only plain keys, only text', () async {
@@ -75,14 +121,56 @@ void saveTests() {
     expect((await call(s, 'GET', '/save')).$1, 403);
     expect((await call(s, 'GET', '/save', token: 'nope')).$1, 403);
     expect((await call(s, 'PUT', '/save/marah.save', body: [65])).$1, 403);
-    for (final bad in ['/save/..%2Fx', '/save/.hidden', '/save/a%2Fb', '/save/', '/save/%FF', '/save/index.html', '/save/x1']) {
-      final (code, _) = await call(s, 'PUT', bad, token: t, body: [65], stamp: 'E:1');
+    for (final bad in [
+      '/save/..%2Fx',
+      '/save/.hidden',
+      '/save/a%2Fb',
+      '/save/',
+      '/save/%FF',
+      '/save/index.html',
+      '/save/x1',
+    ]) {
+      final (code, _) = await call(
+        s,
+        'PUT',
+        bad,
+        token: t,
+        body: [65],
+        stamp: 'E:1',
+      );
       expect(code, anyOf(400, 500), reason: bad);
     }
-    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: [0xFF, 0xFE], stamp: 'E:1')).$1, 500);
-    expect((await call(s, 'POST', '/save/marah.save', token: t, body: [65], stamp: 'E:1')).$1, 405);
+    expect(
+      (await call(
+        s,
+        'PUT',
+        '/save/marah.save',
+        token: t,
+        body: [0xFF, 0xFE],
+        stamp: 'E:1',
+      )).$1,
+      500,
+    );
+    expect(
+      (await call(
+        s,
+        'POST',
+        '/save/marah.save',
+        token: t,
+        body: [65],
+        stamp: 'E:1',
+      )).$1,
+      405,
+    );
     expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), isEmpty);
-    expect(Directory('${dir.path}/Documents/marah').existsSync() ? Directory('${dir.path}/Documents/marah').listSync().where((f) => !f.uri.pathSegments.last.endsWith('.tmp')) : const [], isEmpty);
+    expect(
+      Directory('${dir.path}/Documents/marah').existsSync()
+          ? Directory('${dir.path}/Documents/marah')
+                .listSync()
+                .where((f) => !f.uri.pathSegments.last.endsWith('.tmp'))
+          : const [],
+      isEmpty,
+    );
     expect(SaveFiles.validKey('marah.save.broken'), isTrue);
     expect(SaveFiles.validKey('../marah'), isFalse);
     expect(SaveFiles.validKey('a..b'), isFalse);
@@ -90,7 +178,17 @@ void saveTests() {
     // more than a save may hold is refused, and nothing is left behind
     // (answered 500 while the body is still coming, or the connection cut: either way not kept)
     try {
-      expect((await call(s, 'PUT', '/save/marah.save', token: t, body: List.filled(SaveFiles.maxBytes + 1, 65), stamp: 'E:1')).$1, 500);
+      expect(
+        (await call(
+          s,
+          'PUT',
+          '/save/marah.save',
+          token: t,
+          body: List.filled(SaveFiles.maxBytes + 1, 65),
+          stamp: 'E:1',
+        )).$1,
+        500,
+      );
     } on HttpException {
       // the server stopped reading
     } on SocketException {
@@ -99,37 +197,134 @@ void saveTests() {
     expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), isEmpty);
   });
 
-  test('the save: a write older than one applied never lands over it', () async {
+  test(
+    'the save: a write older than one applied never lands over it',
+    () async {
+      final (s, saves, dir) = await saveServer();
+      addTearDown(() async {
+        await s.close(force: true);
+        await dir.delete(recursive: true);
+      });
+      final t = saves.token;
+      Future<int> put(String text, String stamp) async => (await call(
+        s,
+        'PUT',
+        '/save/marah.save',
+        token: t,
+        body: utf8.encode(text),
+        stamp: stamp,
+      )).$1;
+      Future<String?> saved() async =>
+          (jsonDecode((await call(s, 'GET', '/save', token: t)).$2)
+                  as Map)['marah.save']
+              as String?;
+      expect(await put('a2', 'A:2'), 204);
+      // the engine gave up on its write 1, which arrives late
+      expect(await put('a1', 'A:1'), 409);
+      expect(await saved(), 'a2');
+      expect(await put('a3', 'A:3'), 204);
+      // the next engine opens the save and writes: the first one's late writes are refused for good
+      expect(await put('b1', 'B:1'), 204);
+      expect(await put('a9', 'A:9'), 409);
+      expect(await saved(), 'b1');
+      expect(
+        (await call(
+          s,
+          'DELETE',
+          '/save/marah.save',
+          token: t,
+          stamp: 'A:10',
+        )).$1,
+        409,
+      );
+      expect(await saved(), 'b1');
+      // malformed or missing numbers are refused, and change nothing: the engine writing goes on
+      expect(await put('x', 'nonsense'), 409);
+      expect(await put('u', 'B'), 409);
+      expect(await put('c', 'C:-1'), 409);
+      expect(await put('c', 'C:0'), 409);
+      expect(
+        (await call(
+          s,
+          'PUT',
+          '/save/marah.save',
+          token: t,
+          body: utf8.encode('plain'),
+        )).$1,
+        409,
+      );
+      expect(await put('b2', 'B:2'), 204);
+      expect(await saved(), 'b2');
+    },
+  );
+
+  test('the settings: kept apart from the save, only with the token, only a small object', () async {
     final (s, saves, dir) = await saveServer();
     addTearDown(() async {
       await s.close(force: true);
       await dir.delete(recursive: true);
     });
     final t = saves.token;
-    Future<int> put(String text, String stamp) async =>
-        (await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode(text), stamp: stamp)).$1;
-    Future<String?> saved() async => (jsonDecode((await call(s, 'GET', '/save', token: t)).$2) as Map)['marah.save'] as String?;
-    expect(await put('a2', 'A:2'), 204);
-    // the engine gave up on its write 1, which arrives late
-    expect(await put('a1', 'A:1'), 409);
-    expect(await saved(), 'a2');
-    expect(await put('a3', 'A:3'), 204);
-    // the next engine opens the save and writes: the first one's late writes are refused for good
-    expect(await put('b1', 'B:1'), 204);
-    expect(await put('a9', 'A:9'), 409);
-    expect(await saved(), 'b1');
-    expect((await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'A:10')).$1, 409);
-    expect(await saved(), 'b1');
-    // malformed or missing numbers are refused, and change nothing: the engine writing goes on
-    expect(await put('x', 'nonsense'), 409);
-    expect(await put('u', 'B'), 409);
-    expect(await put('c', 'C:-1'), 409);
-    expect(await put('c', 'C:0'), 409);
-    expect((await call(s, 'PUT', '/save/marah.save', token: t, body: utf8.encode('plain'))).$1, 409);
-    expect(await put('b2', 'B:2'), 204);
-    expect(await saved(), 'b2');
+    expect(await call(s, 'GET', '/settings', token: t), (200, '{}'));
+    expect(saves.settingsNow(), isNull);
+    expect(
+      (await call(
+        s,
+        'PUT',
+        '/settings',
+        token: t,
+        body: utf8.encode('{"scale":1,"shadows":0}'),
+      )).$1,
+      204,
+    );
+    expect(await call(s, 'GET', '/settings', token: t), (
+      200,
+      '{"scale":1,"shadows":0}',
+    ));
+    expect(saves.settingsNow(), '{"scale":1,"shadows":0}');
+    expect(
+      (await call(s, 'PUT', '/settings', body: utf8.encode('{}'))).$1,
+      403,
+    );
+    expect(
+      (await call(
+        s,
+        'PUT',
+        '/settings',
+        token: t,
+        body: utf8.encode('[1]'),
+      )).$1,
+      500,
+    );
+    expect(
+      (await call(
+        s,
+        'PUT',
+        '/settings',
+        token: t,
+        body: utf8.encode('{"x":"${'y' * 5000}"}'),
+      )).$1,
+      500,
+    );
+    // a new game deletes the save, not the settings
+    expect(
+      (await call(
+        s,
+        'PUT',
+        '/save/marah.save',
+        token: t,
+        body: utf8.encode('g'),
+        stamp: 'E:1',
+      )).$1,
+      204,
+    );
+    expect(
+      (await call(s, 'DELETE', '/save/marah.save', token: t, stamp: 'E:2')).$1,
+      204,
+    );
+    expect(saves.settingsNow(), '{"scale":1,"shadows":0}');
+    expect(jsonDecode((await call(s, 'GET', '/save', token: t)).$2), isEmpty);
   });
-
   test('the bundle is still served beside the save', () async {
     final (s, _, dir) = await saveServer();
     addTearDown(() async {

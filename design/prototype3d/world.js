@@ -55,6 +55,22 @@ function cardCluster(w, h, n = 3, upNormals = true, shape = null) {
 // for the same two triangles, and by the herd the GPU shades 37-38% fewer grass fragments; of those it kept, all but a
 // few thousandths of a percent at the cards' edges are kept still, none of it to be seen: the review.) The hull of the kept texels is cut from the square by every choice of up to four of its
 // edges, and the smallest result with at most four corners is kept.
+// fitCard's answers, worked out once: the cards' textures are drawn from the seeded random numbers, so the answer is the
+// same at every load, and working it out took 1.5 s of the page's first task (the lobby's review). Keyed by the card,
+// with the texture's size and the cut it was made for; a texture changed in size or cut is worked out again, and
+// ?refit in the address works them all out and prints them (to copy here).
+const FIT_KEPT = {
+  tamarisk: {"w":256,"h":256,"cut":0.35,"uv":[[0.9302668766149871,0.9243237241602067],[0.03975366550695825,0.9316833374751491],[0.063340585443038,0],[0.988037109375,0]]},
+  grass: {"w":128,"h":128,"cut":0.4,"uv":[[0.8984375,0.9005489864864865],[0.004027399413243913,0.7675961336965633],[0.317125822368421,0],[0.8984375,0]]},
+  bush: {"w":256,"h":256,"cut":0.4,"uv":[[0.1015625,0.6478794642857142],[0.1015625,0],[1,0],[1,0.7762276785714286]]},
+};
+function fitKept(name, canvas, cut) {
+  const k = FIT_KEPT[name], refit = typeof location !== 'undefined' && /[?&]refit\b/.test(location.search);
+  if (k && !refit && k.w === canvas.width && k.h === canvas.height && k.cut === cut) return k.uv;
+  const uv = fitCard(canvas, cut);
+  if (refit) console.log('FIT_KEPT', name, JSON.stringify({ w: canvas.width, h: canvas.height, cut, uv }));
+  return uv;
+}
 function fitCard(canvas, cut, margin = Math.max(1, Math.round(canvas.width / 128))) {
   const W = canvas.width, H = canvas.height, a = canvas.getContext('2d').getImageData(0, 0, W, H).data, lim = cut * 255, pts = [];
   for (let y = 0; y < H; y++) {
@@ -699,7 +715,7 @@ export function buildWorld(scene, renderer, sandTex) {
     const tm = new THREE.InstancedMesh(tg, new THREE.MeshStandardMaterial({ color: '#5c4d3f', roughness: 1 }), trunks.length);
     trunks.forEach(([a, b, r], i) => { const d = b.clone().sub(a); tm.setMatrixAt(i, M4().compose(a, new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize()), V(r, d.length(), r))); });
     tm.castShadow = true; add(tm);
-    const tt = tamariskTexture(), cg = cardCluster(2.6, 2.4, 3, false, fitCard(tt.image, 0.35)); cg.translate(0, -1.2, 0);
+    const tt = tamariskTexture(), cg = cardCluster(2.6, 2.4, 3, false, fitKept('tamarisk', tt.image, 0.35)); cg.translate(0, -1.2, 0);
     const cm = new THREE.InstancedMesh(cg, new THREE.MeshStandardMaterial({ map: tt, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1 }), clumps.length * 2), col = new THREE.Color();
     let ci = 0;
     clumps.forEach(([c, s]) => { for (let r = 0; r < 2; r++) { cm.setMatrixAt(ci, M4().compose(c.clone().add(V(R(-0.3, 0.3), R(-0.2, 0.3), R(-0.3, 0.3))), new THREE.Quaternion().setFromEuler(new THREE.Euler(R(-0.15, 0.15), R(0, 6.28), R(-0.15, 0.15))), V(s * 1.15, s * 1.1, s * 1.15))); cm.setColorAt(ci++, col.setHSL(0.24 + R(-0.03, 0.03), 0.12, 0.62 + R(-0.06, 0.06))); } });
@@ -720,7 +736,7 @@ export function buildWorld(scene, renderer, sandTex) {
       k++;
     }
     // every tuft up close, a thinning sample further out, none past 260 m (the sand texture carries the colour)
-    const gt = grassTexture(), tuft = cardCluster(0.66, 0.5, 3, true, fitCard(gt.image, 0.4));      // (the texture drawn where it was among the random numbers: the grass stands where it stood)
+    const gt = grassTexture(), tuft = cardCluster(0.66, 0.5, 3, true, fitKept('grass', gt.image, 0.4));      // (the texture drawn where it was among the random numbers: the grass stands where it stood)
     add(scatterCells(tuft, new THREE.MeshStandardMaterial({ map: gt, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
       { cell: GRASS_CELL, bands: [[45, 1], [90, 0.45], [160, 0.2], [260, 0.08]] }));
   }
@@ -735,7 +751,7 @@ export function buildWorld(scene, renderer, sandTex) {
         c: new THREE.Color().setHSL(0.12 + R(-0.02, 0.04), 0.1, 0.82 + R(-0.1, 0.1)) });
       k++;
     }
-    const bt = bushTexture(), g = cardCluster(1.2, 1.0, 3, true, fitCard(bt.image, 0.4));
+    const bt = bushTexture(), g = cardCluster(1.2, 1.0, 3, true, fitKept('bush', bt.image, 0.4));
     add(scatterCells(g, new THREE.MeshStandardMaterial({ map: bt, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 }), items,
       { cell: BUSH_CELL, cast: true, bands: [[120, 1], [260, 0.5], [450, 0.25]] }));
     // stones: 8 triangles each (they are a few centimetres across), only near the camera

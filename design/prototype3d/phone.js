@@ -75,7 +75,7 @@ const CSS = `
   .btn.pri { background: var(--acc); color: #fff; }
   .btn.ghost { background: var(--acc-soft); color: var(--acc); }
   /* ---------- home ---------- */
-  .home { background: url(phone/wall_camel.png) 0% 104% / 124% auto no-repeat, linear-gradient(180deg, #cfe3f2 0%, #efe3cf 55%, #e2c9a2 100%); }
+  .home { background: var(--wall, url(phone/wall_camel.png)) 0% 104% / 124% auto no-repeat, linear-gradient(180deg, #cfe3f2 0%, #efe3cf 55%, #e2c9a2 100%); }
   .home .body { padding: 6px 18px 0; gap: 14px; }
   .widgets { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .wg { border-radius: 22px; padding: 12px 13px; background: rgba(255,255,255,.78); -webkit-backdrop-filter: none; height: 136px; display: flex; flex-direction: column; box-shadow: 0 4px 14px rgba(70,50,20,.10); }
@@ -860,7 +860,12 @@ const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '
 const fem = (c) => c.sex === 'female';
 const her = (c, f, m) => (fem(c) ? f : m);      // a word by the camel's sex: her (f) or his (m)
 const titleOf = (c) => `${c.ageName} ${COAT[c.category][fem(c) ? 0 : 1]}`;
-const photo = (c) => `<img src="phone/${PHOTO[c.category]}" alt="" draggable="false"${c.category === 'homr' ? ' class="homr"' : ''}>`;
+// the phone's pictures, each fetched once under the lobby and kept (the app serves every file no-store: الحراج's five
+// were fetched again at every opening, the wallpaper at the phone's first: the review)
+const PICS = ['wall_camel.png', 'camel_side_wodh.png', 'thumb_shaqh.png', 'thumb_shaal.png', 'thumb_safra.png', 'thumb_majaheem.png', 'thumb_saker.png'];
+const PIC = {};
+const pic = (f) => PIC[f] || `phone/${f}`;
+const photo = (c) => `<img src="${pic(PHOTO[c.category])}" alt="" draggable="false"${c.category === 'homr' ? ' class="homr"' : ''}>`;
 const est = (c) => `<bdi dir="ltr">${n0(c.estimateLow)}–${n0(c.estimateHigh)}</bdi>`;
 const ageText = (d) => (d < 30 ? days(Math.max(1, d)) : d < 365 ? count(Math.floor(d / 30), 'month') : count(Math.floor(d / 365), 'year'));
 const dueText = (c) => { const d = c.dueOn - G.today; return d <= 1 ? 'تولد بكرة' : d < 60 ? `تولد بعد ${days(d)}` : `تولد بعد ${count(Math.round(d / 30), 'month')}`; };
@@ -1797,7 +1802,7 @@ const fcBadge = () => (HF() ? (HF().news || []).filter((x) => x.kind !== 'lotLos
 // the bird's picture: the saker is task T11's render (awaiting the owner's approval, cut out); the peregrine is not
 // built yet, a flat STAND-IN as the design has it (dark helmet and moustache, barred breast)
 const PERE = '<svg viewBox="0 0 60 60" aria-hidden="true"><path d="M22 58 C18 44 20 30 28 22 C32 16 40 15 44 20 C48 26 47 40 42 58 Z" fill="#5d6670"/><path d="M28 30 C33 34 39 34 44 30 L44 56 L24 56 Z" fill="#e9e1d2"/><path d="M27 38 h16 M26 44 h18 M25 50 h19" stroke="#59606a" stroke-width="1.6" stroke-dasharray="2 2"/><path d="M29 22 C28 12 34 7 40 8 C46 9 48 15 45 22 Z" fill="#2f3338"/><path d="M45 14 l6 2 -5 3" fill="#e9c84a"/><circle cx="41" cy="14" r="2.2" fill="#111"/><path d="M38 16 c1 4 0 7 -2 9" stroke="#1d2024" stroke-width="3" fill="none"/></svg>';
-const birdPic = (species) => `<span class="ph fb">${species === 'saker' || species === 'حر' ? '<img src="phone/thumb_saker.png" alt="" draggable="false">' : PERE}</span>`;
+const birdPic = (species) => `<span class="ph fb">${species === 'saker' || species === 'حر' ? `<img src="${pic('thumb_saker.png')}" alt="" draggable="false">` : PERE}</span>`;
 const SPECIES_SHORT = { 'شاهين بحري': 'شاهين', 'حر': 'حر', 'شاهين جبلي': 'شاهين جبلي', 'وكري': 'وكري' };
 const GROUND_OF = (name) => (FC.cat ? FC.cat.grounds.find((g) => g.name === name) : null);
 // a date in the season's own year: [month, day]
@@ -2840,6 +2845,12 @@ export function createPhone({ host }) {
     /** Opens the phone enlarged on an app (a place's card: الوايت from the tank, العلف from the feed). */
     openApp: (v) => { if (st.state === 'closed') set('small'); bigAt = performance.now(); set('big'); show(v); focusIn(scr.querySelector('.back') || dev); },
     setPlay: (on) => { st.play = on; if (st.state !== 'closed') layout(); },
+    /** Asks the engine for the hunting season's catalog now (the lobby: not at the club's first opening). */
+    loadCatalog: () => loadCat(),
+    /** Fetches the phone's pictures once and keeps them (the lobby waits for it); its wallpaper set from the copy. */
+    loadPictures: () => Promise.all(PICS.map((f) => fetch(`phone/${f}`).then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`${f}: ${r.status}`)))).then((b) => { PIC[f] = URL.createObjectURL(b); }))).then(() => { box.style.setProperty('--wall', `url("${PIC['wall_camel.png']}")`); }),
+    /** A game's day as the home screen says it, for the lobby: «الأحد 4 أكتوبر 2026 · سهيل». */
+    dayLine: (snapshot) => { const d = new Date(snapshot.date + 'T00:00:00Z'); return `${WEEKDAY[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]} ${d.getUTCFullYear()} · ${season(d)}`; },
     onChange: (f) => listeners.add(f),
     /** The engine's newest view of the game (engine.js), and the engine to send the player's orders to. */
     setGame: (snapshot) => {

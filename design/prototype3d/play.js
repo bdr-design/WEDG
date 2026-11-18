@@ -127,26 +127,31 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const tween = [];
   // the private car's interior: fetched a few seconds after the page is ready, in the background (it is drawn only
   // from the driver's seat and while the door stands open); coming to the door fetches it at once if it is not here yet
-  let cabinLoading = false, cabinFailed = -1e9, cabinWarm = false;
+  let cabinLoading = null, cabinFailed = -1e9, cabinWarm = null;
   function loadCabin() {
-    if (!rigged || model.interior || cabinLoading || performance.now() - cabinFailed < 30000) return;      // (after a failure, try again in 30 s, not every frame)
-    cabinLoading = true;
-    loadLod('veh_suvcabin.json').then((g) => {
+    if (!rigged || model.interior) return Promise.resolve();
+    if (cabinLoading) return cabinLoading;
+    if (performance.now() - cabinFailed < 30000) return Promise.resolve();      // (after a failure, try again in 30 s, not every frame)
+    return (cabinLoading = loadLod('veh_suvcabin.json').then((g) => {
       const it = g.scene.getObjectByName('interior') || g.scene; it.name = 'interior';
       it.traverse((n) => { if (n.isMesh) { n.castShadow = false; n.receiveShadow = true; } });
       car.add(it); model.interior = it; model.doorcard = it.getObjectByName('doorcard_FL');
       model.steer = it.getObjectByName('steering'); steerBase = model.steer ? model.steer.quaternion.clone() : null;
       it.visible = false;
-    }).catch(() => { cabinLoading = false; cabinFailed = performance.now(); });
+    }).catch(() => { cabinLoading = null; cabinFailed = performance.now(); }));
   }
-  // its shaders compiled and its textures sent to the GPU as the player walks up to the car (not on every page load:
-  // the 33 MB of textures stay off the GPU until then), so the door opening does not stall
+  // its shaders compiled and its textures sent to the GPU (under the lobby, prepare; or as the player walks up to the car
+  // if that came first), so the door opening does not stall (its textures are two small palettes now)
   function warmCabin() {
-    if (cabinWarm || !model.interior) return;
-    cabinWarm = true; const it = model.interior; it.visible = true;
+    if (cabinWarm || !model.interior) return cabinWarm || Promise.resolve();
+    const it = model.interior; it.visible = true;
     it.traverse((n) => { if (n.isMesh) for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap']) if (n.material[k]) renderer.initTexture(n.material[k]); });
-    (renderer.compileAsync ? renderer.compileAsync(it, camera, scene) : Promise.resolve(renderer.compile(it, camera, scene))).catch(() => {}).finally(() => { if (model.interior === it && !(state.mode === 'drive' && state.view === 1)) it.visible = false; });
-  }                                   // simple part animations: { obj, key, from, to, t, dur }
+    return (cabinWarm = (renderer.compileAsync ? renderer.compileAsync(it, camera, scene) : Promise.resolve(renderer.compile(it, camera, scene))).catch(() => {}).finally(() => { if (model.interior === it && !(state.mode === 'drive' && state.view === 1)) it.visible = false; }));
+  }
+  // under the lobby (the owner's choice of 18 Nov: everything loaded before «كمّل», the cabin too): fetched, its
+  // textures sent and its shaders made, so neither the door nor the seat waits for it in play
+  const prepare = () => loadCabin().then(() => warmCabin());
+  // simple part animations: { obj, key, from, to, t, dur }
   // one animation per part at a time; `then` runs after an optional hold, in game time (not wall-clock)
   function animate(obj, to, dur = 0.45, then = null, hold = 0) {
     if (!obj) return;
@@ -809,6 +814,5 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     updateCamera(dt);
     return true;
   }
-  if (rigged) setTimeout(loadCabin, 4000);
-  return { start, stop, update, model, facilities, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; }, get orbNow() { return orbNow; } } };
+  return { start, stop, update, model, facilities, prepare, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; }, get orbNow() { return orbNow; } } };
 }

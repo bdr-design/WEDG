@@ -363,4 +363,25 @@ void main() {
     expect(r.run!.summary.extra, isNotEmpty);
     await e.close();
   });
+
+  test('held (the lobby): the time held is not played; released, the clock '
+      'runs on from the minute it was held at', () async {
+    final e = core();
+    await e.newGame(params);
+    final g = e.game!;
+    final day = g.today, minute = e.minuteOfDay();
+    await e.hold();
+    now.value = now.value.add(
+      const Duration(hours: 9),
+    ); // (more than two game days)
+    await e.release();
+    expect(g.today, day);
+    expect((e.minuteOfDay() - minute).abs() <= 1, isTrue);
+    now.value = now.value.add(
+      const Duration(hours: 4),
+    ); // (running again: a game day and more)
+    await e.resume();
+    expect(g.today > day, isTrue);
+    await e.close();
+  });
 }
