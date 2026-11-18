@@ -527,8 +527,11 @@ PERCH_TB = V3((SP.POSES['hooded']['origin'][0], 0, SP.POSES['hooded']['origin'][
 STOOP_TWIST = 10.0
 # the landing's path (the body's centre against where it is at contact, mm, by frame): across from the right, low,
 # up past the fist's side, over it, down onto it (game choices, measured clear of the cuff and forearm by the build)
-LAND_Y = [(0, -3000), (12, -900), (18, -420), (22, -300), (25, -150), (28, 0)]
-LAND_Z = [(0, -150), (8, -300), (14, -260), (19, -60), (23, 90), (26, 60), (28, 0)]
+# (the last frames slow her to about 17 mm a frame at contact: she stopped from 59 mm a frame in one, about 5 g, and
+# the cords swung round her as rods: the review; the legs then give, LAND_GIVE)
+LAND_Y = [(0, -3000), (12, -900), (18, -420), (22, -260), (24, -150), (25, -98), (26, -55), (27, -24), (28, 0)]
+LAND_Z = [(0, -150), (8, -300), (14, -260), (19, -60), (23, 90), (25, 66), (26, 50), (27, 30), (28, 0)]
+LAND_GIVE = (V3((0.0, 0.86, -0.51)), 26.0, 1.5)      # after contact the body carries on along her line (mm in all, frames' time constant) and comes back by 40
 LAND_X = [(0, 0), (28, 0)]
 PLANTED = ('cuff', 'perch', 'ground')
 PERCH_NECK = RIG.get('perch_neck', (14, -32, -40))      # neck1, neck2, head turns that put the perched frame on the static <bird>_fist.glb
@@ -690,7 +693,9 @@ class SakerClips:
         pitch = keys(f, [(0, 4), (12, 2), (20, 30), (26, 52), (31, 44), (38, 42), (45, 66)])
         tb_c = lambda g: PERCH_TB + V3((25, 0, -10)) * (1 - ramp(g, 26, 40))
         if f >= 28:
-            return tb_c(f), pitch, 0.0
+            d, amt, tau = LAND_GIVE
+            give = amt * (1 - math.exp(-(f - 28) / tau)) * (1 - ramp(f, 31, 40))      # (0 at contact, 17 mm a frame: her arrival speed)      # the legs give, then she rises back
+            return tb_c(f) + d * give, pitch, 0.0
         yaw = spline(f, [(0, 90), (14, 88), (22, 40), (27, 0), (28, 0)])
         Rm = lambda p_, y_: (Matrix.Rotation(math.radians(y_), 3, 'Z') @ Matrix.Rotation(math.radians(-p_), 3, 'Y'))
         c28 = tb_c(28) + Rm(keys(28, [(26, 52), (31, 44)]), 0.0) @ self.LAND_CENTRE
@@ -726,10 +731,13 @@ class SakerClips:
         mesh = 'open' if f < 38 else 'fold'
         reach = ramp(f, 16, 24)
         feet = surface if f >= 28 else ('reach', reach)
+        plant = smooth01((f - 22) / 6.0) if 22 <= f < 28 else 0.0      # the feet onto their places on the support by contact
         sp = {'pitch': pitch, 'yaw': yaw, 'tb': tb_air, 'feet': feet, 'mesh': mesh, 'wing': w,
               'tail_spread': lerp(lerp(1.05, 1.0, ramp(f, 0, 8)), 1.5, brake) if f < 32 else lerp(1.5, 1.0, ramp(f, 32, 42)),
               'tail_drop': 18 * brake, 'open_toes': reach * (1 - ramp(f, 27, 29)),
               'clench': 1 - ramp(f, 10, 16)}      # clenched as in the flight loop, opening as the legs reach
+        if plant > 0:
+            sp.update({'plant_blend': plant, 'plant_on': surface})
         if f < 12:
             # the cords' wind eased from the flight loop's (20 m/s) to the path's own (about 5.5 m/s here): from the
             # loop they trailed, then swung forward under her breast as the wind dropped at once
@@ -1038,6 +1046,13 @@ class Applier:
                 else:
                     bf = tuck.lerp(reach, kf)
                 target = self.to_world(W, bf)
+                if sp.get('plant_blend'):
+                    # the reaching foot carried onto its place on the support before contact (it snapped there, 168 mm
+                    # in the contact frame, and flung the cords: the review)
+                    surf_ = self.C.cuff if sp['plant_on'] == 'cuff' else flat_surface
+                    pt = V3((0.0, 22.0 * side, 0.0))
+                    pt.z = surf_(pt.x, pt.y) + (CUFF_LIFT if sp['plant_on'] == 'cuff' else FOOT_LIFT) + 10.0      # (clear of it until contact: the open toes dipped into the perch)
+                    target = target.lerp(pt, sp['plant_blend'])
                 tk = kf if mode in ('free', 'push') else (1 - kf)      # how far drawn up
                 th = math.radians(lerp(197.0, 368.0, smooth01((tk - 0.2) / 0.6)))      # back-down, through down, to forward
                 pole = R.to_3x3() @ V3((math.cos(th), 0, math.sin(th)))
@@ -1070,6 +1085,10 @@ class Applier:
             # a little turbulence in the air, so a trailing cord swings and does not lie as a rod
             self.gust += 1
             wob = V3((0, 900 * math.sin(self.gust * 0.9 + side), 1400 * math.sin(self.gust * 0.63 + 2 * side))) if V3(air).length > 2000 else V3((0, 0, 0))
+            if V3(air).length <= 2000 and sp['feet'] not in PLANTED and not sp.get('jess_hold'):
+                # in the air with little wind a slack cord still stirs, so it bends and does not lie as a rod (the review:
+                # the landing's last frames before contact)
+                wob = V3((300 * math.sin(self.gust * 1.3 + side), 450 * math.sin(self.gust * 0.9 + side), 350 * math.sin(self.gust * 0.7 + 2 * side)))
             hold = V3(FIST_JESS) * V3((1, side, 1)) if sp.get('jess_hold') else None
             if sp.get('jess_take') is not None:      # the falconer's fingers taking the free ends to his fist
                 k = sp['jess_take']
@@ -2069,6 +2088,7 @@ def jess_checks(arm, clips=('cast_off', 'flight', 'glide', 'stoop', 'land_cuff',
             continue
         use_clip(arm, name)
         worst, wf, ahead, af, spread, spf = -1e9, None, -1e9, None, 0.0, None
+        straight, stf = 1e9, None      # the straightest frame: the largest bend between neighbouring segments, its least
         for f in range(CLIPS[name][0]):
             sc.frame_set(f)
             M = (pb['body'].matrix @ pb['body'].bone.matrix_local.inverted()).inverted()
@@ -2084,6 +2104,10 @@ def jess_checks(arm, clips=('cast_off', 'flight', 'glide', 'stoop', 'land_cuff',
             hd.z = 0.0
             hd = hd.normalized() if hd.length > 1e-6 else V3((1, 0, 0))
             for s in ('L', 'R'):
+                segs = [(pb[f'jess{j}.{s}'].tail - pb[f'jess{j}.{s}'].head).normalized() for j in range(1, JESS_N + 1)]
+                bend = max(math.degrees(segs[j].angle(segs[j + 1], 0.0)) for j in range(JESS_N - 1))
+                if bend < straight:
+                    straight, stf = bend, f
                 a0 = pb[f'jess1.{s}'].head
                 for j in range(1, JESS_N + 1):
                     q = (M @ pb[f'jess{j}.{s}'].tail) / MM
@@ -2095,7 +2119,7 @@ def jess_checks(arm, clips=('cast_off', 'flight', 'glide', 'stoop', 'land_cuff',
                             ahead, af = d, f
         print(f'{name}: the jesses\' highest point above the body\'s axis {worst:.0f} mm (frame {wf}); '
               f'the farthest ahead of the anklet along her heading {ahead:.0f} mm (frame {af}); the cords\' spread beyond the anklets\' '
-              f'{spread:.0f} mm (frame {spf})')
+              f'{spread:.0f} mm (frame {spf}); the straightest cord\'s largest bend {straight:.0f} degrees (frame {stf})')
 
 
 def motion_checks(arm, meshes, frames_mesh, clips, body):

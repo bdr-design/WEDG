@@ -461,9 +461,14 @@ reviewer's own tools):
   each flying clip's highest jess point above the body's long axis, its farthest ahead of the anklet along her
   heading on the level, and the two cords' spread beyond the anklets' 16 mm: cast_off -11 / 5 / 3 mm (from frame
   20, when the falconer lets them go; damped while the feet draw up), flight -40 / -2 / 3, glide -40 / -2 / 3,
-  stoop -39 / -7 / 2, the landings -27 / 114 / 16. The 114 is at contact (frame 28): the landing's path stops from
-  1.8 m/s in one frame there and the cords swing forward over the support (a game choice in the path, left as the
-  motion was reviewed; easing her stop over a few frames is the owner's to see).
+  stoop -39 / -7 / 2, the landings -37 / 99 / 16 (the 99 as she brakes onto the support: the cords swing forward
+  about 40 degrees and back, bending along their length), and each clip's straightest cord's largest bend. In the
+  air with little wind a slack cord stirs a little, so it bends and does not lie as a rod.
+- **The touch-down:** she slows through the flare (the body's centre 57, 47, 36, 28 mm a frame into contact; it was
+  59 and then 2, about 5 g), the legs give after it (14, 8, 4 mm along her line) and she rises back by frame 40;
+  the reaching feet are carried onto their places on the support over frames 22-28, 10 mm clear of it until contact
+  (they snapped there, 168 mm in the contact frame, and flung the cords). Nothing of her inside the cuff, the
+  forearm or the perch before the feet take it.
 - **Flight into the landings:** checked in the body's frame (the page sets the landing's path where she is and as
   she heads; the clip turns her a quarter on it): the skeleton 326 mm at the wingtip against the landing's own
   first steps of 329 (its beat starts on the flight loop's: amplitude 40, phase 0; the toes clenched and the tail
