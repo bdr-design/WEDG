@@ -1,7 +1,7 @@
 # The birds of the hunt, built by code
 
-**Status: the look approved by the owner (14 Nov 2026: «اعتمدها وكمّل»); the rigs and clips built, awaiting his
-approval of the motion.** The known gaps are listed below and beside the pictures, in `design/birds/README.md`.
+**Status: the look approved by the owner (14 Nov 2026: «اعتمدها وكمّل»); the rigs and clips approved by him
+(18 Nov 2026: «موافق», on the motion sheets and GIFs of 65a23f4).** The known gaps are listed below and beside the pictures, in `design/birds/README.md`.
 
 The owner asked on 13 Nov 2026 for the hunt's animals to be made now and shown to him («ابي تدخل الحيوانات الان
 وتعرضها علي كذالك موسم القنيص»). Falconry comes first in the hunting design (`docs/proposals/gdd_hunting_section.md`,
@@ -291,7 +291,7 @@ pictures to `design/birds/`.
 
 ## The rig and clips (task T17)
 
-**Status: awaiting the owner's approval of the motion.** He approved the look on 14 Nov 2026 and asked for the bones
+**Status: the motion approved by the owner (18 Nov 2026: «موافق»).** He approved the look on 14 Nov 2026 and asked for the bones
 and the motion (the flight, the landing, the catch). `rig.py` (the saker) and `rig_quarry.py` (the houbara and the
 stone-curlew) build them. The static GLBs above stay as the approved look; the rigged files are new:
 
@@ -502,7 +502,7 @@ as near), and the trapping pigeon (to come). Skinning one bird of 34–49 bones 
 herd camel's cost; the far level is skinned too (its clips are the near ones), so no clip texture is needed for
 these few birds. Textures unchanged (512 px near, 256 px far).
 
-**Pictures** (`design/birds/motion/`, awaiting the owner's approval of the motion): for every clip a contact sheet
+**Pictures** (`design/birds/motion/`, the motion approved 18 Nov 2026; the sheets' own labels still read "awaiting"): for every clip a contact sheet
 from the side and one three-quarter (`<bird>_<clip>_side.jpg`, `_tq.jpg`; the landings seen across their path from
 ahead of the fist, `_front.jpg`), the saker's feet on the cuff close, and two small GIFs (the cast-off and the
 flight). `hood_off` and `hood_on` are held back: they come with the man's hand rig.
