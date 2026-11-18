@@ -40,3 +40,6 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
     game's approved Sadu card (farm.html .pop): a woven runner down the screen's right edge, the panel with its woven
     band and selvedge, «كمّل» in madder red, the loading bar woven as it fills (design/ui/lobby.html, lobby.jpg):
     «أعتمده». The sound switch left out until the game has sounds («أشيله لين تجي الأصوات»).
+12. The ceiling's «كل رصيدك» (it won any lot he could afford in one tap, paying only the hammer): «أبدله بـ«خمس
+    مرات»» (five times the opening, shown when his balance reaches it). And after the hunting phone, next: «اللوبي
+    والتحميل».
