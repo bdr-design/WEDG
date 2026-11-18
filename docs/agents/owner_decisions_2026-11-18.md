@@ -14,3 +14,6 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
    the page blends the two meshes over three frames at every swap (tool/bird3d/README.md, the page rules).
 4. The landing comes in at about 5.5 m/s against the flight loop's 20: «اللعبة تهدّيه قبل الهبوط» (the game's flight
    path slows her before the landing clip starts; part C's map and flight path carry it).
+5. The herd's frame drop (60 to 52 by the herd on his phone, 12 Nov): after the two reviews before the fix, the calls and
+   uploads halved (no change to the picture). Then two fixes that change pixels slightly, shown before and after: the
+   pen floors and the yard's dirt drawn with the ground «أرسمها مع الأرض»; the shadows by four GPU-compared taps «ظلال أخف».
