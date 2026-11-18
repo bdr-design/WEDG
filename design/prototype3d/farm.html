@@ -387,11 +387,19 @@ sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
   // the colour then; during the pass (and the target's own setup in it) `texture` is the target's own again, and an
   // assignment outside it goes to the target's own as three's setter does (nothing in r170 assigns it: re-check on an upgrade)
   const map = sun.shadow.map, pass = renderer.shadowMap.render;
-  renderer.shadowMap.render = function (...args) {
+  renderer.shadowMap.render = function () {
     delete map.texture;
-    try { return pass.apply(this, args); } finally { Object.defineProperty(map, 'texture', { get: () => dt, set: (v) => { map.textures[0] = v; }, configurable: true }); }
+    try { return pass.apply(this, arguments); } finally { Object.defineProperty(map, 'texture', { get: () => dt, set: (v) => { map.textures[0] = v; }, configurable: true }); }
   };
 }
+// A lost GL context come back (iOS may take it from a page in the background, or short of memory): the game saved and
+// the page loaded again. three makes a new shadow map object then (the page's settings and wrappers on the old one
+// gone: with the depth texture left standing in for the colour the yard drew black, the review), and much the page made
+// once is not made again (with the wrappers set again, the grass and walls drew dark and the pen floors went: tried)
+renderer.domElement.addEventListener('webglcontextrestored', async () => {
+  try { await Promise.race([window.marahEngine?.flush?.(), new Promise((r) => setTimeout(r, 2000))]); } catch (_) { /* (saved on the way to the background as well) */ }
+  location.reload();
+});
 scene.add(sun, sun.target);
 
 // ------------------------------------------------------------ the world (ground, roads, farm, trees, grass)
@@ -410,9 +418,9 @@ function shadowOnly(side = THREE.FrontSide, shadowSide = null) {
 const SHADOW_ONLY = shadowOnly();
 {
   const pass = renderer.shadowMap.render;
-  renderer.shadowMap.render = function (...args) {
+  renderer.shadowMap.render = function () {
     for (const m of SHADOW_MATS.values()) m.visible = true;
-    try { return pass.apply(this, args); } finally { for (const m of SHADOW_MATS.values()) m.visible = false; }
+    try { return pass.apply(this, arguments); } finally { for (const m of SHADOW_MATS.values()) m.visible = false; }
   };
 }
 // the depth pass of a mesh depends on its material only through alpha testing, displacement and a custom depth material;
@@ -2045,16 +2053,16 @@ const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array
 if (meter) {
   renderer.info.autoReset = false;
   const gl = renderer.getContext(), bsd = gl.bufferSubData.bind(gl), tsi = gl.texSubImage2D.bind(gl);
-  gl.bufferSubData = function (t, off, data, srcOff, len) { meter.up += len !== undefined ? len * (data.BYTES_PER_ELEMENT || 1) : data.byteLength - (srcOff || 0) * (data.BYTES_PER_ELEMENT || 1); return bsd(...arguments); };
-  gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && typeof px === 'object') meter[meter.fresh.has(bound[unit]) ? 'upNew' : 'up'] += px.byteLength !== undefined ? Math.min(px.byteLength, a[4] * a[5] * 16) : (px.width | 0) * (px.height | 0) * 4; return tsi(...arguments); };      // (a picture: its pixels, 4 bytes each)
+  gl.bufferSubData = function (t, off, data, srcOff, len) { meter.up += len !== undefined ? len * (data.BYTES_PER_ELEMENT || 1) : data.byteLength - (srcOff || 0) * (data.BYTES_PER_ELEMENT || 1); return bsd.apply(null, arguments); };
+  gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && typeof px === 'object') meter[meter.fresh.has(bound[unit]) ? 'upNew' : 'up'] += px.byteLength !== undefined ? Math.min(px.byteLength, a[4] * a[5] * 16) : (px.width | 0) * (px.height | 0) * 4; return tsi.apply(null, arguments); };      // (a picture: its pixels, 4 bytes each)
   // a texture's first upload counted apart: right after something is built it is a one-off of some MB, not what each
   // frame sends (the review). The textures given their storage this frame, known by the one bound on the active unit
   // (three's state skips a bind of the texture already bound, so a flag cleared by the binds could miss one)
   const tst = gl.texStorage2D.bind(gl), btx = gl.bindTexture.bind(gl), atx = gl.activeTexture.bind(gl), bound = [];
   let unit = 0;
-  gl.texStorage2D = function () { meter.fresh.add(bound[unit]); return tst(...arguments); };
-  gl.bindTexture = function (t, tex) { bound[unit] = tex; return btx(...arguments); };
-  gl.activeTexture = function (u) { unit = u - gl.TEXTURE0; return atx(...arguments); };
+  gl.texStorage2D = function () { meter.fresh.add(bound[unit]); return tst.apply(null, arguments); };
+  gl.bindTexture = function (t, tex) { bound[unit] = tex; return btx.apply(null, arguments); };
+  gl.activeTexture = function (u) { unit = u - gl.TEXTURE0; return atx.apply(null, arguments); };
   // the meter's own size watched, not read after each rewrite (a forced layout once a second: 0.5-2.4 ms, in the slowest 1%)
   new ResizeObserver(() => measureHud()).observe(meter.el);
 }
