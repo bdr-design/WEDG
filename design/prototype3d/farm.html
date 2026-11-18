@@ -2002,12 +2002,11 @@ const COAT_HEX = { wodh: '#f4f1ea', shaqh: '#ead7b5', homr: '#a8694a', majaheem:
 const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const STATE_M = { graze: 'يرعى', walk: 'يمشي', idle: 'واقف' };
 const stateWord = (c, mode = c.mode) => (c.male ? STATE_M : STATE)[mode];
-let selectedRing = null, selected = null;
+// the selection ring, made at load (made at the first camel's card, its shader was made then: 0.6 s, the review)
+const selectedRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.7, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#34bcaa', transparent: true, opacity: 0.95, depthWrite: false }));
+selectedRing.renderOrder = 3; selectedRing.visible = false; scene.add(selectedRing);
+let selected = null;
 function pick(c) {
-  if (!selectedRing) {
-    selectedRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.7, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#34bcaa', transparent: true, opacity: 0.95, depthWrite: false }));
-    selectedRing.renderOrder = 3; scene.add(selectedRing);
-  }
   selectedRing.visible = true; selected = c;
 }
 
@@ -2178,16 +2177,45 @@ const LOBBY = (() => {
   const ENGINE = steps[5], FONTS = steps[6], PHONE = steps[7], WARM = steps[8];
   const pictures = phone.loadPictures().catch((err) => console.warn('lobby: pictures', err));
   if (!FONTS.p) FONTS.done = true;
-  // the last step: every program three would make for the scene as it can be seen, made now (compileAsync waits for the
-  // driver where it can make them in parallel), then one frame drawn with the shadow map
-  let warming = null;
+  // the last step, after everything else is in (what loads after it is late again): what play draws made ready on the
+  // GPU now (the review's recipe, measured: in play after it, no program made, no texture or buffer sent):
+  //  1. the textures of all that can be seen sent up, a group a frame (the bar moves between them);
+  //  2. every object shown and unculled for one frame (the cabin, the car's layers, play's sprites and tracks, the herd's
+  //     empty draws given one), every program made for the canvas (compile: a draw's link waited on at the first draw
+  //     without KHR_parallel_shader_compile, which compileAsync cannot help), the facilities not built hidden again
+  //     (the owner's choice: their shaders made, their textures sent when built), and one frame drawn with the shadow
+  //     map (only a draw makes the shadow pass's programs and the buffers); all put back as it was.
+  // In one task from showing to putting back: the frame's own code sets what it shows, and must not run in between.
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  const unbuilt = (o) => o.parent === scene && o.userData.facility && !o.visible;
+  async function warmScene() {
+    const textures = new Set(), seen = (m) => { for (const k in m) if (m[k] && m[k].isTexture) textures.add(m[k]); if (m.uniforms) for (const k in m.uniforms) { const v = m.uniforms[k] && m.uniforms[k].value; if (v && v.isTexture) textures.add(v); } };
+    (function walk(o) { if (unbuilt(o)) return; if (o.material) for (const m of [].concat(o.material)) seen(m); for (const c of o.children) walk(c); })(scene);
+    const list = [...textures];
+    for (let i = 0; i < list.length; i += 6) { for (const t of list.slice(i, i + 6)) renderer.initTexture(t); await nextFrame(); }
+    const hidden = scene.children.filter(unbuilt), shown = [], unculled = [], counts = [];
+    scene.traverse((o) => {
+      if (!o.visible) { shown.push(o); o.visible = true; }
+      if (o.frustumCulled) { unculled.push(o); o.frustumCulled = false; }
+      if (o.isInstancedMesh && o.count === 0) { counts.push(o); o.count = 1; }
+    });
+    try {
+      renderer.setRenderTarget(null);
+      renderer.compile(scene, camera);
+      for (const o of hidden) o.visible = false;
+      renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
+    } finally {
+      for (const o of shown) o.visible = false;
+      for (const o of unculled) o.frustumCulled = true;
+      for (const o of counts) o.count = 0;
+      renderer.shadowMap.needsUpdate = true;
+    }
+    await nextFrame();
+  }
+  let warming = null, again = false;      // (again: the shadows changed while warming: warm once more for the new state)
   function maybeWarm() {
     if (warming || WARM.done || steps.some((x) => x !== WARM && !x.done)) return;
-    warming = (async () => {
-      try { await renderer.compileAsync(scene, camera); } catch (err) { console.warn('lobby: compile', err); }
-      renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
-      warming = null; done(WARM);
-    })();
+    warming = warmScene().catch((err) => console.warn('lobby: warm', err)).then(() => { warming = null; if (again) { again = false; maybeWarm(); } else done(WARM); });
   }
   const pct = () => Math.round(100 * steps.reduce((n, x) => n + (x.done ? x.w : 0), 0) / total);
   const heads = (n) => (n === 1 ? 'راس واحد' : n === 2 ? 'راسين' : n <= 10 ? `${n} روس` : `${n} راس`);
@@ -2238,7 +2266,7 @@ const LOBBY = (() => {
       Promise.all([pictures, e ? phone.loadCatalog() : null]).then(() => done(PHONE));
     },
     game(snap) { G = snap; if (engine) done(ENGINE); draw(); },
-    rewarm() { WARM.done = false; draw(); maybeWarm(); },
+    rewarm() { WARM.done = false; draw(); if (warming) again = true; else maybeWarm(); },
     showSettings,
   };
 })();
