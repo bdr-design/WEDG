@@ -229,6 +229,25 @@ sealed class DomainEvent {
         from: j['from']! as String,
         to: j['to']! as String,
       ),
+      'farmRenamed' => FarmRenamed(
+        day,
+        owner: owner,
+        from: j['from']! as String,
+        to: j['to']! as String,
+      ),
+      'playerRenamed' => PlayerRenamed(
+        day,
+        owner: owner,
+        from: j['from']! as String,
+        to: j['to']! as String,
+      ),
+      'falconRenamed' => FalconRenamed(
+        day,
+        owner: owner,
+        falcon: j['falcon']! as String,
+        from: j['from']! as String,
+        to: j['to']! as String,
+      ),
       'fellSick' => FellSick(
         day,
         owner: owner,
@@ -964,6 +983,57 @@ final class CamelRenamed extends DomainEvent {
   String get type => 'camelRenamed';
   @override
   Map<String, Object?> fieldsToJson() => {'from': from, 'to': to};
+}
+
+final class FarmRenamed extends DomainEvent {
+  const FarmRenamed(
+    super.day, {
+    super.owner,
+    required this.from,
+    required this.to,
+  });
+  final String from;
+  final String to;
+  @override
+  String get type => 'farmRenamed';
+  @override
+  Map<String, Object?> fieldsToJson() => {'from': from, 'to': to};
+}
+
+final class PlayerRenamed extends DomainEvent {
+  const PlayerRenamed(
+    super.day, {
+    super.owner,
+    required this.from,
+    required this.to,
+  });
+  final String from;
+  final String to;
+  @override
+  String get type => 'playerRenamed';
+  @override
+  Map<String, Object?> fieldsToJson() => {'from': from, 'to': to};
+}
+
+final class FalconRenamed extends DomainEvent {
+  const FalconRenamed(
+    super.day, {
+    super.owner,
+    required this.falcon,
+    required this.from,
+    required this.to,
+  });
+  final String falcon;
+  final String from;
+  final String to;
+  @override
+  String get type => 'falconRenamed';
+  @override
+  Map<String, Object?> fieldsToJson() => {
+    'falcon': falcon,
+    'from': from,
+    'to': to,
+  };
 }
 
 final class FellSick extends DomainEvent {

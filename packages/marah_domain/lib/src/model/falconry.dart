@@ -52,7 +52,7 @@ class Falcon {
   }) : taken = taken ?? {};
 
   final FalconId id;
-  final String name;
+  String name; // (the player may rename it)
   final FalconSpecies species;
   final bool female;
 

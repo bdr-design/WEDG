@@ -56,6 +56,13 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         CamelId(_str(j['camel'])),
         _str(j['name']),
       ),
+      'renameFarm' => RenameFarm(me, _str(j['name'])),
+      'renamePlayer' => RenamePlayer(me, _str(j['name'])),
+      'renameFalcon' => RenameFalcon(
+        me,
+        FalconId(_str(j['falcon'])),
+        _str(j['name']),
+      ),
       'setShepherds' => SetShepherds(me, _int(j['count'])),
       'buildFacility' => BuildFacility(
         me,
@@ -230,6 +237,13 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
   RenameCamel(:final camel, :final name) => {
     'type': 'renameCamel',
     'camel': camel.value,
+    'name': name,
+  },
+  RenameFarm(:final name) => {'type': 'renameFarm', 'name': name},
+  RenamePlayer(:final name) => {'type': 'renamePlayer', 'name': name},
+  RenameFalcon(:final falcon, :final name) => {
+    'type': 'renameFalcon',
+    'falcon': falcon.value,
     'name': name,
   },
   SetShepherds(:final count) => {'type': 'setShepherds', 'count': count},

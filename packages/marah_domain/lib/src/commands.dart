@@ -100,6 +100,26 @@ final class RenameCamel extends Command {
   final String name;
 }
 
+/// The player names his farm (the owner's word of 18 Nov: whatever has a name
+/// he names, and renames).
+final class RenameFarm extends Command {
+  const RenameFarm(super.actor, this.name);
+  final String name;
+}
+
+/// The player's own name.
+final class RenamePlayer extends Command {
+  const RenamePlayer(super.actor, this.name);
+  final String name;
+}
+
+/// One of his falcons, by its new name.
+final class RenameFalcon extends Command {
+  const RenameFalcon(super.actor, this.falcon, this.name);
+  final FalconId falcon;
+  final String name;
+}
+
 final class SetFeedPlan extends Command {
   const SetFeedPlan(super.actor, this.plan);
   final FeedPlan plan;

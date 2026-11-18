@@ -43,6 +43,9 @@ Result handle(Sim sim, Command cmd) {
     MateWithStud() => _mateStud(sim, p, cmd),
     Treat() => _treat(sim, p, cmd),
     RenameCamel() => _rename(sim, p, cmd),
+    RenameFarm() => _renameFarm(sim, p, cmd),
+    RenamePlayer() => _renamePlayer(sim, p, cmd),
+    RenameFalcon() => _renameFalcon(sim, p, cmd),
     SetFeedPlan() => _feedPlan(sim, p, cmd),
     OrderSupply() => _order(sim, p, cmd),
     SetShepherds() => _shepherds(sim, p, cmd),
@@ -640,12 +643,56 @@ Result treatCamel(Sim sim, PlayerState p, Camel camel) {
   return _ok(sim);
 }
 
+/// A name as the player gave it, trimmed, or null when it cannot be one: empty
+/// or over 24 characters (one rule for everything he names).
+String? cleanName(String raw) {
+  final name = raw.trim();
+  return name.isEmpty || name.length > 24 ? null : name;
+}
+
+Result _renameFarm(Sim sim, PlayerState p, RenameFarm cmd) {
+  final name = cleanName(cmd.name);
+  if (name == null) return _err(sim, ErrorCode.invalidName);
+  final old = p.farm.name;
+  p.farm.name = name;
+  sim.emit(FarmRenamed(sim.today, owner: p.id, from: old, to: name));
+  return _ok(sim);
+}
+
+Result _renamePlayer(Sim sim, PlayerState p, RenamePlayer cmd) {
+  final name = cleanName(cmd.name);
+  if (name == null) return _err(sim, ErrorCode.invalidName);
+  final old = p.name;
+  p.name = name;
+  sim.emit(PlayerRenamed(sim.today, owner: p.id, from: old, to: name));
+  return _ok(sim);
+}
+
+Result _renameFalcon(Sim sim, PlayerState p, RenameFalcon cmd) {
+  final f = p.falconry?.falcon(cmd.falcon);
+  if (f == null) return _err(sim, ErrorCode.notFound);
+  final name = cleanName(cmd.name);
+  if (name == null) return _err(sim, ErrorCode.invalidName);
+  final old = f.name;
+  f.name = name;
+  sim.emit(
+    FalconRenamed(
+      sim.today,
+      owner: p.id,
+      falcon: f.id.value,
+      from: old,
+      to: name,
+    ),
+  );
+  return _ok(sim);
+}
+
 Result _rename(Sim sim, PlayerState p, RenameCamel cmd) {
   final c = sim.world.camels[cmd.camel];
   final own = Eligibility.owned(c, p.id);
   if (own != null) return Err(own, sim.drain());
-  final name = cmd.name.trim();
-  if (name.isEmpty || name.length > 24) return _err(sim, ErrorCode.invalidName);
+  final name = cleanName(cmd.name);
+  if (name == null) return _err(sim, ErrorCode.invalidName);
   final old = c!.name;
   c.name = name;
   sim.emit(
