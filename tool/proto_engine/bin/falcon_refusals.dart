@@ -68,9 +68,16 @@ List<Map<String, Object?>> variants(HuntRefusal r) => switch (r) {
   HuntRefusal.noLure => [
     for (final m in ['pigeon', 'pigeonNet', 'birdNet', null]) {'missing': m},
   ],
+  // (only the room each can reach: the nets and the tent are one at most)
   HuntRefusal.gearFull => [
-    for (final g in ['pigeon', 'supplies', 'pigeonNet', 'mobileTent'])
-      for (final n in [0, 1, 2, 5, 14]) {'gear': g, 'room': n},
+    for (final g in [
+      Gear.pigeon,
+      Gear.supplies,
+      Gear.pigeonNet,
+      Gear.mobileTent,
+    ])
+      for (final n in [0, 1, 2, 5, 14])
+        if (n <= g.most) {'gear': g.name, 'room': n},
   ],
   _ => [const {}],
 };
