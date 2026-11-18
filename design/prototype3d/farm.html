@@ -1283,7 +1283,7 @@ function buildHerd(T) {
       const frame = () => new Promise((r) => requestAnimationFrame(r));
       herdHold = true;
       try {
-        for (const m of [...meshes, dustMesh]) { renderer.compile(m, camera, scene); await frame(); }
+        for (const m of [...meshes, dustMesh]) { renderer.compile(m, camera, scene); settlePrograms(); await frame(); }
         const tex = new Set();
         for (const m of [...meshes, dustMesh]) for (const mat of [].concat(m.material)) { for (const k in mat) if (mat[k] && mat[k].isTexture) tex.add(mat[k]); if (mat.uniforms) for (const k in mat.uniforms) { const v = mat.uniforms[k] && mat.uniforms[k].value; if (v && v.isTexture) tex.add(v); } }
         const list = [...tex];
@@ -2236,7 +2236,7 @@ const LOBBY = (() => {
       const kids = [...scene.children];
       for (let i = 0; i < kids.length;) {
         const t0 = performance.now();
-        do renderer.compile(kids[i++], camera, scene); while (i < kids.length && performance.now() - t0 < 8);
+        do { renderer.compile(kids[i++], camera, scene); settlePrograms(); } while (i < kids.length && performance.now() - t0 < 8);
         warmFrac = 0.3 + 0.6 * i / kids.length; draw(); await nextFrame();
       }
       for (const o of hidden) o.visible = false;
@@ -2447,6 +2447,11 @@ function meterText(html) {
   if (all === meter.html) return;      // (written only when it changed)
   meter.html = all; meter.el.innerHTML = all;
 }
+// compile() only queues a program; without KHR_parallel_shader_compile its wait comes at its first use, in whatever
+// task touches it next. Each new program touched at once (getUniforms: three's first use), so the wait falls inside
+// the budget that made it (the review: queued under an 8 ms budget, their waits piled into one later task)
+const settled = new WeakSet();
+function settlePrograms() { for (const p of renderer.info.programs) if (!settled.has(p)) { settled.add(p); p.getUniforms(); } }
 let warmHold = false, startHold = false, herdHold = false;      // (the lobby's warm, the first frame's programs or the herd's, under way: the frame stands still)
 function tick(now) {
   if (warmHold || startHold || herdHold) { requestAnimationFrame(tick); return; }
@@ -2565,7 +2570,7 @@ function tick(now) {
   startHold = true;
   try {
     const kids = [...scene.children];
-    for (let i = 0; i < kids.length;) { const t0 = performance.now(); do renderer.compile(kids[i++], camera, scene); while (i < kids.length && performance.now() - t0 < 8); await new Promise((r) => requestAnimationFrame(r)); }
+    for (let i = 0; i < kids.length;) { const t0 = performance.now(); do { renderer.compile(kids[i++], camera, scene); settlePrograms(); } while (i < kids.length && performance.now() - t0 < 8); await new Promise((r) => requestAnimationFrame(r)); }
   } catch (err) { console.warn('first frame:', err); }
   startHold = false;
 })();
