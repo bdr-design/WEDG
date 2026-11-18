@@ -58,3 +58,14 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
     له اسم يقدر يغيره المستخدم» — the player names (and can rename) everything that has a name: the farm, each camel,
     each falcon, and the like. A new game asks for the farm's name. (The engine has RenameCamel; the farm, the falcons
     and the rest need theirs.) Designed and shown before it is built.
+18. Night of 18-19 Nov, before he slept: «كمل كل شي وعين وكيل يوافق عني ممنوع توقف اللين تنهي كل شي ابي اصحى القى كل
+    شي مكتمل». So the work goes on through the night down the list given him (the lobby, the names, the hunting
+    outing, the wolf and the dogs, the peregrine, the Kalashnikov, الحراج's truck and selling from a camel's card,
+    the car's open items, memory), and a proxy agent answers the design questions for him, as on the night of
+    13-14 Nov. The proxy's limits, kept:
+    - it answers only design and scope choices the owner would have been asked as options (the recommended option
+      unless the evidence says otherwise), each written down with its reason in docs/agents/proxy_decisions.md for
+      the owner to confirm or reverse in the morning;
+    - it never decides on access, security, credentials, money, the repository's visibility, or bringing the camel's
+      source files into the repository: those wait for him;
+    - it runs only while no reviewers do (the owner's rule of 17 Nov: two agents at a time).
