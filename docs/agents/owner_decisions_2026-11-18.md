@@ -29,3 +29,10 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
    - the trapping tab's + and − for the pigeons and supplies and a switch for the rest, ordered on the same page
      (the approved design showed the quantity only): «أعتمده»;
    - the card before leaving (الحماد 843 km, about 10 hours): «كذا زين».
+10. A lobby and a loading screen that waits until everything is loaded, so play never stutters («لوبي اللعبة وشاشة
+    التحميل بالكامل لين يتحمل كل شي عشان مايقطع»). Asked as choices:
+    - in the lobby: «كمّل + جديدة + إعدادات» (continue, with the farm's name, the game's date and the balance; a new
+      game on two taps; settings: sound, the scale, the shadows);
+    - behind it while loading: «عزبتك نفسها» (the farm drawn behind the lobby, the camera turning slowly; «كمّل» lit
+      once everything is loaded);
+    - with the loading bar: «وش اللي يتحمّل» (a line naming what is loading now).
