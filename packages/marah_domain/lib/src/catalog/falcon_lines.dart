@@ -6,6 +6,7 @@
 // proxy_decisions.md batch 3); the others are ours, listed in the task's
 // report for the owner's eye.
 import '../common/result.dart';
+import '../rules/hunt_balance.dart';
 import 'falconry.dart';
 
 /// Why the hunting season refused a command: DomainError(huntRefused,
@@ -147,7 +148,8 @@ class FalconLines {
       HuntRefusal.lotGone => 'هالطير انباع، شوف طيور اليوم',
       HuntRefusal.notALot => 'هالطير مو من طيور اليوم',
       HuntRefusal.noRoom => 'ابنِ غرفة الصقور أول: الصقر يبي مكانه بالعزبة',
-      HuntRefusal.roomFull => 'غرفة الصقور مليانة: تاخذ 4 صقور بس',
+      HuntRefusal.roomFull =>
+        'غرفة الصقور مليانة: تاخذ ${_falcons(HuntBalance.roomHolds)} بس',
       HuntRefusal.permitHeld => 'عندك هالتصريح لهالموسم',
       HuntRefusal.needsFalcon => 'تصريح الصقار يبي صقر جوازه باسمك',
       HuntRefusal.gearFull => _room(
@@ -209,6 +211,14 @@ class FalconLines {
       HuntRefusal.searchedToday => 'دوّرته اليوم: دوّره بكرة',
     };
   }
+
+  /// [n] falcons by the counting rule (1, 2, 3 to 10, 11 and up).
+  static String _falcons(int n) => switch (n) {
+    1 => 'صقر واحد',
+    2 => 'صقرين',
+    <= 10 => '$n صقور',
+    _ => '$n صقر',
+  };
 
   /// What still fits of a gear, its counting noun in its four forms (1, 2,
   /// 3 to 10, 11 and up); none: «عندك كفايتك منها».

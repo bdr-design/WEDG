@@ -10,6 +10,7 @@ import '../catalog/falconry.dart';
 import '../common/ids.dart';
 import '../common/result.dart';
 import '../common/time.dart';
+import '../events.dart';
 import '../game.dart';
 import '../handlers/falconry.dart';
 import '../model/falconry.dart';
@@ -79,10 +80,13 @@ Map<String, Object?> falconCatalogOf(GameState state, OwnerId viewer) {
     'room': {
       'price': Facility.falconRoom.price,
       'holds': HuntBalance.roomHolds,
+      'buildDays': Balance.buildDays,
     },
+    'moultMonths': HuntBalance.moultMonths.toList()..sort(),
     'upkeepPerDay': HuntBalance.upkeepPerDay,
     'dauDaysNeeded': HuntBalance.dauDaysNeeded,
     'stepBackDays': HuntBalance.stepBackDays,
+    'stepBack': HuntBalance.stepBack,
     'mostNights': HuntBalance.mostNights,
     'release': [
       HuntBalance.releaseFrom.$1,
@@ -125,6 +129,7 @@ Map<String, Object?> falconCatalogOf(GameState state, OwnerId viewer) {
           const DomainError(ErrorCode.huntRefused, {
             'reason': 'noLure',
             'lure': 'birdNet',
+            'missing': 'birdNet',
           }),
         ),
         for (final r in FalconRoute.values)
@@ -167,9 +172,12 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
           'opens': k.opens(k.seasonFor(today)).value,
           'closes': k.closes(k.seasonFor(today)).value,
           'open': k.seasonOn(today) != null,
-          'held': h?.permits[k],
+          // held for this season only: a season gone by is not held (the
+          // phone kept the first season bought and never sold another)
+          'held': h?.permits[k] == k.seasonFor(today) ? h!.permits[k] : null,
           'valid': h?.holds(k, today) ?? false,
-          'cannot': cannotBuyPermit(sim, p, k)?.params['reason'],
+          // a money refusal has no reason of its own: its code instead
+          'cannot': _why(cannotBuyPermit(sim, p, k)),
         },
     ],
     // (the tracker is each falcon's own: on the falcon below, not a count)
@@ -185,12 +193,13 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
           if (b.facility == Facility.falconRoom) b.doneOn.value,
       ],
       'held': h?.falcons.length ?? 0,
+      'holds': HuntBalance.roomHolds,
       'moult': HuntBalance.moultMonths.contains(today.month),
       'wantCare': [
         for (final f in h?.falcons ?? const <Falcon>[])
           if (f.where == FalconWhere.home && f.caredOn != today) f.id.value,
       ],
-      'cannot': noRoomFor(p)?.params['reason'],
+      'cannot': _why(noRoomFor(p)),
     },
     'falcons': [
       for (final f in h?.falcons ?? const <Falcon>[])
@@ -240,6 +249,7 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
           if (g.hunting) g.name: quarryAt(g, today)?.label,
       },
     },
+    'news': falconNews(state, viewer, today),
     'lots': [
       for (final r in FalconRoute.values)
         for (final l in FalconMarket.lots(state.world.seed, r, today))
@@ -289,6 +299,8 @@ Map<String, Object?> _falcon(
   'taken': {for (final e in f.taken.entries) e.key.label: e.value},
   'where': f.where.name,
   if (f.keep) 'keep': true,
+  // a kept bird: whether it can be set free today (the season's months)
+  if (f.keep) 'releaseCannot': cannotRelease(today, f)?.name,
   'ready': ready(f),
   if (tracked) 'tracker': true,
   if (trackerComing) 'trackerComing': true,
@@ -296,3 +308,59 @@ Map<String, Object?> _falcon(
   if (f.caredOn != null && f.dauDays > 0)
     'stepsBackOn': (f.caredOn! + HuntBalance.stepBackDays).value,
 };
+
+/// How long the phone is told of what became of his birds and lots, days.
+const falconNewsDays = 30;
+
+/// What became of his birds and lots in the last [falconNewsDays] days, the
+/// newest first, as his inbox holds it (the engine's own events, told after
+/// they happened: a bird sold at the hammer with its price, one set free at
+/// the auction's close, a lost falcon found or gone, one that stepped back
+/// without الدعو, a lot that went to another bidder at its price). Each has
+/// a key that stays the same, for the phone to mark it read. Nothing hidden:
+/// a price is told only once the hammer has fallen.
+List<Map<String, Object?>> falconNews(
+  GameState state,
+  OwnerId viewer,
+  GameDay today,
+) {
+  final out = <Map<String, Object?>>[];
+  final box = state.inboxOf(viewer);
+  for (var i = box.length - 1; i >= 0; i--) {
+    final e = box[i];
+    if (today.daysSince(e.day) > falconNewsDays) break;
+    switch (e) {
+      case FalconFate(:final falcon, :final name, :final fate, :final price)
+          when const {
+            Fate.sold,
+            Fate.freedAtClose,
+            Fate.found,
+            Fate.gone,
+            Fate.steppedBack,
+          }.contains(fate):
+        out.add({
+          'key': '${e.day.value}:$falcon:${fate.name}',
+          'kind': fate.name,
+          'day': e.day.value,
+          'falcon': falcon,
+          'name': name,
+          'price': ?price,
+        });
+      case FalconLotLost(:final lot, :final route, :final price):
+        out.add({
+          'key': '${e.day.value}:$lot:lotLost',
+          'kind': 'lotLost',
+          'day': e.day.value,
+          'lot': lot,
+          'route': route.name,
+          'price': price,
+        });
+      default:
+        break;
+    }
+  }
+  return out;
+}
+
+String? _why(DomainError? e) =>
+    e == null ? null : (e.params['reason'] as String?) ?? e.code.name;

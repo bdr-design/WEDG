@@ -337,4 +337,30 @@ void main() {
     expect((await e.tripNight()).refused!.params['reason'], 'driving');
     await e.close();
   });
+
+  test('the calendar jumped from a camp (T18): the camp\'s stops watched '
+      'and the trip\'s lines counted, as a night at camp does', () async {
+    final e = core();
+    await e.newGame(params);
+    final g = e.game!, me = g.me.id;
+    await e.dispatch(SetTestMoney(me, on: true));
+    expect((await e.dispatch(BuyPermit(me, PermitKind.trapping))).ok, isTrue);
+    await e.dispatch(OrderGear(me, Gear.supplies, 3));
+    await e.dispatch(OrderGear(me, Gear.pigeon, 6));
+    await e.dispatch(OrderGear(me, Gear.pigeonNet, 1));
+    await playTo(e, g.today + 1, 400);
+    expect(
+      (await e.dispatch(StartTrip(me, TripKind.trapping, Ground.hamad, 10))).ok,
+      isTrue,
+    );
+    final start = g.today;
+    final r = await e.away(start + 12);
+    expect(r.refused, isNull);
+    final stop = r.run!.stop!;
+    expect(stop.kind, AwayStopKind.extra);
+    expect(stop.extra, 'suppliesOut');
+    expect(g.today < start + 12, isTrue);
+    expect(r.run!.summary.extra, isNotEmpty);
+    await e.close();
+  });
 }
