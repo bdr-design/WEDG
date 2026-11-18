@@ -875,3 +875,17 @@ Then, the owner's choice of 18 Nov 2026 on the two that change pixels, shown the
   page updates it (three does it when it makes the map itself: left at its default 10 m frame, the shadows fell only near
   its middle in the first build). 0.1-0.3% of pixels differ, on shadow edges.
 
+
+After the fix, two reviews (the pictures and the GPU's work; the calls, the uploads and what could break):
+- **Fragments a screen pixel** on a tile GPU, over the pens 2.16 -> 1.19 and walking 1.92 -> 1.28 (3 MSAA-free
+  passes counted); 77 draws over the pens and 70 walking, plus 21 on the shadow map's frames. No shader made in play.
+- **A built yard** (all six pens) made 651 / 602 / 1,259 calls a frame (over the pens / walking / in the car): the six
+  pens shared their posts', rails' and panels' three geometries. Each pen has its own now: 400 / 385 / 1,113.
+- **The shadow taps in the car view** change 1.7% of pixels, not the 0.1-0.3% of the herd's shots: the 17 point taps
+  striped the car shade's cloth and the pickup's bed cover with their own shadow, and the four compared taps leave those
+  bands much fainter.
+- **A lost GL context** (iOS may take one from a page in the background or short of memory): three r170 makes a new
+  shadow map object on the restore, and the yard drew black with the page's depth texture standing in for the colour.
+  Setting the page's wrappers again left the grass and walls dark and the pen floors gone, so nothing is drawn from
+  the loss, and on the restore the game is saved and the page loaded again (one reload, the save intact, about 0.3 s
+  after the restore before the page loads).
