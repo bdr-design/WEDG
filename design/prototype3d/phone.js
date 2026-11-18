@@ -66,6 +66,7 @@ const CSS = `
   .row .lead svg { width: 18px; height: 18px; }
   .row b { font-size: 13.5px; font-weight: 600; }
   .row small { font-size: 11.5px; color: var(--ink2); }
+  .row .qty small { display: block; margin-top: 3px; font-size: 11px; color: inherit; text-align: center; }      /* («أغسطس» over «الجاي») */
   .row .qty { grid-row: span 2; font: 600 14px/1 "Marah Figures", "Alexandria", "IBM Plex Sans Arabic", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }      /* (tabular after the font shorthand, which resets the phone's tabular-nums: the column's figures line up, the audit) */
   .pos { color: var(--acc); }
   .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
@@ -1642,12 +1643,16 @@ function calCardScreen() {
   const t = CAL.day, N = t - G.today;
   const { block, guard, stopAt, supply, due, prep } = cardParts(t, N);
   const goKey = 'calGo', sure = HJ.sure === goKey, can = !block;
+  // from a camp: its supplies and its own stops too (the engine watches them on any stretch: the review)
+  const T = HF() && HF().trip, atCamp = T && !T.oneDay && T.homeOn == null;
+  const campRow = atCamp ? `<div class="row two"><span class="lead${T.supplyDays >= N ? '' : ' bad'}">${svg('box')}</span><b>مؤونة المخيم · ${T.supplyDays ? `تكفي ${days(T.supplyDays)}` : 'ما عندك'}</b><small>ماء وأكل وبنزين${T.supplyDays >= N ? '' : `: ما تكفي ${days(N)}، يوقف لما تخلص`}</small></div>` : '';
+  const campStops = atCamp ? ` · خلصت مؤونة المخيم · ${T.kind === 'trapping' ? 'خلص موسم الطرح' : 'خلص موسم المقناص'} · جا يوم رجعتك` : '';
   return `<div class="body">${back}<div class="title">قبل ما تمشي</div>${errCard()}
     <div class="span"><b>لين ${ddAt(t)}</b><small>${days(N)} · من ${ddAt(G.today)}</small></div>
     ${guard}
     <div class="sec">يكفي ${days(N)}؟</div>
     <div class="group">
-      ${supply}</div>
+      ${supply}${campRow}</div>
     ${stopAt < N ? `<div class="note">حتى لو عبّيت، ما يكفي الأيام كلها: يوقف التقويم حوالي ${dShortAt(G.today + Math.max(1, stopAt))} عشان تطلب، وبعدها تكمل.</div>` : ''}
     <div class="sec">اللي يجي بالطريق</div>
     <div class="group">${due}</div>
@@ -1655,7 +1660,7 @@ function calCardScreen() {
     <div class="group">
       ${prep}</div>
     <div class="sec">يوقف ويرجع لك لو</div>
-    <div class="stops">${stopsText()}</div>
+    <div class="stops">${stopsText(campStops)}</div>
     <div class="note">وكل شي ثاني يمشي بنفسه: الحليب ينباع، والرواتب تنخصم، والولادات تصير، وتلقاها كلها بالآخر.</div>
     <button class="btn ${!can ? '' : sure ? 'sure' : 'pri'} wide" data-act="calGo" ${can ? '' : 'disabled'}>${sure ? 'اضغط مرة ثانية ويمشي' : `امشِ لين ${ddAt(t)}`}</button>
     <div class="note">التقويم يمشي لقدام بس: الأيام اللي تمضي ما ترجع. وتقدر توقفه بنص الطريق.</div></div>`;
@@ -1699,8 +1704,10 @@ function stopWords(stop) {
     case 'registration': return { title: `باقي 3 أيام ويقفل تسجيل ${esc(stop.name || '')}`, line: 'وعندك حلال يقدر يدخله. وبعد القفل تسجيل متأخر برسوم لين 72 ساعة قبل الشوط.', act: 'شوف المزاين', go: 'mazayen' };
     case 'breeding': return { title: 'بدا وقت الضراب', line: 'وعندك ناقة تنلقح.', act: null, go: null };
     case 'crowded': return { title: 'ضاقت الشبوك على حلالك', line: 'ابنِ شبك من العزبة.', act: 'العزبة', go: 'build' };
-    case 'falconCare': return { title: `${nm} يبي الدعو`, line: 'لو ما دعيته اليوم يرجع خطوة: ادعه من نادي الصقور.', act: 'نادي الصقور', go: 'club', tab: 'mine' };
-    case 'extra': return CAMP_STOP[stop.extra] || { title: 'وقف', line: '', act: null, go: null };
+    case 'falconCare': return { title: `${nm} يبي الدعو`, line: `لو ما دعيته اليوم يرجع ${FC.cat ? stretch(FC.cat.stepBack) : ''} بالدعو: ادعه من نادي الصقور.`.replace('  ', ' '), act: 'نادي الصقور', go: 'club', tab: 'mine' };
+    case 'extra':      // (the supplies out once more after the engine broke camp for them: he is on his way home, the review)
+      if (stop.extra === 'suppliesOut' && HF() && HF().trip && HF().trip.homeOn != null) return { title: 'خلصت مؤونة المخيم', line: 'انفك المخيم، وانت بطريقك للعزبة.', act: null, go: null };
+      return CAMP_STOP[stop.extra] || { title: 'وقف', line: '', act: null, go: null };
     case 'cancelled': return { title: 'وقّفته', line: '', act: null, go: null };
     default: return { title: 'وقف التقويم', line: '', act: null, go: null };
   }
@@ -1835,7 +1842,8 @@ function clubAuction() {
     if (isOpen(r.route)) { const w = first ? 'الحين' : `لين ${md(r.to)}`; first = false; return w; }
     // closed: when it opens next (a month gone by this year is next year's: «أكتوبر» read as now, the review)
     const d = dateAt(G.today), now = (d.getUTCMonth() + 1) * 100 + d.getUTCDate(), a = r.from[0] * 100 + r.from[1];
-    const next = now > a ? ' الجاي' : '';
+    // («الجاي» under the month: on one line the chip narrowed the route's name to 62 px, the review)
+    const next = now > a ? '<small>الجاي</small>' : '';
     return r.from[0] === r.to[0] ? `${MONTH[r.from[0] - 1]}${next}` : `من ${md(r.from)}${next}`;
   };
   const LINE = { trapping: 'فرخ شاهين بحري · من حوالي 50,000', exhibition: 'حر مستورد، وأسعاره عالية', breeders: 'ملهم · حر فرخ إنتاج مزارع' };
@@ -1968,7 +1976,7 @@ function lotScreen() {
   }
   const preRow = can && pres.length > 1 ? `<span class="pre" role="group" aria-label="مبالغ جاهزة">${pres.map(([label, v]) => `<button data-act="upSet" data-v="${v}" aria-pressed="${FC.upTo === v}" aria-label="${label}: ${n0(v)} ريال">${label} <b>${n0(v)}</b></button>`).join('')}</span>` : '';
   const kUp = stepOf(FC.upTo), kDown = stepOf(Math.max(l.opening, FC.upTo - 1));
-  const stepRow = `<div class="group"><div class="row ceil"><span class="lead">${svg('gavel')}</span><b>أعلى مبلغ تدفعه</b>${preRow}<span class="stp"><button data-act="upStep" data-d="-1" aria-label="أقل بـ ${n0(kDown)}" ${can && FC.upTo > l.opening ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(FC.upTo)}</b> <span>ريال</span></span><button data-act="upStep" data-d="1" aria-label="أكثر بـ ${n0(kUp)}" ${can && FC.upTo + kUp <= G.cash ? '' : 'disabled'}>${svg('plus')}</button></span><small>${G.cash < 0 ? `عليك دين ${n0(-G.cash)} ريال` : poor ? `رصيدك ${n0(G.cash)} ريال ما يوصل الافتتاح` : `من الافتتاح لين رصيدك ${n0(G.cash)} ريال`}</small></div></div>`;
+  const stepRow = `<div class="group"><div class="row ceil"><span class="lead">${svg('gavel')}</span><b>أعلى مبلغ تدفعه</b>${preRow}<span class="stp"><button data-act="upStep" data-d="-1" aria-label="أقل بـ ${n0(kDown)}" ${can && FC.upTo > l.opening ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(FC.upTo)}</b> <span>ريال</span></span><button data-act="upStep" data-d="1" aria-label="أكثر بـ ${n0(kUp)}" ${can && FC.upTo + kUp <= G.cash ? '' : 'disabled'}>${svg('plus')}</button></span><small>${G.cash < 0 ? `عليك دين ${n0(-G.cash)} ريال` : poor ? `رصيدك ${n0(G.cash)} ريال ما يوصل الافتتاح` : `من الافتتاح لين رصيدك ${n0(top)} ريال`}</small></div></div>`;      // (his balance as «كل رصيدك» rounds it)
   return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${trap ? 'مزاد الليلة' : esc(routeOf(l.route).name)}</div>${fcMsg()}${errCard()}
     <div class="it big">${birdPic(l.species)}${facts}</div>
     ${why}${stepRow}
@@ -2512,7 +2520,7 @@ export function createPhone({ host }) {
   // a button that changes the game: sent to the engine, one at a time (its new view of the game redraws the screen);
   // a refusal is said on the screen, and what was not taken stays in the order
   let engine = null, busy = false, sureAt = 0, sureTimer = 0, orderAt = 0, orderKey = '';
-  const keyOf = (t) => ['act', 's', 'd', 'p', 't', 'f', 'o', 'id', 'k'].map((k) => t.dataset[k] ?? '').join('|');
+  const keyOf = (t) => ['act', 's', 'd', 'p', 't', 'f', 'o', 'id', 'k', 'v', 'day'].map((k) => t.dataset[k] ?? '').join('|');      // (v: a ready amount, day: a calendar day; without them every one shared the first's key)
   async function act(t, at = performance.now()) {
     const kind = t.dataset.act, focused = root.activeElement === t ? keyOf(t) : null;
     // an order's second tap on the same button within DOUBLE_TAP of its answer (by the tap's own time, not when it is

@@ -4,13 +4,14 @@
 //   1. the ceiling of a lot (his choice of 18 Nov: ready amounts, then + and −),
 //   2. his trapped bird's three ways: no room, a free place, the room full,
 //   3. the card before leaving for الحماد (843 km from القصيم),
-//   4. every refusal line the engine gives, with where the phone shows it (written to a text file beside the sheet).
+//   4. every refusal line the engine gives, each variant and where it shows: tool/proto_engine/bin/falcon_refusals.dart
+//      writes design/ui/phone_falcon_refusals.txt.
 // The saves are the engine's own, played by its commands (tool/proto_engine/bin/falcon_design_saves.dart).
 //
 //   cd tool/proto_engine && dart run bin/falcon_design_saves.dart <saves>
 //   python3 tool/proto_app/assemble.py, then serve tool/proto_app/assets/web on PORT
 //   PORT=<p> SAVES=<saves> OUT=<dir> node design/ui/phone_falcon_engine.cjs
-// Writes OUT/falcon_engine_*.png (2x), OUT/phone_falcon_engine.jpg (the sheet) and OUT/phone_falcon_refusals.txt.
+// Writes OUT/falcon_engine_*.png (2x) and OUT/phone_falcon_engine.jpg (the sheet).
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -79,10 +80,6 @@ async function shot(p, name, label, where = 'top') {
     await p.waitForTimeout(1200);
     await shot(p, 'card_hamad', '٣ · قبل ما تمشي: الحماد، 9 ليالي');
     await shot(p, 'card_hamad_end', '٣ · نفس البطاقة، آخرها', 'end');
-    // 4. the refusals: the engine's lines (the catalog), and the phone's own words for money
-    const cat = (await p.evaluate(() => window.marahEngine.falconCatalog())).catalog;
-    const lines = Object.entries(cat.lines.refusals).map(([k, v]) => `${k}\t${v}`);
-    fs.writeFileSync(path.join(OUT, 'phone_falcon_refusals.txt'), lines.join('\n') + '\n');
     await ctx.close();
   }
   await b.close();
