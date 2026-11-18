@@ -43,3 +43,5 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
 12. The ceiling's «كل رصيدك» (it won any lot he could afford in one tap, paying only the hammer): «أبدله بـ«خمس
     مرات»» (five times the opening, shown when his balance reaches it). And after the hunting phone, next: «اللوبي
     والتحميل».
+13. Shown that about one trapping lot in four hammers above five times its opening (30-40 taps of the fine step at
+    p90): «أزيد «عشر مرات»» (a sixth ready amount, ten times the opening, when his balance reaches it).
