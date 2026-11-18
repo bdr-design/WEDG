@@ -175,6 +175,49 @@
   .meter .bad { color: var(--warn); }
   .meter .dot { color: #ff4d3d; }
 
+  /* ---------- the lobby (the owner's approved design, 18 Nov: design/ui/lobby.html): the farm behind it, a woven Sadu
+     runner down the right edge, the panel in the game's Sadu card. Nothing else of the game shows while it is up. */
+  #root.lobby-on > :not(#stage):not(#lobby):not(#meter) { visibility: hidden !important; }
+  #lobby { position: absolute; inset: 0; z-index: 8; pointer-events: none; color: #efe6d6; font-variant-numeric: tabular-nums;
+    --wool: #efe6d6; --wool-2: rgba(239, 230, 214, 0.7); --wool-3: rgba(239, 230, 214, 0.55); --hair: rgba(239, 230, 214, 0.12); --hair-2: rgba(239, 230, 214, 0.26);
+    --qirmiz: #a3302a; --zafaran: #d9952f; --black: rgba(23, 19, 15, 0.96); }
+  #lobby[hidden] { display: none; }
+  #lobby .shade { position: absolute; inset: 0; background: linear-gradient(to left, rgba(10, 8, 6, 0.5), rgba(10, 8, 6, 0) 50%); }
+  #lobby .runner { position: absolute; top: 0; bottom: 0; right: 0; width: 30px; background: var(--sadu-run) right top / 30px 16px repeat-y; box-shadow: -4px 0 14px rgba(0, 0, 0, 0.3); }
+  #lobby .col { position: absolute; top: 0; bottom: 0; right: calc(30px + var(--edge-r)); width: min(296px, 46%); display: flex; flex-direction: column; justify-content: center; pointer-events: auto; }
+  #lobby .card { background: var(--black); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42), inset 0 0 0 1px var(--hair); border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; max-height: calc(100% - var(--edge-t) - var(--edge-b)); }
+  #lobby .card[hidden] { display: none; }
+  #lobby .sadu { flex: none; height: 30px; background: var(--sadu-band) right top / 16px 30px repeat-x; }
+  #lobby .selvedge { flex: none; height: 6px; background: var(--sadu-edge) right top / 16px 6px repeat-x; }
+  #lobby .in { padding: 14px 16px 16px; display: grid; gap: 12px; overflow: auto; }
+  #lobby h1 { margin: 0; font: 800 34px/1.1 var(--display); }
+  #lobby .tag { margin: 2px 0 0; color: var(--wool-3); font-size: 12px; }
+  #lobby .grain { height: 4px; background: var(--sadu-grain) right top / 4px 4px repeat-x; opacity: 0.7; }
+  #lobby .farm b { font: 700 17px/1.3 var(--display); display: block; }
+  #lobby .farm small { color: var(--wool-2); font-size: 13px; display: block; margin-top: 2px; }
+  #lobby button { font-family: var(--ui); color: var(--wool); border: 0; cursor: pointer; }
+  #lobby .btn { height: 48px; border-radius: 2px; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+  #lobby .btn.pri { background: var(--qirmiz); }
+  #lobby .btn.pri[disabled] { background: rgba(163, 48, 42, 0.35); color: var(--wool-2); cursor: default; }
+  #lobby .btn.ghost { background: transparent; box-shadow: inset 0 0 0 1px var(--hair-2); height: 42px; font-size: 14px; }
+  #lobby .btn.sure { background: var(--zafaran); color: #1c1408; }
+  #lobby .btn:focus-visible, #lobby .gear:focus-visible, #lobby .seg button:focus-visible { outline: 2px solid var(--wool); outline-offset: 2px; }
+  #lobby .load { display: grid; gap: 6px; }
+  #lobby .load[hidden] { display: none; }
+  #lobby .bar { height: 12px; background: rgba(239, 230, 214, 0.08); box-shadow: inset 0 0 0 1px var(--hair); }
+  #lobby .bar i { display: block; height: 100%; width: 0; background: var(--sadu-weave) right top / 16px 12px repeat-x; transition: width 0.3s linear; }
+  #lobby .load small { color: var(--wool-2); font-size: 12px; display: flex; justify-content: space-between; }
+  #lobby .gear { position: absolute; top: var(--edge-t); left: var(--edge-l); width: 44px; height: 44px; border-radius: 2px; background: var(--black); box-shadow: inset 0 0 0 1px var(--hair-2); display: grid; place-items: center; pointer-events: auto; }
+  #lobby .gear svg { width: 22px; height: 22px; stroke: var(--wool); fill: none; stroke-width: 1.8; stroke-linejoin: miter; }
+  #lobby .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-height: 40px; }
+  #lobby .row + .row { border-top: 1px solid var(--hair); padding-top: 10px; }
+  #lobby .row b { font-size: 14px; } #lobby .row small { display: block; color: var(--wool-3); font-size: 12px; }
+  #lobby .seg { display: flex; box-shadow: inset 0 0 0 1px var(--hair-2); border-radius: 2px; }
+  #lobby .seg button { padding: 0 11px; min-height: 36px; font-size: 13px; color: var(--wool-2); background: transparent; }
+  #lobby .seg button[aria-pressed="true"] { background: var(--qirmiz); color: var(--wool); font-weight: 700; }
+  #lobby .title { font: 700 18px var(--display); }
+  #lobby .note { color: var(--wool-2); font-size: 13px; line-height: 1.55; text-wrap: pretty; }
+
   /* ---------- loading */
   .status { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
   .status[hidden] { display: none; }
@@ -232,7 +275,7 @@
   .pl-pedal.brake .lvl { background: linear-gradient(to top, rgba(240, 106, 93, 0.95), rgba(240, 106, 93, 0.5)); }
 </style>
 
-<div id="root">
+<div id="root" class="lobby-on">
 <div id="stage" aria-label="العزبة ثلاثية الأبعاد: حلالك في الشبوك. اسحب بإصبع لتحريك الخريطة، وقرّب أو بعّد بإصبعين، ولفها بلفّ الإصبعين، واضغط على ناقة لتختارها."></div>
 <div id="labels" dir="rtl" lang="ar" role="group" aria-label="أماكن العزبة على الخريطة"></div>
 
@@ -251,6 +294,46 @@
 </section>
 
 <div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p></div>
+<!-- the lobby (see its style): shown at every fresh start; «كمّل» lit once everything the game draws is loaded -->
+<div id="lobby" dir="rtl" lang="ar">
+  <div class="shade"></div>
+  <div class="runner" aria-hidden="true"></div>
+  <button class="gear" id="lb-gear" type="button" aria-label="الإعدادات"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3h3.4l.5 2.4 1.7.9 2.2-1.1 2.4 2.4-1.1 2.2.9 1.7 2.4.5v3.4l-2.4.5-.9 1.7 1.1 2.2-2.4 2.4-2.2-1.1-1.7.9-.5 2.4h-3.4l-.5-2.4-1.7-.9-2.2 1.1-2.4-2.4 1.1-2.2-.9-1.7L3 13.7v-3.4l2.4-.5.9-1.7-1.1-2.2 2.4-2.4 2.2 1.1 1.7-.9z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <div class="col">
+    <div class="card" id="lb-main" role="dialog" aria-labelledby="lb-name">
+      <div class="sadu" aria-hidden="true"></div>
+      <div class="in">
+        <div><h1 id="lb-name">مراح</h1><p class="tag">حلالك، وعزبتك، ومزاينك</p></div>
+        <div class="grain" aria-hidden="true"></div>
+        <div class="farm" id="lb-farm" aria-live="polite"><b>…</b></div>
+        <div class="load" id="lb-load"><div class="bar" role="progressbar" aria-label="التحميل" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="lb-bar"></i></div><small><span id="lb-what">يحمّل…</span><span id="lb-pct" class="num">0٪</span></small></div>
+        <button class="btn pri" id="lb-go" type="button" disabled>يحمّل…</button>
+        <button class="btn ghost" id="lb-new" type="button">لعبة جديدة</button>
+      </div>
+      <div class="selvedge" aria-hidden="true"></div>
+    </div>
+    <div class="card" id="lb-confirm" role="dialog" aria-labelledby="lb-confirm-t" hidden>
+      <div class="sadu" aria-hidden="true"></div>
+      <div class="in">
+        <div class="title" id="lb-confirm-t">لعبة جديدة؟</div>
+        <div class="note" id="lb-confirm-note"></div>
+        <button class="btn sure" id="lb-new-go" type="button">اضغط مرة ثانية: ابدأ من جديد</button>
+        <button class="btn ghost" id="lb-new-back" type="button">رجوع</button>
+      </div>
+      <div class="selvedge" aria-hidden="true"></div>
+    </div>
+    <div class="card" id="lb-set" role="dialog" aria-labelledby="lb-set-t" hidden>
+      <div class="sadu" aria-hidden="true"></div>
+      <div class="in">
+        <div class="title" id="lb-set-t">الإعدادات</div>
+        <div class="row"><div><b>الدقة</b><small>الأخف يريّح الجوال ويقلل الحرارة</small></div><span class="seg" role="group" aria-label="الدقة"><button type="button" data-set="scale" data-v="2">حادة</button><button type="button" data-set="scale" data-v="1">أخف</button></span></div>
+        <div class="row"><div><b>الظلال</b><small>بدونها أخف على الجوال</small></div><span class="seg" role="group" aria-label="الظلال"><button type="button" data-set="shadows" data-v="1">شغّالة</button><button type="button" data-set="shadows" data-v="0">طافية</button></span></div>
+        <button class="btn ghost" id="lb-set-done" type="button">تم</button>
+      </div>
+      <div class="selvedge" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
 <div class="meter glass num" id="meter" dir="rtl" hidden aria-live="off"></div>
 </div>
 
@@ -318,11 +401,14 @@ const R = (a, b) => a + (b - a) * rand();
 
 // ------------------------------------------------------------ renderer, sky, light
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));     // 2x (the owner, 12 Nov, of the blur: at 1.5x on his 3x screen the picture was drawn at a quarter of its pixels, at 2x 44%, 78% more than 1.5x; ADR 0005)
+// the player's settings, kept on the device (the lobby's, the owner's choice of 18 Nov: a new game keeps them too)
+const SETTINGS = (() => { try { return { scale: 2, shadows: 1, ...JSON.parse(localStorage.getItem('marah.settings') || '{}') }; } catch { return { scale: 2, shadows: 1 }; } })();
+const saveSettings = () => { try { localStorage.setItem('marah.settings', JSON.stringify(SETTINGS)); } catch { /* (for this visit only) */ } };
+renderer.setPixelRatio(Math.min(devicePixelRatio, SETTINGS.scale > 1 ? 2 : 1));     // 2x (the owner, 12 Nov, of the blur: at 1.5x on his 3x screen the picture was drawn at a quarter of its pixels, at 2x 44%, 78% more than 1.5x; ADR 0005)
 renderer.setSize(stage.clientWidth, stage.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;      // Khronos PBR Neutral (the owner's choice, 12 Nov, of the washed-out colours: AgX left the sand's colour 40% less saturated and the contrast a quarter lower)
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = SETTINGS.shadows !== 0;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 stage.appendChild(renderer.domElement);
 
@@ -1615,6 +1701,10 @@ function saduUrl(rows, cell) {
 }
 document.documentElement.style.setProperty('--sadu-band', saduUrl(SADU, 2));
 document.documentElement.style.setProperty('--sadu-edge', saduUrl(SADU.slice(-3), 2));      // the selvedge: the band's last three rows
+// the lobby's: the band turned a quarter (the runner down the edge), the grains, and the diamonds the loading bar weaves
+document.documentElement.style.setProperty('--sadu-run', saduUrl(SADU[0].split('').map((_, x) => SADU.map((r) => r[x]).reverse().join('')), 2));
+document.documentElement.style.setProperty('--sadu-grain', saduUrl(['WK', 'KW'], 2));
+document.documentElement.style.setProperty('--sadu-weave', saduUrl(SADU.slice(4, 10), 2));
 // a camel's numbers: its age from its stage (GDD §5, the stage's first year), and a value inside the GDD §6 band of its kind
 // (the young, to a حقة: 3-6k; breeding stock: 10-40k; game choice, steady per name) unless it has its own
 // the age from the engine's days: months under a year, then whole years
@@ -1910,7 +2000,7 @@ function pick(c) {
 
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let downAt = null;
-renderer.domElement.addEventListener('pointerdown', (e) => { if ((play && play.on) || phone.hit(e.clientX, e.clientY)) { downAt = null; return; } downAt = [e.clientX, e.clientY]; ease.k = 1; });      // (in play a tap on the scene is not a tap on the map: it opened a place's card behind the hidden HUD)
+renderer.domElement.addEventListener('pointerdown', (e) => { if (lobbyOn || (play && play.on) || phone.hit(e.clientX, e.clientY)) { downAt = null; return; } downAt = [e.clientX, e.clientY]; ease.k = 1; });      // (in play a tap on the scene is not a tap on the map: it opened a place's card behind the hidden HUD)
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!downAt || (play && play.on) || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   const pin = pinAt(e.clientX, e.clientY);
@@ -1953,7 +2043,7 @@ function tapWorld(x, y) {
 
 // ------------------------------------------------------------ load and run
 // (the middle level is the 4k one: the owner's choice of 14 Nov, «النسخة الوسط الأخف الحين»; the 8k lod1.json is kept)
-Promise.all(['lod0.json', 'lod1_4k.json', 'lod2.json'].map(loadLod)).then((T) => {
+const herdReady = Promise.all(['lod0.json', 'lod1_4k.json', 'lod2.json'].map(loadLod)).then((T) => {
   shareCoatMaps(T);
   LODS = T;
   HERD = buildHerd(T);
@@ -1968,8 +2058,8 @@ Promise.all(['lod0.json', 'lod1_4k.json', 'lod2.json'].map(loadLod)).then((T) =>
   // the game's rules engine, in its worker (docs/plan-gameplay.md, G2), started once the yard is up so it never competes
   // with the loading; the phone's الوايت and العلف and its home screen show the game from it and send it the player's
   // orders (G3). Without its file (not built) the yard goes on without it.
-  import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => { phone.setGame(snap); setGame(snap); }, onAway: (m) => phone.onAway(m) })).then((e) => { window.marahEngine = e; phone.setEngine(e); if (e.snapshot) { phone.setGame(e.snapshot); setGame(e.snapshot); } }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); });      // (imported here, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
-}).catch(() => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; });
+  import('./engine.js').then(({ startEngine }) => startEngine({ onSnapshot: (snap) => { phone.setGame(snap); setGame(snap); LOBBY.game(snap); }, onAway: (m) => phone.onAway(m) })).then((e) => { window.marahEngine = e; phone.setEngine(e); LOBBY.engine(e); if (e.snapshot) { phone.setGame(e.snapshot); setGame(e.snapshot); LOBBY.game(e.snapshot); } }, (err) => { window.marahEngineError = String(err.message || err); console.warn('engine:', err); LOBBY.engine(null); });      // (imported here, not at the top: a copy of the page without engine.js loses only the engine, not the yard)
+}).catch((err) => { $('status').querySelector('p').textContent = 'ما قدرت أحمّل العزبة. حدّث الصفحة.'; throw err; });
 
 // ------------------------------------------------------------ vehicles built from the owner's photos
 async function loadVehicles() {
@@ -2040,6 +2130,100 @@ vehiclesReady.then(async () => {
 $('cam-play').addEventListener('click', () => { if (play) { closePop(); if (demoHerd) { play.debug.man.pos.set(-6, 0, -4); play.debug.man.heading = Math.atan2(-10, -30); } play.start(); } });
 
 view('drone');
+// ------------------------------------------------------------ the lobby: shown at every fresh start (a return from the
+// background goes straight back to the game, the owner's choices of 18 Nov), the game's clock held until «كمّل». Its
+// steps, each named while it loads; «كمّل» lit once all are done, the last one every shader made for what the game draws
+function applySettings(ch) {
+  Object.assign(SETTINGS, ch); saveSettings();
+  if ('scale' in ch) { renderer.setPixelRatio(Math.min(devicePixelRatio, SETTINGS.scale > 1 ? 2 : 1)); renderer.setSize(stage.clientWidth, stage.clientHeight); }
+  if ('shadows' in ch && renderer.shadowMap.enabled !== (SETTINGS.shadows !== 0)) {
+    renderer.shadowMap.enabled = SETTINGS.shadows !== 0;
+    scene.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; });
+    renderer.shadowMap.needsUpdate = true;
+    if (lobbyOn) LOBBY.rewarm();      // (every shader made again for the new state, under the lobby)
+  }
+  LOBBY.showSettings();
+}
+let lobbyOn = true;
+const LOBBY = (() => {
+  const el = (id) => document.getElementById(id);
+  const steps = [
+    { what: 'النوق', w: 3, p: herdReady },
+    { what: 'الأرض', w: 2, p: terrainReady },
+    { what: 'السيارات', w: 2, p: vehiclesReady },
+    { what: 'العزبة', w: 1, p: baked },
+    { what: 'اللعبة', w: 2, p: null },      // (the engine and its first view of the game)
+    { what: 'الخطوط', w: 1, p: document.fonts ? document.fonts.ready : null },
+    { what: 'الرسم', w: 3, p: null },      // (every shader made: warm)
+  ];
+  const total = steps.reduce((n, x) => n + x.w, 0);
+  let engine = null, G = null, failed = false;
+  const done = (x) => { if (x.done) return; x.done = true; draw(); maybeWarm(); };
+  for (const x of steps) if (x.p) x.p.then(() => done(x), () => { if (x.what === 'النوق') { failed = true; draw(); } else done(x); });
+  const ENGINE = steps[4], FONTS = steps[5], WARM = steps[6];
+  if (!FONTS.p) FONTS.done = true;
+  // the last step: every program three would make for the scene as it can be seen, made now (compileAsync waits for the
+  // driver where it can make them in parallel), then one frame drawn with the shadow map
+  let warming = null;
+  function maybeWarm() {
+    if (warming || WARM.done || steps.some((x) => x !== WARM && !x.done)) return;
+    warming = (async () => {
+      try { await renderer.compileAsync(scene, camera); } catch (err) { console.warn('lobby: compile', err); }
+      renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
+      warming = null; done(WARM);
+    })();
+  }
+  const pct = () => Math.round(100 * steps.reduce((n, x) => n + (x.done ? x.w : 0), 0) / total);
+  const heads = (n) => (n === 1 ? 'راس واحد' : n === 2 ? 'راسين' : n <= 10 ? `${n} روس` : `${n} راس`);
+  function draw() {
+    const ready = steps.every((x) => x.done), now = steps.find((x) => !x.done), p = pct();
+    el('lb-bar').style.width = `${p}%`; el('lb-bar').parentElement.setAttribute('aria-valuenow', String(p));
+    el('lb-pct').textContent = `${p}٪`;
+    el('lb-what').textContent = failed ? 'ما قدرت أحمّل العزبة. حدّث الصفحة.' : now ? `يحمّل: ${now.what}` : 'تحمّل كل شي';
+    el('lb-load').hidden = ready;
+    const go = el('lb-go'); go.disabled = !ready; go.textContent = ready ? 'كمّل' : 'يحمّل…';
+    el('lb-farm').innerHTML = G ? `<b>${esc(G.farm.name)}</b><small>${phone.dayLine(G)}</small><small>رصيدك <span class="num">${Math.round(G.cash).toLocaleString('en-US')}</span> ريال · ${heads(G.yard.length)}</small>` : '<b>…</b>';
+  }
+  function card(which) { for (const [id, k] of [['lb-main', 'main'], ['lb-confirm', 'new'], ['lb-set', 'set']]) el(id).hidden = k !== which; }
+  function showSettings() {
+    for (const b of document.querySelectorAll('#lb-set [data-set]')) b.setAttribute('aria-pressed', String(String(SETTINGS[b.dataset.set]) === b.dataset.v));
+  }
+  el('lb-gear').addEventListener('click', () => { card('set'); showSettings(); el('lb-set').querySelector('button').focus(); });
+  el('lb-set-done').addEventListener('click', () => { card('main'); el('lb-gear').focus(); });
+  el('lb-set').addEventListener('click', (e) => { const b = e.target.closest('[data-set]'); if (b) applySettings({ [b.dataset.set]: Number(b.dataset.v) }); });
+  // a new game: two taps (the card names the save it replaces), on the engine's own startOver, the clock held again
+  el('lb-new').addEventListener('click', () => {
+    el('lb-confirm-note').textContent = G ? `تبدأ من أول بناقة وحدة مع حوارها. وحفظك الحالي، ${G.farm.name} بـ${phone.dayLine(G).split(' · ')[0]}، ينمسح.` : 'تبدأ من أول بناقة وحدة مع حوارها.';
+    card('new'); el('lb-new-back').focus();
+  });
+  el('lb-new-back').addEventListener('click', () => { card('main'); el('lb-new').focus(); });
+  el('lb-new-go').addEventListener('click', async () => {
+    if (!engine) return;
+    const b = el('lb-new-go'); b.disabled = true;
+    try {
+      await engine.startOver(G ? { playerName: G.playerName, farmName: G.farm.name, region: G.farm.region } : {});
+      await engine.hold(true);
+    } catch (err) { console.warn('lobby: new game', err); }
+    b.disabled = false; card('main'); el('lb-go').focus();
+  });
+  el('lb-go').addEventListener('click', () => {
+    if (el('lb-go').disabled) return;
+    lobbyOn = false; root.classList.remove('lobby-on'); el('lobby').hidden = true;
+    if (engine) engine.hold(false).catch(() => {});
+    if (meter) meter.ready = 0;      // (the meter counts from play, not from the lobby)
+    renderer.shadowMap.needsUpdate = true; refreshLabels(); measureHud();
+  });
+  draw();
+  return {
+    get on() { return lobbyOn; },
+    // the engine started: its clock held at once (the lobby stands it still); none: the game goes on without it
+    engine(e) { engine = e; if (e) e.hold(true).catch(() => {}); if (!e || e.snapshot) done(ENGINE); },
+    game(snap) { G = snap; if (engine) done(ENGINE); draw(); },
+    rewarm() { WARM.done = false; draw(); maybeWarm(); },
+    showSettings,
+  };
+})();
+window.__lobby = LOBBY;      // (the browser tests read it)
 const clock = new THREE.Clock();
 renderer.shadowMap.autoUpdate = false;
 sun.target.position.set(1e9, 0, 0);          // forces the first placement of the shadow area
@@ -2082,8 +2266,8 @@ if (meter) {
     if (demo) { demoHerd = !demoHerd; syncYard(); refreshLabels(); }
     // the GPU's test (the review): the picture at 1x instead of 2x, and the shadows off; for this visit only (a reload
     // brings 2x and the shadows back). If 1x holds 60 by the herd, the GPU's pixel work is the limit
-    if (scale) { renderer.setPixelRatio(renderer.getPixelRatio() > 1 ? 1 : Math.min(devicePixelRatio, 2)); renderer.setSize(stage.clientWidth, stage.clientHeight); }
-    if (shade) { renderer.shadowMap.enabled = !renderer.shadowMap.enabled; scene.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; }); renderer.shadowMap.needsUpdate = true; }
+    if (scale) applySettings({ scale: renderer.getPixelRatio() > 1 ? 1 : 2 });
+    if (shade) applySettings({ shadows: renderer.shadowMap.enabled ? 0 : 1 });      // (kept, as the lobby's settings are)
     if (mode && HERD) { HERD.mode = (HERD.mode + 1) % HERD_MODES.length; try { localStorage.setItem('marah.herdMode', String(HERD.mode)); } catch { /* (kept for this visit only) */ } }
     meter.hist.fill(0); meter.n = 0; meter.jank = 0; meter.recent.fill(0); meter.ready = 0;
     cpu.game.fill(0); cpu.draw.fill(0); cpu.n = 0; cpu.sg = 0; cpu.sd = 0; meter.shown = 0;
@@ -2180,7 +2364,7 @@ function tick(now) {
   for (const c of camels) c.update(dt, camera.position);
   if (HERD) HERD.pose();
   const playing = play ? play.update(dt) : false;
-  { const on = !playing && !phone.big; if (controls.enabled !== on) controls.enabled = on; }      // (the map's controls off in play, and under the enlarged phone, where the scene is not drawn: left on, a thumb on the walk stick or a pedal swung the camera with it)
+  { const on = !playing && !phone.big && !lobbyOn; if (controls.enabled !== on) controls.enabled = on; }      // (the map's controls off in play, and under the enlarged phone, where the scene is not drawn: left on, a thumb on the walk stick or a pedal swung the camera with it)
   // follow without stealing the viewer's control of the angle
   const tgt = follow ? follow.root.position : followHerd ? herdCenter() : null;
   if (tgt && !playing) { const delta = tmpTo.copy(tgt).setY(1.1).sub(controls.target).multiplyScalar(Math.min(1, dt * 3)); controls.target.add(delta); camera.position.add(delta); }
@@ -2275,6 +2459,7 @@ function tick(now) {
   // heaviest frame is the same, only the average rises while driving
   const carMoving = playing && play.debug.state.mode === 'drive' && Math.abs(play.debug.carState.v) > 0.3;      // (driven: the speed left on the car after play stopped redrew the map every frame on foot, the review)
   if (shadowMoved || carMoving || (++shadowFrame & 1) === 0) renderer.shadowMap.needsUpdate = true;
+  if (lobbyOn && !playing) { const a = dt * 0.035, x = camera.position.x - controls.target.x, z = camera.position.z - controls.target.z, c = Math.cos(a), sn = Math.sin(a); camera.position.x = controls.target.x + x * c - z * sn; camera.position.z = controls.target.z + x * sn + z * c; }      // (behind the lobby the farm turns slowly)
   if (!playing) { controls.dampingFactor = 1 - Math.exp(-dt * 3.1); controls.update(); placeLabels(); }      // (OrbitControls eases by the frame: 0.05 a frame at 60 fps, the same in seconds at any rate)
   const tDraw = cpu ? performance.now() : 0;
   if (HERD && !phone.big && !glLost) HERD.draw(camera);

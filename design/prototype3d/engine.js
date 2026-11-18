@@ -105,7 +105,9 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
   if (opened.ok === false && !opened.status) throw new Error(`the engine did not start: ${opened.error} ${opened.detail ?? ''}`);
   // into the background: saved, and the clock stopped; back in front: caught up (iOS may suspend the page any moment
   // after it is hidden)
-  const onVisibility = () => { call(document.hidden ? 'pause' : 'resume').catch(() => {}); };
+  // held (the lobby, the owner's choice of 18 Nov: the clock stands until «كمّل»): paused, and not resumed by coming back
+  let held = false;
+  const onVisibility = () => { if (document.hidden || !held) call(document.hidden ? 'pause' : 'resume').catch(() => {}); };
   document.addEventListener('visibilitychange', onVisibility);
   return {
     status: opened.status,
@@ -135,6 +137,9 @@ async function start({ url = './engine_worker.js', newGame = {}, timeScale, onSn
     /** After a save that could not be read: the last one that was. */
     openPrevious: () => call('openPrevious'),
     startOver: (game = {}) => call('startOver', { newGame: game }),
+    /** Holds the game's clock at its minute (true: and coming back from the background does not resume it) or lets
+     *  it run on from that minute (false: the time held is not played; EngineCore.hold and release). */
+    hold: (on) => { held = !!on; return call(held ? 'hold' : 'release'); },
     /** Saves (waiting 20 s at most: a save that does not answer is cut off at 15 s), stops the worker, and lets a
      *  new engine start. */
     stop: async () => {

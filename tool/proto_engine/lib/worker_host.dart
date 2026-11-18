@@ -27,7 +27,7 @@ import 'worker_backend.dart';
 /// * `{op: 'dispatch', id, command: {type, ...}}` (commands_json.dart).
 /// * `{op: 'bankMonth', id, month: 'YYYY-MM'}`: one month of البنك, opened
 ///   (`month`: SnapshotJson.moneyMonth, or null when no money moved in it).
-/// * `{op: 'flush' | 'pause' | 'resume' | 'openPrevious', id}`;
+/// * `{op: 'flush' | 'pause' | 'resume' | 'hold' | 'release' | 'openPrevious', id}`;
 ///   `{op: 'startOver', id, newGame}`.
 /// * `{op: 'stored', seq, ok, error}`: the page kept write `seq`, or could not
 ///   (only when it keeps the save). Answered at once, never queued (every
@@ -253,6 +253,15 @@ class WorkerHost {
           _reply(id, {'ok': true});
         case 'resume':
           await core.resume();
+          _startTicker();
+          _reply(id, {'ok': true});
+        // the lobby: the clock held at its minute, then run on from it
+        case 'hold':
+          _ticker?.cancel();
+          await core.hold();
+          _reply(id, {'ok': true});
+        case 'release':
+          await core.release();
           _startTicker();
           _reply(id, {'ok': true});
         case 'openPrevious':

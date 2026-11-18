@@ -148,6 +148,7 @@ class EngineCore {
   Future<void> startOver() => _serial(() async {
     _cancelTimers();
     _game = null;
+    _held = null; // (a minute held is the old game's)
     await store.startOver();
   });
 
@@ -163,6 +164,31 @@ class EngineCore {
     _paused = false;
     if (_game != null) await _catchUpNow();
   });
+
+  /// The lobby (the owner's choice of 18 Nov: the game's clock stands until
+  /// «كمّل»): paused as [pause] is, and the game's minute kept, so that
+  /// [release] lands the clock back on it: the time spent held is not played.
+  Future<void> hold() => _serial(() async {
+    _paused = true;
+    _cancelTimers();
+    final g = _game;
+    if (g != null && _held == null)
+      _held = (day: g.today, minute: minuteOfDay());
+    await _saveNow();
+  });
+
+  /// Lets a held clock run on from the minute it was held at (a new game
+  /// started while held runs from its own start).
+  Future<void> release() => _serial(() async {
+    final h = _held;
+    _held = null;
+    _paused = false;
+    final g = _game;
+    if (g == null) return;
+    if (h != null && h.day == g.today) land(g.state, h.day, h.minute);
+    await _catchUpNow();
+  });
+  ({GameDay day, int minute})? _held;
 
   Future<void> flush() => _serial(_saveNow);
 

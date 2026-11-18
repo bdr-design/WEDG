@@ -2840,6 +2840,8 @@ export function createPhone({ host }) {
     /** Opens the phone enlarged on an app (a place's card: الوايت from the tank, العلف from the feed). */
     openApp: (v) => { if (st.state === 'closed') set('small'); bigAt = performance.now(); set('big'); show(v); focusIn(scr.querySelector('.back') || dev); },
     setPlay: (on) => { st.play = on; if (st.state !== 'closed') layout(); },
+    /** A game's day as the home screen says it, for the lobby: «الأحد 4 أكتوبر 2026 · سهيل». */
+    dayLine: (snapshot) => { const d = new Date(snapshot.date + 'T00:00:00Z'); return `${WEEKDAY[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]} ${d.getUTCFullYear()} · ${season(d)}`; },
     onChange: (f) => listeners.add(f),
     /** The engine's newest view of the game (engine.js), and the engine to send the player's orders to. */
     setGame: (snapshot) => {
