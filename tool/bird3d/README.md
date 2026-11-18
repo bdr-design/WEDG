@@ -349,6 +349,15 @@ the first frame of the clip it hands to, beside the largest step inside that cli
   6 meshes, about 15.9k triangles; with this rule a perched saker is 3 draws, 7.2k (folded body, hood, jesses), a
   flying one 2 draws, 6.8k (spread body, jesses), one far 1 draw. The far level has no hood: a hooded falcon far
   off is drawn bare (listed below).
+- **The swap blended (the owner, 18 Nov 2026).** Where a clip swaps the folded mesh for the spread one or back (the
+  `hidden` keys stepping), the page draws both for three frames and fades one out as the other comes in (the frame
+  before the step, the step, the frame after; both meshes in the same pose there, as the swaps were matched). At the
+  houbara's take-off and escape swaps a third of the bird's pixels change colour (the sandy closed wing to the
+  black-and-white flight feathers, as on the real bird when it opens), and in one frame it read as a flash; no
+  fold of the spread wing hides them (`rig_quarry.py OUT houbara tune_colour` searched its pose for colour and
+  outline together: 30% of the shared pixels changed at the start, 28% at the best), and painting the closed wing
+  darker would change the approved standing bird. The blend costs a second body draw for three frames. The same
+  rule for every bird's swaps (the saker's cast-off and landings, the stone-curlew's take-off).
 - **Play once.** The clips that do not loop (`rouse`, `hood_off`, `hood_on`, `cast_off`, `stoop`, `bind`, the
   landings, `take_off`, `escape`, `crouch`) are played with `LoopOnce` and `clampWhenFinished`: three.js's default
   loop wraps the last frame back to the first (a take-off would end standing).
@@ -533,10 +542,9 @@ flight). `hood_off` and `hood_on` are held back: they come with the man's hand r
 - **The wrist on the upstroke.** At the most flexed frames of `flight` (5-6 and 12-13) some wrist triangles fall
   to 7-9% of their rest area (a crease seen close from the front); in the swaps' folds, for one to four frames,
   to under 1%. An extra weight ring or a corrective shape would cost a morph target; not done, listed.
-- **The houbara's swap colour.** At the take-off's swap (frame 14) the wing changes colour for a frame: the folded
-  mesh's sandy closed wing gives way to the spread mesh folded, which shows its dark primaries and the white bar.
-  Matching the folded mesh's painted wing to it would change the approved standing look; listed, not done (the
-  owner's call). The swaps were tuned from the side and the front three-quarter; from behind and above, as the
+- **The houbara's swap colour.** At the take-off's swap (frame 14) the wing changes colour: the folded mesh's sandy
+  closed wing gives way to the spread mesh folded, which shows its dark primaries and the white bar. The owner chose
+  the page's three-frame blend (18 Nov 2026; see the page rules above). The swaps were tuned from the side and the front three-quarter; from behind and above, as the
   falconer sees a flushed bird, the cut reads as a jump (overlap 0.58-0.79): listed.
 - **The houbara's escape.** It runs jinking, then takes off; the rising spiral the falcon meets (en.wikipedia,
   Asian houbara: "rises into the air and spirals") is the flight path the game steers with the flight loop, not a

@@ -774,6 +774,91 @@ if __name__ == '__main__':
             if rnd % 2 == 1:
                 step = {k: max(4, v * 0.6) for k, v in step.items()}
             print(NAME, 'round', rnd, 'overlap %.3f' % best[0], best[1], best[2])
+    if mode == 'tune_colour':
+        # the spread wing's fold at the swap searched for the colour as well as the outline: the folded mesh shows the
+        # sandy closed wing, and at the houbara's swap the spread wing bunched its dark flight feathers below the
+        # coverts, the wing turning dark in one frame (the owner, 18 Nov 2026: «أطابق اللونين»). Both meshes are drawn
+        # flat in their own paint (workbench, texture colour, no light) from the side and the three-quarter; the
+        # score is the lower outline overlap, less the mean colour difference where both are drawn.
+        sc_ = bpy.context.scene
+        sc_.render.engine = 'CYCLES'      # (workbench needs a GPU library this machine lacks: an even white sky instead)
+        sc_.cycles.samples = 6
+        sc_.cycles.device = 'CPU'
+        wd = bpy.data.worlds.new('tc_world')
+        wd.use_nodes = True
+        bg = wd.node_tree.nodes['Background']
+        bg.inputs['Color'].default_value = (1.0, 1.0, 1.0, 1.0)
+        bg.inputs['Strength'].default_value = 1.0
+        sc_.world = wd
+        sc_.view_settings.view_transform = 'Standard'
+        sc_.render.film_transparent = True
+        sc_.render.resolution_x, sc_.render.resolution_y = 320, 240
+        cam = bpy.data.objects.new('tc_cam', bpy.data.cameras.new('tc_cam'))
+        sc_.collection.objects.link(cam)
+        sc_.camera = cam
+        cam.data.type = 'ORTHO'
+        cam.data.ortho_scale = 1.0
+        rig.use_clip(arm, 'stand')      # (every clip's NLA track muted: they drove the pose and the meshes' `hidden` morph)
+        if arm.animation_data:
+            arm.animation_data.action = None
+        for o in meshes.values():
+            sk = o.data.shape_keys
+            if sk.animation_data:
+                sk.animation_data.action = None
+            sk.key_blocks['hidden'].value = 0.0
+        A = QApplier(NAME, arm, B, body, rig.toe_vertex_sets(meshes['fold']))
+        A.trail = C.trail
+        base = C.swap_base()
+        tmp = os.path.join(OUT, '_tc.png')
+        from PIL import Image
+
+        def shot(which, view):
+            for k_, o in meshes.items():
+                o.hide_render = k_ != which
+            c0 = arm.matrix_world @ arm.pose.bones['body'].head
+            d = V3(rig.VIEWS[view]).normalized()
+            cam.location = c0 - d * 3.0
+            cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
+            sc_.render.filepath = tmp
+            bpy.ops.render.render(write_still=True)
+            return np.asarray(Image.open(tmp).convert('RGBA'), float) / 255.0
+
+        def cdiff(fa, fb):
+            # the share of the pixels both draw whose colour clearly changes (a mean over the whole bird hid the wing)
+            m = (fa[..., 3] > 0.5) & (fb[..., 3] > 0.5)
+            return float((np.abs(fa[..., :3] - fb[..., :3]).max(-1)[m] > 0.15).mean()) if m.any() else 1.0
+
+        sf, so = dict(SWAP[NAME][0]), dict(SWAP[NAME][1])
+        A.apply(dict(base, wing=so, fold=sf), 0, key=False)
+        bpy.context.view_layer.update()
+        ref = {v: shot('fold', v) for v in ('side', 'three_quarter')}
+        a_, ta = rig.evaluated_co(meshes['fold'])
+        b_, tb = rig.evaluated_co(meshes['open'])
+        print(NAME, 'colour start: overlap %.3f colour difference %.3f' % (
+            min(rig.pair_iou(a_, ta, b_, tb, rig.VIEWS['side']), rig.pair_iou(a_, ta, b_, tb, rig.VIEWS['three_quarter'])),
+            max(cdiff(ref[v], shot('open', v)) for v in ('side', 'three_quarter'))), flush=True)
+        Image.fromarray((np.concatenate([ref['side'], shot('open', 'side')], 1) * 255).astype(np.uint8)).save(os.path.join(OUT, 'tc_start.png'))
+        lam = float(os.environ.get('TC_LAMBDA', '1.5'))
+        step = {'up': 12, 'sweep': 15, 'fore': 20, 'hand': 20, 'twist': 20}
+        best = None
+        for rnd in range(4):
+            c = dict(so)
+            grid = [dict(c, **{k: c[k] + dv}) for k in step for dv in (-step[k], step[k])] + [dict(c)]
+            for g in grid:
+                A.apply(dict(base, wing=g, fold=sf), 0, key=False)
+                bpy.context.view_layer.update()
+                a_, ta = rig.evaluated_co(meshes['fold'])
+                b_, tb = rig.evaluated_co(meshes['open'])
+                iou = min(rig.pair_iou(a_, ta, b_, tb, rig.VIEWS['side']), rig.pair_iou(a_, ta, b_, tb, rig.VIEWS['three_quarter']))
+                cd = max(cdiff(ref[v], shot('open', v)) for v in ('side', 'three_quarter'))
+                score = iou - lam * cd
+                if best is None or score > best[0]:
+                    best = (score, iou, cd, dict(g))
+            so = best[3]
+            print(NAME, 'colour round', rnd, 'score %.3f overlap %.3f colour difference %.3f' % best[:3], best[3], flush=True)
+            step = {k: max(4, v * 0.6) for k, v in step.items()}
+        for o in meshes.values():
+            o.hide_render = False
     if mode in ('sheets', 'quick'):
         rig.SHEET_PREFIX[0] = NAME
         me = bpy.data.meshes.new('sand')
