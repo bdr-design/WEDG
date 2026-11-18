@@ -36,3 +36,7 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
     - behind it while loading: «عزبتك نفسها» (the farm drawn behind the lobby, the camera turning slowly; «كمّل» lit
       once everything is loaded);
     - with the loading bar: «وش اللي يتحمّل» (a line naming what is loading now).
+11. The lobby's design: the first mockup (a glass panel with a small crest) — «ماعجبني وين السدو». Redone in the
+    game's approved Sadu card (farm.html .pop): a woven runner down the screen's right edge, the panel with its woven
+    band and selvedge, «كمّل» in madder red, the loading bar woven as it fills (design/ui/lobby.html, lobby.jpg):
+    «أعتمده». The sound switch left out until the game has sounds («أشيله لين تجي الأصوات»).
