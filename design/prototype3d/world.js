@@ -143,6 +143,18 @@ export const DRAPE = [];
 export const DECALS = { dirt: null, dirtRect: null, pens: [] };
 // ground cover is cut into cells; each cell draws all, part or none of its instances by distance
 export const SCATTER = [];
+// an instanced mesh's own geometry object over shared buffers: three keys its vertex arrays by geometry, and the instanced
+// meshes sharing one set every attribute up again at each one's draw (vertexAttribPointer and bindBuffer: 60% of the
+// frame's WebGL calls by the herd, the review); the GPU buffers stay shared
+function ownGeo(geo) {
+  const cg = new THREE.BufferGeometry();
+  for (const k in geo.attributes) cg.setAttribute(k, geo.attributes[k]);
+  cg.setIndex(geo.index);
+  for (const gr of geo.groups) cg.addGroup(gr.start, gr.count, gr.materialIndex);
+  if (geo.boundingSphere) cg.boundingSphere = geo.boundingSphere.clone();
+  if (geo.boundingBox) cg.boundingBox = geo.boundingBox.clone();
+  return cg;
+}
 function scatterCells(geo, mat, items, { cell = 25, bands, cast = false, receive = true }) {
   const buckets = new Map();
   for (const it of items) {
@@ -154,16 +166,7 @@ function scatterCells(geo, mat, items, { cell = 25, bands, cast = false, receive
   for (const list of buckets.values()) {
     // shuffle so that any prefix is an even sample of the cell
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
-    // its own geometry object over the shared buffers: three keys its vertex arrays by geometry, and the cells sharing one
-    // set every attribute up again at each cell's draw (vertexAttribPointer and bindBuffer: 60% of the frame's WebGL calls
-    // by the herd, the review); the GPU buffers stay shared
-    const cg = new THREE.BufferGeometry();
-    for (const k in geo.attributes) cg.setAttribute(k, geo.attributes[k]);
-    cg.setIndex(geo.index);
-    for (const gr of geo.groups) cg.addGroup(gr.start, gr.count, gr.materialIndex);
-    if (geo.boundingSphere) cg.boundingSphere = geo.boundingSphere.clone();
-    if (geo.boundingBox) cg.boundingBox = geo.boundingBox.clone();
-    const m = new THREE.InstancedMesh(cg, mat, list.length);
+    const m = new THREE.InstancedMesh(ownGeo(geo), mat, list.length);
     let cx = 0, cz = 0;
     list.forEach((it, i) => { m.setMatrixAt(i, it.m); if (it.c) m.setColorAt(i, it.c); cx += it.x; cz += it.z; });
     cx /= list.length; cz /= list.length;
@@ -372,11 +375,14 @@ export function buildWorld(scene, renderer, sandTex) {
       }
     }
   };
-  const pg = new THREE.CylinderGeometry(0.05, 0.055, 1.85, 8); pg.translate(0, 0.92, 0);
-  const rg = new THREE.CylinderGeometry(0.028, 0.028, 1, 6);
-  const plg = new THREE.PlaneGeometry(1, 1); plg.translate(0, 0.5, 0);
+  const pg0 = new THREE.CylinderGeometry(0.05, 0.055, 1.85, 8); pg0.translate(0, 0.92, 0);
+  const rg0 = new THREE.CylinderGeometry(0.028, 0.028, 1, 6);
+  const plg0 = new THREE.PlaneGeometry(1, 1); plg0.translate(0, 0.5, 0);
   for (const [key, p] of Object.entries(LAYOUT.pens)) {
     posts = []; rails = []; panels = [];
+    // each pen's pieces their own geometry objects (six pens sharing three set every attribute up again: 190 WebGL calls a
+    // frame in a built yard, the review)
+    const pg = ownGeo(pg0), rg = ownGeo(rg0), plg = ownGeo(plg0);
     penFence(p, 2);
     FAC = PEN_FACILITY[key];
     // the instanced pieces their own copy of the metal (one material used by instanced and plain meshes both had three make

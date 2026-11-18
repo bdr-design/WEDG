@@ -688,7 +688,7 @@ printMesh.renderOrder = 2; printMesh.frustumCulled = false; scene.add(printMesh)
 const prints = Array.from({ length: PRINTS }, () => ({ age: 999, x: 0, z: 0, h: 0 }));
 const printM = new THREE.Matrix4(), printQ = new THREE.Quaternion(), printP = new THREE.Vector3(), printS = new THREE.Vector3(1, 1, 1), fade = new THREE.Color();
 for (let i = 0; i < PRINTS; i++) { printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); printMesh.setColorAt(i, fade.setScalar(0)); }
-let printNext = 0, printsLive = 0, printTick = 0, printAcc = 0;
+let printNext = 0, printsLive = 0, printTick = 0, printAcc = 0, printWhole = false;      // (printWhole: the whole buffers wait to go up)
 const dustTex = canvasTex(64, 64, (g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 2, w / 2, w / 2, w / 2); gr.addColorStop(0, 'rgba(226,200,160,0.9)'); gr.addColorStop(1, 'rgba(226,200,160,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); });
 // The dust a footfall raises, one draw for all of it: three.js's sprite (its quad, its SpriteMaterial and shader: turned
 // to face the camera, fogged, its colours as before), each puff an instance with its place and size in the instance
@@ -726,7 +726,12 @@ function footfall(pos, heading, near) {
   printMesh.setMatrixAt(i, printM.compose(printP.set(pos.x, 0.015, pos.z), printQ.setFromAxisAngle(UPV, heading), printS));
   // the new print sent on its own (all 260 went up every frame while any print was fresh: the review)
   printMesh.setColorAt(i, fade.setScalar(0.55));
-  printMesh.instanceMatrix.addUpdateRange(i * 16, 16); printMesh.instanceColor.addUpdateRange(i * 3, 3);
+  // a range of its own, unless the whole buffers wait to go up (a range added then made three send the range alone and the
+  // whole was lost, after a frame not drawn: the review); many ranges waiting, the whole instead
+  if (!printWhole) {
+    printMesh.instanceMatrix.addUpdateRange(i * 16, 16); printMesh.instanceColor.addUpdateRange(i * 3, 3);
+    if (printMesh.instanceColor.updateRanges.length > 24) { printMesh.instanceMatrix.clearUpdateRanges(); printMesh.instanceColor.clearUpdateRanges(); printWhole = true; }
+  }
   printMesh.instanceMatrix.needsUpdate = true; printMesh.instanceColor.needsUpdate = true;
   if (near) { const d = dust[dustNext++ % DUST]; d.x = pos.x; d.z = pos.z; d.live = true; d.age = 0; }
 }
@@ -1046,6 +1051,7 @@ function buildHerd(T) {
   // packed at the top). The whole texture, 64 rows (155,648 bytes), went up on every frame any camel faded, and with 40
   // camels one nearly always does (the review: 85-100% of frames in every drawing variant). three r170 updates no part
   // of a texture, so the rows go up by texSubImage2D on the texture three made, bound through three's own state.
+  let rowsDue = false;      // (sent by draw: under the enlarged phone nothing is drawn, and nothing need go up, the review)
   function sendRows() {
     const tp = renderer.properties.get(liveTex);
     if (!tp.__webglTexture) { liveTex.needsUpdate = true; return; }      // (its first upload: three makes it whole)
@@ -1086,7 +1092,7 @@ function buildHerd(T) {
         if (c.clipOut) livePose(c, c.row); else bakedPose(c, c.row);
         posed = true;
       }
-      if (posed) sendRows();
+      if (posed) rowsDue = true;
       for (const c of order) {
         if (c.clip !== 'walk' || c.li >= 2 || c.speed <= 0.2) continue;
         for (let f = 0; f < 4; f++) {
@@ -1101,6 +1107,7 @@ function buildHerd(T) {
     // just before the frame is drawn, with its camera: each camel in sight goes into its level's draw, each in the sun's
     // shadow area into its caster's
     draw(cam) {
+      if (rowsDue) { rowsDue = false; sendRows(); }
       cam.updateMatrixWorld();
       const e = proj.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse).elements;
       for (let k = 0; k < 6; k++) {      // (Frustum.setFromProjectionMatrix's planes: rows 4 -/+ 1, 2, 3)
@@ -1115,7 +1122,7 @@ function buildHerd(T) {
         for (let k = 0; k < 6; k++) { SP[k * 4] = pl[k].normal.x; SP[k * 4 + 1] = pl[k].normal.y; SP[k * 4 + 2] = pl[k].normal.z; SP[k * 4 + 3] = pl[k].constant; }
       }
       // the shadow casters only on the frames the shadow map is drawn (every other one): filled and sent every frame before
-      const shadowNow = renderer.shadowMap.needsUpdate;
+      const shadowNow = renderer.shadowMap.enabled && renderer.shadowMap.needsUpdate;
       n.fill(0);
       for (const c of order) {
         const s = c.root.scale.x, p = c.root.position, y = p.y + 1.1 * s, r = 2.6 * s;      // (a sphere that covers every pose; the size from the camel's
@@ -2098,10 +2105,10 @@ function meterFrame(now) {
   // counts only after the yard has loaded and 3 s of warm-up (shaders compile on first use);
   // a gap over a second means the app was in the background, not a stutter
   if (now === undefined || !$('status').hidden) return;
-  if (!meter.ready) { meter.ready = now + 3000; meter.el.textContent = 'يسخّن…'; meter.html = null; return; }      // (written straight: the next text is written whatever it is)
-  if (now < meter.ready) { meter.last = now; meter.start = now; return; }
+  if (!meter.ready) { meter.ready = now + 3000; meter.el.textContent = 'يسخّن…'; meter.html = null; meter.up = meter.upNew = 0; return; }      // (written straight: the next text is written whatever it is)
+  if (now < meter.ready) { meter.last = now; meter.start = now; meter.up = meter.upNew = 0; return; }      // (the bytes of frames not counted dropped: the first reading was 3-4 times too high, the review)
   const ft = now - meter.last; meter.last = now;
-  if (ft > 1000) return;
+  if (ft > 1000) { meter.up = 0; return; }
   const bin = Math.min(399, Math.round(ft * 4));
   meter.hist[bin]++; meter.n++; if (ft > 50) meter.jank++;
   meter.recent[meter.ri] = ft; meter.ri = (meter.ri + 1) % meter.recent.length; meter.upFrames++;
@@ -2172,7 +2179,7 @@ function tick(now) {
     let live = 0;
     for (let i = 0; i < PRINTS; i++) { const p = prints[i]; if (p.age > 70) continue; p.age += pdt; live++; printMesh.setColorAt(i, fade.setScalar(0.55 * Math.max(0, 1 - p.age / 70))); if (p.age > 70) printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); }
     printMesh.instanceColor.clearUpdateRanges(); printMesh.instanceMatrix.clearUpdateRanges();      // (the whole buffers this time)
-    printMesh.instanceColor.needsUpdate = true; printMesh.instanceMatrix.needsUpdate = true; printsLive = live;
+    printMesh.instanceColor.needsUpdate = true; printMesh.instanceMatrix.needsUpdate = true; printsLive = live; printWhole = true;
   }
   // the dust: each puff grows, rises and fades over 1.5 s (as each sprite did), the living ones written into the draw
   if (dustMesh.visible || dustNext !== dustSeen) {
@@ -2255,7 +2262,7 @@ function tick(now) {
   if (!playing) { controls.dampingFactor = 1 - Math.exp(-dt * 3.1); controls.update(); placeLabels(); }      // (OrbitControls eases by the frame: 0.05 a frame at 60 fps, the same in seconds at any rate)
   const tDraw = cpu ? performance.now() : 0;
   if (HERD && !phone.big) HERD.draw(camera);
-  if (!phone.big) renderer.render(scene, camera);      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
+  if (!phone.big) { renderer.render(scene, camera); printWhole = false; }      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
   if (cpu && meter.ready && now >= meter.ready && !phone.big) { const g = tDraw - tGame, d = performance.now() - tDraw; cpu.game[Math.min(399, Math.round(g * 4))]++; cpu.draw[Math.min(399, Math.round(d * 4))]++; cpu.sg += g; cpu.sd += d; cpu.n++; }      // (not while the enlarged phone stops the drawing)
   requestAnimationFrame(tick);
 }
