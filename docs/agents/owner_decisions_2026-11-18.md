@@ -54,3 +54,7 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
 16. The full loading, two trade-offs: the facilities not built yet (the room's interior, the caravan, the tractor:
     +12 MB of textures) «أشكالها بس» (their shaders made under the lobby, their textures sent when built); a shadows
     change «يجهّزها لما تغيّر» (only the chosen variant made; a change in the lobby makes them again before «كمّل»).
+17. Asked whether a new game keeps the farm's and player's names: «خلي المستخدم يختار اسم العزبة واسم الناقة والطير اي شي
+    له اسم يقدر يغيره المستخدم» — the player names (and can rename) everything that has a name: the farm, each camel,
+    each falcon, and the like. A new game asks for the farm's name. (The engine has RenameCamel; the farm, the falcons
+    and the rest need theirs.) Designed and shown before it is built.
