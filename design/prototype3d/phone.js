@@ -1961,7 +1961,7 @@ function lotScreen() {
   if (l.gone) return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${trap ? 'مزاد الليلة' : esc(routeOf(l.route).name)}</div>${fcMsg()}
     <div class="it big off">${birdPic(l.species)}${facts}</div>
     ${FC.msg ? '' : `<div class="note">${lost ? `راح لغيرك بـ ${n0(lost.price)} ريال.` : 'انباع لك، وهو بغرفة الصقور.'}</div>`}</div>`;      // (the answer's card says it already)
-  const top = Math.max(0, Math.floor(G.cash / stepOf(G.cash)) * stepOf(G.cash));      // (his balance, rounded down to its step)
+  const top = Math.max(0, G.cash);      // (his balance: the last + lands on it exactly, as the note says)
   if (FC.upTo == null) FC.upTo = l.opening;
   FC.upTo = Math.max(l.opening, Math.min(FC.upTo, Math.max(l.opening, top)));
   const noRoom = H.room.cannot, poor = G.cash < l.opening;
@@ -1978,7 +1978,7 @@ function lotScreen() {
   }
   const preRow = can && pres.length > 1 ? `<span class="pre" role="group" aria-label="مبالغ جاهزة">${pres.map(([label, v]) => `<button data-act="upSet" data-v="${v}" aria-pressed="${FC.upTo === v}" aria-label="${label}: ${n0(v)} ريال">${label}<b>${n0(v)}</b></button>`).join('')}</span>` : '';
   const kUp = stepOf(FC.upTo), kDown = stepOf(Math.max(l.opening, FC.upTo - 1));
-  const stepRow = `<div class="group"><div class="row ceil"><span class="lead">${svg('gavel')}</span><b>أعلى مبلغ تدفعه</b>${preRow}<span class="stp"><button data-act="upStep" data-d="-1" aria-label="أقل بـ ${n0(kDown)}" ${can && FC.upTo > l.opening ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(FC.upTo)}</b> <span>ريال</span></span><button data-act="upStep" data-d="1" aria-label="أكثر بـ ${n0(kUp)}" ${can && FC.upTo + kUp <= G.cash ? '' : 'disabled'}>${svg('plus')}</button></span><small>${G.cash < 0 ? `عليك دين ${n0(-G.cash)} ريال` : poor ? `رصيدك ${n0(G.cash)} ريال ما يوصل الافتتاح` : `من الافتتاح لين رصيدك ${n0(G.cash)} ريال`}</small></div></div>`;
+  const stepRow = `<div class="group"><div class="row ceil"><span class="lead">${svg('gavel')}</span><b>أعلى مبلغ تدفعه</b>${preRow}<span class="stp"><button data-act="upStep" data-d="-1" aria-label="أقل بـ ${n0(kDown)}" ${can && FC.upTo > l.opening ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(FC.upTo)}</b> <span>ريال</span></span><button data-act="upStep" data-d="1" aria-label="أكثر بـ ${n0(kUp)}" ${can && FC.upTo < G.cash ? '' : 'disabled'}>${svg('plus')}</button></span><small>${G.cash < 0 ? `عليك دين ${n0(-G.cash)} ريال` : poor ? `رصيدك ${n0(G.cash)} ريال ما يوصل الافتتاح` : `من الافتتاح لين رصيدك ${n0(G.cash)} ريال`}</small></div></div>`;
   return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${trap ? 'مزاد الليلة' : esc(routeOf(l.route).name)}</div>${fcMsg()}${errCard()}
     <div class="it big">${birdPic(l.species)}${facts}</div>
     ${why}${stepRow}
@@ -2573,7 +2573,7 @@ export function createPhone({ host }) {
     if (kind === 'mzsel') { MZ.sel = t.dataset.id; done(); return; }
     if (kind === 'calPick') { CAL.day = Number(t.dataset.day); done(); return; }
     if (kind === 'fcTab') { FC.tab = t.dataset.p; shownAt = now; done(); return; }      // (a quick second tap lands on nothing of the new tab, as a screen's change)
-    if (kind === 'upStep') { const l = HF() && HF().lots.find((x) => x.lot === FC.lot); if (l) { const v = FC.upTo ?? l.opening, d = Number(t.dataset.d); FC.upTo = d > 0 ? v + stepOf(v) : Math.max(l.opening, v - stepOf(Math.max(l.opening, v - 1))); sr.textContent = ''; } done(); return; }      // (by the figure's own step: 500 under 50,000, then 1,000, then 5,000)
+    if (kind === 'upStep') { const l = HF() && HF().lots.find((x) => x.lot === FC.lot); if (l) { const v = FC.upTo ?? l.opening, d = Number(t.dataset.d); FC.upTo = d > 0 ? Math.min(v + stepOf(v), Math.max(l.opening, G.cash)) : Math.max(l.opening, v - stepOf(Math.max(l.opening, v - 1))); sr.textContent = ''; } done(); return; }      // (by the figure's own step: 500 under 50,000, then 1,000, then 5,000)
     if (kind === 'upSet') { FC.upTo = Number(t.dataset.v); sr.textContent = ''; done(); return; }      // (a buy readied before stands down: its words in the live region with it)
     if (kind === 'gearStep' || kind === 'gearPick') { if (HF() && FC.cat) { const o = gearOrder(), k = t.dataset.k; o[k] = kind === 'gearPick' ? (o[k] ? 0 : 1) : Math.max(0, o[k] + Number(t.dataset.d)); } done(); return; }
     if (kind === 'calMonth') { CAL.month = Math.max(0, Math.min(12, (CAL.month ?? 0) + Number(t.dataset.d))); done(); return; }
