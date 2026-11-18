@@ -1,0 +1,12 @@
+# The owner's decisions of 18 Nov 2026
+
+Asked in Gulf Arabic as choices (the recommendation first); his answers word for word.
+
+1. The birds' motion (the saker, the houbara, the stone-curlew, the sheets and GIFs of 65a23f4): «موافق». Merged on
+   the session branch (726c0b7).
+2. The saker's trousers at the heel (they now run over the heel and bend a little with the tarsus, where the static
+   bird's hang straight; see design/birds/motion/saker_legs_vs_static.jpg): «يبقى كذا».
+3. The houbara's wing at the take-off's swap (the wing changes colour for one frame: the folded mesh's sandy closed
+   wing gives way to the spread mesh's dark primaries and white bar): «أطابق اللونين». To be built and reviewed.
+4. The landing comes in at about 5.5 m/s against the flight loop's 20: «اللعبة تهدّيه قبل الهبوط» (the game's flight
+   path slows her before the landing clip starts; part C's map and flight path carry it).
