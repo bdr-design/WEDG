@@ -45,3 +45,7 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
     والتحميل».
 13. Shown that about one trapping lot in four hammers above five times its opening (30-40 taps of the fine step at
     p90): «أزيد «عشر مرات»» (a sixth ready amount, ten times the opening, when his balance reaches it).
+14. The lobby's behaviour, asked as choices: the game's clock «يوقف لين «كمّل»» (paused in the lobby); the loading
+    «حمّل كل شي حتى لو طوّل» (the cabin and every shader before «كمّل», even if it takes longer); back from the
+    background «ترجع للعبة على طول» (the lobby only on a fresh start or a reload); the settings «تنحفظ بالجوال»
+    (kept on the device, a new game included).
