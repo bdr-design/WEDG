@@ -293,6 +293,12 @@ const CSS = `
   .msgc[data-go] { cursor: pointer; }
   .tank .v.w { letter-spacing: normal; }      /* (a word, not a figure: no tracking on Arabic, the audit) */
   .row.ceil { grid-template-columns: 36px 1fr; row-gap: 4px; } .row.ceil .stp { grid-column: 2; justify-self: start; } .row.ceil small { grid-column: 2; }
+  /* the ceiling's ready amounts (the owner's choice, 18 Nov: «أرقام جاهزة + ضبط»), then the stepper for the exact figure */
+  .row.ceil .pre { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; }
+  .row.ceil .pre button { height: 32px; padding-inline: 10px; border-radius: 10px; background: var(--acc-soft); color: var(--acc); font-weight: 700; font-size: 12px; white-space: nowrap; }
+  .row.ceil .pre button b { font: 700 13px/1 "Marah Figures", "Alexandria", sans-serif; font-variant-numeric: tabular-nums; }
+  .row.ceil .pre button[aria-pressed="true"] { background: var(--acc); color: #fff; }
+  .row.ceil .pre button[disabled] { background: #eeeef1; color: #b8b8bd; cursor: default; }
   .fg .row.ord .stp .n { min-width: 34px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }      /* (what is said after an order, for a screen reader: outside the screen the redraws replace) */
 `;
@@ -402,11 +408,15 @@ const NOUN = {
   bird: ['طير واحد', 'طيرين', 'طيور', 'طير'],
   pigeon: ['حمامة وحدة', 'حمامتين', 'حمامات', 'حمامة'],
   night: ['ليلة وحدة', 'ليلتين', 'ليالي', 'ليلة'],
+  week: ['أسبوع واحد', 'أسبوعين', 'أسابيع', 'أسبوع'],
+  minute: ['دقيقة وحدة', 'دقيقتين', 'دقايق', 'دقيقة'],
+  farkh: ['فرخ واحد', 'فرخين', 'فروخ', 'فرخ'],
   permit: ['تصريح واحد', 'تصريحين', 'تصاريح', 'تصريح'],
   buy: ['شروة وحدة', 'شروتين', 'شروات', 'شروة'],          // (البنك: a falcon or a tracker bought)
 };
 const count = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`; };
 const days = (n) => count(n, 'day');
+const stretch = (n) => (n % 7 ? days(n) : n === 7 ? 'أسبوع' : count(n / 7, 'week'));      // (a stretch the catalog gives in days, in weeks when whole: «4 أسابيع»)
 // a stepper's word under its number: the number is shown, so one takes the bare singular and two the dual
 const unitWord = (n, k) => { const [one, two, few, many] = NOUN[k]; return n === 2 ? two : n >= 3 && n <= 10 ? few : n === 1 ? one.split(' ')[0] : many; };
 const WEEKDAY = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -774,7 +784,7 @@ const FAC = {
   caravan: { name: 'كرفان الراعي', icon: 'caravan', what: 'لازم قبل الراعي' },
   tent: { name: 'بيت الشعر', icon: 'tent', what: 'للضيوف والقهوة' },
   room: { name: 'غرفة العزبة', icon: 'room', what: 'جلسة ومكيفات' },
-  falconRoom: { name: 'غرفة الصقور', icon: 'falcon', what: 'أوكار ومقيض، تاخذ 4 صقور' },      // (T18: its pin and model come with the map, part C)
+  falconRoom: { name: 'غرفة الصقور', icon: 'falcon', what: () => (HF() ? `أوكار ومقيض، تاخذ ${count(HF().room.holds, 'falcon')}` : 'أوكار ومقيض') },      // (how many it holds: the engine's)      // (T18: its pin and model come with the map, part C)
 };
 const PEN_NTH = ['ثاني', 'ثالث', 'رابع', 'خامس', 'سادس'];
 function buildScreen() {
@@ -804,7 +814,7 @@ function buildScreen() {
     }
     if (made < x.most) {
       const debt = x.cannot === 'inDebt', poor = debt || x.cannot === 'insufficientFunds', name = nameOf(made);
-      const line = [d.what, `${n0(x.price)} ريال`, debt ? `عليك دين ${n0(-G.cash)} ريال` : poor ? 'رصيدك ما يكفي' : ''].filter(Boolean).join(' · ');
+      const line = [typeof d.what === 'function' ? d.what() : d.what, `${n0(x.price)} ريال`, debt ? `عليك دين ${n0(-G.cash)} ريال` : poor ? 'رصيدك ما يكفي' : ''].filter(Boolean).join(' · ');
       // at ordering: built now for more, where the money covers it
       const fee = (RU().buildNow || {})[x.facility], all = x.price + (fee ?? 0);
       const now = !poor && fee != null && G.cash >= all ? nowLink(`buildNow:${x.facility}`, `data-act="buildNow" data-f="${x.facility}" aria-label="ابنِ ${name} الحين بـ ${n0(all)} ريال"`, `أو ابنه الحين بـ ${n0(all)} ريال`, `اضغط مرة ثانية ويخلص الحين بـ ${n0(all)} ريال`) : '';
@@ -1668,7 +1678,7 @@ function calGoingScreen() {
 }
 // the camp's own stops (T18: Trips.campStop)
 const CAMP_STOP = {
-  suppliesOut: { title: 'خلصت مؤونة المخيم', line: 'اطلب مؤونة من نادي الصقور توصل عزبتك بكرة، أو فك المخيم وارجع.', act: 'نادي الصقور', go: 'club', tab: 'trap' },
+  suppliesOut: { title: 'خلصت مؤونة المخيم', line: 'فك المخيم وارجع: المؤونة ما توصل المخيم، توصل عزبتك لما ترجع.', act: null, go: null },
   seasonEnd: { title: 'خلص الموسم', line: 'فك المخيم وارجع.', act: null, go: null },
   tripEnd: { title: 'جا يوم رجعتك', line: 'فك المخيم وارجع، أو كمّل.', act: null, go: null },
 };
@@ -1800,7 +1810,7 @@ function fcRefusal(r, command) {
 const fcNav = (to = '') => nav('', to);
 const fcMsg = () => (FC.msg ? `<div class="msgc${FC.msg.good ? ' good' : ''}"><span class="lead">${svg(FC.msg.good ? 'check' : 'talk')}</span><b>${FC.msg.title}</b><small>${FC.msg.line}</small></div>` : '');
 const fcSeg = (on) => `<div class="seg" style="grid-template-columns:repeat(3,1fr)" role="tablist">${[['auction', 'المزاد'], ['mine', 'صقوري'], ['trap', 'الطرح']].map(([k, t]) => `<span data-act="fcTab" data-p="${k}" role="tab" tabindex="0" aria-selected="${k === on}"${k === on ? ' class="on"' : ''}>${t}</span>`).join('')}</div>`;
-const fcRow = (icon, name, line, right = '', cls = '', attrs = '') => `<div class="row${cls ? ' ' + cls : ''}"${attrs}><span class="lead">${svg(icon)}</span><b>${name}</b>${right ? `<span class="qty${/^<span/.test(right) ? '' : ''}">${right}</span>` : ''}<small>${line}</small></div>`;
+const fcRow = (icon, name, line, right = '', cls = '', attrs = '') => `<div class="row${cls ? ' ' + cls : ''}"${attrs}><span class="lead">${svg(icon)}</span><b>${name}</b>${right ? (/^<span/.test(right) ? right : `<span class="qty">${right}</span>`) : ''}<small>${line}</small></div>`;
 const fcRow2 = (icon, name, line, cls = '') => `<div class="row two${cls ? ' ' + cls : ''}"><span class="lead">${svg(icon)}</span><b>${name}</b><small>${line}</small></div>`;
 const routeOf = (k) => (FC.cat ? FC.cat.routes.find((r) => r.route === k) : null);
 const isOpen = (k) => !!HF() && HF().open.includes(k);
@@ -1816,14 +1826,17 @@ function clubAuction() {
   const tr = routeOf('trapping'), open = isOpen('trapping');
   const news = (H.news || []).filter((x) => (x.kind === 'sold' || x.kind === 'freedAtClose') && G.today - x.day <= 7);
   const newsCards = news.map((x) => x.kind === 'sold'
-    ? `<div class="msgc good" data-go="hammer" data-k="${esc(x.key)}" role="button" tabindex="0"><span class="lead">${svg('gavel')}</span><b>رسى المزاد على ${esc(x.name)}</b><small>بـ ${n0(x.price)} ريال، نزلت برصيدك كاملة · ${fdayShort(x.day)}</small></div>`
+    ? `<div class="msgc good" data-go="hammer" data-k="${esc(x.key)}" role="button" tabindex="0"><span class="lead">${svg('gavel')}</span><b>رسى المزاد على ${esc(x.name)}</b><small>بـ ${n0(x.price)} ريال، نزلت برصيدك كاملة · ليلة ${fdayShort(x.day - 1)}</small></div>`
     : `<div class="msgc"><span class="lead">${svg('net')}</span><b>${esc(x.name)} انطلق</b><small>${esc(C.lines.release.freedAtClose)} · ${fdayShort(x.day)}</small></div>`).join('');
   const held = (H.held || []).map((f) => `<div class="row r3" data-go="bird" data-id="${esc(f.id)}" role="button" tabindex="0"><span class="lead now">${svg('net')}</span><b>${esc(f.name)} · فرخ ${esc(f.speciesName)}</b><span class="chev">${svg('chev')}</span><small>${f.entered ? 'بمزاد الليلة، ويرسى الليلة' : `طرحته ب${esc(f.ground || '')} ${fdayShort(f.on)} · اعرضه أو خله لك`}</small></div>`).join('');
   // a route's month: open now, or when it opens (the first open one «الحين», as the design has it)
   let first = true;
   const when = (r) => {
     if (isOpen(r.route)) { const w = first ? 'الحين' : `لين ${md(r.to)}`; first = false; return w; }
-    return r.from[0] === r.to[0] ? MONTH[r.from[0] - 1] : `من ${md(r.from)}`;
+    // closed: when it opens next (a month gone by this year is next year's: «أكتوبر» read as now, the review)
+    const d = dateAt(G.today), now = (d.getUTCMonth() + 1) * 100 + d.getUTCDate(), a = r.from[0] * 100 + r.from[1];
+    const next = now > a ? ' الجاي' : '';
+    return r.from[0] === r.to[0] ? `${MONTH[r.from[0] - 1]}${next}` : `من ${md(r.from)}${next}`;
   };
   const LINE = { trapping: 'فرخ شاهين بحري · من حوالي 50,000', exhibition: 'حر مستورد، وأسعاره عالية', breeders: 'ملهم · حر فرخ إنتاج مزارع' };
   const ICON = { trapping: 'gavel', exhibition: 'star', breeders: 'falcon' };
@@ -1847,7 +1860,7 @@ function clubMine() {
   const where = room.built ? `بغرفة الصقور · ${fs.length ? count(fs.length, 'falcon') : 'ما فيها صقر'} من ${hold}` : room.building.length ? `غرفة الصقور تنبني، تخلص ${fdayShort(room.building[0])}` : 'ما عندك غرفة صقور: تنبنى من العزبة';
   const item = (f) => {
     const third = [f.passport ? 'جوازه باسمك' : '', f.where === 'lost' ? 'ضايع' : dauWord(f), f.tracker ? 'عليه جهاز تتبع' : f.trackerComing ? 'جهازه بالطريق' : '', takenWord(f)].filter(Boolean).join(' · ');
-    return `<div class="it two" data-go="train" data-id="${esc(f.id)}" role="button" tabindex="0">${birdPic(f.species)}<b>${esc(f.name)} · ${esc(f.speciesName)} ${esc(f.age)}</b><small>${howCame(f)}</small><small>${third}</small></div>`;
+    return `<div class="it two" data-go="train" data-id="${esc(f.id)}" role="button" tabindex="0">${birdPic(f.species)}<b>${esc(f.name)} · ${esc(f.age)} ${esc(f.speciesName)}</b><small>${howCame(f)}</small><small>${third}</small></div>`;
   };
   const cared = room.wantCare.length === 0, moult = room.moult, home = fs.filter((f) => f.where === 'home').length;
   const care = !fs.length ? '' : moult ? `<button class="btn wide" disabled>بالمقيض ما فيه دعو</button>` : cared ? `<button class="btn wide" disabled>${home > 1 ? 'دعيتهم اليوم' : 'دعيته اليوم'}</button>` : `<button class="btn pri wide" data-act="care">${home > 1 ? 'ادعهم اليوم' : 'ادعه اليوم'}</button>`;
@@ -1874,17 +1887,19 @@ function clubTrap() {
   const H = HF(), C = FC.cat, P = H.permits.find((p) => p.kind === 'trapping'), tr = routeOf('trapping');
   const permitLine = P.valid ? `ساري لين ${md(tr.to)} · بأراضي الطرح بس` : P.held != null ? `لموسم ${P.held}، يبدأ ${fdayShort(P.opens)}` : 'تشتريه من «تصريح الصيد»';
   const O = gearOrder(), price = (k) => C.gear.find((g) => g.gear === k).price;
+  // the engine holds every delivery while a trip is on: it comes when he is back
+  const arrives = H.trip ? 'توصل لما ترجع' : 'توصل بكرة';
   const total = TRAP_GEAR.reduce((n, k) => n + O[k] * price(k), 0), poor = G.cash < total;
   const row = (k) => {
     const [has, way, room] = H.gear[k], name = C.gear.find((g) => g.gear === k).name, p = price(k), many = k === 'pigeon' || k === 'supplies';
-    const line = k === 'pigeon' ? `${has ? `عندك ${count(has, 'pigeon')} · ` : ''}الحمامة ${n0(p)}` : k === 'supplies' ? `${GEAR_LINE[k]} · ${n0(p)} لليوم` : `${GEAR_LINE[k]} · ${n0(p)}`;
-    const said = k === 'supplies' && has ? `تكفي ${days(has)}` : has ? 'عندك' : '';
-    const coming = way ? `<small class="rush">${many ? `${count(way, k === 'pigeon' ? 'pigeon' : 'day')} ` : ''}توصل بكرة</small>` : '';
+    // what he has of the counted gear in its small line (beside the stepper it ran off the card: the review)
+    const line = k === 'pigeon' ? `${has ? `عندك ${count(has, 'pigeon')} · ` : ''}الحمامة ${n0(p)}` : k === 'supplies' ? `${has ? `عندك تكفي ${days(has)}` : GEAR_LINE[k]} · ${n0(p)} لليوم` : `${GEAR_LINE[k]} · ${n0(p)}`;
+    const said = has && !many ? 'عندك' : '';
+    const coming = way ? `<small class="rush">${many ? `${count(way, k === 'pigeon' ? 'pigeon' : 'day')} ` : ''}${arrives}</small>` : '';
     let right = '';
     if (many && room > 0) right = `<span class="stp"><button data-act="gearStep" data-k="${k}" data-d="-1" aria-label="${name} أقل" ${O[k] ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${O[k]}</b></span><button data-act="gearStep" data-k="${k}" data-d="1" aria-label="${name} أكثر" ${O[k] < room ? '' : 'disabled'}>${svg('plus')}</button></span>`;
     else if (!many && room > 0) right = `<span class="act"><span class="sw${O[k] ? ' on' : ''}" data-act="gearPick" data-k="${k}" role="switch" tabindex="0" aria-checked="${!!O[k]}" aria-label="اطلب ${name} بـ ${n0(p)} ريال"><i></i></span></span>`;
-    else right = `<span class="qty ${has ? 'ok' : 'wait'}">${said || 'توصل بكرة'}</span>`;
-    if (many && room > 0 && said) right = `<span class="qty ok" style="grid-row:1">${said}</span>${right}`;
+    else right = `<span class="qty ${has ? 'ok' : 'wait'}">${said || (has ? 'عندك' : arrives)}</span>`;
     return `<div class="row ${many && room > 0 ? 'ord' : ''} ${!many && room > 0 ? 'r3' : ''}"><span class="lead">${svg(GEAR_ICON[k])}</span><b>${name}</b>${right}<small>${line}</small>${coming}</div>`;
   };
   const key = 'gearOrder', sure = HJ.sure === key, can = total > 0 && !poor && G.cash >= 0;
@@ -1893,7 +1908,7 @@ function clubTrap() {
     <div class="sec">عدة الطاروح · السعر بالريال</div>
     <div class="group fg">${TRAP_GEAR.map(row).join('')}</div>
     <button class="btn ${!can ? '' : sure ? 'sure' : 'pri'} wide" data-act="gearOrder" ${can ? '' : 'disabled'}>${sure ? `اضغط مرة ثانية: تدفع ${n0(total)} ريال` : total ? `${all ? 'اطلب' : 'اشتر الناقص'} بـ ${n0(total)}` : 'اختار اللي تبيه'}</button>
-    <div class="note">${poor && total ? `رصيدك ${n0(G.cash)} ريال ما يكفي. ` : ''}نقد من رصيدك، وتوصل عزبتك بكرة. والعدة تقرّبك من الطير وما تضمنه: كثير من المواسم تخلص بدون طير.</div>`;
+    <div class="note">${G.cash < 0 ? `عليك دين ${n0(-G.cash)} ريال. ` : poor && total ? `رصيدك ${n0(G.cash)} ريال ما يكفي. ` : ''}نقد من رصيدك، و${H.trip ? 'توصل عزبتك لما ترجع من الطلعة' : 'توصل عزبتك بكرة'}. والعدة تقرّبك من الطير وما تضمنه: كثير من المواسم تخلص بدون طير.</div>`;
 }
 function clubScreen() {
   const H = HF();
@@ -1913,7 +1928,8 @@ function lotsScreen() {
   const item = (l) => {
     const lost = l.gone ? lotLost(l.lot) : null;
     const line = [l.ground ? esc(l.ground) : '', `${n0(l.weight)} غرام`].filter(Boolean).join(' · ') + `</small><small>${sizeOf(l)}`;
-    const last = trap ? `${esc(l.species)} · ${daysAgo(l.trappedDaysAgo ?? 0)}` : `${esc(l.species)} ${esc(l.age)}`;
+    // (not the title again: «قرناس حر … حر قرناس», the review)
+    const last = trap ? `${esc(l.species)} · ${daysAgo(l.trappedDaysAgo ?? 0)}` : { exhibition: 'مستورد', breeders: 'إنتاج مزارع' }[l.route] || esc(r.name);
     const pr = l.gone ? `<span class="pr"><small class="${lost ? '' : 'pos'}">${lost ? `راح بـ ${n0(lost.price)}` : 'انباع لك'}</small></span>` : `<span class="pr"><span class="price num">${n0(l.opening)}</span><small>الافتتاح</small></span>`;
     return `<div class="it lot${l.gone ? ' off' : ''}"${l.gone ? '' : ` data-go="lot" data-id="${esc(l.lot)}" role="button" tabindex="0" aria-label="${lotTitle(l)}، ${line.replace(/<\/small><small>/g, '، ')}، الافتتاح ${n0(l.opening)} ريال"`}>${birdPic(l.species)}<b>${lotTitle(l)}</b><small>${line}</small>${pr}<small>${last}</small></div>`;
   };
@@ -1932,22 +1948,32 @@ function lotScreen() {
   const l = H.lots.find((x) => x.lot === FC.lot);
   if (!l) return `<div class="body">${back}<div class="title">مزاد الليلة</div>${fcMsg()}<div class="note" style="margin-top:6px">هالطير مو من طيور اليوم.</div></div>`;
   const trap = l.route === 'trapping', lost = l.gone ? lotLost(l.lot) : null;
-  const facts = `<b>${lotTitle(l)} · ${esc(l.species)}</b><small>${[l.ground ? `${trap ? 'انطرح ب' : ''}${esc(l.ground)}` : '', trap ? daysAgo(l.trappedDaysAgo ?? 0) : ''].filter(Boolean).join(' · ') || esc(routeOf(l.route).name)}</small><small>${sizeOf(l)} · ${n0(l.weight)} غرام</small><small>الافتتاح ${n0(l.opening)} ريال</small>`;
+  const facts = `<b>${lotTitle(l)}${(SPECIES_SHORT[l.species] || l.species) !== l.species ? ` · ${esc(l.species)}` : ''}</b><small>${[l.ground ? `${trap ? 'انطرح ب' : ''}${esc(l.ground)}` : '', trap ? daysAgo(l.trappedDaysAgo ?? 0) : ''].filter(Boolean).join(' · ') || esc(routeOf(l.route).name)}</small><small>${sizeOf(l)} · ${n0(l.weight)} غرام</small><small>الافتتاح ${n0(l.opening)} ريال</small>`;
   if (l.gone) return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${trap ? 'مزاد الليلة' : esc(routeOf(l.route).name)}</div>${fcMsg()}
     <div class="it big off">${birdPic(l.species)}${facts}</div>
-    <div class="note">${lost ? `راح لغيرك بـ ${n0(lost.price)} ريال.` : 'انباع لك، وهو بغرفة الصقور.'}</div></div>`;
-  const k = stepOf(l.opening), top = Math.max(0, Math.floor(G.cash / k) * k);
+    ${FC.msg ? '' : `<div class="note">${lost ? `راح لغيرك بـ ${n0(lost.price)} ريال.` : 'انباع لك، وهو بغرفة الصقور.'}</div>`}</div>`;      // (the answer's card says it already)
+  const top = Math.max(0, Math.floor(G.cash / stepOf(G.cash)) * stepOf(G.cash));      // (his balance, rounded down to its step)
   if (FC.upTo == null) FC.upTo = l.opening;
   FC.upTo = Math.max(l.opening, Math.min(FC.upTo, Math.max(l.opening, top)));
   const noRoom = H.room.cannot, poor = G.cash < l.opening;
   const can = !noRoom && !poor && G.cash >= 0, key = `buyFalcon:${l.lot}`, sure = HJ.sure === key;
-  const why = noRoom ? alertCard(esc(FC.cat.lines.refusals[noRoom]), H.room.building.length ? `غرفتك تنبني، تخلص ${fdayShort(H.room.building[0])}.` : 'تنبنى من العزبة بـ 18,000 ريال، وتخلص بعد 3 أيام.') : '';
-  const stepRow = `<div class="group"><div class="row ceil"><span class="lead">${svg('gavel')}</span><b>أعلى مبلغ تدفعه</b><span class="stp"><button data-act="upStep" data-d="-1" aria-label="أقل" ${can && FC.upTo > l.opening ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(FC.upTo)}</b> <span>ريال</span></span><button data-act="upStep" data-d="1" aria-label="أكثر" ${can && FC.upTo + k <= G.cash ? '' : 'disabled'}>${svg('plus')}</button></span><small>${poor ? `رصيدك ${n0(G.cash)} ريال ما يوصل الافتتاح` : `من الافتتاح لين رصيدك ${n0(G.cash)} ريال`}</small></div></div>`;
+  const why = noRoom ? alertCard(esc(FC.cat.lines.refusals[noRoom]), H.room.building.length ? `غرفتك تنبني، تخلص ${fdayShort(H.room.building[0])}.` : `تنبنى من العزبة بـ ${n0(FC.cat.room.price)} ريال، وتخلص بعد ${days(FC.cat.room.buildDays)}.`) : '';
+  // the ready amounts: the opening, half as much again, twice, three times (each rounded to its step), and his whole
+  // balance; those past his balance left out. Then + and − by the figure's own step for the exact amount
+  const round = (v) => Math.round(v / stepOf(v)) * stepOf(v);
+  const pres = [];
+  for (const [label, v] of [['الافتتاح', l.opening], ['مرة ونص', round(l.opening * 1.5)], ['الضعف', round(l.opening * 2)], ['ثلاث مرات', round(l.opening * 3)], ['كل رصيدك', top]]) {
+    if (v < l.opening || v > top || pres.some((x) => x[1] === v)) continue;
+    pres.push([label, v]);
+  }
+  const preRow = can && pres.length > 1 ? `<span class="pre" role="group" aria-label="مبالغ جاهزة">${pres.map(([label, v]) => `<button data-act="upSet" data-v="${v}" aria-pressed="${FC.upTo === v}" aria-label="${label}: ${n0(v)} ريال">${label} <b>${n0(v)}</b></button>`).join('')}</span>` : '';
+  const kUp = stepOf(FC.upTo), kDown = stepOf(Math.max(l.opening, FC.upTo - 1));
+  const stepRow = `<div class="group"><div class="row ceil"><span class="lead">${svg('gavel')}</span><b>أعلى مبلغ تدفعه</b>${preRow}<span class="stp"><button data-act="upStep" data-d="-1" aria-label="أقل بـ ${n0(kDown)}" ${can && FC.upTo > l.opening ? '' : 'disabled'}>${svg('minus')}</button><span class="n"><b>${n0(FC.upTo)}</b> <span>ريال</span></span><button data-act="upStep" data-d="1" aria-label="أكثر بـ ${n0(kUp)}" ${can && FC.upTo + kUp <= G.cash ? '' : 'disabled'}>${svg('plus')}</button></span><small>${G.cash < 0 ? `عليك دين ${n0(-G.cash)} ريال` : poor ? `رصيدك ${n0(G.cash)} ريال ما يوصل الافتتاح` : `من الافتتاح لين رصيدك ${n0(G.cash)} ريال`}</small></div></div>`;
   return `<div class="body hjl">${back}<div class="title" style="font-size:22px">${trap ? 'مزاد الليلة' : esc(routeOf(l.route).name)}</div>${fcMsg()}${errCard()}
     <div class="it big">${birdPic(l.species)}${facts}</div>
     ${why}${stepRow}
     <button class="btn ${!can ? '' : sure ? 'sure' : 'pri'} wide" data-act="buyFalcon" data-id="${esc(l.lot)}" ${can ? '' : 'disabled'}>${sure ? `اضغط مرة ثانية: تدفع لين ${n0(FC.upTo)}` : `زايد لين ${n0(FC.upTo)}`}</button>
-    <div class="note">يرسى الليلة بسعره: لو وصله حدك تدفع سعر المطرقة بس، ولو ما وصله يروح لغيرك وتعرف بكم. ${trap ? 'وما فيه رسوم.' : ''}</div>
+    <div class="note">تعرف على طول: لو وصل حدك سعر المطرقة تدفع سعر المطرقة بس، ولو ما وصله يروح لغيرك وتعرف بكم.${trap ? ' وما فيه رسوم.' : ''}</div>
     <div class="note">نقد من رصيدك، والطير يجي بجوازه باسمك${trap ? ' وحجله الإلكتروني' : ''} لغرفة الصقور.</div></div>`;
 }
 // view 5, and DESIGN FIRST: a held bird's three ways: entered tonight (the hammer falls tonight, no fee), kept (the
@@ -1993,9 +2019,9 @@ function hammerScreen() {
 function trackerRow(f) {
   const price = FC.cat.gear.find((g) => g.gear === 'tracker').price, key = `tracker:${f.id}`;
   const can = f.where === 'home' && !f.tracker && !f.trackerComing && G.cash >= price;
-  const line = f.tracker ? 'عليه جهازه: لو ضاع غالبًا تلقاه' : f.trackerComing ? 'جهازه بالطريق، يوصل عزبتك بكرة' : `الجهاز بـ ${n0(price)} ريال لكل صقر، يوصل بكرة${f.where !== 'home' ? '' : G.cash < price ? ' · رصيدك ما يكفي' : ''}`;
+  const line = f.tracker ? 'عليه جهازه: لو ضاع غالبًا تلقاه' : f.trackerComing ? `جهازه بالطريق، ${HF().trip ? 'يوصل عزبتك لما ترجع' : 'يوصل عزبتك بكرة'}` : `الجهاز بـ ${n0(price)} ريال لكل صقر، ${HF().trip ? 'يوصل لما ترجع' : 'يوصل بكرة'}${f.where !== 'home' ? '' : G.cash < price ? ' · رصيدك ما يكفي' : ''}`;
   const act = f.tracker || f.trackerComing || f.where !== 'home' ? '' : rushLike(key, `data-act="tracker" data-id="${esc(f.id)}"`, 'اطلب', `اطلب جهاز تتبع لـ ${esc(f.name)} بـ ${n0(price)} ريال`, can);
-  return `<div class="group"><div class="row r3"><span class="lead">${svg('chip')}</span><b>جهاز التتبع</b>${act}<small>${line}</small>${HJ.sure === key ? `<small class="rush now">تدفع ${n0(price)} ريال، ويوصل بكرة</small>` : ''}</div></div>`;
+  return `<div class="group"><div class="row r3"><span class="lead">${svg('chip')}</span><b>جهاز التتبع</b>${act}<small>${line}</small>${HJ.sure === key ? `<small class="rush now">تدفع ${n0(price)} ريال، و${HF().trip ? 'يوصل لما ترجع' : 'يوصل بكرة'}</small>` : ''}</div></div>`;
 }
 function trainScreen() {
   const back = fcNav('club');
@@ -2012,18 +2038,19 @@ function trainScreen() {
   const caredToday = !room.wantCare.includes(f.id);
   const care = f.where !== 'home' ? '' : room.moult ? '<button class="btn wide" disabled>بالمقيض ما فيه دعو</button>' : caredToday ? `<button class="btn wide" disabled>${home > 1 ? 'دعيتهم اليوم' : 'دعيته اليوم'}</button>` : `<button class="btn pri wide" data-act="care">${home > 1 ? 'ادعهم اليوم' : 'ادعه اليوم'}</button>`;
   const rel = FC.cat.release, rKey = `release:${f.id}`;
-  const inMonths = (() => { const d = dateAt(G.today), m = d.getUTCMonth() + 1, day = d.getUTCDate(), a = rel[0] * 100 + rel[1], z = rel[2] * 100 + rel[3], v = m * 100 + day; return v >= a && v <= z; })();
+  const inMonths = f.releaseCannot == null;      // (the engine's: the season's months for setting free)
   const release = f.keep && f.species === 'passagePeregrine' ? `<div class="sec">تطلقه للبر</div><div class="group"><div class="row r3"><span class="lead">${svg('falcon')}</span><b>تطلق ${esc(f.name)}</b>${rushLike(rKey, `data-act="release" data-id="${esc(f.id)}"`, 'اطلقه', `اطلق ${esc(f.name)}`, inMonths)}<small>من ${md([rel[0], rel[1]])} لين ${md([rel[2], rel[3]])} مع رجعة الشاهين للشمال، أو يبقى عندك</small>${HJ.sure === rKey ? '<small class="rush now">ينطلق للأبد وما يرجع</small>' : ''}</div></div>` : '';
   const lost = f.where === 'lost' ? `<div class="warn"><span class="lead">${svg('alert')}</span><b>${esc(f.name)} ضايع</b><small>${f.tracker ? 'عليه جهاز تتبع: غالبًا تلقاه.' : 'ما عليه جهاز تتبع: تدوره بعيونك.'}</small></div><button class="btn pri wide" data-act="search" data-id="${esc(f.id)}">دوّره</button>` : '';
-  const back2 = f.stepsBackOn != null && !room.moult && !f.ready ? ` ولو ما دعيته يرجع خطوة ${fdayShort(f.stepsBackOn)}.` : f.stepsBackOn != null && !room.moult ? ` ولو ما دعيته يرجع أسبوع ${fdayShort(f.stepsBackOn)}.` : '';
+  const C = FC.cat, mo = C.moultMonths, moult = `من ${MONTH[mo[0] - 1]} لين ${MONTH[mo[mo.length - 1] - 1]}`;
+  const back2 = f.stepsBackOn != null && !room.moult ? ` ولو ما دعيته يرجع ${stretch(C.stepBack)} ${fdayShort(f.stepsBackOn)}.` : '';
   return `<div class="body">${back}<div class="title">الدعو · ${esc(f.name)}</div>${fcMsg()}${errCard()}
-    <div class="note" style="margin-top:-4px">${f.ready ? `دعيته ${need} يوم، وهو جاهز للمقناص` : `صقر جديد يبي ${need} يوم دعو قبل أول طلعة · دعيته ${count(f.dauDays, 'day')}`}</div>
+    <div class="note" style="margin-top:-4px">${f.ready ? `دعيته ${stretch(need)}، وهو جاهز للمقناص` : `صقر جديد يبي ${stretch(need)} دعو قبل أول طلعة · ${f.dauDays ? `دعيته ${days(f.dauDays)}` : 'ما دعيته للحين'}`}</div>
     ${lost}
     <div class="group">${[0, 1, 2, 3].map(step).join('')}${readyRow}</div>
     <div class="group">${fcRow('scale', 'الميزان', 'تزنه كل يوم قبل أكله', `${n0(f.weight)} غرام`)}</div>
     ${trackerRow(f)}
     ${care}
-    <div class="note">مرة باليوم لكل صقور الغرفة، وتنحسب لك الأيام اللي فاتت لين أسبوعين. ولو تركته أسبوعين يرجع أسبوع. وبالمقيض من مايو لين أغسطس ما فيه دعو.${back2}</div>
+    <div class="note">مرة باليوم لكل صقور الغرفة، وتنحسب لك الأيام اللي فاتت لين ${stretch(C.stepBackDays)}. ولو تركته ${stretch(C.stepBackDays)} يرجع ${stretch(C.stepBack)}. وبالمقيض ${moult} ما فيه دعو.${back2}</div>
     ${release}</div>`;
 }
 // views 13-15: «تصريح الصيد»: the two permits (season, open or closed, held, the fee, two taps to buy, the refusal's
@@ -2071,11 +2098,15 @@ function tripCardScreen() {
   if (!G || !T || !FC.cat) return `<div class="body">${back}<div class="title">قبل ما تمشي</div>${waiting()}</div>`;
   const N = T.nights, t = T.to, trap = T.kind === 'trapping';
   const { block, guard, stopAt, supply, due, prep } = cardParts(t, Math.max(1, N));
-  const what = T.oneDay ? `طلعة يوم ل${esc(T.groundName)}` : `${trap ? 'مخيم طرح' : 'رحلة مقناص'} ب${esc(T.groundName)} · لين ${dShortAt(t)}`;
-  const road = `${n0(T.km)} كم، حوالي ${hoursWord(T.hours)} سواقة`;
-  const has = T.has.map((x) => (x === 'الحمام' && T.pigeons ? count(T.pigeons, 'pigeon') : x));
+  const li = (n) => (n.startsWith('ال') ? `لل${n.slice(2)}` : `ل${n}`);      // (لـ before ال: «للمحازة»)
+  const what = T.oneDay ? `طلعة يوم ${li(esc(T.groundName))}` : `${trap ? 'مخيم طرح' : 'رحلة مقناص'} ب${esc(T.groundName)} · لين ${dShortAt(t)}`;
+  const mins = Math.max(5, Math.round(T.driveMinutes / 5) * 5);      // (the engine's drive: under an hour in minutes)
+  const road = `${n0(T.km)} كم، حوالي ${T.driveMinutes < 55 ? count(mins, 'minute') : hoursWord(T.hours)} سواقة`;
+  // the supplies have their own row below: not said again in the gear's
+  const sup = FC.cat.gear.find((g) => g.gear === 'supplies').name, own = (x) => T.oneDay || x !== sup;
+  const has = T.has.filter(own).map((x) => (x === 'الحمام' && T.pigeons ? count(T.pigeons, 'pigeon') : x)), lacks = T.lacks.filter(own);
   const camp = [
-    `<div class="row two"><span class="lead">${svg(trap ? 'pigeon' : 'falcon')}</span><b>${has.length ? `عدتك: ${list(has)}` : 'ما عندك عدة'}</b><small>${T.lacks.length ? `ناقصك: ${T.lacks.join('، ')}` : 'عندك العدة كلها'}</small></div>`,
+    `<div class="row two"><span class="lead">${svg(trap ? 'pigeon' : 'falcon')}</span><b>${has.length ? `عدتك: ${list(has)}` : 'ما عندك عدة'}</b><small>${lacks.length ? `ناقصك: ${lacks.join('، ')}` : 'عندك العدة كلها'}</small></div>`,
     !trap && T.falcons ? `<div class="row two"><span class="lead">${svg('falcon')}</span><b>${T.falcons.length ? `معك ${T.falcons.map(esc).join(' و')}` : 'ما عندك صقر جاهز'}</b><small>${T.falcons.length ? 'خلصوا الدعو' : 'الصقر يبي يخلص الدعو قبل أول طلعة'}</small></div>` : '',
     T.oneDay ? '' : `<div class="row two"><span class="lead${T.suppliesEnough ? '' : ' bad'}">${svg('box')}</span><b>مؤونة المخيم · ${T.supplyDays ? `تكفي ${days(T.supplyDays)}` : 'ما عندك'}</b><small>ماء وأكل وبنزين${T.suppliesEnough ? '' : `: ما تكفي ${count(N, 'night')}`}</small></div>`,
   ].join('');
@@ -2107,7 +2138,7 @@ function tripSumRows(m) {
   const x = m.extra || {};
   if (!Object.keys(x).length) return '';
   const rows = [];
-  if (x.caught) rows.push(`<div class="row r2"><span class="lead">${svg('net')}</span><b>${x.caught === 1 ? 'طرحت فرخ شاهين بحري' : `طرحت ${count(x.caught, 'bird')} فروخ شاهين بحري`}</b><small>شوفه بنادي الصقور: تعرضه أو تخليه لك</small></div>`);
+  if (x.caught) rows.push(`<div class="row r2"><span class="lead">${svg('net')}</span><b>${x.caught === 1 ? 'طرحت فرخ شاهين بحري' : `طرحت ${count(x.caught, 'farkh')} شاهين بحري`}</b><small>شوفه بنادي الصقور: تعرضه أو تخليه لك</small></div>`);
   if (x.released) rows.push(`<div class="row r2"><span class="lead">${svg('falcon')}</span><b>طلقت ${count(x.released, 'bird')}</b><small>المزاد ما يقبلها</small></div>`);
   if (x.stooped) rows.push(`<div class="row r2"><span class="lead">${svg('falcon')}</span><b>نزل على الطعم وما علق ${count(x.stooped, 'time')}</b><small>بالمخيم</small></div>`);
   if (x.flights) rows.push(`<div class="row r2"><span class="lead">${svg('falcon')}</span><b>طلعات الصقر ${n0(x.flights)}</b><small>${x.taken ? `صاد ${count(x.taken, 'time')}` : 'وما صاد شي'}</small></div>`);
@@ -2422,7 +2453,9 @@ export function createPhone({ host }) {
     const key = inScr ? keyOf(f) : null, go = inScr ? f.dataset.go : null;
     if (!redraw(true)) return;
     if (!inScr) return;
-    const again = [...scr.querySelectorAll('[data-act], [data-go]')].find((x) => (key && x.dataset.act ? keyOf(x) === key : go && x.dataset.go === go));
+    // the same control, or the same row of a list by its id and key too (a row matched by data-go alone took the focus
+    // to the list's first row: the review)
+    const again = [...scr.querySelectorAll('[data-act], [data-go]')].find((x) => keyOf(x) === key && (x.dataset.go || '') === (go || ''));
     focusIn(again || scr.querySelector('.back') || dev);
   }
   // البنك: the month opened, its kinds asked of the engine (again when money moves while it is open); an answer that
@@ -2485,7 +2518,7 @@ export function createPhone({ host }) {
     // an order's second tap on the same button within DOUBLE_TAP of its answer (by the tap's own time, not when it is
     // handled) is dropped before anything is cleared: «سوم» tapped twice used two tries, and the dropped tap wiped the
     // seller's answer (the reviews). Other buttons, and the steppers, are not held back
-    const LOCAL = kind === 'step' || kind === 'tab' || kind === 'bidStep' || kind === 'askStep' || kind === 'mzsel' || kind === 'calPick' || kind === 'calMonth' || kind === 'fcTab' || kind === 'upStep' || kind === 'gearStep' || kind === 'gearPick';
+    const LOCAL = kind === 'step' || kind === 'tab' || kind === 'bidStep' || kind === 'askStep' || kind === 'mzsel' || kind === 'calPick' || kind === 'calMonth' || kind === 'fcTab' || kind === 'upStep' || kind === 'upSet' || kind === 'gearStep' || kind === 'gearPick';
     // «وقّف هنا»: at once, whatever is under way (the engine takes it outside its queue)
     if (kind === 'calStop') { if (engine && engine.stopAway) engine.stopAway().catch((err) => console.warn('phone:', err)); sr.textContent = 'يوقف'; return; }
     // what cannot be undone is asked twice: a sale, taking a listing down, withdrawing an entry, registering (it costs
@@ -2514,7 +2547,8 @@ export function createPhone({ host }) {
     const done = () => {
       // said to a screen reader when an order is answered, the same words again for a new answer (the region is emptied
       // as the order goes), and not at a stepper's press
-      if (ordered) { const m = HJ.msg || FC.msg; sr.textContent = HJ.said || (m ? `${m.title}. ${m.line}`.replace(/<[^>]+>/g, '') : ERR || ''); HJ.said = null; }
+      // (an order paid in part and refused in part: both said)
+      if (ordered) { const m = HJ.msg || FC.msg; sr.textContent = HJ.said || [m ? `${m.title}. ${m.line}`.replace(/<[^>]+>/g, '') : '', ERR || ''].filter(Boolean).join(' '); HJ.said = null; }
       if (!live()) return;
       if (next) { show(next); if (focused) focusIn(scr.querySelector('.back') || dev); return; }
       redraw();
@@ -2528,8 +2562,9 @@ export function createPhone({ host }) {
     if (kind === 'tab') { HJ.tab = t.dataset.p; done(); return; }
     if (kind === 'mzsel') { MZ.sel = t.dataset.id; done(); return; }
     if (kind === 'calPick') { CAL.day = Number(t.dataset.day); done(); return; }
-    if (kind === 'fcTab') { FC.tab = t.dataset.p; done(); return; }
-    if (kind === 'upStep') { const l = HF() && HF().lots.find((x) => x.lot === FC.lot); if (l) FC.upTo = (FC.upTo ?? l.opening) + Number(t.dataset.d) * stepOf(l.opening); done(); return; }
+    if (kind === 'fcTab') { FC.tab = t.dataset.p; shownAt = now; done(); return; }      // (a quick second tap lands on nothing of the new tab, as a screen's change)
+    if (kind === 'upStep') { const l = HF() && HF().lots.find((x) => x.lot === FC.lot); if (l) { const v = FC.upTo ?? l.opening, d = Number(t.dataset.d); FC.upTo = d > 0 ? v + stepOf(v) : Math.max(l.opening, v - stepOf(Math.max(l.opening, v - 1))); } done(); return; }      // (by the figure's own step: 500 under 50,000, then 1,000, then 5,000)
+    if (kind === 'upSet') { FC.upTo = Number(t.dataset.v); done(); return; }
     if (kind === 'gearStep' || kind === 'gearPick') { if (HF() && FC.cat) { const o = gearOrder(), k = t.dataset.k; o[k] = kind === 'gearPick' ? (o[k] ? 0 : 1) : Math.max(0, o[k] + Number(t.dataset.d)); } done(); return; }
     if (kind === 'calMonth') { CAL.month = Math.max(0, Math.min(12, (CAL.month ?? 0) + Number(t.dataset.d))); done(); return; }
     if (kind === 'bidStep') { const l = listingOf(HJ.listing); if (l) HJ.bid += Number(t.dataset.d) * stepOf(l.askPrice); done(); return; }
@@ -2619,7 +2654,7 @@ export function createPhone({ host }) {
           const command = { type: 'orderGear', gear: k, units: o[k], ...(kind === 'tracker' ? { falcon: t.dataset.id } : {}) }, r = await engine.dispatch(command);
           if (r.ok) { paid += ((r.events || []).find((e) => e.type === 'gearOrdered') || {}).cost || 0; o[k] = 0; } else ERR = fcRefusal(r, command);
         }
-        if (paid) FC.msg = { good: true, title: kind === 'tracker' ? `طلبت جهاز تتبع بـ ${n0(paid)} ريال` : `طلبت العدة بـ ${n0(paid)} ريال`, line: 'من رصيدك، وتوصل عزبتك بكرة.' };
+        if (paid) FC.msg = { good: true, title: kind === 'tracker' ? `طلبت جهاز تتبع بـ ${n0(paid)} ريال` : `طلبت العدة بـ ${n0(paid)} ريال`, line: HF().trip ? 'من رصيدك، وتوصل عزبتك لما ترجع من الطلعة.' : 'من رصيدك، وتوصل عزبتك بكرة.' };
         if (!ERR && kind === 'gearOrder') FC.order = null;
       }
       else if (kind === 'care') {
@@ -2799,7 +2834,7 @@ export function createPhone({ host }) {
     setGame: (snapshot) => {
       // (the word after an order, and a confirmation readied, are for their day: stood down, drawn again)
       let stood = false;
-      if (G && snapshot && snapshot.today !== G.today) { stood = !!(HJ.msg || HJ.sure); HJ.msg = HJ.sure = null; }
+      if (G && snapshot && snapshot.today !== G.today) { stood = !!(HJ.msg || HJ.sure || FC.msg); HJ.msg = HJ.sure = FC.msg = null; }
       const was = G; G = snapshot;
       if (!live()) return;
       if (st.screen === 'bankMonth') {

@@ -6,7 +6,6 @@ import 'dart:convert';
 
 import 'package:marah_domain/marah_domain.dart';
 import 'package:marah_domain/src/sim.dart';
-import 'package:marah_domain/src/trips.dart';
 import 'package:test/test.dart';
 
 GameDay d(int y, int m, int day) => GameDay.ofDate(DateTime.utc(y, m, day));
@@ -123,7 +122,8 @@ void main() {
   });
 
   Map<String, Object?> permit(Game g, PermitKind k) =>
-      ((falconFacts(g.state, g.me.id)['permits']! as List).cast<Map>())
+      ((falconFacts(g.state, g.me.id)['permits']! as List)
+              .cast<Map<String, Object?>>())
           .singleWhere((p) => p['kind'] == k.name)
           .cast<String, Object?>();
 
@@ -155,7 +155,9 @@ void main() {
     g.me.hunt.held.remove(f);
     g.me.hunt.falcons.add(f);
     Map<String, Object?> mine() =>
-        ((falconFacts(g.state, g.me.id)['falcons']! as List).cast<Map>()).single
+        ((falconFacts(g.state, g.me.id)['falcons']! as List)
+                .cast<Map<String, Object?>>())
+            .single
             .cast<String, Object?>();
     expect(mine()['releaseCannot'], 'releaseMonths');
     g.advanceDays(d(2027, 2, 2).daysSince(g.today));

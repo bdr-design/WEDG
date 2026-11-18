@@ -86,6 +86,7 @@ Map<String, Object?> falconCatalogOf(GameState state, OwnerId viewer) {
     'upkeepPerDay': HuntBalance.upkeepPerDay,
     'dauDaysNeeded': HuntBalance.dauDaysNeeded,
     'stepBackDays': HuntBalance.stepBackDays,
+    'stepBack': HuntBalance.stepBack,
     'mostNights': HuntBalance.mostNights,
     'release': [
       HuntBalance.releaseFrom.$1,
@@ -191,6 +192,7 @@ Map<String, Object?> falconFacts(GameState state, OwnerId viewer) {
           if (b.facility == Facility.falconRoom) b.doneOn.value,
       ],
       'held': h?.falcons.length ?? 0,
+      'holds': HuntBalance.roomHolds,
       'moult': HuntBalance.moultMonths.contains(today.month),
       'wantCare': [
         for (final f in h?.falcons ?? const <Falcon>[])
