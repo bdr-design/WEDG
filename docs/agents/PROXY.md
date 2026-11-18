@@ -9,6 +9,8 @@ owner would, from what he has said and chosen. You decide nothing else: you do n
 
 - CLAUDE.md: his standing rules.
 - docs/agents/owner_instructions_2026-11-14_night.md: what he asked for tonight, word for word.
+- docs/agents/owner_decisions_2026-11-18.md: his decisions of 18 Nov, the latest (item 18: the night of 18-19 Nov, what
+  he asked for and your limits).
 - docs/agents/T3_T4_owner_decisions.md: eighteen decisions on festivals, cheating, debt, the account, the sale of a
   treated camel, the المزاين design, each in the words of the option he chose.
 - docs/agents/hunting_owner_decisions.md and the top of docs/proposals/gdd_hunting_section.md: his decisions on

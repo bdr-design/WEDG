@@ -55,6 +55,10 @@
   .seg span.on { background: var(--qirmiz); color: var(--wool); font-weight: 700; }
   .title { font: 700 18px var(--display); }
   .note { color: var(--wool-2); font-size: 13px; line-height: 1.55; text-wrap: pretty; }
+  .field { display: grid; gap: 4px; }
+  .field span { color: var(--wool-2); font-size: 12px; }
+  .field input { height: 40px; border-radius: 2px; border: 0; box-shadow: inset 0 0 0 1px var(--hair-2); background: rgba(239, 230, 214, 0.06); color: var(--wool); font: 600 15px var(--ui); padding-inline: 10px; }
+  .field input:focus { outline: 2px solid var(--wool); outline-offset: 1px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -81,6 +85,8 @@
     <div class="in">
       <div class="title">لعبة جديدة؟</div>
       <div class="note">تبدأ من أول: ناقة وحدة مع حوارها و20,000 ريال. وحفظك الحالي، عزبة الرفيعة بـ4 أكتوبر 2026، ينمسح.</div>
+      <label class="field" id="names" hidden><span>اسم عزبتك</span><input type="text" value="عزبة الرفيعة" maxlength="24" dir="rtl"></label>
+      <label class="field" id="names2" hidden><span>اسمك</span><input type="text" value="أبو فهد" maxlength="24" dir="rtl"></label>
       <button class="btn sure">اضغط مرة ثانية: ابدأ من جديد</button>
       <button class="btn ghost">رجوع</button>
     </div>
@@ -117,7 +123,8 @@
 
   const s = new URLSearchParams(location.search).get('s') || 'loading';
   if (s !== 'loading') { document.getElementById('load').hidden = true; const go = document.getElementById('go'); go.disabled = false; go.textContent = 'كمّل'; }
-  if (s === 'new') { document.getElementById('main').hidden = true; document.getElementById('new').hidden = false; }
+  if (s === 'new' || s === 'names') { document.getElementById('main').hidden = true; document.getElementById('new').hidden = false; }
+  if (s === 'names') { document.getElementById('names').hidden = false; document.getElementById('names2').hidden = false; document.querySelector('#new .note').textContent = 'تبدأ من أول: ناقة وحدة مع حوارها و20,000 ريال، وحفظك الحالي ينمسح. سمّ عزبتك وسمّ نفسك:'; }
   if (s === 'settings') { document.getElementById('main').hidden = true; document.getElementById('set').hidden = false; }
 </script>
 </body>
