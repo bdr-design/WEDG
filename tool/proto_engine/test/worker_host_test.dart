@@ -182,6 +182,19 @@ void main() {
       }),
       containsPair('error', 'badNewGame'),
     );
+    // a new game's names by the rule every rename keeps (the lobby's fields)
+    for (final names in [
+      {'farmName': '  '},
+      {'playerName': ''},
+      {'farmName': 'ع' * 25},
+    ]) {
+      expect(
+        await page.call('start', {
+          'newGame': {...newGame, ...names},
+        }),
+        containsPair('error', 'badNewGame'),
+      );
+    }
     for (final scale in [0, -1, 2e6, 'fast']) {
       expect(
         await page.call('start', {'newGame': newGame, 'timeScale': scale}),

@@ -643,13 +643,6 @@ Result treatCamel(Sim sim, PlayerState p, Camel camel) {
   return _ok(sim);
 }
 
-/// A name as the player gave it, trimmed, or null when it cannot be one: empty
-/// or over 24 characters (one rule for everything he names).
-String? cleanName(String raw) {
-  final name = raw.trim();
-  return name.isEmpty || name.length > 24 ? null : name;
-}
-
 Result _renameFarm(Sim sim, PlayerState p, RenameFarm cmd) {
   final name = cleanName(cmd.name);
   if (name == null) return _err(sim, ErrorCode.invalidName);

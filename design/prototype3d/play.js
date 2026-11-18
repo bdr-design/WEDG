@@ -227,6 +227,8 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   const onKey = (e) => {
     if (e.type === 'keyup') { keys.delete(e.code); return; }      // (let go even out of play: dropped there, the key stayed held and the man walked alone on the next start)
     if (busy()) return;             // (the enlarged phone has the keys)
+    const t = e.composedPath()[0];
+    if (t && t.closest && t.closest('input, textarea')) return;      // (a name being typed, in the small phone or a card: its letters are not steps)
     if (!state.on) return;
     keys.add(e.code);
     if (e.type === 'keydown' && e.code === 'KeyE') primary();

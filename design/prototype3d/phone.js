@@ -74,6 +74,14 @@ const CSS = `
   .btn { height: 44px; border-radius: 14px; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding-inline: 16px; }
   .btn.pri { background: var(--acc); color: #fff; }
   .btn.ghost { background: var(--acc-soft); color: var(--acc); }
+  /* a name he gives (proxy N1): a pencil beside it, then a field with «احفظ» */
+  .title .rn { display: inline-grid; place-items: center; width: 32px; height: 32px; margin-inline-start: 6px; vertical-align: middle; border-radius: 10px; background: var(--acc-soft); color: var(--acc); }
+  .title .rn svg { width: 16px; height: 16px; }
+  .rnrow { display: flex; gap: 8px; align-items: center; }
+  .rnrow input { flex: 1; min-width: 0; height: 44px; border: 0; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); padding-inline: 12px; font: 700 18px "Alexandria", sans-serif; color: var(--ink); }
+  .rnrow input:focus { outline: 2px solid var(--acc); outline-offset: 1px; }
+  .rnrow .btn { flex: none; }
+  .rnerr { color: var(--red); margin-top: -4px; }
   /* ---------- home ---------- */
   .home { background: var(--wall, url(phone/wall_camel.png)) 0% 104% / 124% auto no-repeat, linear-gradient(180deg, #cfe3f2 0%, #efe3cf 55%, #e2c9a2 100%); }
   .home .body { padding: 6px 18px 0; gap: 14px; }
@@ -326,6 +334,7 @@ const I = {
     haraj: '<path d="M3.5 12.4V5c0-.8.7-1.5 1.5-1.5h7.4l8.1 8.1c.6.6.6 1.5 0 2.1l-7.4 7.4c-.6.6-1.5.6-2.1 0z"/><circle cx="8.2" cy="8.2" r="1.6"/>',
     user: '<circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.5c.6-3.3 3-5 6.5-5s5.9 1.7 6.5 5"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
     talk: '<path d="M4 5.5h16v10H9l-5 4z"/>',
     // المزاين (design/ui/phone_mazayen.cjs)
     cup: '<path d="M7.5 4h9v5.5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.8c0 2.4 1.2 3.8 3.2 4.2M16.5 6h2.7c0 2.4-1.2 3.8-3.2 4.2"/><path d="M12 14v3.5M9.5 17.5h5v3h-5z"/>',
@@ -376,6 +385,15 @@ const app = (k, n, extra = '') => `<div class="app"${APP_GO[k] ? ` data-go="${AP
 // being made up (bags and bales), set when العلف opens. ERR: the engine's refusal of the last order, said on the screen
 // until the next tap.
 let G = null, ERR = null;
+// a name being given (proxy N1): which (k: 'farm' or 'falcon:<id>'), what is typed so far (kept across a redraw), and
+// why it was not taken
+const RN = { k: null, v: '', err: null };
+const nameOf = (k) => (k === 'farm' ? G?.farm.name : (HF()?.falcons || []).find((x) => `falcon:${x.id}` === k)?.name);
+// a screen's title with its name and the pencil that renames it, or, while it is being renamed, the field
+function nameTitle(head, name, k, what) {
+  if (RN.k !== k) return `<div class="title">${head}${esc(name)}<button type="button" class="rn" data-act="rnEdit" data-k="${esc(k)}" aria-label="غيّر ${what}">${svg('pencil')}</button></div>`;
+  return `${head ? `<div class="title">${head.replace(/ · $/, '')}</div>` : ''}<div class="rnrow"><input class="rn-in" type="text" value="${esc(RN.v)}" maxlength="24" dir="rtl" autocomplete="off" aria-label="${what}"><button type="button" class="btn pri" data-act="rnSave" data-k="${esc(k)}">احفظ</button></div>${RN.err ? `<div class="note rnerr" role="alert">${esc(RN.err)}</div>` : ''}`;
+}
 const ORD = { barley: null, alfalfa: null };
 const n0 = (v) => Math.round(v).toLocaleString('en-US');
 // the GDD's counting rule (9, «الكتابة»): one and two by the word, 3 to 10 the plural, 11 and up the singular
@@ -791,6 +809,7 @@ const FAC = {
 const PEN_NTH = ['ثاني', 'ثالث', 'رابع', 'خامس', 'سادس'];
 function buildScreen() {
   if (!G) return `<div class="body">${nav()}<div class="title">العزبة</div>${waiting()}</div>`;
+  const title = nameTitle('', G.farm.name, 'farm', 'اسم العزبة');
   const f = G.farm, F = Object.fromEntries(f.facilities.map((x) => [x.facility, x]));
   const kind = (label, value) => `<div class="kind"><span>${label}</span><span class="d">${value}</span></div>`;
   const pens = F.pen.has, store = F.store.has;
@@ -834,7 +853,7 @@ function buildScreen() {
   const vet = sick.length ? `<div class="sec">يبي علاج</div><div class="group">${sick.map(sickRow).join('')}${treatAll}</div>
     <div class="note">${sick.length === 1 ? `لو ${sick[0].sex !== 'male' ? 'تركتها' : 'تركته'} بعد ${days(sick[0].graceDays)} ممكن ${sick[0].sex !== 'male' ? 'تموت' : 'يموت'}.` : `لو تركتهم بعد ${days(sick[0].graceDays)} ممكن يموتون.`}</div>` : '';
   const building = (RU().builds || []).length > 0;
-  return `<div class="body">${nav()}<div class="title">العزبة</div>${errCard()}
+  return `<div class="body">${nav()}${title}${errCard()}
     ${vet}${have}
     <div class="sec">ابنِ ووسّع</div>
     <div class="group">${f.facilities.map(row).join('')}</div>
@@ -2058,7 +2077,7 @@ function trainScreen() {
   const lost = f.where === 'lost' ? `<div class="warn"><span class="lead">${svg('alert')}</span><b>${esc(f.name)} ضايع</b><small>${f.tracker ? 'عليه جهاز تتبع: غالبًا تلقاه.' : 'ما عليه جهاز تتبع: تدوره بعيونك.'}</small></div><button class="btn pri wide" data-act="search" data-id="${esc(f.id)}">دوّره</button>` : '';
   const C = FC.cat, mo = C.moultMonths, moult = `من ${MONTH[mo[0] - 1]} لين ${MONTH[mo[mo.length - 1] - 1]}`;
   const back2 = f.stepsBackOn != null && !room.moult ? ` ولو ما دعيته، يرجع ${stretch(C.stepBack)} يوم ${fdayShort(f.stepsBackOn)}.` : '';
-  return `<div class="body">${back}<div class="title">الدعو · ${esc(f.name)}</div>${fcMsg()}${errCard()}
+  return `<div class="body">${back}${nameTitle('الدعو · ', f.name, `falcon:${f.id}`, 'اسم الصقر')}${fcMsg()}${errCard()}
     <div class="note" style="margin-top:-4px">${f.ready ? `دعيته ${stretch(need)}، وهو جاهز للمقناص` : `صقر جديد يبي ${stretch(need)} دعو قبل أول طلعة · ${f.dauDays ? `دعيته ${days(f.dauDays)}` : 'ما دعيته للحين'}`}</div>
     ${lost}
     <div class="group">${[0, 1, 2, 3].map(step).join('')}${readyRow}</div>
@@ -2246,7 +2265,7 @@ export function createPhone({ host }) {
   const endPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
   let drawn = '';
   function show(v, same = false) {
-    if (v !== st.screen) { ERR = null; shownAt = performance.now(); }
+    if (v !== st.screen) { ERR = null; shownAt = performance.now(); RN.k = null; RN.err = null; }      // (a name half typed is dropped with its screen)
     if (v === 'feed' && st.screen !== 'feed') ORD.barley = ORD.alfalfa = null;      // (opened afresh: the order starts at three weeks' need)
     st.screen = v; scr.classList.toggle('home', v === 'home');
     // (المزاين's and the chat's screens, as their design: a number kept with the word before it too, «لين | 100,000»)
@@ -2465,6 +2484,7 @@ export function createPhone({ host }) {
   // drawn again with the keyboard's place kept (the page comes a moment after it opens)
   function redrawKept() {
     const f = root.activeElement, inScr = f && scr.contains(f);
+    if (inScr && f.classList.contains('rn-in')) { redraw(true); return; }      // (redraw keeps the name's field)
     const key = inScr ? keyOf(f) : null, go = inScr ? f.dataset.go : null;
     if (!redraw(true)) return;
     if (!inScr) return;
@@ -2501,9 +2521,12 @@ export function createPhone({ host }) {
   const live = () => st.state !== 'closed';      // (every screen shows the game's own numbers)
   function redraw(same = false) {
     const sc = scr.querySelector('.body'), top = sc ? sc.scrollTop : 0;
+    const typing = root.activeElement?.classList.contains('rn-in') ? root.activeElement : null, at = typing ? [typing.selectionStart, typing.selectionEnd] : null;
     if (show(st.screen, same) === false) return false;
     const again = scr.querySelector('.body');
     if (again) again.scrollTop = top;
+    const field = typing && scr.querySelector('.rn-in');      // (a snapshot while he types: the field drawn again, the focus and the caret where they were)
+    if (field) { field.focus({ preventScroll: true }); field.setSelectionRange(...at); }
     return true;
   }
   // التقويم's jump (T15): the engine runs it (EngineCore.away); its progress redraws the screen under way a few times a
@@ -2557,7 +2580,7 @@ export function createPhone({ host }) {
     if (HJ.sure) { sureAt = now; const key = HJ.sure; sureTimer = setTimeout(() => { if (HJ.sure === key) { HJ.sure = null; if (live()) redraw(); } }, SURE_FOR); }
     if (kind !== 'tab' && kind !== 'bidStep' && kind !== 'askStep' && kind !== 'mzsel') HJ.msg = null;
     if (!LOCAL || kind === 'fcTab') FC.msg = null;      // (the auction's answer stays while the ceiling is set again)      // (the seller's answer stays while the haggle is set again)
-    let next = null;
+    let next = null, renamed = null;
     let ordered = false;
     const done = () => {
       // said to a screen reader when an order is answered, the same words again for a new answer (the region is emptied
@@ -2577,7 +2600,13 @@ export function createPhone({ host }) {
     if (kind === 'tab') { HJ.tab = t.dataset.p; done(); return; }
     if (kind === 'mzsel') { MZ.sel = t.dataset.id; done(); return; }
     if (kind === 'calPick') { CAL.day = Number(t.dataset.day); done(); return; }
-    if (kind === 'fcTab') { FC.tab = t.dataset.p; shownAt = now; done(); return; }      // (a quick second tap lands on nothing of the new tab, as a screen's change)
+    if (kind === 'fcTab') { FC.tab = t.dataset.p; shownAt = now; done(); return; }
+    // a name (proxy N1): the pencil makes it a field, typed in from the name it has
+    if (kind === 'rnEdit') {
+      RN.k = t.dataset.k; RN.v = nameOf(RN.k) ?? ''; RN.err = null; done();
+      const i = scr.querySelector('.rn-in'); if (i) { focusIn(i); i.select(); }
+      return;
+    }      // (a quick second tap lands on nothing of the new tab, as a screen's change)
     // (− back onto the step's grid first: after a + that stopped at his balance)
     if (kind === 'upStep') { const l = HF() && HF().lots.find((x) => x.lot === FC.lot); if (l) { const v = FC.upTo ?? l.opening, d = Number(t.dataset.d); FC.upTo = d > 0 ? Math.min(v + stepOf(v), Math.max(l.opening, G.cash)) : (() => { const k = stepOf(Math.max(l.opening, v - 1)); return Math.max(l.opening, v % k ? Math.floor(v / k) * k : v - k); })(); sr.textContent = ''; } done(); return; }      // (by the figure's own step: 500 under 50,000, then 1,000, then 5,000)
     if (kind === 'upSet') { FC.upTo = Number(t.dataset.v); sr.textContent = ''; done(); return; }      // (a buy readied before stands down: its words in the live region with it)
@@ -2595,7 +2624,14 @@ export function createPhone({ host }) {
     busy = true; sr.textContent = '';
     const send = async (command) => { const r = await engine.dispatch(command); if (!r.ok) ERR = refusal(r, command); return r.ok; };
     try {
-      if (kind === 'plan' && t.dataset.p !== G.farm.feedPlan) await send({ type: 'setFeedPlan', plan: t.dataset.p });
+      if (kind === 'rnSave') {
+        const k = RN.k, name = RN.v.trim();
+        if (k !== t.dataset.k) return;
+        if (!name) { RN.err = 'اكتب الاسم'; HJ.said = RN.err; return; }
+        const r = await engine.dispatch(k === 'farm' ? { type: 'renameFarm', name } : { type: 'renameFalcon', falcon: k.slice('falcon:'.length), name });
+        if (r.ok) { RN.k = null; RN.err = null; HJ.said = `انحفظ الاسم: ${name}`; renamed = k; }
+        else { RN.err = r.error?.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : refusal(r, { type: 'rename' }); HJ.said = RN.err; }
+      } else if (kind === 'plan' && t.dataset.p !== G.farm.feedPlan) await send({ type: 'setFeedPlan', plan: t.dataset.p });
       else if (kind === 'share' && t.dataset.p !== G.farm.milk.calfShare) await send({ type: 'setCalfShare', share: t.dataset.p });
       else if (kind === 'build') await send({ type: 'buildFacility', facility: t.dataset.f });
       else if (kind === 'tanker') await send({ type: 'orderSupply', supply: 'water', units: 1, tanker: t.dataset.t });
@@ -2744,6 +2780,10 @@ export function createPhone({ host }) {
     } finally {
       busy = false; orderAt = performance.now(); orderKey = keyOf(t);
       ordered = true; done();
+      if (kind === 'rnSave' && live()) {      // (the name's field again on a refusal, its pencil once it is saved)
+        const el = RN.k ? scr.querySelector('.rn-in') : renamed && pencilOf(renamed);
+        if (el) focusIn(el);
+      }
     }
     // a purchase, at the asking price or by a haggle: the seller's answer is said on the camel's page (a lower price, or
     // no); one bought goes back to the list, with the word that it comes tomorrow
@@ -2805,7 +2845,15 @@ export function createPhone({ host }) {
       HJ.msg = { good: true, title: `بعت ${esc(l.camel.name)} على ${esc(o.buyerName)} بـ ${n0(o.amount)} ريال`, line: `يوصلك ${n0(o.amount - fee)} بعد السعي.` };
     }
   }
+  const pencilOf = (k) => [...scr.querySelectorAll('[data-act="rnEdit"]')].find((x) => x.dataset.k === k);
+  scr.addEventListener('input', (e) => { if (e.target.classList?.contains('rn-in')) RN.v = e.target.value; });
   scr.addEventListener('keydown', (e) => {
+    // in a name's field: Enter saves it, Escape puts the name back (not the phone's own Escape, which shrinks it)
+    if (e.target.classList?.contains('rn-in')) {
+      if (e.key === 'Enter' && !e.repeat && !e.isComposing) { e.preventDefault(); const b = scr.querySelector('[data-act="rnSave"]'); if (b) act(b); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); const k = RN.k; RN.k = null; RN.err = null; redraw(); const p = pencilOf(k); if (p) focusIn(p); }
+      return;
+    }
     // a key held: its repeats are not more presses, and the browser's own click for each is stopped too (held, Enter
     // clicked once a repeat and Space once on release, and sold a readied camel: the reviews)
     if (e.repeat) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-act], [data-go]')) e.preventDefault(); return; }

@@ -427,3 +427,11 @@ final class CareFalcons extends Command {
   const CareFalcons(super.actor, {this.minute});
   final int? minute;
 }
+
+/// A name as the player gave it, trimmed, or null when it cannot be one: empty
+/// or over 24 characters (one rule for everything he names: the farm, himself,
+/// a camel, a falcon, and the new game's names).
+String? cleanName(String raw) {
+  final name = raw.trim();
+  return name.isEmpty || name.length > 24 ? null : name;
+}

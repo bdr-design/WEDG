@@ -452,10 +452,15 @@ class WorkerHost {
       throw FormatException('$k: $n');
     }
 
+    // (the names by the rule every rename keeps: the lobby refuses an empty
+    // one first, and one sent past it is refused here, before anything changes)
+    String named(String k, String fallback) =>
+        cleanName(pick<String>(k, fallback)) ?? (throw FormatException(k));
+
     return NewGameParams(
       seed: seed.toInt(),
-      playerName: pick<String>('playerName', 'اللاعب'),
-      farmName: pick<String>('farmName', 'العزبة'),
+      playerName: named('playerName', 'اللاعب'),
+      farmName: named('farmName', 'العزبة'),
       region: byName(Region.values, 'region', Region.qassim),
       favourite: byName(ColorCategory.values, 'favourite', ColorCategory.wodh),
     );

@@ -97,6 +97,14 @@
   .pop .ttl { min-width: 0; }
   .pop h2 { margin: 0; font: 700 20px/26px var(--display); text-wrap: balance; }
   .pop .ttl p { margin: 2px 0 0; font: 400 12.5px/18px var(--ui); color: var(--wool-2); text-wrap: balance; }
+  /* the rename (the owner's word of 18 Nov: whatever has a name he names): a pencil beside the name, then a field */
+  .pop .rn { width: 32px; height: 32px; display: inline-grid; place-items: center; vertical-align: middle; margin-inline-start: 6px; border: 1px solid var(--hair-2); border-radius: 2px; background: transparent; color: var(--wool-2); }
+  .pop .rn svg.i { width: 16px; height: 16px; }
+  .pop .nm { display: flex; gap: 8px; align-items: center; }
+  .pop .nm input { flex: 1; min-width: 0; height: 40px; border: 0; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--hair-2); background: rgba(239, 230, 214, 0.06); color: var(--wool); font: 700 18px var(--display); padding-inline: 10px; }
+  .pop .nm input:focus { outline: 2px solid var(--wool); outline-offset: 1px; }
+  .pop .nm button { flex: none; height: 40px; padding-inline: 14px; border: 0; border-radius: 2px; background: var(--qirmiz); color: var(--wool); font: 700 14px var(--ui); }
+  .pop .nm-err { margin: 4px 0 0; font-size: 12.5px; color: var(--zafaran-ink); }
   .pop .x { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--hair-2); border-radius: 2px; color: var(--wool-2); }
   .pop .x svg.i { width: 16px; height: 16px; }
   .pop .body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 2px; }
@@ -217,6 +225,17 @@
   #lobby .seg button[aria-pressed="true"] { background: var(--qirmiz); color: var(--wool); font-weight: 700; }
   #lobby .title { font: 700 18px var(--display); }
   #lobby .note { color: var(--wool-2); font-size: 13px; line-height: 1.55; text-wrap: pretty; }
+  /* the names (proxy N1): a new game's farm and player, and his own name in the settings */
+  #lobby .names { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #lobby .field { display: grid; gap: 4px; min-width: 0; }
+  #lobby .field > span { color: var(--wool-2); font-size: 12px; }
+  #lobby .field input { min-width: 0; height: 40px; border-radius: 2px; border: 0; box-shadow: inset 0 0 0 1px var(--hair-2); background: rgba(239, 230, 214, 0.06); color: var(--wool); font: 600 15px var(--ui); padding-inline: 10px; }
+  #lobby .field input:focus { outline: 2px solid var(--wool); outline-offset: 1px; }
+  #lobby .field .pair { display: flex; gap: 8px; }
+  #lobby .field .pair input { flex: 1; }
+  #lobby .field .pair button { flex: none; height: 40px; padding-inline: 14px; border-radius: 2px; background: var(--qirmiz); font-weight: 700; font-size: 14px; }
+  #lobby .err { margin: -4px 0 0; color: var(--zafaran); font-size: 12.5px; }
+  #lobby .err[hidden] { display: none; }
 
   /* ---------- loading */
   .status { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
@@ -317,6 +336,8 @@
       <div class="in">
         <div class="title" id="lb-confirm-t">لعبة جديدة؟</div>
         <div class="note" id="lb-confirm-note"></div>
+        <div class="names"><label class="field"><span>اسم عزبتك</span><input id="lb-farm-name" type="text" maxlength="24" dir="rtl" autocomplete="off"></label><label class="field"><span>اسمك</span><input id="lb-player-name" type="text" maxlength="24" dir="rtl" autocomplete="off"></label></div>
+        <p class="err" id="lb-new-err" role="alert" hidden>اكتب الاسم</p>
         <button class="btn sure" id="lb-new-go" type="button">اضغط مرة ثانية: ابدأ من جديد</button>
         <button class="btn ghost" id="lb-new-back" type="button">رجوع</button>
       </div>
@@ -328,6 +349,8 @@
         <div class="title" id="lb-set-t">الإعدادات</div>
         <div class="row"><div><b>الدقة</b><small>الأخف يريّح الجوال ويقلل الحرارة</small></div><span class="seg" role="group" aria-label="الدقة"><button type="button" data-set="scale" data-v="2">حادة</button><button type="button" data-set="scale" data-v="1">أخف</button></span></div>
         <div class="row"><div><b>الظلال</b><small>بدونها أخف على الجوال</small></div><span class="seg" role="group" aria-label="الظلال"><button type="button" data-set="shadows" data-v="1">شغّالة</button><button type="button" data-set="shadows" data-v="0">طافية</button></span></div>
+        <label class="field" id="lb-me" hidden><span>اسمك</span><span class="pair"><input id="lb-me-name" type="text" maxlength="24" dir="rtl" autocomplete="off"><button type="button" id="lb-me-save">احفظ</button></span></label>
+        <p class="err" id="lb-me-err" role="status" hidden></p>
         <button class="btn ghost" id="lb-set-done" type="button">تم</button>
       </div>
       <div class="selvedge" aria-hidden="true"></div>
@@ -1760,13 +1783,30 @@ const gaugeHtml = (p) => {
 let popActs = [], popMode = '';
 const spot = { p: new THREE.Vector3() };
 const spotOf = (c) => { spot.p.copy(c.root.position).setY(1.4); return spot; };
+// a camel's name in its card, with the pencil that renames it (his own camels only, with the engine: not the test
+// herd's copies), or the field it becomes
+const PENCIL = '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>';
+const nameRow = (camel) => (pop.naming
+  ? `<div class="nm"><input id="c-name" type="text" value="${esc(pop.typed ?? camel.name)}" maxlength="24" dir="rtl" autocomplete="off" aria-label="اسم ${camel.male ? 'الجمل' : 'الناقة'}"><button type="button" data-rename-save>احفظ</button></div><p class="nm-err" id="c-name-err"${pop.nameErr ? '' : ' hidden'}>${pop.nameErr || ''}</p>`
+  : `<h2 id="pop-title">${esc(camel.name)}${!camel.demo && window.marahEngine ? `<button type="button" class="rn" data-rename aria-label="غيّر الاسم">${svgI(PENCIL)}</button>` : ''}</h2>`);
+async function saveCamelName() {
+  const c = pop && pop.camel, field = $('c-name');
+  if (!c || !field) return;
+  const name = field.value.trim();
+  if (!name) { pop.nameErr = 'اكتب الاسم'; renderCard(); $('c-name').focus(); return; }
+  let r = null;
+  try { r = await window.marahEngine.dispatch({ type: 'renameCamel', camel: c.id, name }); } catch (err) { console.warn('rename:', err); }
+  if (!pop || pop.camel !== c) return;
+  if (r && r.ok) { c.name = name; pop.naming = false; pop.nameErr = null; pop.typed = null; renderCard(); refreshLabels(); $('pop').querySelector('[data-rename]')?.focus(); }
+  else { pop.nameErr = r && r.error && r.error.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : 'ما تم، جرّب مرة ثانية'; renderCard(); $('c-name').focus(); }
+}
 // the card's whole content, built when it opens or its content changes (never per frame)
 function renderCard() {
   const { place, camel } = pop;
   let top, body, acts;
   if (camel) {
     top = `<div class="backrow"><button type="button" class="back" data-back aria-label="رجوع إلى ${place.name}">${svgI('<path d="M9 6l6 6-6 6"/>')}${place.name}</button>${X_BTN}</div>` +
-      `<div class="who"><span class="sw" style="background:${COAT_HEX[camel.coat]}"></span><div class="ttl"><h2 id="pop-title">${esc(camel.name)}</h2><p id="c-meta">${esc(metaOf(camel))}</p></div></div>`;
+      `<div class="who"><span class="sw" style="background:${COAT_HEX[camel.coat]}"></span><div class="ttl">${nameRow(camel)}<p id="c-meta">${esc(metaOf(camel))}</p></div></div>`;
     body = `<div class="note${camel.warn ? ' warn' : ''}">${camel.due != null ? svgI(CLOCK) : camel.warn ? svgI(ALERT) : ''}${esc(camel.note)}</div>` +
       statsHtml([ageStat(camel), camel.due != null ? ['تولد بعد', ...days(camel.due), camel.due <= 10 ? 'warn' : ''] : camel.sick ? ['الصحة', camel.male ? 'مريض' : 'مريضة', '', 'warn'] : ['الصحة', 'زينة', '', 'good'],
         ['القيمة التقريبية', valueOf(camel).toLocaleString('en-US'), 'ريال']]);
@@ -1781,6 +1821,7 @@ function renderCard() {
     body = (c.gauge === undefined ? '' : gaugeHtml(c.gauge)) + (c.stats ? statsHtml(c.stats) : '') + (c.html || '');
     acts = c.actions || [];
   }
+  const typing = document.activeElement?.id === 'c-name' ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
   const had = $('pop').contains(document.activeElement) ? (document.activeElement.dataset.act !== undefined ? `[data-act="${document.activeElement.dataset.act}"]` : document.activeElement.hasAttribute('data-back') ? '[data-close]' : null) : null;
   $('pop-top').innerHTML = top;
   $('pop-body').innerHTML = body; $('pop-body').hidden = !body;
@@ -1789,6 +1830,7 @@ function renderCard() {
   $('pop-acts').hidden = !acts.length;
   $('pop').hidden = false;
   if (had) ($('pop').querySelector(had) || $('pop')).focus({ preventScroll: true });      // (a button that rebuilt the card keeps the focus on its new self; it fell to the page)
+  if (typing && $('c-name')) { $('c-name').focus({ preventScroll: true }); $('c-name').setSelectionRange(...typing); }      // (the herd's news while he types a name: the field drawn again with what he typed, the caret where it was)
   refreshLabels(); measureHud();
 }
 // a pick or a follow lasts while its card is open
@@ -1816,11 +1858,24 @@ function closePop() {
   const back = pop.place.el; pop = null; stopFollow(); $('pop').hidden = true; refreshLabels(); measureHud();
   if ($('pop').contains(document.activeElement) || document.activeElement === document.body) (back.offsetParent ? back : document.querySelector('.side button')).focus({ preventScroll: true });      // (to the place's pin, or the map's first button if the pin is off the screen)
 }
+// in the name's field: Enter saves, Escape puts the name back (not the card's own Escape, which closes it)
+$('pop').addEventListener('input', (e) => {
+  if (e.target.id !== 'c-name' || !pop) return;
+  pop.typed = e.target.value;
+  if (pop.nameErr) { pop.nameErr = null; $('c-name-err').hidden = true; }
+});
+$('pop').addEventListener('keydown', (e) => {
+  if (e.target.id !== 'c-name') return;
+  if (e.key === 'Enter') { e.preventDefault(); saveCamelName(); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); pop.naming = false; pop.nameErr = null; pop.typed = null; renderCard(); $('pop').querySelector('[data-rename]')?.focus(); }
+});
 addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (phone.big) phone.shrink(); else if (phone.state === 'small') phone.close(); else if (pop) closePop(); });
 $('pop').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b || !pop) return;
+  if (b.hasAttribute('data-rename')) { pop.naming = true; pop.nameErr = null; pop.typed = null; renderCard(); const f = $('c-name'); f.focus(); f.select(); return; }
+  if (b.hasAttribute('data-rename-save')) { saveCamelName(); return; }
   if (b.hasAttribute('data-close')) closePop();
-  else if (b.hasAttribute('data-back')) { stopFollow(); pop.camel = null; renderCard(); }
+  else if (b.hasAttribute('data-back')) { stopFollow(); pop.camel = null; pop.naming = false; pop.nameErr = null; pop.typed = null; renderCard(); }
   else if (b.dataset.camel) openCamel(camels[+b.dataset.camel]);
   else if (b.dataset.act) popActs[+b.dataset.act].run();
 });
@@ -2273,20 +2328,47 @@ const LOBBY = (() => {
   function showSettings() {
     for (const b of document.querySelectorAll('#lb-set [data-set]')) b.setAttribute('aria-pressed', String(String(SETTINGS[b.dataset.set]) === b.dataset.v));
   }
-  el('lb-gear').addEventListener('click', () => { card('set'); showSettings(); el('lb-set').querySelector('button').focus(); });
+  el('lb-gear').addEventListener('click', () => {
+    card('set'); showSettings();
+    el('lb-me').hidden = !(G && engine); el('lb-me-err').hidden = true;
+    if (G) el('lb-me-name').value = G.playerName;
+    el('lb-set').querySelector('button').focus();
+  });
+  // his own name (saved with the game, not with the device's settings: proxy N1)
+  async function saveMe() {
+    const name = el('lb-me-name').value.trim(), msg = el('lb-me-err');
+    msg.hidden = false;
+    if (!name) { msg.textContent = 'اكتب الاسم'; el('lb-me-name').focus(); return; }
+    let r = null;
+    try { r = await engine.dispatch({ type: 'renamePlayer', name }); } catch (err) { console.warn('lobby: rename', err); }
+    msg.textContent = r && r.ok ? 'انحفظ' : r && r.error && r.error.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : 'ما تم، جرّب مرة ثانية';
+  }
+  el('lb-me-save').addEventListener('click', saveMe);
+  el('lb-me-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveMe(); } });
+  el('lb-me-name').addEventListener('input', () => { el('lb-me-err').hidden = true; });
   el('lb-set-done').addEventListener('click', () => { card('main'); el('lb-gear').focus(); });
   el('lb-set').addEventListener('click', (e) => { const b = e.target.closest('[data-set]'); if (b) applySettings({ [b.dataset.set]: Number(b.dataset.v) }); });
   // a new game: two taps (the card names the save it replaces), on the engine's own startOver, the clock held again
   el('lb-new').addEventListener('click', () => {
     el('lb-confirm-note').textContent = G ? `تبدأ من أول بناقة وحدة مع حوارها. وحفظك الحالي، ${G.farm.name} بـ${phone.dayLine(G).split(' · ')[0]}، ينمسح.` : 'تبدأ من أول بناقة وحدة مع حوارها.';
+    el('lb-farm-name').value = G ? G.farm.name : ''; el('lb-player-name').value = G ? G.playerName : '';
+    el('lb-new-err').hidden = true;
     card('new'); el('lb-new-back').focus();
   });
   el('lb-new-back').addEventListener('click', () => { card('main'); el('lb-new').focus(); });
+  for (const id of ['lb-farm-name', 'lb-player-name']) {
+    el(id).addEventListener('input', () => { el('lb-new-err').hidden = true; });
+    el(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el('lb-new-go').click(); } });
+    el(id).addEventListener('focus', () => setTimeout(() => el(id).scrollIntoView({ block: 'nearest' }), 300));      // (in landscape the keyboard takes half the screen: the card scrolls the field into what is left)
+  }
   el('lb-new-go').addEventListener('click', async () => {
     if (!engine) return;
+    const farmName = el('lb-farm-name').value.trim(), playerName = el('lb-player-name').value.trim();
+    const empty = !farmName ? el('lb-farm-name') : !playerName ? el('lb-player-name') : null;
+    if (empty) { el('lb-new-err').hidden = false; empty.focus(); return; }      // (an empty name: the second tap refused, proxy N1)
     const b = el('lb-new-go'); b.disabled = true;
     try {
-      await engine.startOver(G ? { playerName: G.playerName, farmName: G.farm.name, region: G.farm.region } : {});
+      await engine.startOver({ playerName, farmName, ...(G ? { region: G.farm.region } : {}) });
       await engine.hold(true);
       LOBBY.rewarm();      // (the new game's yard made ready too)
     } catch (err) { console.warn('lobby: new game', err); }
