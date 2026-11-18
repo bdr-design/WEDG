@@ -1966,11 +1966,12 @@ function lotScreen() {
   const noRoom = H.room.cannot, poor = G.cash < l.opening;
   const can = !noRoom && !poor && G.cash >= 0, key = `buyFalcon:${l.lot}`, sure = HJ.sure === key;
   const why = noRoom ? alertCard(esc(FC.cat.lines.refusals[noRoom]), H.room.building.length ? `غرفتك تنبني، تخلص ${fdayShort(H.room.building[0])}.` : `تنبنى من العزبة بـ ${n0(FC.cat.room.price)} ريال، وتخلص بعد ${days(FC.cat.room.buildDays)}.`) : '';
-  // the ready amounts: the opening, half as much again, twice, three times (each rounded to its step), and his whole
-  // balance; those past his balance left out. Then + and − by the figure's own step for the exact amount
+  // the ready amounts: the opening, half as much again, twice, three times, five times (each rounded to its step; the
+  // owner's choice of 18 Nov in place of his whole balance, which won any lot he could afford in one tap); those past
+  // his balance left out. Then + and − by the figure's own step for the exact amount
   const round = (v) => Math.round(v / stepOf(v)) * stepOf(v);
   const pres = [];
-  for (const [label, v] of [['الافتتاح', l.opening], ['مرة ونص', round(l.opening * 1.5)], ['الضعف', round(l.opening * 2)], ['ثلاث مرات', round(l.opening * 3)], ['كل رصيدك', top]]) {
+  for (const [label, v] of [['الافتتاح', l.opening], ['مرة ونص', round(l.opening * 1.5)], ['الضعف', round(l.opening * 2)], ['ثلاث مرات', round(l.opening * 3)], ['خمس مرات', round(l.opening * 5)]]) {
     if (v < l.opening || v > top || pres.some((x) => x[1] === v)) continue;
     pres.push([label, v]);
   }
