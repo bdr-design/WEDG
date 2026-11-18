@@ -2111,8 +2111,8 @@ function meterFrame(now) {
   // a second fell always on the same of the two (79 or 100 in two loads of the same yard: the review)
   meter.fresh.clear();
   meter.callsMax = Math.max(meter.calls, renderer.info.render.calls); meter.calls = renderer.info.render.calls;
-  if (!meter.ready) { meter.ready = now + 3000; meter.el.textContent = 'يسخّن…'; meter.html = null; meter.up = meter.upNew = 0; return; }      // (written straight: the next text is written whatever it is)
-  if (now < meter.ready) { meter.last = now; meter.start = now; meter.shown = now; meter.up = meter.upNew = 0; return; }      // (the bytes of frames not counted dropped, and the first line a second after: it was 3-4 times too high, then one frame's, the reviews)
+  if (!meter.ready) { meter.ready = now + 3000; meter.el.textContent = 'يسخّن…'; meter.html = null; meter.up = meter.upNew = 0; meter.upFrames = 0; return; }      // (written straight: the next text is written whatever it is)
+  if (now < meter.ready) { meter.last = now; meter.start = now; meter.shown = now; meter.up = meter.upNew = 0; meter.upFrames = 0; return; }      // (the bytes of frames not counted dropped, and the first line a second after: it was 3-4 times too high, then one frame's, the reviews)
   const ft = now - meter.last; meter.last = now;
   if (ft > 1000) { meter.up = 0; return; }
   const bin = Math.min(399, Math.round(ft * 4));
