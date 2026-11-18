@@ -17,3 +17,9 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
 5. The herd's frame drop (60 to 52 by the herd on his phone, 12 Nov): after the two reviews before the fix, the calls and
    uploads halved (no change to the picture). Then two fixes that change pixels slightly, shown before and after: the
    pen floors and the yard's dirt drawn with the ground «أرسمها مع الأرض»; the shadows by four GPU-compared taps «ظلال أخف».
+6. While the herd's iPhone build runs, what next: «جوال الصيد» (the hunting phone: the reviewers' findings fixed, the
+   design shown in pictures before it is adopted). After it, the order «الصيد ثم الذيب ثم الشاهين».
+7. The hunting phone's ceiling stepper: «أرقام جاهزة + ضبط» (preset amounts to pick from, then + and − for the exact
+   figure).
+8. The public repository (a signed IPA carries his device ids and Apple team): «خلّه خاص». The owner makes the change
+   in GitHub's settings himself; the steps were given to him.
