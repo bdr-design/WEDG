@@ -465,7 +465,8 @@ reviewer's own tools):
   about 40 degrees and back, bending along their length), and each clip's straightest cord's largest bend. In the
   air with little wind a slack cord stirs a little, so it bends and does not lie as a rod.
 - **The touch-down:** she slows through the flare (the body's centre 57, 47, 36, 28 mm a frame into contact; it was
-  59 and then 2, about 5 g), the legs give after it (14, 8, 4 mm along her line) and she rises back by frame 40;
+  59 and then 2, about 5 g), the legs give after it (14, 7, 2 mm along her line, little of it down) and she rises back by frame 35 (a deeper,
+  longer give put the folding wing into the falconer's forearm at frame 35);
   the reaching feet are carried onto their places on the support over frames 22-28, 10 mm clear of it until contact
   (they snapped there, 168 mm in the contact frame, and flung the cords). Nothing of her inside the cuff, the
   forearm or the perch before the feet take it.

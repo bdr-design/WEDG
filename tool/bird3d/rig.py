@@ -531,7 +531,7 @@ STOOP_TWIST = 10.0
 # the cords swung round her as rods: the review; the legs then give, LAND_GIVE)
 LAND_Y = [(0, -3000), (12, -900), (18, -420), (22, -260), (24, -150), (25, -98), (26, -55), (27, -24), (28, 0)]
 LAND_Z = [(0, -150), (8, -300), (14, -260), (19, -60), (23, 90), (25, 66), (26, 50), (27, 30), (28, 0)]
-LAND_GIVE = (V3((0.0, 0.86, -0.51)), 26.0, 1.5)      # after contact the body carries on along her line (mm in all, frames' time constant) and comes back by 40
+LAND_GIVE = (V3((0.0, 0.95, -0.31)), 26.0, 1.5)      # after contact the body carries on along her line, little down (mm in all, frames' time constant), back by 35 (lower and longer, the folding wing went into the falconer's forearm at 35)
 LAND_X = [(0, 0), (28, 0)]
 PLANTED = ('cuff', 'perch', 'ground')
 PERCH_NECK = RIG.get('perch_neck', (14, -32, -40))      # neck1, neck2, head turns that put the perched frame on the static <bird>_fist.glb
@@ -694,7 +694,7 @@ class SakerClips:
         tb_c = lambda g: PERCH_TB + V3((25, 0, -10)) * (1 - ramp(g, 26, 40))
         if f >= 28:
             d, amt, tau = LAND_GIVE
-            give = amt * (1 - math.exp(-(f - 28) / tau)) * (1 - ramp(f, 31, 40))      # (0 at contact, 17 mm a frame: her arrival speed)      # the legs give, then she rises back
+            give = amt * (1 - math.exp(-(f - 28) / tau)) * (1 - ramp(f, 30, 35))      # (0 at contact, 17 mm a frame: her arrival speed)      # the legs give, then she rises back
             return tb_c(f) + d * give, pitch, 0.0
         yaw = spline(f, [(0, 90), (14, 88), (22, 40), (27, 0), (28, 0)])
         Rm = lambda p_, y_: (Matrix.Rotation(math.radians(y_), 3, 'Z') @ Matrix.Rotation(math.radians(-p_), 3, 'Y'))
