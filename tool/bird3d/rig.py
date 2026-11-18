@@ -407,20 +407,28 @@ class Cord:
 
     def step(self, anchor, air, dt=1.0 / FPS, sub=4, end=None, keep_out=None, damp=0.92):
         g = V3((0, 0, -9810.0))
-        for _ in range(sub):
+        # the anchor (and a held end) moved over the frame, a sub-step at a time: set at the frame's end on the first
+        # sub-step, the first point was flung at four times the bird's speed and the cord overshot ahead of her
+        # whenever she moved (the cast-off's flicks, the landing's cords forward of the breast)
+        a_from = self.p[0].copy()
+        e_from = self.p[-1].copy() if end is not None else None
+        for k in range(sub):
             h = dt / sub
-            self.p[0] = V3(anchor)
+            t = (k + 1) / sub
+            anchor_k = a_from.lerp(V3(anchor), t)
+            end_k = e_from.lerp(V3(end), t) if end is not None else None
+            self.p[0] = anchor_k
             if end is not None:
-                self.p[-1] = V3(end)
+                self.p[-1] = end_k
             for i in range(1, len(self.p)):
                 v = (self.p[i] - self.q[i]) * damp
                 self.q[i] = self.p[i].copy()
                 drag = (V3(air) - v / h) * 0.5 * h      # pulled toward moving with the air
                 self.p[i] = self.p[i] + v + (g * h * h) + drag * h * 5
             for _ in range(4):
-                self.p[0] = V3(anchor)
+                self.p[0] = anchor_k
                 if end is not None:
-                    self.p[-1] = V3(end)
+                    self.p[-1] = end_k
                 for i in range(1, len(self.p)):
                     d = self.p[i] - self.p[i - 1]
                     L = d.length or 1e-6
@@ -441,8 +449,8 @@ class Cord:
 
 class BodyKeepOut:
     """Keeps a point (mm, armature space) out of the bird's body: in the body's rest frame, a point inside the section
-    nearest along the body is moved out to its edge: under the body's axis along its own line, over it straight down
-    (along the section's -u) to just under the lower edge, never onto her back. The cords
+    nearest along the body is moved straight down (along the section's -u) to just under its lower edge, its side place
+    kept. The cords
     had no collision: at the cast-off's push they swung up through the torso and stood over her back and before her
     face (the reviews)."""
 
@@ -472,12 +480,10 @@ class BodyKeepOut:
         k = (a / ha) ** 2 + (b / hb) ** 2
         if k >= 1.0:
             return p
-        if a < 0:      # under the axis: out along its own direction to the edge (a straight drop left kinks)
-            r = 1.0 / math.sqrt(max(k, 1e-9))
-            a2, b2 = a * r - self.MARGIN * (a / ha) / math.sqrt(max(k, 1e-9)), b * r
-        else:          # over it: straight down to under the lower edge (never out onto her back)
-            a2, b2 = -ad * math.sqrt(max(0.0, 1.0 - (b / hb) ** 2)) - self.MARGIN, b
-        x2 = x + u * (a2 - a) + v * (b2 - b)
+        # straight down to just under the lower edge, the point's side place kept (out along its own line from the
+        # section's centre, each cord went out to its own flank: 106-127 mm apart for anklets 16 mm apart, the review)
+        a2 = -ad * math.sqrt(max(0.0, 1.0 - (b / hb) ** 2)) - self.MARGIN
+        x2 = x + u * (a2 - a)
         return (self.M @ (V3(tuple(x2)) * MM)) / MM
 
 
@@ -660,7 +666,7 @@ class SakerClips:
               'tail_lift': keys(f, [(15, 0), (18, 26), (27, 26), (33, 0)]),      # the tail raised clear of the fist
               'air': V3((-(20000 - (1100 + 5000 * t)) * ramp(f, 20, 32), 0, 0)),      # (from the push: from 24 the cords flicked up over her back as the feet drew up)
               'settle_to': 'flight', 'settle': ramp(f, 31, 38),      # the cords' air eased to the flight loop's
-              'cord_damp': lerp(0.92, 0.7, ramp(f, 19, 21) * (1 - ramp(f, 26, 30)))}      # (damped while the feet draw up: they flung forward under her face)
+              'cord_damp': lerp(0.92, 0.7, ramp(f, 19, 21) * (1 - ramp(f, 30, 36)))}      # (damped while the feet draw up: they flung forward under her face)
         if sp['neck'] is None:
             del sp['neck']
         if f == 14:
@@ -727,9 +733,8 @@ class SakerClips:
         if f < 12:
             # the cords' wind eased from the flight loop's (20 m/s) to the path's own (about 5.5 m/s here): from the
             # loop they trailed, then swung forward under her breast as the wind dropped at once
-            v = (self.land_place(f + 1)[0] - tb_air).length * FPS
-            head = Matrix.Rotation(math.radians(yaw), 3, 'Z') @ V3((1, 0, 0))
-            sp['air'] = -head * max(0.0, 20000.0 - v) * (1 - ramp(f, 0, 12))
+            vel = (self.land_place(f + 1)[0] - tb_air) * FPS      # along the path (not her heading: she turns on it)
+            sp['air'] = -vel.normalized() * max(0.0, 20000.0 - vel.length) * (1 - ramp(f, 0, 12))
         if f >= 37:
             sp['fold'] = {kk: v * (1 - ramp(f, 38, 45)) for kk, v in SWAP_FOLD.items()}
         if surface == 'perch':
@@ -2063,21 +2068,34 @@ def jess_checks(arm, clips=('cast_off', 'flight', 'glide', 'stoop', 'land_cuff',
         if name not in CLIPS:
             continue
         use_clip(arm, name)
-        worst, wf, ahead, af = -1e9, None, -1e9, None
+        worst, wf, ahead, af, spread, spf = -1e9, None, -1e9, None, 0.0, None
         for f in range(CLIPS[name][0]):
             sc.frame_set(f)
             M = (pb['body'].matrix @ pb['body'].bone.matrix_local.inverted()).inverted()
+            base = ((M @ pb['jess1.L'].head) - (M @ pb['jess1.R'].head)).length / MM
+            for j in range(1, JESS_N + 1):      # the two cords together under her, not each out on its own side
+                d = ((M @ pb[f'jess{j}.L'].tail) - (M @ pb[f'jess{j}.R'].tail)).length / MM - base
+                if d > spread:
+                    spread, spf = d, f
+            # ahead: along her heading on the level, in the armature (in the body's frame a cord hanging straight
+            # down read as 118 mm ahead when she flares nose-up 52 degrees at contact)
+            Mb = pb['body'].matrix @ pb['body'].bone.matrix_local.inverted()
+            hd = Mb.to_3x3() @ V3((1, 0, 0))
+            hd.z = 0.0
+            hd = hd.normalized() if hd.length > 1e-6 else V3((1, 0, 0))
             for s in ('L', 'R'):
-                x0 = (M @ pb[f'jess1.{s}'].head).x / MM
+                a0 = pb[f'jess1.{s}'].head
                 for j in range(1, JESS_N + 1):
                     q = (M @ pb[f'jess{j}.{s}'].tail) / MM
                     if q.z > worst:
                         worst, wf = q.z, f
                     if name != 'cast_off' or f >= 20:      # (held in the falconer's grip before 20)
-                        if q.x - x0 > ahead:
-                            ahead, af = q.x - x0, f
+                        d = (pb[f'jess{j}.{s}'].tail - a0).dot(hd) / MM
+                        if d > ahead:
+                            ahead, af = d, f
         print(f'{name}: the jesses\' highest point above the body\'s axis {worst:.0f} mm (frame {wf}); '
-              f'the farthest ahead of the anklet {ahead:.0f} mm (frame {af})')
+              f'the farthest ahead of the anklet along her heading {ahead:.0f} mm (frame {af}); the cords\' spread beyond the anklets\' '
+              f'{spread:.0f} mm (frame {spf})')
 
 
 def motion_checks(arm, meshes, frames_mesh, clips, body):
