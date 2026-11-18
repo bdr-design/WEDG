@@ -49,3 +49,5 @@ Asked in Gulf Arabic as choices (the recommendation first); his answers word for
     «حمّل كل شي حتى لو طوّل» (the cabin and every shader before «كمّل», even if it takes longer); back from the
     background «ترجع للعبة على طول» (the lobby only on a fresh start or a reload); the settings «تنحفظ بالجوال»
     (kept on the device, a new game included).
+15. «كيف اقنص؟»: told that the outing on the map (the camp, the trapping, casting the falcon: T18 part C) is not built
+    yet, only the phone's side. When: «بعد اللوبي مباشرة» (designed and shown before it is built).
