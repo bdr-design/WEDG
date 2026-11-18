@@ -433,7 +433,7 @@ reviewer's own tools):
 - **Nothing through the support:** in every frame of every clip on the cuff or the perch, before the feet take it
   and after they leave, no vertex of the shown body inside the cuff, a 45 mm forearm 400 mm behind it, or the
   perch (the landings now come in from the side; the cast-off lifts the tail clear before she drops). Once
-  planted, only the tail on the fist (see What is unsure) and, on the perch, two tarsus vertices under 1 mm (on the cuff, one at the cast-off's push, 0.7 mm).
+  planted, only the tail and the folded wing tips on the fist's stand-in forearm (see What is unsure; the build lists every bone inside) and, on the perch, two tarsus vertices under 1 mm (on the cuff, one at the cast-off's push, 0.7 mm).
 - **The tarsus's top under the trousers, the look held:** the approved bird's trousers run from the shank
   straight to their end a third of the way down the tarsus, cutting the heel's corner, so the tarsus's top comes out
   through their back wall (a small grey stub behind the heel even in the approved `saker_fist.glb`); the rig made it

@@ -1711,11 +1711,12 @@ def support_checks(arm, meshes, frames_mesh, name, n, kind):
         dm = np.where(mask, d, 0.0)
         cnt = int((dm > 0.5).sum())
         if cnt:
-            i = int(np.argmax(dm))
-            v = meshes[m].data.vertices[i]
             gi = {g.index: g.name for g in meshes[m].vertex_groups}
-            top = gi[max(v.groups, key=lambda g: g.weight).group] if len(v.groups) else '?'
-            (post if planted else pre).append((f, cnt, round(float(dm.max()), 1), top))
+            vs = meshes[m].data.vertices
+            # every bone with a vertex inside, not only the deepest's (the tail hid the folded wing behind it)
+            bones = sorted({gi[max(vs[int(i)].groups, key=lambda g: g.weight).group].split('.')[0]
+                            for i in np.nonzero(dm > 0.5)[0] if len(vs[int(i)].groups)})
+            (post if planted else pre).append((f, cnt, round(float(dm.max()), 1), '+'.join(bones)))
     print(f'{name}: vertices inside the {"cuff or forearm" if kind == "cuff" else "perch"} before the feet take it '
           f'(frame, count, deepest mm, its bone): {pre if pre else "none"}')
     print(f'{name}: once planted, vertices other than the toes inside: {post if post else "none"}; '
