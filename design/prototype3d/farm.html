@@ -384,11 +384,12 @@ sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
   sun.shadow.map.texture.name = 'sun.shadowMap';
   sun.shadow.camera.updateProjectionMatrix();      // (three does it only when it makes the map itself: left at its default 10 m frame, the shadows fell only near its middle)
   // the lit materials read `map.texture` (in the lights' setup, after the shadow pass): the depth texture stands in for
-  // the colour then; during the pass (and the target's own setup in it) `texture` is the target's own again
+  // the colour then; during the pass (and the target's own setup in it) `texture` is the target's own again, and an
+  // assignment outside it goes to the target's own as three's setter does (nothing in r170 assigns it: re-check on an upgrade)
   const map = sun.shadow.map, pass = renderer.shadowMap.render;
   renderer.shadowMap.render = function (...args) {
     delete map.texture;
-    try { return pass.apply(this, args); } finally { Object.defineProperty(map, 'texture', { get: () => dt, configurable: true }); }
+    try { return pass.apply(this, args); } finally { Object.defineProperty(map, 'texture', { get: () => dt, set: (v) => { map.textures[0] = v; }, configurable: true }); }
   };
 }
 scene.add(sun, sun.target);
@@ -2031,14 +2032,20 @@ let shadowFrame = 0;
 // histogram of 0.25 ms steps (the slowest 1% read off it, nothing sorted or made): it used to sort every frame time of
 // the session once a second, which on a phone took a few ms after some minutes and itself made one slow frame a second,
 // near 2% of the frames, so the slowest 1% it showed was partly its own
-const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0, up: 0, upFrames: 0 } : null;
+const meter = location.hash === '#fps' ? { el: $('meter'), hist: new Uint32Array(400), n: 0, jank: 0, recent: new Float32Array(240), ri: 0, last: 0, shown: 0, start: 0, up: 0, upNew: 0, fresh: false, upFrames: 0 } : null;
 // the bytes sent to the GPU each frame, counted for the meter (the herd's uploads were the one cost found only by the
 // herd: the review); two calls wrapped, nothing else, and only with the meter on
 if (meter) {
   renderer.info.autoReset = false;
   const gl = renderer.getContext(), bsd = gl.bufferSubData.bind(gl), tsi = gl.texSubImage2D.bind(gl);
   gl.bufferSubData = function (t, off, data, srcOff, len) { meter.up += len !== undefined ? len * (data.BYTES_PER_ELEMENT || 1) : data.byteLength - (srcOff || 0) * (data.BYTES_PER_ELEMENT || 1); return bsd(...arguments); };
-  gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && px.byteLength !== undefined) meter.up += Math.min(px.byteLength, a[4] * a[5] * 16); return tsi(...arguments); };
+  gl.texSubImage2D = function () { const a = arguments, px = a[a.length - (typeof a[a.length - 1] === 'number' ? 2 : 1)]; if (px && typeof px === 'object') meter[meter.fresh ? 'upNew' : 'up'] += px.byteLength !== undefined ? Math.min(px.byteLength, a[4] * a[5] * 16) : (px.width | 0) * (px.height | 0) * 4; return tsi(...arguments); };      // (a picture: its pixels, 4 bytes each)
+  // a texture's first upload (three makes its storage, then fills it, on the same binding) counted apart: right after
+  // something is built it is a one-off of some MB, not what each frame sends (the review)
+  const tst = gl.texStorage2D.bind(gl), btx = gl.bindTexture.bind(gl), atx = gl.activeTexture.bind(gl);
+  gl.texStorage2D = function () { meter.fresh = true; return tst(...arguments); };
+  gl.bindTexture = function () { meter.fresh = false; return btx(...arguments); };
+  gl.activeTexture = function () { meter.fresh = false; return atx(...arguments); };
   // the meter's own size watched, not read after each rewrite (a forced layout once a second: 0.5-2.4 ms, in the slowest 1%)
   new ResizeObserver(() => measureHud()).observe(meter.el);
 }
@@ -2105,8 +2112,8 @@ function meterFrame(now) {
   for (let i = 0; i < meter.recent.length && sum < 2000; i++) { k = (k + meter.recent.length - 1) % meter.recent.length; if (!meter.recent[k]) break; sum += meter.recent[k]; cnt++; }
   const p99 = pct(meter.hist, meter.n, 0.99);
   const secs = Math.round((now - meter.start) / 1000);
-  const upKb = meter.upFrames ? meter.up / meter.upFrames / 1000 : 0; meter.up = 0; meter.upFrames = 0;
-  const line5 = `يرسل للكرت ${upKb < 10 ? upKb.toFixed(1) : Math.round(upKb)} ك.ب باللقطة · ${renderer.info.render.calls} رسمة`;
+  const upKb = meter.upFrames ? meter.up / meter.upFrames / 1000 : 0, newKb = meter.upNew / 1000; meter.up = 0; meter.upNew = 0; meter.upFrames = 0;
+  const line5 = `يرسل للكرت ${upKb < 10 ? upKb.toFixed(1) : Math.round(upKb)} ك.ب باللقطة${newKb >= 1 ? ` (+ صور جديدة ${Math.round(newKb)} ك.ب مرة وحدة)` : ''} · ${renderer.info.render.calls} رسمة`;
   const line3 = cpu.n ? `الحساب ${(cpu.sg / cpu.n).toFixed(1)} · تجهيز الرسم ${(cpu.sd / cpu.n).toFixed(1)} م.ث بالمعدل · أبطأ 1٪: ${Math.round(pct(cpu.game, cpu.n, 0.99))} و${Math.round(pct(cpu.draw, cpu.n, 0.99))}` : '';
   // the engine's cost to the page (its own work is on its thread): reading each new view of the game, and the save
   const es = window.marahEngine?.stats;
