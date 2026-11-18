@@ -11,7 +11,9 @@ owner's iPhone with the page's frame meter, which the app always shows. The labe
 «60 · 18 م.ث · مزج إطارين».
 
 1. **افتح العداد:** اضغط على المربع الصغير اللي فوق يمين. يكبر ويطلع فيه أكثر من سطر. السطر الثاني فيه:
-   «رسم القطيع: مزج إطارين · قطيع تجربة: طافي · 2 راس» (الرقم الأخير عدد نوقك في العزبة).
+   «رسم القطيع: مزج إطارين · قطيع تجربة: طافي · 2 راس» (الرقم الأخير عدد نوقك في العزبة). وتحت فيه سطر
+   «الدقة 2x · الظلال شغّالة»: **لا تلمسه** وقت الصور الست، لأنه يغيّر الرسم ويرجّع العداد يحسب من الصفر (له خطوة
+   بروحه تحت).
 2. **شغّل قطيع التجربة:** اضغط على كلمة «قطيع تجربة: طافي». تصير «قطيع تجربة: شغّال»، والعدد يصير «40 راس». هذي نسخ
    من نوقك، توزّعت على الحظاير الست عشان نقيس ثقل عزبة مليانة. ما تدخل في حلالك ولا في عدّ الحظاير، ولا تنفتح لها
    بطاقة.
@@ -33,9 +35,15 @@ owner's iPhone with the page's frame meter, which the app always shows. The labe
    - «N لقطة/ث · أبطأ 1٪: N م.ث»
    - «تقطيع: N»
    - «الحساب X · تجهيز الرسم Y م.ث بالمعدل · أبطأ 1٪: a وb»
+   - «يرسل للكرت N ك.ب باللقطة · N رسمة» (إذا بنيت شي قبل شوي، يطلع جنبه بين قوسين «+ صور جديدة … مرة وحدة»:
+     عادي، هذي صور تنرسل مرة وحدة بس)
 
    وإذا حسّيت إن الجوال حمي، أو شفت تقطيع، أو إن وحدة من الطرق شكل النوق فيها غريب، قل لنا.
-8. **إذا خلصت:** افتح العداد واضغط «قطيع تجربة: شغّال» لين يرجع «طافي» (أو سكّر اللعبة وافتحها). خل «رسم القطيع» على
+8. **صورتين زيادة، الدقة والظلال:** خل «رسم القطيع» على «مزج إطارين». افتح العداد واضغط «الدقة 2x»، تصير «الدقة
+   1x»، وسوّ اللقطة الأولى (الخريطة) وصوّرها. بعدين رجّعها «الدقة 2x»، واضغط «الظلال شغّالة» لين تصير «الظلال
+   طافية»، وسوّ نفس اللقطة وصوّرها. بعدها رجّع الظلال «شغّالة». هالصورتين تقول لنا وش ياكل أكثر بجوالك: كثرة النقاط
+   في الشاشة، ولا الظلال.
+9. **إذا خلصت:** افتح العداد واضغط «قطيع تجربة: شغّال» لين يرجع «طافي» (أو سكّر اللعبة وافتحها). خل «رسم القطيع» على
    «مزج إطارين»، إلا إذا قلنا لك غير كذا.
 
 ## What the shots draw now (14 Nov)
@@ -56,7 +64,7 @@ over 50 ms («تقطيع»). The CPU line splits the frame into the game's compu
 - **0 مزج إطارين** (as built: two baked frames blended in the shader, 32 texture reads a vertex). If its slowest 1% is
   within about 1 ms of the other two in both views, the vertex fetches cost nothing on his phone: keep 0.
 - **1 أقرب إطار** (16 reads a vertex; the pose steps at 60 frames a second, up to 8 ms of a clip off) and
-  **2 كلها بالمعالج** (16 reads a vertex; every camel posed on the CPU, about 97 kB sent to the GPU a frame). If either
+  **2 كلها بالمعالج** (16 reads a vertex; every camel posed on the CPU, 97,280 bytes sent to the GPU a frame for 40 camels; since 18 Nov variants 0 and 1 send only the fading camels' rows, a few kB). If either
   is clearly smoother than 0 (a lower slowest 1%, fewer stutters, the frame rate held at 60 where 0 drops), the
   vertex fetches are the cost. Prefer 2, because its poses are exact. Choose 1 instead if 2's الحساب or تجهيز الرسم
   rises by more than it saves.
