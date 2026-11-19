@@ -241,13 +241,26 @@ class EngineCore {
           ),
           null,
         );
-      case StartTrip(:final actor, :final kind, :final ground, :final nights):
+      case StartTrip(
+        :final actor,
+        :final kind,
+        :final ground,
+        :final nights,
+        :final drove,
+      ):
         return (
-          StartTrip(actor, kind, ground, nights, minute: minuteOfDay()),
+          StartTrip(
+            actor,
+            kind,
+            ground,
+            nights,
+            minute: minuteOfDay(),
+            drove: drove,
+          ),
           null,
         );
-      case EndTrip(:final actor):
-        return (EndTrip(actor, minute: minuteOfDay()), null);
+      case EndTrip(:final actor, :final drove):
+        return (EndTrip(actor, minute: minuteOfDay(), drove: drove), null);
       case CareFalcons(:final actor):
         return (CareFalcons(actor, minute: minuteOfDay()), null);
       case MoveCamp(:final actor, :final ground):

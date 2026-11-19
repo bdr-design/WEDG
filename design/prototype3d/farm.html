@@ -373,7 +373,7 @@ import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWorld, LAYOUT, PEN_FACILITY, VEHICLES, DECALS, drapeOnTerrain, updateScatter } from './world.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { buildTerrain, buildCampLand } from './terrain.js';
+import { buildTerrain, buildCampLand, worldRings } from './terrain.js';
 import { buildCamp } from './camp.js';
 
 const $ = (id) => document.getElementById(id);
@@ -629,7 +629,7 @@ const SITE = { camp: null, prep: null };      // the camp he is at, out on a tri
 const builtCount = (f) => (GAME ? GAME.farm.facilities.find((x) => x.facility === f)?.has ?? 0 : 0);
 const facVisible = (fac) => fac === 'start' || (fac === 'graze' ? camels.some((c) => c.home === 'graze') : fac.startsWith('pen') ? builtCount('pen') >= +fac.slice(3) : builtCount(fac) > 0);
 function applyFacilities(force) {
-  if (SITE.camp) return;      // (out at the camp the farm stays hidden: what was built meanwhile shows on the way home, leaveCamp)
+  if (SITE.camp && !SITE.camp.near) return;      // (out at a far camp the farm stays hidden: what was built meanwhile shows on the way home, leaveCamp)
   const sig = GAME ? GAME.farm.facilities.map((x) => x.has).join(',') : 'none';
   if (!force && sig === facSig) return;
   facSig = sig;
@@ -1642,7 +1642,7 @@ function placeFacilities() {
   const bigTank = builtCount('tank') > 0, store = builtCount('store') > 0;
   placeHits.length = 0;
   for (const pl of PLACES) {
-    pl.off = SITE.camp ? !pl.camp : pl.camp ? true : pl.facility ? !facVisible(pl.facility) : false;      // (at the camp only its own pin; at home none of the camp's)
+    pl.off = SITE.camp && !SITE.camp.near ? !pl.camp : pl.camp ? !SITE.camp : pl.facility ? !facVisible(pl.facility) : false;      // (at a far camp only its own pin; at a near one the farm's too; at home none of the camp's)
     if (pl.key === 'water') pl.p.copy(bigTank ? WATER_AT.big : WATER_AT.start);
     if (pl.key === 'feed') { pl.p.copy(store ? FEED_AT.big : FEED_AT.start); pl.name = store ? 'مستودع العلف' : 'مظلة العلف'; }
     const hit = pl.key === 'water' ? (bigTank ? pl.hit : pl.hitStart) : pl.key === 'feed' ? (store ? pl.hit : pl.hitStart) : pl.hit;
@@ -1731,9 +1731,13 @@ function groundPlace(g) {
         ...(trap ? [['عدتك', lacks.length ? 'ناقصة' : 'كاملة', '', lacks.length ? 'warn' : 'good']] : [])];      // (a hunting ground's nights are the stepper's)
       const [nv, nu] = nightsWord(n);
       const step = `<div class="nights" role="group" aria-label="الليالي"><button type="button" data-nights="-1" aria-label="ليلة أقل"${n <= least ? ' disabled' : ''}>−</button><span aria-live="polite"><b class="num">${nv}</b> ${nu}</span><button type="button" data-nights="1" aria-label="ليلة زيادة"${n >= most ? ' disabled' : ''}>+</button></div>`;
-      const note = `<div class="note">${trap ? 'الجوال يوريك عدتك ومؤونة المخيم وكم يكفي العلف والماء قبل ما تطلع.' : 'الجوال يوريك كم يكفي العلف والماء قبل ما تطلع.'}</div>`;      // (short: the card before leaving says the rest, and a long note was cut in a small card)
+      // a near ground he can drive to himself (the owner's choice of 19 Nov); there, by its point, he pitches camp where he is
+      const near = NEAR_AT[g.ground], here = near && atGround(near);
+      const note = `<div class="note">${here ? 'انت بالأرض: تنصب المخيم جنب سيارتك.' : near ? 'تقدر تسوق لها بنفسك، ولما توصل تنصب المخيم من هالبطاقة. أو تطلع والتقويم يمشي المشوار.' : trap ? 'الجوال يوريك عدتك ومؤونة المخيم وكم يكفي العلف والماء قبل ما تطلع.' : 'الجوال يوريك كم يكفي العلف والماء قبل ما تطلع.'}</div>`;      // (short: the card before leaving says the rest, and a long note was cut in a small card)
       return { sub: `${trap ? 'مخيم أيام' : n === 0 ? 'مقناص · طلعة يوم' : 'مقناص · رحلة أيام'} · ${where} العزبة`, stats, html: step + note,
-        actions: [{ label: trap ? 'اطلع للمخيم' : n === 0 ? 'اطلع' : 'اطلع للرحلة', primary: true, run: () => { closePop(); phone.openTrip(kind, g.ground, n, () => startTrip(kind, g.ground, n)); } },
+        actions: [here
+          ? { label: 'انصب المخيم هنا', primary: true, run: () => { closePop(); phone.openTrip(kind, g.ground, n, () => startTrip(kind, g.ground, n, true), { here: true }); } }
+          : { label: trap ? 'اطلع للمخيم' : n === 0 ? 'اطلع' : 'اطلع للرحلة', primary: true, run: () => { closePop(); phone.openTrip(kind, g.ground, n, () => startTrip(kind, g.ground, n)); } },
           ...(trap && lacks.length ? [{ label: 'كمّل عدتك', run: () => { closePop(); phone.openApp('club'); } }] : [])] };
     },
   };
@@ -1747,16 +1751,23 @@ async function careFalcons(pl) {
   try { await e.dispatch({ type: 'careFalcons' }); } catch (err) { console.warn('care:', err); }
   if (pop && pop.place === pl) renderCard();
 }
+// at a near ground: his car (or the walker, or the map's view) within 600 m of its point
+function atGround([x, z]) {
+  const ps = [playCar?.position, play && play.on ? play.focus() : null].filter(Boolean);
+  return ps.some((p) => Math.hypot(p.x - x, p.z - z) < 600);
+}
 // «اطلع» on the phone's card: the trip starts in the engine; the drive out is the calendar's jump (a day's outing on a
 // near ground has none: the clock brings him there)
-async function startTrip(kind, ground, nights) {
+// (drove: he drove there himself and pitches camp where he stands, the owner's choice of 19 Nov; no jump then)
+async function startTrip(kind, ground, nights, drove = false) {
   const e = window.marahEngine;
   if (!e) return;
+  if (drove) { const f = play && play.on ? play.focus() : controls.target; SITE.droveAt = [f.x, f.z]; } else SITE.droveAt = null;
   let r = null;
-  try { r = await e.dispatch({ type: 'startTrip', kind, ground, nights }); } catch (err) { console.warn('trip:', err); }
-  if (!r || !r.ok) { phone.tripRefused(r); return; }
+  try { r = await e.dispatch({ type: 'startTrip', kind, ground, nights, ...(drove ? { drove: true } : {}) }); } catch (err) { console.warn('trip:', err); }
+  if (!r || !r.ok) { SITE.droveAt = null; phone.tripRefused(r); return; }
   prepareCamp(ground, kind);      // (the camp's land loads under the drive's jump)
-  phone.runTrip();
+  if (!drove) phone.runTrip();
 }
 // the grounds once the catalog comes (asked by the lobby); shown or hidden as the season and the trip change
 async function loadGrounds() {
@@ -1776,9 +1787,10 @@ async function loadGrounds() {
 const CAMP_RECTS = [{ x0: -2.6, x1: 2.6, z0: -5.1, z1: 0.1, h: 3.3 }, { x0: 3.1, x1: 4.7, z0: 0.3, z1: 1.6, h: 0.6 }, { x0: -3.2, x1: -2.0, z0: 2.0, z1: 3.2, h: 0.3 }, { x0: -5.0, x1: -4.2, z0: -1.5, z1: -0.9, h: 0.5 }];
 // a level spot near a near ground's point, the tent's ground (the Nafud's edge is dunes): the least rise over 12 m in a
 // 600 m square round it
-function flatSpot(h, x0, z0) {
-  let best = [x0, z0], low = Infinity;
-  for (let dx = -300; dx <= 300; dx += 30) for (let dz = -300; dz <= 300; dz += 30) {
+function flatSpot(h, x0, z0) { return flatSpotNear(h, x0, z0, 300); }
+function flatSpotNear(h, x0, z0, R) {
+  let best = [x0, z0], low = Infinity, step = Math.max(6, R / 10);
+  for (let dx = -R; dx <= R; dx += step) for (let dz = -R; dz <= R; dz += step) {
     const x = x0 + dx, z = z0 + dz, c = h(x, z);
     const rise = Math.max(Math.abs(h(x + 6, z) - c), Math.abs(h(x - 6, z) - c), Math.abs(h(x, z + 6) - c), Math.abs(h(x, z - 6) - c));
     if (rise < low) { low = rise; best = [x, z]; }
@@ -1793,20 +1805,31 @@ function campWanted(g = GAME) {
   const there = g.today > t.arriveOn || (g.today === t.arriveOn && (g.minute ?? 0) >= t.arriveMinute);
   return there ? { ground: t.ground, kind: t.kind } : null;
 }
+// a near ground's camp stands where it is in the farm's own world (the owner's choice of 19 Nov: driven to on the real
+// land): at its level spot, or, driven to, by where he stopped; the farm's rings made round it. A far ground's camp is
+// its own land with the camp at its middle, the farm hidden
 function prepareCamp(ground, kind) {
-  const key = `${ground}|${kind}`;
+  const near = !!NEAR_AT[ground], at = near && SITE.droveAt ? SITE.droveAt.join(',') : '';
+  const key = `${ground}|${kind}|${at}`;
   if (SITE.prep && SITE.prep.key === key) return SITE.prep.p;
   const p = (async () => {
     const t = await terrainReady;
-    const near = NEAR_AT[ground];
-    const [cx, cz] = near ? flatSpot(t.heightAt, near[0], near[1]) : [0, 0];
-    const land = await buildCampLand(near ? '' : `grounds/${ground}/`, t, sand, renderer, cx, cz);
     const camp = buildCamp(kind);
-    // made ready now (as the lobby makes the farm): the textures sent, the programs made, so nothing waits in play
-    if (!near) renderer.initTexture(land.land.sat);
     for (const m of camp.children) if (m.material.map) renderer.initTexture(m.material.map);
+    if (near) {
+      const [x0, z0] = SITE.droveAt || NEAR_AT[ground];
+      const [cx, cz] = SITE.droveAt ? flatSpotNear(t.heightAt, x0 + 14, z0, 60) : flatSpot(t.heightAt, x0, z0);      // (driven: 14 m off the car's side)
+      camp.position.set(cx, t.heightAt(cx, cz), cz); camp.updateMatrixWorld(true);
+      let rings, job = worldRings(t.land, t.mat, cx, cz);
+      for (let r = job.next(); ; r = job.next()) if (r.done) { rings = r.value; break; }
+      try { renderer.compile(camp, camera, scene); } catch (err) { console.warn('camp: compile', err); }
+      return { key, ground, kind, near: true, camp, rings, at: { x: cx, y: camp.position.y, z: cz }, drove: !!SITE.droveAt };
+    }
+    const land = await buildCampLand(`grounds/${ground}/`, t, sand, renderer, 0, 0);
+    // made ready now (as the lobby makes the farm): the textures sent, the programs made, so nothing waits in play
+    renderer.initTexture(land.land.sat);
     try { renderer.compile(land.group, camera, scene); renderer.compile(camp, camera, scene); } catch (err) { console.warn('camp: compile', err); }
-    return { key, ground, kind, land, camp };
+    return { key, ground, kind, land, camp, at: { x: 0, y: 0, z: 0 } };
   })();
   SITE.prep = { key, p };
   p.catch((err) => { console.warn('camp:', err); if (SITE.prep && SITE.prep.p === p) SITE.prep = null; });
@@ -1814,6 +1837,7 @@ function prepareCamp(ground, kind) {
 }
 function enterCamp(c) {
   if (SITE.camp) return;
+  if (c.near) return enterNearCamp(c);
   if (play && play.on) play.stop();
   closePop();
   const hidden = [];
@@ -1832,9 +1856,45 @@ function enterCamp(c) {
   placeFacilities(); groundsKey = ''; placeGrounds();
   view('tent');
 }
+// a near camp: in the farm's world, nothing hidden; the land's rings round it; the car parked by the tent when the jump
+// brought him, left where he stopped when he drove
+function enterNearCamp(c) {
+  closePop();
+  scene.add(c.camp);
+  const carAt = playCar ? { p: playCar.position.clone(), r: playCar.rotation.y } : null;
+  SITE.camp = { ...c, carAt };
+  STREAM.swap(c.rings, c.at.x, c.at.z);
+  if (play) play.setExtra(CAMP_RECTS.map((r) => ({ ...r, x0: r.x0 + c.at.x, x1: r.x1 + c.at.x, z0: r.z0 + c.at.z, z1: r.z1 + c.at.z })));
+  if (playCar && !c.drove) {
+    if (play && play.on) play.stop();
+    const x = c.at.x + 7.6, z = c.at.z - 2.0;
+    playCar.position.set(x, groundAt(x, z), z); playCar.rotation.y = Math.PI;
+    if (play) { play.debug.carState.pos.copy(playCar.position); play.debug.carState.heading = Math.PI; }
+  }
+  renderer.shadowMap.needsUpdate = true;
+  placeFacilities(); groundsKey = ''; placeGrounds();
+  if (!(play && play.on)) view('tent');
+}
 function leaveCamp() {
   const c = SITE.camp;
   if (!c) return;
+  if (c.near) {
+    closePop();
+    c.camp.removeFromParent();
+    for (const m of c.camp.children) { m.geometry.dispose(); m.material.map?.dispose(); m.material.dispose(); }
+    if (play) play.setExtra(null);
+    SITE.camp = null; SITE.prep = null;
+    if (playCar && c.carAt && !SITE.drivingHome) {      // (brought home by the jump: the car where he left it at the farm)
+      if (play && play.on) play.stop();
+      playCar.position.copy(c.carAt.p); playCar.rotation.y = c.carAt.r;
+      if (play) { play.debug.carState.pos.copy(c.carAt.p); play.debug.carState.heading = c.carAt.r; }
+      view('drone');
+    }
+    SITE.drivingHome = false;
+    renderer.shadowMap.needsUpdate = true;
+    placeFacilities(); groundsKey = ''; placeGrounds();
+    return;
+  }
   if (play && play.on) play.stop();
   closePop();
   c.land.group.removeFromParent(); c.camp.removeFromParent();
@@ -1863,7 +1923,7 @@ function syncSite() {
 const ORDINAL = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
 const CAMP_STOP = { suppliesOut: 'خلصت مؤونة المخيم: فك المخيم وارجع، أو اطلب مؤونة.', seasonEnd: 'خلص الموسم: فك المخيم وارجع.', tripEnd: 'جا يوم رجعتك: فك المخيم وارجع، أو نام ليلة زيادة لو عندك مؤونة.' };
 addPlace({ key: 'camp:tent', camp: true, name: 'المخيم', icon: 'tent', p: new THREE.Vector3(0, 4.3, -2.5), max: 900, off: true,
-  text: () => { const t = GAME?.falcons?.trip; return t ? `المخيم · ${t.groundName}` : 'المخيم'; },
+  text: () => { const t = GAME?.falcons?.trip; const a = SITE.camp?.at; if (a) placeCampPin(a); return t ? `المخيم · ${t.groundName}` : 'المخيم'; },
   cls: () => (GAME?.falcons?.trip?.stop ? 'warn' : ''),
   open() {
     const t = GAME?.falcons?.trip;
@@ -1876,21 +1936,53 @@ addPlace({ key: 'camp:tent', camp: true, name: 'المخيم', icon: 'tent', p: 
       ...(t.oneDay ? [] : [['المؤونة', ...(t.supplyDays ? days(t.supplyDays) : ['خلصت']), t.supplyDays <= 1 ? 'warn' : '']]),
       ['العزبة تكفي', ...(fd == null ? ['—', ''] : days(fd)), fd != null && fd <= 3 ? 'warn' : '']];
     const note = t.stop ? CAMP_STOP[t.stop] || '' : t.oneDay ? 'ترجع للعزبة قبل الليل.' : trap ? 'الطرح من الفجر لين الساعة 10، وبالمسا ساعة.' : 'الطلعات بعد الشروق بساعة، والعصر.';
-    const home = { label: t.oneDay ? 'ارجع للعزبة' : 'فك المخيم وارجع', primary: t.oneDay || !!t.stop, run: () => { closePop(); endTrip(); } };
+    const near = !!NEAR_AT[t.ground];
+    // home: by the calendar's jump; from a near ground he may drive home himself (the owner's choice of 19 Nov)
+    const home = near
+      ? [{ label: 'فك المخيم وسق للعزبة', primary: t.oneDay || !!t.stop, run: () => { closePop(); endTrip(true); } }, { label: 'فك المخيم وارجع بالتقويم', run: () => { closePop(); endTrip(false); } }]
+      : [{ label: t.oneDay ? 'ارجع للعزبة' : 'فك المخيم وارجع', primary: t.oneDay || !!t.stop, run: () => { closePop(); endTrip(false); } }];
     return { sub: `${t.groundName} · ${trap ? 'مخيم طرح' : t.oneDay ? 'طلعة مقناص' : 'رحلة مقناص'}`, stats, html: note ? `<div class="note${t.stop ? ' warn' : ''}">${note}</div>` : '',
-      actions: t.oneDay ? [home] : [{ label: 'نام لين الفجر', primary: !t.stop, run: () => { closePop(); phone.runTrip(); } }, home] };
+      actions: t.oneDay ? home : [{ label: 'نام لين الفجر', primary: !t.stop, run: () => { closePop(); phone.runTrip(); } }, ...home] };
   } });
+function placeCampPin(a) { const pl = PLACES.find((x) => x.key === 'camp:tent'); if (pl) pl.p.set(a.x, a.y + 4.3, a.z - 2.5); }
 // «فك المخيم وارجع»: the engine breaks camp (EndTrip) and the drive home is the calendar's jump when it is days; a drive
 // home inside the day the clock runs
-async function endTrip() {
+async function endTrip(drive = false) {
   const e = window.marahEngine;
   if (!e) return;
+  SITE.drivingHome = drive;      // (he drives home himself: the car stays where it is, by the camp)
   let r = null;
-  try { r = await e.dispatch({ type: 'endTrip' }); } catch (err) { console.warn('trip:', err); }
-  if (!r || !r.ok) { phone.tripRefused(r); return; }
+  try { r = await e.dispatch({ type: 'endTrip', ...(drive ? { drove: true } : {}) }); } catch (err) { console.warn('trip:', err); }
+  if (!r || !r.ok) { SITE.drivingHome = false; phone.tripRefused(r); return; }
+  if (drive) return;
   await new Promise((ok) => setTimeout(ok, 0));      // (the engine's new view of the game comes with the answer)
   if (GAME?.falcons?.trip?.leg != null) phone.runTrip();
 }
+// ------------------------------------------------------------ the farm's land following him (the owner's choice of 19 Nov: a
+// near ground driven to, 14 km on the real land): its fine rings rebuilt round the view or the car once it is a
+// kilometre from their middle, one ring a frame, then swapped in together (the same material: nothing compiled)
+const STREAM = {
+  cx: 0, cz: 0, job: null, meshes: null, nx: 0, nz: 0,
+  tick(f) {
+    if (!farmLand || (SITE.camp && !SITE.camp.near)) return;
+    if (this.job) { const r = this.job.next(); if (r.done) { this.job = null; this.swap(r.value, this.nx, this.nz); } return; }
+    const dx = f.x - this.cx, dz = f.z - this.cz;
+    if (dx * dx + dz * dz < 1000 * 1000) return;
+    this.nx = Math.round(f.x / 250) * 250; this.nz = Math.round(f.z / 250) * 250;
+    this.job = worldRings(farmLand.land, farmLand.mat, this.nx, this.nz);
+  },
+  swap(meshes, cx, cz) {
+    this.job = null;
+    const old = this.meshes || farmLand.meshes;
+    const shown = old[0] ? old[0].visible : true;
+    for (const m of old) { m.removeFromParent(); if (this.meshes) m.geometry.dispose(); else m.visible = false; }      // (the start's own rings kept, hidden, for the way back: rebuilt they are the same)
+    for (const m of meshes) { m.visible = shown; scene.add(m); }
+    this.meshes = meshes; this.cx = cx; this.cz = cz;
+    renderer.shadowMap.needsUpdate = true;
+  },
+};
+let farmLand = null;
+terrainReady.then((t) => { farmLand = t; });
 let groundsKey = '';
 function placeGrounds() {
   const k = [!!HUNT.cat, onTrip(), !!permitOf('trapping')?.open].join('|');
@@ -2245,8 +2337,9 @@ function view(kind) {
   } else if (kind === 'tent') {
     // the camp, as the storyboard's frame 7 looks at it: the tent, the supplies and the car beside it
     follow = null; followHerd = false;
-    controls.target.set(2.5, 1.2, -2.0);
-    camera.position.set(-17, 10, 21);
+    const a = SITE.camp?.at || { x: 0, y: 0, z: 0 };
+    controls.target.set(a.x + 2.5, a.y + 1.2, a.z - 2.0);
+    camera.position.set(a.x - 17, a.y + 10, a.z + 21);
   } else if (kind === 'room') {
     // from the pens side, looking at the glass front, the porch and the cars
     follow = null; followHerd = false;
@@ -2727,7 +2820,7 @@ function tick(now) {
   if (meter) { meterFrame(now); renderer.info.reset(); }      // (the frame's draws counted over both passes: three resets them at each render, the shadow pass's left out)
   const tGame = cpu ? performance.now() : 0;
   const dt = Math.min(clock.getDelta(), 0.05);
-  const home = !SITE.camp;      // (at the camp the farm is not drawn: its herd and its shrubs not moved either)
+  const home = !(SITE.camp && !SITE.camp.near);      // (at a far camp the farm is not drawn: its herd and its shrubs not moved either; a near camp is in the farm's world)
   if (home) for (const c of camels) c.update(dt, camera.position);
   if (HERD && home) HERD.pose();
   const playing = play ? play.update(dt) : false;
@@ -2777,6 +2870,7 @@ function tick(now) {
     camera.position.copy(controls.target).add(tmpAway);
   }
   if (home) updateScatter(camera.position, sun.target.position, sunDir, sun.shadow.camera.right);
+  STREAM.tick(playing ? play.focus() : controls.target);
   if (playCar) {
     // the player's car in three layers by the camera's distance from it: the near one (150k triangles) within 6.5 m, the
     // middle one (82k) to 20 m, so the chase camera at its 8 m draws it, and the far one (15k) beyond. From the seat and

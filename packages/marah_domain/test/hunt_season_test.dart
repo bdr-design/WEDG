@@ -1538,6 +1538,28 @@ void main() {
       expect(cat, contains('طلقته: الوكري طير مقيم، وطرحه ممنوع'));
     });
   });
+
+  test('a trip he drove himself: at the ground at once, and home at once when '
+      'he drives back (the owner, 19 Nov)', () {
+    final g = trapper();
+    final r = g.dispatch(
+      StartTrip(
+        g.me.id,
+        TripKind.trapping,
+        Ground.hamad,
+        3,
+        minute: 600,
+        drove: true,
+      ),
+    );
+    expect(r.ok, isTrue, reason: '${why(r)}');
+    final t = g.me.hunt.trip!;
+    expect(t.arriveOn, g.today);
+    expect(t.arriveMinute, 600);
+    expect(t.there(g.today, 600), isTrue);
+    expect(g.dispatch(EndTrip(g.me.id, minute: 700, drove: true)).ok, isTrue);
+    expect(g.me.hunt.trip, isNull);
+  });
 }
 
 Quarry? quarryAtDay(Ground? g, GameDay day) {

@@ -121,8 +121,9 @@ Command? commandFromJson(OwnerId me, Map<String, Object?> j) {
         TripKind.values.byName(_str(j['kind'])),
         Ground.values.byName(_str(j['ground'])),
         _int(j['nights']),
+        drove: j['drove'] == true,
       ),
-      'endTrip' => EndTrip(me),
+      'endTrip' => EndTrip(me, drove: j['drove'] == true),
       'moveCamp' => MoveCamp(me, Ground.values.byName(_str(j['ground']))),
       // (the minute is the engine's: EngineCore stamps it)
       'spotFalcon' => SpotFalcon(me, _at(j['at'])),
@@ -297,13 +298,14 @@ Map<String, Object?> commandToJson(Command c) => switch (c) {
     'lot': lot,
     'upTo': upTo,
   },
-  StartTrip(:final kind, :final ground, :final nights) => {
+  StartTrip(:final kind, :final ground, :final nights, :final drove) => {
     'type': 'startTrip',
     'kind': kind.name,
     'ground': ground.name,
     'nights': nights,
+    if (drove) 'drove': true,
   },
-  EndTrip() => {'type': 'endTrip'},
+  EndTrip(:final drove) => {'type': 'endTrip', if (drove) 'drove': true},
   MoveCamp(:final ground) => {'type': 'moveCamp', 'ground': ground.name},
   SpotFalcon(:final at) => {'type': 'spotFalcon', 'at': _atName(at)},
   ReleaseLure(:final at, :final lure) => {

@@ -315,18 +315,26 @@ final class StartTrip extends Command {
     this.ground,
     this.nights, {
     this.minute,
+    this.drove = false,
   });
   final TripKind kind;
   final Ground ground;
   final int nights;
   final int? minute;
+
+  /// He drove there himself and is at the ground now (the owner's choice of
+  /// 19 Nov: a near ground can be driven to on the map): no drive's time.
+  final bool drove;
 }
 
 /// Breaks camp and drives home («فك المخيم وارجع»), at any time: the drive
 /// home is game time as the drive out is.
 final class EndTrip extends Command {
-  const EndTrip(super.actor, {this.minute});
+  const EndTrip(super.actor, {this.minute, this.drove = false});
   final int? minute;
+
+  /// He drives home himself (a near ground, on the map): the trip ends now.
+  final bool drove;
 }
 
 /// Moves the trapping camp to another trapping ground with the mobile tent.

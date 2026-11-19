@@ -86,8 +86,35 @@ export async function buildTerrain(scene, renderer, sandTex) {
   const land = await loadLand('', renderer);
   const mat = landMaterial(land.sat, sandTex);
   const r = landRings(land, mat, 0, 0, null);
-  for (const m of [...r.group.children]) scene.add(m);      // (each ring a child of the scene, as before: the shadows' bake and the merges find them there)
-  return { meta: land.meta, heightAt: land.heightAt, mat, land, rings: r };
+  const meshes = [...r.group.children];
+  for (const m of meshes) scene.add(m);      // (each ring a child of the scene, as before: the shadows' bake and the merges find them there)
+  return { meta: land.meta, heightAt: land.heightAt, mat, land, rings: r, meshes };
+}
+
+// The farm's three rings again round another centre (cx, cz in the world's metres), in place on the same land: as the
+// car drives off across it (the owner's choice of 19 Nov: a near ground driven to, 14 km on the real land), the 50 m
+// and 100 m rings follow it so the ground under it is as fine as at the yard. A generator: one ring a call, so a frame
+// pays for one (the page swaps all three in when the last is made). The same material: no program is made.
+export function* worldRings(land, mat, cx, cz) {
+  const { meta, heightAt: h, W, D } = land;
+  const out = [];
+  const grid = (x0, x1, z0, z1, nx, nz, sink, order) => {
+    const g = new THREE.PlaneGeometry(1, 1, nx, nz); g.rotateX(-Math.PI / 2);
+    const p = g.attributes.position, uv = g.attributes.uv;
+    for (let i = 0; i < p.count; i++) {
+      const x = x0 + (p.getX(i) + 0.5) * (x1 - x0), z = z0 + (p.getZ(i) + 0.5) * (z1 - z0);
+      p.setXYZ(i, x, h(x, z) - (sink ? sink(x, z) : 0), z);
+      uv.setXY(i, (x - meta.xWest) / W, 1 - (z - meta.zNorth) / D);
+    }
+    g.computeVertexNormals();
+    const m = new THREE.Mesh(g, mat); m.receiveShadow = true; m.renderOrder = order; m.name = 'land ring';
+    out.push(m);
+  };
+  const inside = (r) => (x, z) => (Math.abs(x - cx) < r && Math.abs(z - cz) < r ? 6 : 0);
+  grid(cx - 2000, cx + 2000, cz - 2000, cz + 2000, 80, 80, null, 0); yield;
+  grid(cx - 6000, cx + 6000, cz - 6000, cz + 6000, 120, 120, inside(1999), 0.1); yield;
+  grid(meta.xWest, meta.xEast, meta.zNorth, meta.zSouth, 128, 121, inside(5999), 0.2);
+  return out;
 }
 
 // a camp's land (T18 part C): the ground's own (a far ground's cut, loaded now) or the farm's (a near ground), its

@@ -53,11 +53,15 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   for (const x of [1.2, 10.8]) allPosts.push({ x, z: 0.75, r: 0.12, fac: 'room' });      // the room's two porch posts (world.js; walked through, the review)
   const roofs = [], posts = [];
   let away = null;      // a camp's obstacles while he is out on a trip (T18 part C): the camp stands at the world's origin, where the yard is, and the yard's are not met there
+  let extra = [], lastStands = (f) => f === 'start';      // (a near ground's camp, standing in the farm's own world: its obstacles beside the yard's)
   function facilities(stands) {
+    lastStands = stands;
     if (away) return;
     const keep = (list, out) => { out.length = 0; for (const o of list) if (!o.fac || stands(o.fac)) out.push(o); };
     keep(allRects, rects); keep(allPosts, posts); keep(allRoofs, roofs);
+    rects.push(...extra);
   }
+  function setExtra(list) { extra = list || []; facilities(lastStands); }
   // the camp's obstacles (rects as the yard's: x0, x1, z0, z1, h), or null to go back to the yard's (the page then says
   // what stands again with facilities())
   function setAway(list) {
@@ -822,5 +826,5 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     updateCamera(dt);
     return true;
   }
-  return { start, stop, update, model, facilities, setAway, prepare, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; }, get orbNow() { return orbNow; } } };
+  return { start, stop, update, model, facilities, setAway, setExtra, prepare, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; }, get orbNow() { return orbNow; } } };
 }

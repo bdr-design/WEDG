@@ -365,7 +365,14 @@ Result startTrip(Sim sim, PlayerState p, StartTrip cmd) {
   if (over) h!.trip = was;
   if (no != null) return Err(no, sim.drain());
   settleTrip(sim, p, minute);
-  final (d, m) = arrival(p, cmd.kind, cmd.ground, sim.today, minute);
+  final (d, m) = arrival(
+    p,
+    cmd.kind,
+    cmd.ground,
+    sim.today,
+    minute,
+    drive: cmd.drove ? 0 : null,
+  );
   p.hunt.trip = Trip(
     kind: cmd.kind,
     ground: cmd.ground,
@@ -428,6 +435,11 @@ Result endTrip(Sim sim, PlayerState p, EndTrip cmd) {
     return refuse(sim, HuntRefusal.noTrip);
   }
   if (t.returning) return refuse(sim, HuntRefusal.homeward);
+  // he drives home himself on the map: the trip is over as he leaves
+  if (cmd.drove) {
+    endTripNow(sim, p);
+    return Ok(sim.drain());
+  }
   // the whole road home (from the ground, or from the road out: game
   // choice, the same time back)
   final at = minute + driveMinutes(p, t.ground);

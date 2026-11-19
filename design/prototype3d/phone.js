@@ -2116,7 +2116,7 @@ function tripCardScreen() {
   const li = (n) => (n.startsWith('ال') ? `لل${n.slice(2)}` : `ل${n}`);      // (لـ before ال: «للمحازة»)
   const what = T.oneDay ? `طلعة يوم ${li(esc(T.groundName))}` : `${trap ? 'مخيم طرح' : 'رحلة مقناص'} ب${esc(T.groundName)} · لين ${dShortAt(t)}`;
   const mins = Math.max(5, Math.round(T.driveMinutes / 5) * 5);      // (the engine's drive: under an hour in minutes)
-  const road = `${n0(T.km)} كم، حوالي ${T.driveMinutes < 55 ? count(mins, 'minute') : hoursWord(T.hours)} سواقة`;
+  const road = FC.trip.here ? 'انت بالأرض' : `${n0(T.km)} كم، حوالي ${T.driveMinutes < 55 ? count(mins, 'minute') : hoursWord(T.hours)} سواقة`;
   // the supplies have their own row below: not said again in the gear's
   const sup = FC.cat.gear.find((g) => g.gear === 'supplies').name, own = (x) => T.oneDay || x !== sup;
   const has = T.has.filter(own).map((x) => (x === 'الحمام' && T.pigeons ? count(T.pigeons, 'pigeon') : x)), lacks = T.lacks.filter(own);
@@ -2127,7 +2127,7 @@ function tripCardScreen() {
   ].join('');
   const refused = T.refused ? alertCard(esc(FC.cat.lines.refusals[T.refused] || 'ما تقدر تطلع الحين'), 'جهّز وارجع للبطاقة.') : '';
   const key = 'tripGo', sure = HJ.sure === key, can = !block && !T.refused && !!FC.trip.onGo;
-  const goWord = T.oneDay ? 'اطلع' : trap ? 'اطلع للمخيم' : 'اطلع للرحلة';
+  const goWord = FC.trip.here ? 'انصب المخيم' : T.oneDay ? 'اطلع' : trap ? 'اطلع للمخيم' : 'اطلع للرحلة';
   return `<div class="body">${back}<div class="title">قبل ما تمشي</div>${errCard()}
     <div class="span"><b>${what}</b><small>${T.oneDay ? 'ترجع نفس اليوم' : count(N, 'night')} · من ${ddAt(T.from)} · ${road}</small></div>
     ${guard}${refused}
@@ -2908,12 +2908,12 @@ export function createPhone({ host }) {
     /** The card before leaving for a camp or an outing (T18; the map's ground card, part C, opens it): [kind]
      *  'trapping' | 'falconry', [ground] the engine's name, [nights] (0: a day's outing). [onGo] is called on «اطلع»'s
      *  second tap; the phone itself starts no trip. */
-    openTrip: async (kind, ground, nights, onGo = null) => {
+    openTrip: async (kind, ground, nights, onGo = null, opts = {}) => {
       if (!engine || !engine.tripCard) return;
       loadCat();
       const r = await engine.tripCard(kind, ground, nights);
       if (!r || !r.ok) return;
-      FC.trip = { card: r.card, onGo };
+      FC.trip = { card: r.card, onGo, here: !!opts.here };      // (here: he drove there himself and pitches camp where he is: no road to say)
       if (st.state === 'closed') set('small');
       bigAt = performance.now(); set('big'); show('tripCard'); focusIn(scr.querySelector('.back') || dev);
     },

@@ -1,0 +1,20 @@
+{
+ "lat0": 27.9,
+ "lat1": 28.5,
+ "lon0": 45.97,
+ "lon1": 46.629999999999995,
+ "farmLat": 28.032,
+ "farmLon": 46.31048899755501,
+ "farmElev": 354.16325882207184,
+ "size": 1536,
+ "xWest": -33456.626750595555,
+ "xEast": 31395.3179934493,
+ "zNorth": -51748.632,
+ "zSouth": 14595.76800000016,
+ "satellite": "NASA HLS S30 2025-02-03",
+ "elevation": "AWS Terrain Tiles (Terrarium) z12",
+ "campLat": 28.032,
+ "campLon": 46.31048899755501,
+ "groundLat": 28.2,
+ "groundLon": 46.3
+}

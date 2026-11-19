@@ -72,9 +72,9 @@ def score_of(a):
     return (a.max(axis=2) < 5).mean() * 3 + ((v > 200) & (sat_ < 25)).mean()
 
 
-def fetch_sat(day):
+def fetch_sat(day, layer='HLS_S30_Nadir_BRDF_Adjusted_Reflectance'):
     url = ('https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0'
-           f'&LAYERS=HLS_S30_Nadir_BRDF_Adjusted_Reflectance&STYLES=&CRS=EPSG:4326&BBOX={LAT0},{LON0},{LAT1},{LON1}'
+           f'&LAYERS={layer}&STYLES=&CRS=EPSG:4326&BBOX={LAT0},{LON0},{LAT1},{LON1}'
            f'&WIDTH=4096&HEIGHT=3512&FORMAT=image/jpeg&TIME={day}')
     for attempt in range(4):      # (a connection dropped now and then: tried again)
         try:
@@ -95,6 +95,29 @@ for day in days[:12]:
         sat, best_sc, DATE = pic, sc, day
     if sc < 0.01:
         break
+# still missing or cloud (a coast at a swath's edge on every day: الخفجي, الجبيل, الوجه; جازان's clouds): a mosaic, the
+# bad pixels filled from the next days, then from Landsat (HLS L30) on the same days; the scene's days all named
+def bad_of(a):
+    v = a.mean(axis=2); sp = a.max(axis=2) - a.min(axis=2)
+    return (a.max(axis=2) < 5) | ((v > 200) & (sp < 25))
+if best_sc > 0.01:
+    base = np.asarray(sat).copy(); used = [DATE]
+    for layer in ('HLS_S30_Nadir_BRDF_Adjusted_Reflectance', 'HLS_L30_Nadir_BRDF_Adjusted_Reflectance'):
+        for day in days[:24]:
+            hole = bad_of(base.astype(float))
+            if hole.mean() < 0.003:
+                break
+            if day == DATE and layer.startswith('HLS_S30'):
+                continue
+            try:
+                a = np.asarray(fetch_sat(day, layer))
+            except Exception:
+                continue
+            fill = hole & ~bad_of(a.astype(float))
+            if fill.mean() > 0.002:
+                base[fill] = a[fill]; used.append(f"{day}{'' if layer.startswith('HLS_S30') else ' L30'}")
+    sat = Image.fromarray(base); best_sc = score_of(np.asarray(sat.resize((512, 439))).astype(float))
+    DATE = ', '.join(used)
 print('date', DATE, 'missing/cloud', round(best_sc, 4), file=sys.stderr)
 
 
