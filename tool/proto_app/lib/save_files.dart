@@ -118,8 +118,9 @@ class SaveFiles {
             }
           }
           final text = utf8.decode(body.takeBytes());
-          if (jsonDecode(text) is! Map)
+          if (jsonDecode(text) is! Map) {
             throw const FormatException('not an object');
+          }
           res.statusCode = await _inTurn(() async {
             await dir.create(recursive: true);
             final tmp = File('${dir.path}/.$settingsFile.${_n++}.tmp');
