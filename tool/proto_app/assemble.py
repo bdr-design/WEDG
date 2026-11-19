@@ -25,7 +25,7 @@ PROTO = REPO / 'design' / 'prototype3d'
 OUT = APP / 'assets' / 'web'
 ADDONS = ['controls/OrbitControls.js', 'geometries/RoundedBoxGeometry.js', 'loaders/GLTFLoader.js',
           'objects/Sky.js', 'utils/BufferGeometryUtils.js', 'utils/SkeletonUtils.js']
-SCRIPTS = ['play.js', 'world.js', 'terrain.js', 'car_physics.js', 'phone.js', 'engine.js']
+SCRIPTS = ['play.js', 'world.js', 'terrain.js', 'car_physics.js', 'phone.js', 'engine.js', 'camp.js']
 CDN = f'https://cdn.jsdelivr.net/npm/three@{THREE_VERSION}/'
 
 # The page's faces as Google Fonts serves them to iOS Safari (14 Nov 2026: Alexandria v6, IBM Plex Sans Arabic v15,
@@ -140,6 +140,10 @@ def main():
         for f in (PROTO / folder).iterdir():
             if f.is_file():
                 shutil.copy2(f, OUT / f.name)
+    # each hunting or trapping ground's own land (T18 part C: tool/terrain3d/make_terrain.py --site ... --camp auto),
+    # served at grounds/<ground>/ for the camp
+    if (PROTO / 'grounds').is_dir():
+        shutil.copytree(PROTO / 'grounds', OUT / 'grounds')
     page = (PROTO / 'farm.html').read_text(encoding='utf-8')
     if CDN not in page:
         sys.exit(f'farm.html does not import three.js from {CDN}: update THREE_VERSION')

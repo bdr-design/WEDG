@@ -373,7 +373,8 @@ import { Sky } from 'three/addons/objects/Sky.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWorld, LAYOUT, PEN_FACILITY, VEHICLES, DECALS, drapeOnTerrain, updateScatter } from './world.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { buildTerrain } from './terrain.js';
+import { buildTerrain, buildCampLand } from './terrain.js';
+import { buildCamp } from './camp.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -458,7 +459,7 @@ function makeSky() {
 }
 // the sky last of the opaque draws (three sorts by material before depth, and the sky, the first material made, was
 // drawn first under everything: shaded where the ground would cover it, the review)
-{ const sky = makeSky(); sky.renderOrder = 2; scene.add(sky); }
+{ const sky = makeSky(); sky.renderOrder = 2; sky.userData.everywhere = true; scene.add(sky); }      // (everywhere: drawn at the camp too, T18 part C; all else is the farm's)
 const pmrem = new THREE.PMREMGenerator(renderer);
 const envScene = new THREE.Scene();
 envScene.add(makeSky());
@@ -519,7 +520,7 @@ renderer.domElement.addEventListener('webglcontextrestored', async () => {
   try { await Promise.race([window.marahEngine?.flush?.(), new Promise((r) => setTimeout(r, 2000))]); } catch (_) { /* (saved on the way to the background as well) */ }
   location.reload();
 });
-scene.add(sun, sun.target);
+scene.add(sun, sun.target); sun.userData.everywhere = sun.target.userData.everywhere = true;
 
 // ------------------------------------------------------------ the world (ground, roads, farm, trees, grass)
 const sand = new THREE.TextureLoader().load('sand.jpg');
@@ -623,10 +624,12 @@ function bakeStaticShadows() {
 // built (the owner, 13 Nov 2026: the farm starts small and grows by what is bought): world.js tags each piece; hidden
 // here, with its merged meshes and its shadows. The camels are the engine's (syncYard).
 const FOLD = { on: [] };      // (the pen floors painted into the terrain: which stand; foldDecals)
-let GAME = null, facSig = null, placesReady = false, onFacilities = null;      // (onFacilities: play mode's obstacles, once it is made)
+let GAME = null, facSig = null, placesReady = false, onFacilities = null;
+const SITE = { camp: null, prep: null };      // the camp he is at, out on a trip (T18 part C: see enterCamp), and the one being made ready      // (onFacilities: play mode's obstacles, once it is made)
 const builtCount = (f) => (GAME ? GAME.farm.facilities.find((x) => x.facility === f)?.has ?? 0 : 0);
 const facVisible = (fac) => fac === 'start' || (fac === 'graze' ? camels.some((c) => c.home === 'graze') : fac.startsWith('pen') ? builtCount('pen') >= +fac.slice(3) : builtCount(fac) > 0);
 function applyFacilities(force) {
+  if (SITE.camp) return;      // (out at the camp the farm stays hidden: what was built meanwhile shows on the way home, leaveCamp)
   const sig = GAME ? GAME.farm.facilities.map((x) => x.has).join(',') : 'none';
   if (!force && sig === facSig) return;
   facSig = sig;
@@ -811,7 +814,7 @@ const printGeo = new THREE.PlaneGeometry(0.2, 0.3).rotateX(-Math.PI / 2);
 const printMat = new THREE.MeshBasicMaterial({ map: printTex, transparent: true, depthWrite: false });
 printMat.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', '#if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )\n diffuseColor.a *= vColor.r;\n#endif'); };
 const PRINTS = 260, printMesh = new THREE.InstancedMesh(printGeo, printMat, PRINTS);
-printMesh.renderOrder = 2; printMesh.frustumCulled = false; scene.add(printMesh);      // (after the wheel tracks' decal, renderOrder 1: at the same order they sorted by depth and swapped as the camera moved)
+printMesh.renderOrder = 2; printMesh.frustumCulled = false; printMesh.userData.everywhere = true; scene.add(printMesh);      // (after the wheel tracks' decal, renderOrder 1: at the same order they sorted by depth and swapped as the camera moved)
 const prints = Array.from({ length: PRINTS }, () => ({ age: 999, x: 0, z: 0, h: 0 }));
 const printM = new THREE.Matrix4(), printQ = new THREE.Quaternion(), printP = new THREE.Vector3(), printS = new THREE.Vector3(1, 1, 1), fade = new THREE.Color();
 for (let i = 0; i < PRINTS; i++) { printMesh.setMatrixAt(i, printM.makeScale(0, 0, 0)); printMesh.setColorAt(i, fade.setScalar(0)); }
@@ -844,7 +847,7 @@ dustMat.onBeforeCompile = (sh) => {
 };
 const dustMesh = new THREE.InstancedMesh(dustGeo, dustMat, DUST);
 dustMesh.center = new THREE.Vector2(0.5, 0.5);      // (the sprite shader's anchor: three.js sets it from the object)
-dustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); dustMesh.frustumCulled = false; dustMesh.count = 0; dustMesh.visible = false; scene.add(dustMesh);
+dustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); dustMesh.frustumCulled = false; dustMesh.count = 0; dustMesh.visible = false; dustMesh.userData.everywhere = true; scene.add(dustMesh);
 const dust = Array.from({ length: DUST }, () => ({ x: 0, z: 0, age: 9, live: false }));
 let dustNext = 0, dustSeen = 0;
 function footfall(pos, heading, near) {
@@ -1484,7 +1487,7 @@ function setGame(snap) {
   GAME = snap;
   applyFacilities();
   syncYard();
-  if (placesReady) placeGrounds();
+  if (placesReady) { placeGrounds(); syncSite(); }
   if (pop) renderCard(); else refreshLabels();
 }
 
@@ -1639,7 +1642,7 @@ function placeFacilities() {
   const bigTank = builtCount('tank') > 0, store = builtCount('store') > 0;
   placeHits.length = 0;
   for (const pl of PLACES) {
-    pl.off = pl.facility ? !facVisible(pl.facility) : false;
+    pl.off = SITE.camp ? !pl.camp : pl.camp ? true : pl.facility ? !facVisible(pl.facility) : false;      // (at the camp only its own pin; at home none of the camp's)
     if (pl.key === 'water') pl.p.copy(bigTank ? WATER_AT.big : WATER_AT.start);
     if (pl.key === 'feed') { pl.p.copy(store ? FEED_AT.big : FEED_AT.start); pl.name = store ? 'مستودع العلف' : 'مظلة العلف'; }
     const hit = pl.key === 'water' ? (bigTank ? pl.hit : pl.hitStart) : pl.key === 'feed' ? (store ? pl.hit : pl.hitStart) : pl.hit;
@@ -1683,7 +1686,7 @@ document.fonts.ready.then(refreshLabels);
 function addPlace(pl) {
   const el = document.createElement('button'); el.type = 'button';
   el.addEventListener('click', (e) => { e.stopPropagation(); openPlace(pl); });
-  labelLayer.appendChild(el); pl.el = el; pl.off = pl.shown ? !pl.shown() : false;
+  labelLayer.appendChild(el); pl.el = el; if (pl.shown) pl.off = !pl.shown(); else pl.off = !!pl.off;
   PLACES.push(pl); labels.push(pl); order.push(pl);
   return pl;
 }
@@ -1752,6 +1755,7 @@ async function startTrip(kind, ground, nights) {
   let r = null;
   try { r = await e.dispatch({ type: 'startTrip', kind, ground, nights }); } catch (err) { console.warn('trip:', err); }
   if (!r || !r.ok) { phone.tripRefused(r); return; }
+  prepareCamp(ground, kind);      // (the camp's land loads under the drive's jump)
   phone.runTrip();
 }
 // the grounds once the catalog comes (asked by the lobby); shown or hidden as the season and the trip change
@@ -1764,12 +1768,134 @@ async function loadGrounds() {
   for (const g of cat.grounds) addPlace(groundPlace(g));
   refreshLabels();
 }
+// ------------------------------------------------------------ the camp at the ground (T18 part C, frames 7, 8 and 13): its
+// land (a far ground's own cut, or the farm's round a near ground's point), the tent and the supplies, the car beside
+// them; the farm hidden while he is out. The land is loaded and made ready as the trip starts, under the calendar's
+// jump (the drive), so the camp draws at once when he arrives; the camp is let go when he is home
+const CAMP_RECTS = [{ x0: -1.7, x1: 1.7, z0: -4.2, z1: 0.15, h: 2.3 }, { x0: 1.6, x1: 3.3, z0: -1.6, z1: -0.3, h: 0.6 }, { x0: -2.8, x1: -1.6, z0: 1.0, z1: 2.2, h: 0.3 }, { x0: -2.5, x1: -1.7, z0: -1.1, z1: -0.5, h: 0.5 }];
+// a level spot near a near ground's point, the tent's ground (the Nafud's edge is dunes): the least rise over 12 m in a
+// 600 m square round it
+function flatSpot(h, x0, z0) {
+  let best = [x0, z0], low = Infinity;
+  for (let dx = -300; dx <= 300; dx += 30) for (let dz = -300; dz <= 300; dz += 30) {
+    const x = x0 + dx, z = z0 + dz, c = h(x, z);
+    const rise = Math.max(Math.abs(h(x + 6, z) - c), Math.abs(h(x - 6, z) - c), Math.abs(h(x, z + 6) - c), Math.abs(h(x, z - 6) - c));
+    if (rise < low) { low = rise; best = [x, z]; }
+  }
+  return best;
+}
+// where he is: at the camp once the drive out has brought him there (the engine's arriveOn and arriveMinute), until he
+// breaks camp (homeOn: the drive home shows the farm)
+function campWanted(g = GAME) {
+  const t = g?.falcons?.trip;
+  if (!t || t.homeOn != null) return null;
+  const there = g.today > t.arriveOn || (g.today === t.arriveOn && (g.minute ?? 0) >= t.arriveMinute);
+  return there ? { ground: t.ground, kind: t.kind } : null;
+}
+function prepareCamp(ground, kind) {
+  const key = `${ground}|${kind}`;
+  if (SITE.prep && SITE.prep.key === key) return SITE.prep.p;
+  const p = (async () => {
+    const t = await terrainReady;
+    const near = NEAR_AT[ground];
+    const [cx, cz] = near ? flatSpot(t.heightAt, near[0], near[1]) : [0, 0];
+    const land = await buildCampLand(near ? '' : `grounds/${ground}/`, t, sand, renderer, cx, cz);
+    const camp = buildCamp(kind);
+    // made ready now (as the lobby makes the farm): the textures sent, the programs made, so nothing waits in play
+    if (!near) renderer.initTexture(land.land.sat);
+    for (const m of camp.children) if (m.material.map) renderer.initTexture(m.material.map);
+    try { renderer.compile(land.group, camera, scene); renderer.compile(camp, camera, scene); } catch (err) { console.warn('camp: compile', err); }
+    return { key, ground, kind, land, camp };
+  })();
+  SITE.prep = { key, p };
+  p.catch((err) => { console.warn('camp:', err); if (SITE.prep && SITE.prep.p === p) SITE.prep = null; });
+  return p;
+}
+function enterCamp(c) {
+  if (SITE.camp) return;
+  if (play && play.on) play.stop();
+  closePop();
+  const hidden = [];
+  for (const o of scene.children) if (!o.userData.everywhere && o.visible) { o.visible = false; hidden.push(o); }
+  scene.add(c.land.group, c.camp);
+  const carAt = playCar ? { p: playCar.position.clone(), r: playCar.rotation.y } : null;
+  SITE.camp = { ...c, hidden, carAt };
+  LAND.h = groundAt = c.land.heightAt;
+  if (play) play.setAway(CAMP_RECTS);
+  if (playCar) {      // parked on the tent's right, nose out (frame 7)
+    const x = 5.2, z = -1.2;
+    playCar.position.set(x, c.land.heightAt(x, z), z); playCar.rotation.y = Math.PI;
+    if (play) { play.debug.carState.pos.copy(playCar.position); play.debug.carState.heading = Math.PI; }
+  }
+  renderer.shadowMap.needsUpdate = true;
+  placeFacilities(); groundsKey = ''; placeGrounds();
+  view('tent');
+}
+function leaveCamp() {
+  const c = SITE.camp;
+  if (!c) return;
+  if (play && play.on) play.stop();
+  closePop();
+  c.land.group.removeFromParent(); c.camp.removeFromParent();
+  c.land.dispose();
+  for (const m of c.camp.children) { m.geometry.dispose(); m.material.map?.dispose(); m.material.dispose(); }
+  for (const o of c.hidden) o.visible = true;
+  SITE.camp = null; SITE.prep = null;
+  terrainReady.then((t) => { LAND.h = groundAt = t.heightAt; });
+  if (play) { play.setAway(null); onFacilities?.(); }
+  if (playCar && c.carAt) {
+    playCar.position.copy(c.carAt.p); playCar.rotation.y = c.carAt.r;
+    if (play) { play.debug.carState.pos.copy(c.carAt.p); play.debug.carState.heading = c.carAt.r; }
+  }
+  applyFacilities(true);      // (what was built while he was out, and the rest as it stands)
+  renderer.shadowMap.needsUpdate = true;
+  placeFacilities(); groundsKey = ''; placeGrounds();
+  view('drone');
+}
+// on each snapshot: the camp when he is there, the farm when he is not
+function syncSite() {
+  const want = campWanted();
+  if (want && !SITE.camp) prepareCamp(want.ground, want.kind).then((c) => { const w = campWanted(); if (w && w.ground === c.ground && !SITE.camp) enterCamp(c); });
+  else if (!want && SITE.camp) leaveCamp();
+}
+// the tent's pin and the camp's card (frame 8): the day, the supplies, the farm's days; a night's sleep or home
+const ORDINAL = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
+const CAMP_STOP = { suppliesOut: 'خلصت مؤونة المخيم: فك المخيم وارجع، أو اطلب مؤونة.', seasonEnd: 'خلص الموسم: فك المخيم وارجع.', tripEnd: 'جا يوم رجعتك: فك المخيم وارجع، أو نام ليلة زيادة لو عندك مؤونة.' };
+addPlace({ key: 'camp:tent', camp: true, name: 'المخيم', icon: 'tent', p: new THREE.Vector3(0, 3.2, -2), max: 900, off: true,
+  text: () => { const t = GAME?.falcons?.trip; return t ? `المخيم · ${t.groundName}` : 'المخيم'; },
+  cls: () => (GAME?.falcons?.trip?.stop ? 'warn' : ''),
+  open() {
+    const t = GAME?.falcons?.trip;
+    if (!t) return { sub: '' };
+    const day = GAME.today - t.arriveOn + 1, trap = t.kind === 'trapping';
+    this.name = t.oneDay ? 'طلعة اليوم' : `المخيم · اليوم ${day <= 10 ? ORDINAL[day - 1] : day}`;
+    const w = waterNow(), f = feedNow(), farmDays = [w?.days, f?.days].filter((x) => x != null);
+    const fd = farmDays.length ? Math.min(...farmDays) : null;
+    const stats = [['الأيام', String(day), ''],
+      ...(t.oneDay ? [] : [['المؤونة', ...(t.supplyDays ? days(t.supplyDays) : ['خلصت']), t.supplyDays <= 1 ? 'warn' : '']]),
+      ['العزبة تكفي', ...(fd == null ? ['—', ''] : days(fd)), fd != null && fd <= 3 ? 'warn' : '']];
+    const note = t.stop ? CAMP_STOP[t.stop] || '' : t.oneDay ? 'ترجع للعزبة قبل الليل.' : trap ? 'الطرح من الفجر لين الساعة 10، وبالمسا ساعة.' : 'الطلعات بعد الشروق بساعة، والعصر.';
+    const home = { label: t.oneDay ? 'ارجع للعزبة' : 'فك المخيم وارجع', primary: t.oneDay || !!t.stop, run: () => { closePop(); endTrip(); } };
+    return { sub: `${t.groundName} · ${trap ? 'مخيم طرح' : t.oneDay ? 'طلعة مقناص' : 'رحلة مقناص'}`, stats, html: note ? `<div class="note${t.stop ? ' warn' : ''}">${note}</div>` : '',
+      actions: t.oneDay ? [home] : [{ label: 'نام لين الفجر', primary: !t.stop, run: () => { closePop(); phone.runTrip(); } }, home] };
+  } });
+// «فك المخيم وارجع»: the engine breaks camp (EndTrip) and the drive home is the calendar's jump when it is days; a drive
+// home inside the day the clock runs
+async function endTrip() {
+  const e = window.marahEngine;
+  if (!e) return;
+  let r = null;
+  try { r = await e.dispatch({ type: 'endTrip' }); } catch (err) { console.warn('trip:', err); }
+  if (!r || !r.ok) { phone.tripRefused(r); return; }
+  await new Promise((ok) => setTimeout(ok, 0));      // (the engine's new view of the game comes with the answer)
+  if (GAME?.falcons?.trip?.leg != null) phone.runTrip();
+}
 let groundsKey = '';
 function placeGrounds() {
   const k = [!!HUNT.cat, onTrip(), !!permitOf('trapping')?.open].join('|');
   if (k === groundsKey) return;
   groundsKey = k;
-  for (const pl of PLACES) if (pl.ground) pl.off = !pl.shown();
+  for (const pl of PLACES) if (pl.ground) pl.off = !pl.shown();      // (shown() is false on a trip: none at the camp)
   if (pop && pop.place.off) closePop();
   refreshLabels();
 }
@@ -2115,6 +2241,11 @@ function view(kind) {
     follow = null; followHerd = false;
     controls.target.set(LAYOUT.camp.x + 3, 1.2, LAYOUT.camp.z - 16);
     camera.position.set(LAYOUT.camp.x + 30, 21, LAYOUT.camp.z + 28);
+  } else if (kind === 'tent') {
+    // the camp, as the storyboard's frame 7 looks at it: the tent, the supplies and the car beside it
+    follow = null; followHerd = false;
+    controls.target.set(1.5, 1.0, -1.0);
+    camera.position.set(-16, 9, 18);
   } else if (kind === 'room') {
     // from the pens side, looking at the glass front, the porch and the cars
     follow = null; followHerd = false;
@@ -2264,7 +2395,7 @@ async function loadVehicles() {
     const hero = v.model === 'suv' && !playCar;
     const o = hero ? heroCar() : make(v.model === 'suv' ? 'suvfar' : v.model, v.tint);
     o.position.set(v.x, 0, v.z); o.rotation.y = v.rot; scene.add(o);
-    if (hero) playCar = o;
+    if (hero) { playCar = o; o.userData.everywhere = true; }
     if (v.hay) o.userData.facility = 'store';      // (the pickup loaded with bales stands by the feed store)
     if (v.hay) { const b = new THREE.Mesh(mergeGeometries([0, 1, 2].map((i) => new THREE.BoxGeometry(0.5, 0.42, 1.0).translate(-0.9 - i * 0.6, 1.4, 0))), hay); b.castShadow = b.receiveShadow = true; o.add(b); }      // (three bales, one draw)
   }
@@ -2275,6 +2406,7 @@ async function loadVehicles() {
   const head = make('tractor'); head.position.set(6.85, 0, 0); rig.add(head);
 }
 let playCar = null, play = null;
+const LAND = { h: (x, z) => 0 };      // the ground play walks and drives on: the farm's, or the camp's while he is out (T18 part C)
 const vehiclesReady = loadVehicles();
 // the fixed shadows are built once the vehicles and terrain are in, or have failed (the yard's casters gave up their own
 // shadows when they were taken, so the build must run either way)
@@ -2282,8 +2414,11 @@ const baked = Promise.allSettled([vehiclesReady, terrainReady]).then(() => bakeS
 const playReady = vehiclesReady.then(async () => {
   const t = await terrainReady;
   await baked.catch((e) => console.error(e));      // (the bake first, always: then nothing play adds can ever be taken for a fixed caster; a failed bake must not block play)
-  play = createPlay({ scene, camera, renderer, heightAt: t.heightAt, car: playCar, camels, LAYOUT, loadLod, host: root, phone,
+  const before = new Set(scene.children);
+  LAND.h = t.heightAt;
+  play = createPlay({ scene, camera, renderer, heightAt: (x, z) => LAND.h(x, z), car: playCar, camels, LAYOUT, loadLod, host: root, phone,
     onExit: (p) => { controls.target.set(p.x, 1, p.z); camera.position.set(p.x - 14, 9, p.z + 16); ease.k = 1; controls.update(); measureHud(); } });      // (the HUD measured again: hidden in play, a turn of the phone there left its boxes stale)
+  for (const o of scene.children) if (!before.has(o)) o.userData.everywhere = true;      // (the walker's and the car's own: at the camp too)
   window.__play = play;
   onFacilities = () => play.facilities(facVisible); onFacilities();      // (what stands blocks the walker and the car; nothing else)
   return play;
@@ -2321,12 +2456,21 @@ const LOBBY = (() => {
     { what: 'الخطوط', w: 1, p: document.fonts ? document.fonts.ready : null },
     { what: 'الجوال', w: 1, p: null },      // (its pictures and the hunting season's catalog, kept)
     { what: 'الرسم', w: 3, p: null },      // (every shader made: warm)
+    { what: 'المخيم', w: 1, p: null },      // (a game opened while he is out at a camp: its land and tent made ready before «كمّل», T18 part C)
   ];
   const total = steps.reduce((n, x) => n + x.w, 0);
   let engine = null, G = null, failed = false;
   const done = (x) => { if (x.done) return; x.done = true; draw(); maybeWarm(); };
   for (const x of steps) if (x.p) x.p.then(() => done(x), () => { if (x.what === 'النوق') { failed = true; draw(); } else done(x); });
-  const ENGINE = steps[5], FONTS = steps[6], PHONE = steps[7], WARM = steps[8];
+  const ENGINE = steps[5], FONTS = steps[6], PHONE = steps[7], WARM = steps[8], CAMP = steps[9];
+  // the camp, once the engine's first view of the game says where he is (before the warm, which then makes it ready too)
+  const campStep = (snap) => {
+    if (CAMP.done || CAMP.asked) return;
+    CAMP.asked = true;
+    const w = campWanted(snap);
+    if (!w) { done(CAMP); return; }
+    prepareCamp(w.ground, w.kind).then((c) => { if (!SITE.camp) enterCamp(c); }).catch((err) => console.warn('lobby: camp', err)).finally(() => done(CAMP));
+  };
   const pictures = phone.loadPictures().catch((err) => console.warn('lobby: pictures', err));
   if (!FONTS.p) FONTS.done = true;
   // the last step, after everything else is in (what loads after it is late again): what play draws made ready on the
@@ -2418,7 +2562,7 @@ const LOBBY = (() => {
   el('lb-go').addEventListener('click', () => {
     if (el('lb-go').disabled) return;
     lobbyOn = false; root.classList.remove('lobby-on'); el('lobby').hidden = true;
-    view('drone');      // (the map from its own view, not where the lobby's turn left it: a minute in the lobby left it 120° round, and a pin hidden by the overlap rule, the review)
+    view(SITE.camp ? 'tent' : 'drone');      // (the map from its own view (the camp's, out on a trip), not where the lobby's turn left it: a minute in the lobby left it 120° round, and a pin hidden by the overlap rule, the review)
     if (engine) engine.hold(false).catch(() => {});
     if (meter) meter.ready = 0;      // (the meter counts from play, not from the lobby)
     renderer.shadowMap.needsUpdate = true; refreshLabels(); measureHud();
@@ -2429,9 +2573,10 @@ const LOBBY = (() => {
     // the engine started: its clock held at once (the lobby stands it still); none: the game goes on without it
     engine(e) {
       engine = e; if (e) e.hold(true).catch(() => {}); if (!e || e.snapshot) done(ENGINE);
+      if (!e) done(CAMP);
       Promise.all([pictures, e ? phone.loadCatalog() : null]).then(() => { if (e) loadGrounds(); done(PHONE); });      // (and the hunting season's grounds on the map)
     },
-    game(snap) { G = snap; if (engine) done(ENGINE); draw(); },
+    game(snap) { G = snap; if (engine) done(ENGINE); campStep(snap); draw(); },
     rewarm() { WARM.done = false; draw(); if (warming) again = true; else maybeWarm(); },
     showSettings,
   };
@@ -2581,8 +2726,9 @@ function tick(now) {
   if (meter) { meterFrame(now); renderer.info.reset(); }      // (the frame's draws counted over both passes: three resets them at each render, the shadow pass's left out)
   const tGame = cpu ? performance.now() : 0;
   const dt = Math.min(clock.getDelta(), 0.05);
-  for (const c of camels) c.update(dt, camera.position);
-  if (HERD) HERD.pose();
+  const home = !SITE.camp;      // (at the camp the farm is not drawn: its herd and its shrubs not moved either)
+  if (home) for (const c of camels) c.update(dt, camera.position);
+  if (HERD && home) HERD.pose();
   const playing = play ? play.update(dt) : false;
   { const on = !playing && !phone.big && !lobbyOn; if (controls.enabled !== on) controls.enabled = on; }      // (the map's controls off in play, and under the enlarged phone, where the scene is not drawn: left on, a thumb on the walk stick or a pedal swung the camera with it)
   // follow without stealing the viewer's control of the angle
@@ -2629,7 +2775,7 @@ function tick(now) {
     tmpAway.lerpVectors(ease.o0, ease.o1, e).applyAxisAngle(UPV, ease.yaw * e);
     camera.position.copy(controls.target).add(tmpAway);
   }
-  updateScatter(camera.position, sun.target.position, sunDir, sun.shadow.camera.right);
+  if (home) updateScatter(camera.position, sun.target.position, sunDir, sun.shadow.camera.right);
   if (playCar) {
     // the player's car in three layers by the camera's distance from it: the near one (150k triangles) within 6.5 m, the
     // middle one (82k) to 20 m, so the chase camera at its 8 m draws it, and the far one (15k) beyond. From the seat and
@@ -2682,7 +2828,7 @@ function tick(now) {
   if (lobbyOn && !playing) { const a = dt * 0.035, x = camera.position.x - controls.target.x, z = camera.position.z - controls.target.z, c = Math.cos(a), sn = Math.sin(a); camera.position.x = controls.target.x + x * c - z * sn; camera.position.z = controls.target.z + x * sn + z * c; }      // (behind the lobby the farm turns slowly)
   if (!playing) { controls.dampingFactor = 1 - Math.exp(-dt * 3.1); controls.update(); placeLabels(); }      // (OrbitControls eases by the frame: 0.05 a frame at 60 fps, the same in seconds at any rate)
   const tDraw = cpu ? performance.now() : 0;
-  if (HERD && !phone.big && !glLost) HERD.draw(camera);
+  if (HERD && home && !phone.big && !glLost) HERD.draw(camera);
   if (!phone.big && !glLost) { renderer.render(scene, camera); printWhole = false; }      // (enlarged, the phone stands over a dimmed last frame: the scene is not drawn under it)
   if (cpu && meter.ready && now >= meter.ready && !phone.big) { const g = tDraw - tGame, d = performance.now() - tDraw; cpu.game[Math.min(399, Math.round(g * 4))]++; cpu.draw[Math.min(399, Math.round(d * 4))]++; cpu.sg += g; cpu.sd += d; cpu.n++; }      // (not while the enlarged phone stops the drawing)
   requestAnimationFrame(tick);

@@ -29,6 +29,22 @@ flutter:
     - assets/web/
     - assets/web/phone/
     - assets/web/fonts/
+    - assets/web/grounds/hamad/
+    - assets/web/grounds/ummKhunsur/
+    - assets/web/grounds/uwayqilah/
+    - assets/web/grounds/rafha/
+    - assets/web/grounds/hail/
+    - assets/web/grounds/dibdibah/
+    - assets/web/grounds/khafji/
+    - assets/web/grounds/jubail/
+    - assets/web/grounds/sulayyil/
+    - assets/web/grounds/sharurah/
+    - assets/web/grounds/lith/
+    - assets/web/grounds/qunfudhah/
+    - assets/web/grounds/mujayrimah/
+    - assets/web/grounds/jazan/
+    - assets/web/grounds/yanbu/
+    - assets/web/grounds/wajh/
     - assets/web/three/build/
     - assets/web/three/examples/jsm/controls/
     - assets/web/three/examples/jsm/geometries/

@@ -52,9 +52,17 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
   for (const dx of [-2.25, 2.25]) for (const dz of [-1.6, 1.6]) allPosts.push({ x: -28 + dx, z: -2.6 + dz, r: 0.07 });      // the start's feed shade (world.js)
   for (const x of [1.2, 10.8]) allPosts.push({ x, z: 0.75, r: 0.12, fac: 'room' });      // the room's two porch posts (world.js; walked through, the review)
   const roofs = [], posts = [];
+  let away = null;      // a camp's obstacles while he is out on a trip (T18 part C): the camp stands at the world's origin, where the yard is, and the yard's are not met there
   function facilities(stands) {
+    if (away) return;
     const keep = (list, out) => { out.length = 0; for (const o of list) if (!o.fac || stands(o.fac)) out.push(o); };
     keep(allRects, rects); keep(allPosts, posts); keep(allRoofs, roofs);
+  }
+  // the camp's obstacles (rects as the yard's: x0, x1, z0, z1, h), or null to go back to the yard's (the page then says
+  // what stands again with facilities())
+  function setAway(list) {
+    away = list;
+    if (list) { rects.length = 0; rects.push(...list); posts.length = 0; roofs.length = 0; }
   }
   facilities((f) => f === 'start');      // (the start's farm until the page says what stands)
 
@@ -814,5 +822,5 @@ export function createPlay({ scene, camera, renderer, heightAt, car, camels, LAY
     updateCamera(dt);
     return true;
   }
-  return { start, stop, update, model, facilities, prepare, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; }, get orbNow() { return orbNow; } } };
+  return { start, stop, update, model, facilities, setAway, prepare, get on() { return state.on; }, focus: () => (state.mode === 'drive' ? carState.pos : man.pos), debug: { man, carState, enter, exit, toggleView, keys, state, snap: () => { state.snap = true; }, orbit: (yaw, el, hold) => { orbYaw = yaw; orbIdle = hold ? -Infinity : 0; }, get orbNow() { return orbNow; } } };
 }
