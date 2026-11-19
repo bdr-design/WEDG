@@ -95,10 +95,12 @@
   .pop .tile.warn { background: var(--zafaran); color: #1c1408; }
   .pop .tile svg.i { width: 22px; height: 22px; }
   .pop .ttl { min-width: 0; }
-  .pop h2 { margin: 0; font: 700 20px/26px var(--display); text-wrap: balance; }
+  .pop h2 { margin: 0; font: 700 20px/26px var(--display); text-wrap: balance; overflow-wrap: anywhere; }      /* (a 24-letter name with no space wraps: it ran out of the card, reviewer A) */
+  .pop h2.long { font-size: 17px; line-height: 22px; }      /* (a long name a size down: at 667 it took four lines and pushed the figures out) */
   .pop .ttl p { margin: 2px 0 0; font: 400 12.5px/18px var(--ui); color: var(--wool-2); text-wrap: balance; }
   /* the rename (the owner's word of 18 Nov: whatever has a name he names): a pencil beside the name, then a field */
-  .pop .rn { width: 32px; height: 32px; display: inline-grid; place-items: center; vertical-align: middle; margin-inline-start: 6px; border: 1px solid var(--hair-2); border-radius: 2px; background: transparent; color: var(--wool-2); }
+  .pop .rn::after { content: ""; position: absolute; inset: -6px; }      /* (a 44 px target round the 32 px look) */
+  .pop .rn { position: relative; width: 32px; height: 32px; display: inline-grid; place-items: center; vertical-align: middle; margin-inline-start: 6px; border: 1px solid var(--hair-2); border-radius: 2px; background: transparent; color: var(--wool-2); }
   .pop .rn svg.i { width: 16px; height: 16px; }
   .pop .nm { display: flex; gap: 8px; align-items: center; }
   .pop .nm input { flex: 1; min-width: 0; height: 40px; border: 0; border-radius: 2px; box-shadow: inset 0 0 0 1px var(--hair-2); background: rgba(239, 230, 214, 0.06); color: var(--wool); font: 700 18px var(--display); padding-inline: 10px; }
@@ -198,11 +200,11 @@
   #lobby .card[hidden] { display: none; }
   #lobby .sadu { flex: none; height: 30px; background: var(--sadu-band) right top / 16px 30px repeat-x; }
   #lobby .selvedge { flex: none; height: 6px; background: var(--sadu-edge) right top / 16px 6px repeat-x; }
-  #lobby .in { padding: 14px 16px 16px; display: grid; gap: 12px; overflow: auto; }
+  #lobby .in { padding: 14px 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; overflow: auto; }      /* (its column no wider than the card: a long name widened it and cut the buttons, reviewer A) */
   #lobby h1 { margin: 0; font: 800 34px/1.1 var(--display); }
   #lobby .tag { margin: 2px 0 0; color: var(--wool-3); font-size: 12px; }
   #lobby .grain { height: 4px; background: var(--sadu-grain) right top / 4px 4px repeat-x; opacity: 0.7; }
-  #lobby .farm b { font: 700 17px/1.3 var(--display); display: block; }
+  #lobby .farm b { font: 700 17px/1.3 var(--display); display: block; overflow-wrap: anywhere; }
   #lobby .farm small { color: var(--wool-2); font-size: 13px; display: block; margin-top: 2px; }
   #lobby button { font-family: var(--ui); color: var(--wool); border: 0; cursor: pointer; }
   #lobby .btn { height: 48px; border-radius: 2px; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
@@ -225,10 +227,10 @@
   #lobby .seg button { padding: 0 11px; min-height: 36px; font-size: 13px; color: var(--wool-2); background: transparent; }
   #lobby .seg button[aria-pressed="true"] { background: var(--qirmiz); color: var(--wool); font-weight: 700; }
   #lobby .title { font: 700 18px var(--display); }
-  #lobby .note { color: var(--wool-2); font-size: 13px; line-height: 1.55; text-wrap: pretty; }
+  #lobby .note { color: var(--wool-2); font-size: 13px; line-height: 1.55; text-wrap: pretty; overflow-wrap: anywhere; }
   /* the names (proxy N1): a new game's farm and player, and his own name in the settings */
   #lobby .names { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  #lobby .field { display: grid; gap: 4px; min-width: 0; }
+  #lobby .field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; }
   #lobby .field > span, #lobby .field > label { color: var(--wool-2); font-size: 12px; }
   #lobby .field input { min-width: 0; height: 40px; border-radius: 2px; border: 0; box-shadow: inset 0 0 0 1px var(--hair-2); background: rgba(239, 230, 214, 0.06); color: var(--wool); font: 600 15px var(--ui); padding-inline: 10px; }
   #lobby .field input:focus { outline: 2px solid var(--wool); outline-offset: 1px; }
@@ -236,6 +238,7 @@
   #lobby .field .pair input { flex: 1; }
   #lobby .field .pair button { flex: none; height: 40px; padding-inline: 14px; border-radius: 2px; background: var(--qirmiz); font-weight: 700; font-size: 14px; }
   #lobby .err { margin: -4px 0 0; color: var(--zafaran); font-size: 12.5px; }
+  #lobby .err.ok { color: var(--wool-2); }      /* («انحفظ» is no error: reviewer A) */
   #lobby .err[hidden] { display: none; }
 
   /* ---------- loading */
@@ -317,6 +320,7 @@
 <div class="status" id="status" dir="rtl"><p class="glass">تحميل العزبة…</p></div>
 <!-- the lobby (see its style): shown at every fresh start; «كمّل» lit once everything the game draws is loaded -->
 <div id="lobby" dir="rtl" lang="ar">
+  <p id="lb-sr" class="vh" aria-live="assertive"></p>
   <div class="shade"></div>
   <div class="runner" aria-hidden="true"></div>
   <button class="gear" id="lb-gear" type="button" aria-label="الإعدادات"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3h3.4l.5 2.4 1.7.9 2.2-1.1 2.4 2.4-1.1 2.2.9 1.7 2.4.5v3.4l-2.4.5-.9 1.7 1.1 2.2-2.4 2.4-2.2-1.1-1.7.9-.5 2.4h-3.4l-.5-2.4-1.7-.9-2.2 1.1-2.4-2.4 1.1-2.2-.9-1.7L3 13.7v-3.4l2.4-.5.9-1.7-1.1-2.2 2.4-2.4 2.2 1.1 1.7-.9z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -339,7 +343,7 @@
         <div class="title" id="lb-confirm-t">لعبة جديدة؟</div>
         <div class="note" id="lb-confirm-note"></div>
         <div class="names"><label class="field"><span>اسم عزبتك</span><input id="lb-farm-name" type="text" maxlength="24" dir="rtl" autocomplete="off"></label><label class="field"><span>اسمك</span><input id="lb-player-name" type="text" maxlength="24" dir="rtl" autocomplete="off"></label></div>
-        <p class="err" id="lb-new-err" role="alert" hidden>اكتب الاسم</p>
+        <p class="err" id="lb-new-err" hidden>اكتب الاسم</p>
         <button class="btn sure" id="lb-new-go" type="button">اضغط مرة ثانية: ابدأ من جديد</button>
         <button class="btn ghost" id="lb-new-back" type="button">رجوع</button>
       </div>
@@ -352,7 +356,7 @@
         <div class="row"><div><b>الدقة</b><small>الأخف يريّح الجوال ويقلل الحرارة</small></div><span class="seg" role="group" aria-label="الدقة"><button type="button" data-set="scale" data-v="2">حادة</button><button type="button" data-set="scale" data-v="1">أخف</button></span></div>
         <div class="row"><div><b>الظلال</b><small>بدونها أخف على الجوال</small></div><span class="seg" role="group" aria-label="الظلال"><button type="button" data-set="shadows" data-v="1">شغّالة</button><button type="button" data-set="shadows" data-v="0">طافية</button></span></div>
         <div class="field" id="lb-me" hidden><label for="lb-me-name">اسمك</label><span class="pair"><input id="lb-me-name" type="text" maxlength="24" dir="rtl" autocomplete="off" aria-describedby="lb-me-err"><button type="button" id="lb-me-save">احفظ</button></span></div>
-        <p class="err" id="lb-me-err" role="status" hidden></p>
+        <p class="err" id="lb-me-err" hidden></p>
         <button class="btn ghost" id="lb-set-done" type="button">تم</button>
       </div>
       <div class="selvedge" aria-hidden="true"></div>
@@ -1790,12 +1794,19 @@ const spotOf = (c) => { spot.p.copy(c.root.position).setY(1.4); return spot; };
 const PENCIL = '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>';
 const nameRow = (camel) => (pop.naming
   ? `<h2 id="pop-title" class="vh">${esc(camel.name)}</h2><div class="nm"><input id="c-name" type="text" value="${esc(pop.typed ?? camel.name)}" maxlength="24" dir="rtl" autocomplete="off" aria-label="اسم ${camel.male ? 'الجمل' : 'الناقة'}" aria-describedby="c-name-err"><button type="button" data-rename-save>احفظ</button></div><p class="nm-err" id="c-name-err" role="alert"${pop.nameErr ? '' : ' hidden'}>${pop.nameErr || ''}</p>`
-  : `<h2 id="pop-title">${esc(camel.name)}${!camel.demo && window.marahEngine ? `<button type="button" class="rn" data-rename aria-label="غيّر الاسم">${svgI(PENCIL)}</button>` : ''}</h2>`);
+  : `<h2 id="pop-title"${camel.name.length > 12 ? ' class="long"' : ''}>${esc(camel.name)}${!camel.demo && window.marahEngine ? `<button type="button" class="rn" data-rename aria-label="غيّر اسم ${camel.male ? 'الجمل' : 'الناقة'}">${svgI(PENCIL)}</button>` : ''}</h2>`);
 // a name as the engine's cleanName takes it: trimmed, and empty when nothing in it shows (only invisible marks or a
 // tatweel: reviewer B)
 const nameOf = (raw) => { const n = raw.trim(); return n.replace(/[\p{Cf}\u0640\s]/gu, '') ? n : ''; };
 // said once to a screen reader (written afresh, so the same words twice are said twice)
-function say(el, words) { el.textContent = ''; setTimeout(() => { el.textContent = words; }, 30); }
+// the words shown set as they are (emptied and written again they made the card jump 6 px, reviewer A), and said in a
+// hidden live region (sr), afresh each time so the same words twice are said twice; it empties itself after
+function say(el, words, sr) {
+  if (el) el.textContent = words;
+  if (!sr) return;
+  clearTimeout(sr.t); sr.textContent = '';
+  setTimeout(() => { sr.textContent = words; sr.t = setTimeout(() => { sr.textContent = ''; }, 1500); }, 30);
+}
 async function saveCamelName() {
   const c = pop && pop.camel, field = $('c-name');
   if (!c || !field || pop.saving) return;      // (one save at a time: a double tap or a held Enter sent it 15 times, reviewer B)
@@ -1807,7 +1818,7 @@ async function saveCamelName() {
   try { r = await window.marahEngine.dispatch({ type: 'renameCamel', camel: c.id, name }); } catch (err) { console.warn('rename:', err); }
   if (pop) pop.saving = false;
   if (!pop || pop.camel !== c) return;
-  if (r && r.ok) { c.name = name; pop.naming = false; pop.nameErr = null; pop.typed = null; renderCard(); refreshLabels(); $('pop').querySelector('[data-rename]')?.focus(); say($('pop-sr'), `انحفظ الاسم: ${name}`); }
+  if (r && r.ok) { c.name = name; pop.naming = false; pop.nameErr = null; pop.typed = null; renderCard(); refreshLabels(); $('pop').querySelector('[data-rename]')?.focus(); say(null, `انحفظ الاسم: ${name}`, $('pop-sr')); }
   else { pop.nameErr = r && r.error && r.error.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : 'ما تم، جرّب مرة ثانية'; renderCard(); $('c-name').focus(); }
 }
 // the card's whole content, built when it opens or its content changes (never per frame)
@@ -1865,7 +1876,7 @@ function openCamel(c) {
 }
 function closePop() {
   if (!pop) return;
-  const back = pop.place.el; pop = null; stopFollow(); $('pop').hidden = true; refreshLabels(); measureHud();
+  const back = pop.place.el; pop = null; stopFollow(); $('pop').hidden = true; $('pop-sr').textContent = ''; refreshLabels(); measureHud();      // (the live region's last words not left for the next card)
   if ($('pop').contains(document.activeElement) || document.activeElement === document.body) (back.offsetParent ? back : document.querySelector('.side button')).focus({ preventScroll: true });      // (to the place's pin, or the map's first button if the pin is off the screen)
 }
 // in the name's field: Enter saves, Escape puts the name back (not the card's own Escape, which closes it)
@@ -2350,13 +2361,14 @@ const LOBBY = (() => {
     if (savingMe) return;      // (one at a time: three taps sent three, a held Enter nineteen, reviewer B)
     const name = nameOf(el('lb-me-name').value), msg = el('lb-me-err');
     msg.hidden = false;
-    if (!name) { say(msg, 'اكتب الاسم'); el('lb-me-name').focus(); return; }
-    if (G && name === G.playerName) { say(msg, 'انحفظ'); return; }      // (unchanged: nothing sent)
+    if (!name) { msg.classList.remove('ok'); say(msg, 'اكتب الاسم', el('lb-sr')); el('lb-me-name').focus(); return; }
+    if (G && name === G.playerName) { msg.classList.add('ok'); say(msg, 'انحفظ', el('lb-sr')); return; }      // (unchanged: nothing sent)
     savingMe = true; el('lb-me-save').disabled = true;
     let r = null;
     try { r = await engine.dispatch({ type: 'renamePlayer', name }); } catch (err) { console.warn('lobby: rename', err); }
     savingMe = false; el('lb-me-save').disabled = false;
-    say(msg, r && r.ok ? 'انحفظ' : r && r.error && r.error.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : 'ما تم، جرّب مرة ثانية');
+    msg.classList.toggle('ok', !!(r && r.ok));
+    say(msg, r && r.ok ? 'انحفظ' : r && r.error && r.error.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : 'ما تم، جرّب مرة ثانية', el('lb-sr'));
   }
   el('lb-me-save').addEventListener('click', saveMe);
   el('lb-me-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat && !e.isComposing) saveMe(); } });
@@ -2374,17 +2386,17 @@ const LOBBY = (() => {
   for (const id of ['lb-farm-name', 'lb-player-name']) {
     el(id).addEventListener('input', () => { el('lb-new-err').hidden = true; });
     el(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat && !e.isComposing) el('lb-new-go').click(); } });
-    el(id).addEventListener('focus', () => setTimeout(() => el(id).scrollIntoView({ block: 'nearest' }), 300));      // (in landscape the keyboard takes half the screen: the card scrolls the field into what is left)
+    el(id).addEventListener('focus', () => setTimeout(() => el(id).closest('.names').scrollIntoView({ block: 'start' }), 300));      // (the fields' row at the card's top: the button under it stays above the keyboard too, reviewer A)      // (in landscape the keyboard takes half the screen: the card scrolls the field into what is left)
   }
   el('lb-new-go').addEventListener('click', async () => {
     if (!engine) return;
     const farmName = nameOf(el('lb-farm-name').value), playerName = nameOf(el('lb-player-name').value);
     const empty = !farmName ? el('lb-farm-name') : !playerName ? el('lb-player-name') : null;
-    if (empty) { el('lb-new-err').hidden = false; say(el('lb-new-err'), 'اكتب الاسم'); empty.focus(); return; }      // (an empty name: the second tap refused, proxy N1)
+    if (empty) { el('lb-new-err').hidden = false; say(el('lb-new-err'), 'اكتب الاسم', el('lb-sr')); empty.focus(); return; }      // (an empty name: the second tap refused, proxy N1)
     const b = el('lb-new-go'); b.disabled = true;
     try {
       const r = await engine.startOver({ playerName, farmName, ...(G ? { region: G.farm.region } : {}) });
-      if (!r || !r.ok) { b.disabled = false; el('lb-new-err').hidden = false; say(el('lb-new-err'), 'اكتب الاسم'); el('lb-farm-name').focus(); return; }      // (the engine's refusal: the card stays, reviewer B)
+      if (!r || !r.ok) { b.disabled = false; el('lb-new-err').hidden = false; say(el('lb-new-err'), 'اكتب الاسم', el('lb-sr')); el('lb-farm-name').focus(); return; }      // (the engine's refusal: the card stays, reviewer B)
       await engine.hold(true);
       LOBBY.rewarm();      // (the new game's yard made ready too)
     } catch (err) { console.warn('lobby: new game', err); }

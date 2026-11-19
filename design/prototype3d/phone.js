@@ -58,13 +58,14 @@ const CSS = `
   .nav .back { display: flex; align-items: center; gap: 2px; color: var(--acc); font-size: 14px; font-weight: 500; }
   .nav .back svg { width: 18px; height: 18px; stroke-width: 2.2; }
   .nav .end { margin-inline-start: auto; color: var(--acc); }
-  .title { font: 700 27px/1.1 "Marah Figures", "Alexandria", sans-serif; }      /* (no tracking: letter-spacing pulls Arabic's joined letters apart, the audit) */
+  .title { font: 700 27px/1.1 "Marah Figures", "Alexandria", sans-serif; overflow-wrap: anywhere; }      /* (a 24-letter name with no space wraps: it ran out of the screen, reviewer A) */      /* (no tracking: letter-spacing pulls Arabic's joined letters apart, the audit) */
   .group { background: var(--card); border-radius: 16px; overflow: hidden; }
   .row { display: grid; grid-template-columns: 36px 1fr auto; column-gap: 11px; align-items: center; padding: 9px 12px; min-height: 52px; position: relative; }
   .row + .row::before { content: ""; position: absolute; top: 0; inset-inline: 59px 0; height: .5px; background: var(--line); }
   .row .lead { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--acc-soft); color: var(--acc); grid-row: span 2; }
   .row .lead svg { width: 18px; height: 18px; }
   .row b { font-size: 13.5px; font-weight: 600; }
+  .row > b, .row > small { min-width: 0; overflow-wrap: anywhere; }      /* (a 24-letter name with no space wraps in its row: it widened the rows past the screen, reviewer A) */
   .row small { font-size: 11.5px; color: var(--ink2); }
   .row .qty small { display: block; margin-top: 3px; font-size: 11px; color: inherit; text-align: center; }      /* («أغسطس» over «الجاي») */
   .row .qty { grid-row: span 2; font: 600 14px/1 "Marah Figures", "Alexandria", "IBM Plex Sans Arabic", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }      /* (tabular after the font shorthand, which resets the phone's tabular-nums: the column's figures line up, the audit) */
@@ -75,7 +76,8 @@ const CSS = `
   .btn.pri { background: var(--acc); color: #fff; }
   .btn.ghost { background: var(--acc-soft); color: var(--acc); }
   /* a name he gives (proxy N1): a pencil beside it, then a field with «احفظ» */
-  .title .rn { display: inline-grid; place-items: center; width: 32px; height: 32px; margin-inline-start: 6px; vertical-align: middle; border-radius: 10px; background: var(--acc-soft); color: var(--acc); }
+  .title .rn::after { content: ""; position: absolute; inset: -6px; }      /* (a 44 px target round the 32 px look) */
+  .title .rn { position: relative; display: inline-grid; place-items: center; width: 32px; height: 32px; margin-inline-start: 6px; vertical-align: middle; border-radius: 10px; background: var(--acc-soft); color: var(--acc); }
   .title .rn svg { width: 16px; height: 16px; }
   .rnrow { display: flex; gap: 8px; align-items: center; }
   .rnrow input { flex: 1; min-width: 0; height: 44px; border: 0; border-radius: 12px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); padding-inline: 12px; font: 700 18px "Alexandria", sans-serif; color: var(--ink); }
@@ -392,7 +394,7 @@ const nameOf = (k) => (k === 'farm' ? G?.farm.name : (HF()?.falcons || []).find(
 // a screen's title with its name and the pencil that renames it, or, while it is being renamed, the field
 function nameTitle(head, name, k, what) {
   if (RN.k !== k) return `<div class="title">${head}${esc(name)}<button type="button" class="rn" data-act="rnEdit" data-k="${esc(k)}" aria-label="غيّر ${what}">${svg('pencil')}</button></div>`;
-  return `${head ? `<div class="title">${head.replace(/ · $/, '')}</div>` : ''}<div class="rnrow"><input class="rn-in" type="text" value="${esc(RN.v)}" maxlength="24" dir="rtl" autocomplete="off" aria-label="${what}"><button type="button" class="btn pri" data-act="rnSave" data-k="${esc(k)}">احفظ</button></div>${RN.err ? `<div class="note rnerr" role="alert">${esc(RN.err)}</div>` : ''}`;
+  return `${head ? `<div class="title">${head.replace(/ · $/, '')}</div>` : ''}<div class="rnrow"><input class="rn-in" type="text" maxlength="24" dir="rtl" autocomplete="off" aria-label="${what}"><button type="button" class="btn pri" data-act="rnSave" data-k="${esc(k)}">احفظ</button></div>${RN.err ? `<div class="note rnerr" role="alert">${esc(RN.err)}</div>` : ''}`;
 }
 const ORD = { barley: null, alfalfa: null };
 const n0 = (v) => Math.round(v).toLocaleString('en-US');
@@ -2273,7 +2275,8 @@ export function createPhone({ host }) {
     let html = keepTogether(S[v](), MZ_SCREENS.has(v) || v.startsWith('cal') || FC_SCREENS.has(v));      // (and the hunting season's, T18)      // (and التقويم's, as its design)
     if (same && html === drawn) return false;      // (a redraw that would draw the same: left as it is)
     drawn = html;
-    scr.innerHTML = `<span class="pill"></span>${sbar()}${html}<div class="hb"></div>`;      // (a number kept on the line of the word after it: «20,000 | ريال» split across lines otherwise)
+    scr.innerHTML = `<span class="pill"></span>${sbar()}${html}<div class="hb"></div>`;
+    { const f = scr.querySelector('.rn-in'); if (f) f.value = RN.v; }      // (the name's field filled as a property: in the drawn text keepTogether turned its spaces to no-break ones, and a name edited back to itself was sent, reviewer A)      // (a number kept on the line of the word after it: «20,000 | ريال» split across lines otherwise)
     fitNumbers();
   }
   // enlarged, a big figure wider than its card is set smaller to fit it, as iOS fits a label to its width (a balance in
@@ -2329,8 +2332,8 @@ export function createPhone({ host }) {
     if (st.state === 'closed') show('home');
     const was = st.state;
     st.state = state; box.dataset.state = state;
-    if (state !== 'big' && HJ.sure) { HJ.sure = null; if (state !== 'closed') redraw(); }
-    if (state !== 'big' && RN.k) { RN.k = null; RN.err = null; if (state !== 'closed') redraw(); }      // (a name half typed is dropped as the phone shrinks, as when its screen is left: reviewer B)      // (a sale readied on the enlarged phone does not wait for its return; its button drawn again unreadied)
+    if (state !== 'big' && HJ.sure) { HJ.sure = null; if (state !== 'closed') redraw(); }      // (a sale readied on the enlarged phone does not wait for its return; its button drawn again unreadied)
+    if (state !== 'big' && RN.k) { RN.k = null; RN.err = null; if (state !== 'closed') redraw(); }      // (a name half typed is dropped as the phone shrinks, as when its screen is left: reviewer B)
     // to assistive technology and the keyboard: closed, the phone is not there; small, it is a picture (a tap does
     // nothing); big, it is a modal dialog with the focus in it, given back to where it was when it shrinks
     box.setAttribute('aria-hidden', String(state === 'closed'));
@@ -2601,13 +2604,13 @@ export function createPhone({ host }) {
     if (kind === 'tab') { HJ.tab = t.dataset.p; done(); return; }
     if (kind === 'mzsel') { MZ.sel = t.dataset.id; done(); return; }
     if (kind === 'calPick') { CAL.day = Number(t.dataset.day); done(); return; }
-    if (kind === 'fcTab') { FC.tab = t.dataset.p; shownAt = now; done(); return; }
+    if (kind === 'fcTab') { FC.tab = t.dataset.p; shownAt = now; done(); return; }      // (a quick second tap lands on nothing of the new tab, as a screen's change)
     // a name (proxy N1): the pencil makes it a field, typed in from the name it has
     if (kind === 'rnEdit') {
       RN.k = t.dataset.k; RN.v = nameOf(RN.k) ?? ''; RN.err = null; done();
       const i = scr.querySelector('.rn-in'); if (i) { focusIn(i); i.select(); }
       return;
-    }      // (a quick second tap lands on nothing of the new tab, as a screen's change)
+    }
     // (− back onto the step's grid first: after a + that stopped at his balance)
     if (kind === 'upStep') { const l = HF() && HF().lots.find((x) => x.lot === FC.lot); if (l) { const v = FC.upTo ?? l.opening, d = Number(t.dataset.d); FC.upTo = d > 0 ? Math.min(v + stepOf(v), Math.max(l.opening, G.cash)) : (() => { const k = stepOf(Math.max(l.opening, v - 1)); return Math.max(l.opening, v % k ? Math.floor(v / k) * k : v - k); })(); sr.textContent = ''; } done(); return; }      // (by the figure's own step: 500 under 50,000, then 1,000, then 5,000)
     if (kind === 'upSet') { FC.upTo = Number(t.dataset.v); sr.textContent = ''; done(); return; }      // (a buy readied before stands down: its words in the live region with it)
@@ -2632,7 +2635,7 @@ export function createPhone({ host }) {
         if (name === nameOf(k)) { RN.k = null; RN.err = null; renamed = k; return; }      // (unchanged: nothing sent)
         const r = await engine.dispatch(k === 'farm' ? { type: 'renameFarm', name } : { type: 'renameFalcon', falcon: k.slice('falcon:'.length), name });
         if (r.ok) { RN.k = null; RN.err = null; HJ.said = `انحفظ الاسم: ${name}`; renamed = k; }
-        else { RN.err = r.error?.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : refusal(r, { type: 'rename' }); HJ.said = RN.err; }
+        else { RN.err = r.error?.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : r.error?.code === 'notFound' ? 'هالصقر ما عاد عندك' : 'ما تم، جرّب مرة ثانية'; HJ.said = RN.err; }      // (the card's and the lobby's words for a failure, one wording: reviewer A)
       } else if (kind === 'plan' && t.dataset.p !== G.farm.feedPlan) await send({ type: 'setFeedPlan', plan: t.dataset.p });
       else if (kind === 'share' && t.dataset.p !== G.farm.milk.calfShare) await send({ type: 'setCalfShare', share: t.dataset.p });
       else if (kind === 'build') await send({ type: 'buildFacility', facility: t.dataset.f });
@@ -2848,7 +2851,7 @@ export function createPhone({ host }) {
     }
   }
   const pencilOf = (k) => [...scr.querySelectorAll('[data-act="rnEdit"]')].find((x) => x.dataset.k === k);
-  scr.addEventListener('input', (e) => { if (e.target.classList?.contains('rn-in')) RN.v = e.target.value; });
+  scr.addEventListener('input', (e) => { if (e.target.classList?.contains('rn-in')) RN.v = e.target.value.replace(/\u00a0/g, ' '); });
   scr.addEventListener('keydown', (e) => {
     // in a name's field: Enter saves it, Escape puts the name back (not the phone's own Escape, which shrinks it)
     if (e.target.classList?.contains('rn-in')) {
