@@ -374,7 +374,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { buildWorld, LAYOUT, PEN_FACILITY, VEHICLES, DECALS, drapeOnTerrain, updateScatter } from './world.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildTerrain, buildCampLand, worldRings } from './terrain.js';
-import { buildCamp } from './camp.js';
+import { buildCamp, gravelTexture } from './camp.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -1808,6 +1808,7 @@ function campWanted(g = GAME) {
 // a near ground's camp stands where it is in the farm's own world (the owner's choice of 19 Nov: driven to on the real
 // land): at its level spot, or, driven to, by where he stopped; the farm's rings made round it. A far ground's camp is
 // its own land with the camp at its middle, the farm hidden
+const SAND_GROUNDS = new Set(['sharurah']), GRAVEL = { tex: null };
 function prepareCamp(ground, kind) {
   const near = !!NEAR_AT[ground], at = near && SITE.droveAt ? SITE.droveAt.join(',') : '';
   const key = `${ground}|${kind}|${at}`;
@@ -1825,9 +1826,11 @@ function prepareCamp(ground, kind) {
       try { renderer.compile(camp, camera, scene); } catch (err) { console.warn('camp: compile', err); }
       return { key, ground, kind, near: true, camp, rings, at: { x: cx, y: camp.position.y, z: cz }, drove: !!SITE.droveAt };
     }
-    const land = await buildCampLand(`grounds/${ground}/`, t, sand, renderer, 0, 0);
+    // the near detail: gravel at the gravel plains and coasts, his sand photo at the Empty Quarter's dunes (شرورة)
+    const detail = SAND_GROUNDS.has(ground) ? sand : (GRAVEL.tex ||= gravelTexture());
+    const land = await buildCampLand(`grounds/${ground}/`, t, detail, renderer, 0, 0);
     // made ready now (as the lobby makes the farm): the textures sent, the programs made, so nothing waits in play
-    renderer.initTexture(land.land.sat);
+    renderer.initTexture(land.land.sat); renderer.initTexture(detail);
     try { renderer.compile(land.group, camera, scene); renderer.compile(camp, camera, scene); } catch (err) { console.warn('camp: compile', err); }
     return { key, ground, kind, land, camp, at: { x: 0, y: 0, z: 0 } };
   })();

@@ -168,3 +168,34 @@ export function buildCamp(kind) {
   if (net) { net.castShadow = true; group.add(net); }
   return group;
 }
+
+// The ground's near detail at the gravel plains and the coasts (the owner's choice of 19 Nov: gravel made by code until
+// his photos come): a pale desert pavement of small stones close together, 1-6 cm and a few to 10 cm (the texture repeats every 22 m near the camera: 2 cm a
+// pixel), its average held at 1/1.55 in every channel so the land's shader, which multiplies it by 1.55, leaves the
+// satellite colour as it is and adds only the grain (his Qassim sand photo averages red and reddened الحماد's plain)
+export function gravelTexture() {
+  const N = 1024, c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d');
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  g.fillStyle = 'rgb(176,164,148)'; g.fillRect(0, 0, N, N);
+  for (let i = 0; i < 2600; i++) {      // (fine grit, then pebbles, light and dark, a few larger stones)
+    const x = rnd() * N, y = rnd() * N, r = 0.6 + rnd() * 1.4, k = 120 + rnd() * 110;
+    g.fillStyle = `rgb(${k},${k - 10},${k - 22})`; g.fillRect(x, y, r, r);
+  }
+  for (let i = 0; i < 26000; i++) {      // (a desert pavement: small stones close together, 1-6 cm; a few larger)
+    const big = rnd() < 0.03, x = rnd() * N, y = rnd() * N, r = big ? 2 + rnd() * 2.5 : 0.6 + rnd() * rnd() * 1.6, dark = rnd() < 0.5, k = dark ? 85 + rnd() * 55 : 165 + rnd() * 55;
+    g.fillStyle = `rgb(${k + rnd() * 18},${k - 4 - rnd() * 10},${k - 16 - rnd() * 14})`;
+    g.beginPath(); g.ellipse(x, y, r, r * (0.6 + rnd() * 0.4), rnd() * 3.14, 0, 6.283); g.fill();
+    if (!dark) { g.fillStyle = 'rgba(60,48,36,0.35)'; g.beginPath(); g.ellipse(x + r * 0.35, y + r * 0.4, r, r * 0.55, 0, 0, 6.283); g.fill(); }      // (each stone's shadow on its sunless side)
+  }
+  // the average to 1/1.55 in linear light in every channel
+  const img = g.getImageData(0, 0, N, N), d = img.data, lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const srgb = (v) => Math.round(255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055));
+  const sum = [0, 0, 0];
+  for (let i = 0; i < d.length; i += 4) for (let k = 0; k < 3; k++) sum[k] += lin(d[i + k]);
+  const n = d.length / 4, gain = sum.map((x) => (1 / 1.55) / (x / n));
+  for (let i = 0; i < d.length; i += 4) for (let k = 0; k < 3; k++) d[i + k] = Math.min(255, srgb(Math.min(1, lin(d[i + k]) * gain[k])));
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.name = 'gravel'; t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+  return t;
+}
