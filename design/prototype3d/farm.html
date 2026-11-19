@@ -1772,7 +1772,8 @@ async function loadGrounds() {
 // land (a far ground's own cut, or the farm's round a near ground's point), the tent and the supplies, the car beside
 // them; the farm hidden while he is out. The land is loaded and made ready as the trip starts, under the calendar's
 // jump (the drive), so the camp draws at once when he arrives; the camp is let go when he is home
-const CAMP_RECTS = [{ x0: -1.7, x1: 1.7, z0: -4.2, z1: 0.15, h: 2.3 }, { x0: 1.6, x1: 3.3, z0: -1.6, z1: -0.3, h: 0.6 }, { x0: -2.8, x1: -1.6, z0: 1.0, z1: 2.2, h: 0.3 }, { x0: -2.5, x1: -1.7, z0: -1.1, z1: -0.5, h: 0.5 }];
+// (camp.js: the big tent 5 x 5 m, its door at the origin; the supplies on its right, the fire front-left, the cage on its left)
+const CAMP_RECTS = [{ x0: -2.6, x1: 2.6, z0: -5.1, z1: 0.1, h: 3.3 }, { x0: 3.1, x1: 4.7, z0: 0.3, z1: 1.6, h: 0.6 }, { x0: -3.2, x1: -2.0, z0: 2.0, z1: 3.2, h: 0.3 }, { x0: -5.0, x1: -4.2, z0: -1.5, z1: -0.9, h: 0.5 }];
 // a level spot near a near ground's point, the tent's ground (the Nafud's edge is dunes): the least rise over 12 m in a
 // 600 m square round it
 function flatSpot(h, x0, z0) {
@@ -1823,7 +1824,7 @@ function enterCamp(c) {
   LAND.h = groundAt = c.land.heightAt;
   if (play) play.setAway(CAMP_RECTS);
   if (playCar) {      // parked on the tent's right, nose out (frame 7)
-    const x = 5.2, z = -1.2;
+    const x = 7.6, z = -2.0;
     playCar.position.set(x, c.land.heightAt(x, z), z); playCar.rotation.y = Math.PI;
     if (play) { play.debug.carState.pos.copy(playCar.position); play.debug.carState.heading = Math.PI; }
   }
@@ -1861,7 +1862,7 @@ function syncSite() {
 // the tent's pin and the camp's card (frame 8): the day, the supplies, the farm's days; a night's sleep or home
 const ORDINAL = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
 const CAMP_STOP = { suppliesOut: 'خلصت مؤونة المخيم: فك المخيم وارجع، أو اطلب مؤونة.', seasonEnd: 'خلص الموسم: فك المخيم وارجع.', tripEnd: 'جا يوم رجعتك: فك المخيم وارجع، أو نام ليلة زيادة لو عندك مؤونة.' };
-addPlace({ key: 'camp:tent', camp: true, name: 'المخيم', icon: 'tent', p: new THREE.Vector3(0, 3.2, -2), max: 900, off: true,
+addPlace({ key: 'camp:tent', camp: true, name: 'المخيم', icon: 'tent', p: new THREE.Vector3(0, 4.3, -2.5), max: 900, off: true,
   text: () => { const t = GAME?.falcons?.trip; return t ? `المخيم · ${t.groundName}` : 'المخيم'; },
   cls: () => (GAME?.falcons?.trip?.stop ? 'warn' : ''),
   open() {
@@ -2244,8 +2245,8 @@ function view(kind) {
   } else if (kind === 'tent') {
     // the camp, as the storyboard's frame 7 looks at it: the tent, the supplies and the car beside it
     follow = null; followHerd = false;
-    controls.target.set(1.5, 1.0, -1.0);
-    camera.position.set(-16, 9, 18);
+    controls.target.set(2.5, 1.2, -2.0);
+    camera.position.set(-17, 10, 21);
   } else if (kind === 'room') {
     // from the pens side, looking at the glass front, the porch and the cars
     follow = null; followHerd = false;
