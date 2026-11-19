@@ -68,7 +68,8 @@ def probe_dates():
 
 def score_of(a):
     v = a.mean(axis=2); sat_ = a.max(axis=2) - a.min(axis=2)
-    return (v < 12).mean() * 3 + ((v > 200) & (sat_ < 25)).mean()
+    # missing: pure black (off the swath); dark sea is not missing (the coast's grounds scored as all missing)
+    return (a.max(axis=2) < 5).mean() * 3 + ((v > 200) & (sat_ < 25)).mean()
 
 
 def fetch_sat(day):

@@ -94,7 +94,7 @@ export async function buildTerrain(scene, renderer, sandTex) {
 // rings round the camp's point, with that point at the world's origin
 export async function buildCampLand(dir, farm, sandTex, renderer, cx = 0, cz = 0) {
   const land = dir ? await loadLand(dir, renderer) : farm.land;
-  const mat = dir ? landMaterial(land.sat, sandTex) : farm.mat;
+  const mat = landMaterial(land.sat, sandTex);      // (its own even on the farm's land: the farm's has the yard's decals folded in, and they showed by the camp)
   const r = landRings(land, mat, cx, cz, null);
-  return { ...r, land, mat, dispose: () => { r.dispose(); if (dir) { mat.dispose(); land.sat.dispose(); } } };
+  return { ...r, land, mat, dispose: () => { r.dispose(); mat.dispose(); if (dir) land.sat.dispose(); } };
 }

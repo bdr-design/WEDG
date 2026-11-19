@@ -63,7 +63,7 @@ export function buildCamp(kind) {
   const add = (geo, hex, shade) => parts.push(painted(geo, hex, shade));
   // the tent, its door facing +z (the camp's front), set back 2.2 m so the door is at the origin
   const T = { W: 3, L: 4, H: 2.2 }, tz = -T.L / 2;
-  add(at(ridgeTent(T.W, T.L, T.H), 0, 0, tz), '#d4c19a', 0.18);
+  add(at(ridgeTent(T.W, T.L, T.H), 0, 0, tz), '#e6d8b8', 0.12);      // (the canvas's cream: the first shade read as khaki under the sky's light)
   add(at(box(0.9, 1.5, 0.02), 0, 0.75, 0.005), '#3a2f24', 0);                                  // the door's opening
   add(at(cyl(0.025, 0.025, T.H + 0.25, 6), 0, (T.H + 0.25) / 2, 0.03), '#7a6a52', 0);           // front pole
   add(at(cyl(0.025, 0.025, T.H + 0.25, 6), 0, (T.H + 0.25) / 2, -T.L - 0.03), '#7a6a52', 0);    // back pole
