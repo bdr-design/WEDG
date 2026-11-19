@@ -647,6 +647,7 @@ Result _renameFarm(Sim sim, PlayerState p, RenameFarm cmd) {
   final name = cleanName(cmd.name);
   if (name == null) return _err(sim, ErrorCode.invalidName);
   final old = p.farm.name;
+  if (name == old) return _ok(sim); // (unchanged: no event, reviewer B)
   p.farm.name = name;
   sim.emit(FarmRenamed(sim.today, owner: p.id, from: old, to: name));
   return _ok(sim);
@@ -656,6 +657,7 @@ Result _renamePlayer(Sim sim, PlayerState p, RenamePlayer cmd) {
   final name = cleanName(cmd.name);
   if (name == null) return _err(sim, ErrorCode.invalidName);
   final old = p.name;
+  if (name == old) return _ok(sim); // (unchanged: no event, reviewer B)
   p.name = name;
   sim.emit(PlayerRenamed(sim.today, owner: p.id, from: old, to: name));
   return _ok(sim);
@@ -667,6 +669,7 @@ Result _renameFalcon(Sim sim, PlayerState p, RenameFalcon cmd) {
   final name = cleanName(cmd.name);
   if (name == null) return _err(sim, ErrorCode.invalidName);
   final old = f.name;
+  if (name == old) return _ok(sim); // (unchanged: no event, reviewer B)
   f.name = name;
   sim.emit(
     FalconRenamed(
@@ -687,6 +690,7 @@ Result _rename(Sim sim, PlayerState p, RenameCamel cmd) {
   final name = cleanName(cmd.name);
   if (name == null) return _err(sim, ErrorCode.invalidName);
   final old = c!.name;
+  if (name == old) return _ok(sim); // (unchanged: no event, reviewer B)
   c.name = name;
   sim.emit(
     CamelRenamed(sim.today, owner: p.id, camel: c.id, from: old, to: name),

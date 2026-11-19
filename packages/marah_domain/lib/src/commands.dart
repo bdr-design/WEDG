@@ -433,5 +433,10 @@ final class CareFalcons extends Command {
 /// a camel, a falcon, and the new game's names).
 String? cleanName(String raw) {
   final name = raw.trim();
-  return name.isEmpty || name.length > 24 ? null : name;
+  // (nothing in it that shows: only invisible format marks, a tatweel or
+  // spaces, reviewer B; such a name displayed empty)
+  final shows = name.replaceAll(_unseen, '').isNotEmpty;
+  return !shows || name.length > 24 ? null : name;
 }
+
+final _unseen = RegExp(r'[\p{Cf}\u0640\s]', unicode: true);

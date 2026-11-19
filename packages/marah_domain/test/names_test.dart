@@ -42,4 +42,17 @@ void main() {
       expect(g.dispatch(RenameCamel(g.me.id, c.id, 'وضحى')).ok, isTrue);
     }
   });
+
+  test('a name of nothing that shows is empty; an unchanged name sends no '
+      'event (reviewer B)', () {
+    final g = gameOn(d(2026, 10, 1));
+    for (final bad in ['\u200b', '\u200f', 'ـ', ' \u200b ']) {
+      final r = g.dispatch(RenameFarm(g.me.id, bad));
+      expect((r as Err).error.code, ErrorCode.invalidName, reason: bad);
+    }
+    expect(g.dispatch(RenamePlayer(g.me.id, 'أبو فهد')).ok, isTrue);
+    final again = g.dispatch(RenamePlayer(g.me.id, ' أبو فهد '));
+    expect(again.ok, isTrue);
+    expect(again.events.whereType<PlayerRenamed>(), isEmpty);
+  });
 }

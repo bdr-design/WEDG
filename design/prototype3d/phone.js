@@ -2329,7 +2329,8 @@ export function createPhone({ host }) {
     if (st.state === 'closed') show('home');
     const was = st.state;
     st.state = state; box.dataset.state = state;
-    if (state !== 'big' && HJ.sure) { HJ.sure = null; if (state !== 'closed') redraw(); }      // (a sale readied on the enlarged phone does not wait for its return; its button drawn again unreadied)
+    if (state !== 'big' && HJ.sure) { HJ.sure = null; if (state !== 'closed') redraw(); }
+    if (state !== 'big' && RN.k) { RN.k = null; RN.err = null; if (state !== 'closed') redraw(); }      // (a name half typed is dropped as the phone shrinks, as when its screen is left: reviewer B)      // (a sale readied on the enlarged phone does not wait for its return; its button drawn again unreadied)
     // to assistive technology and the keyboard: closed, the phone is not there; small, it is a picture (a tap does
     // nothing); big, it is a modal dialog with the focus in it, given back to where it was when it shrinks
     box.setAttribute('aria-hidden', String(state === 'closed'));
@@ -2625,9 +2626,10 @@ export function createPhone({ host }) {
     const send = async (command) => { const r = await engine.dispatch(command); if (!r.ok) ERR = refusal(r, command); return r.ok; };
     try {
       if (kind === 'rnSave') {
-        const k = RN.k, name = RN.v.trim();
+        const k = RN.k, raw = RN.v.trim(), name = raw.replace(/[\p{Cf}\u0640\s]/gu, '') ? raw : '';      // (nothing that shows: empty, as the engine's cleanName)
         if (k !== t.dataset.k) return;
         if (!name) { RN.err = 'اكتب الاسم'; HJ.said = RN.err; return; }
+        if (name === nameOf(k)) { RN.k = null; RN.err = null; renamed = k; return; }      // (unchanged: nothing sent)
         const r = await engine.dispatch(k === 'farm' ? { type: 'renameFarm', name } : { type: 'renameFalcon', falcon: k.slice('falcon:'.length), name });
         if (r.ok) { RN.k = null; RN.err = null; HJ.said = `انحفظ الاسم: ${name}`; renamed = k; }
         else { RN.err = r.error?.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : refusal(r, { type: 'rename' }); HJ.said = RN.err; }
@@ -2883,7 +2885,7 @@ export function createPhone({ host }) {
   // big, Tab goes round the phone's own buttons only (the game behind the dim is not reachable)
   addEventListener('keydown', (e) => {
     if (st.state !== 'big' || e.key !== 'Tab') return;
-    const all = [...scr.querySelectorAll('[tabindex="0"], button:not([disabled])')], at = all.indexOf(root.activeElement);      // (a greyed button takes no focus: in the round, the keyboard stuck on it, the review)
+    const all = [...scr.querySelectorAll('[tabindex="0"], button:not([disabled]), input:not([disabled])')], at = all.indexOf(root.activeElement);      // (and a name's field: left once, Tab never came back to it, reviewer B)      // (a greyed button takes no focus: in the round, the keyboard stuck on it, the review)
     if (!all.length) return;
     e.preventDefault(); focusIn(all[(at + (e.shiftKey ? -1 : 1) + all.length + (at < 0 && e.shiftKey ? 1 : 0)) % all.length]);
   }, true);
