@@ -1794,11 +1794,10 @@ const spotOf = (c) => { spot.p.copy(c.root.position).setY(1.4); return spot; };
 const PENCIL = '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>';
 const nameRow = (camel) => (pop.naming
   ? `<h2 id="pop-title" class="vh">${esc(camel.name)}</h2><div class="nm"><input id="c-name" type="text" value="${esc(pop.typed ?? camel.name)}" maxlength="24" dir="rtl" autocomplete="off" aria-label="اسم ${camel.male ? 'الجمل' : 'الناقة'}" aria-describedby="c-name-err"><button type="button" data-rename-save>احفظ</button></div><p class="nm-err" id="c-name-err" role="alert"${pop.nameErr ? '' : ' hidden'}>${pop.nameErr || ''}</p>`
-  : `<h2 id="pop-title"${camel.name.length > 12 ? ' class="long"' : ''}>${esc(camel.name)}${!camel.demo && window.marahEngine ? `<button type="button" class="rn" data-rename aria-label="غيّر اسم ${camel.male ? 'الجمل' : 'الناقة'}">${svgI(PENCIL)}</button>` : ''}</h2>`);
+  : `<h2${camel.name.length > 12 ? ' class="long"' : ''}><span id="pop-title">${esc(camel.name)}</span>${!camel.demo && window.marahEngine ? `<button type="button" class="rn" data-rename aria-label="غيّر اسم ${camel.male ? 'الجمل' : 'الناقة'}">${svgI(PENCIL)}</button>` : ''}</h2>`);
 // a name as the engine's cleanName takes it: trimmed, and empty when nothing in it shows (only invisible marks or a
 // tatweel: reviewer B)
 const nameOf = (raw) => { const n = raw.trim(); return n.replace(/[\p{Cf}\u0640\s]/gu, '') ? n : ''; };
-// said once to a screen reader (written afresh, so the same words twice are said twice)
 // the words shown set as they are (emptied and written again they made the card jump 6 px, reviewer A), and said in a
 // hidden live region (sr), afresh each time so the same words twice are said twice; it empties itself after
 function say(el, words, sr) {
@@ -1818,6 +1817,7 @@ async function saveCamelName() {
   try { r = await window.marahEngine.dispatch({ type: 'renameCamel', camel: c.id, name }); } catch (err) { console.warn('rename:', err); }
   if (pop) pop.saving = false;
   if (!pop || pop.camel !== c) return;
+  if (!pop.naming && !(r && r.ok)) { say(null, 'ما تم، جرّب مرة ثانية', $('pop-sr')); return; }      // (Escape while it was sent: no field to go back to, said only; it threw, reviewer B)
   if (r && r.ok) { c.name = name; pop.naming = false; pop.nameErr = null; pop.typed = null; renderCard(); refreshLabels(); $('pop').querySelector('[data-rename]')?.focus(); say(null, `انحفظ الاسم: ${name}`, $('pop-sr')); }
   else { pop.nameErr = r && r.error && r.error.code === 'invalidName' ? 'الاسم من حرف لين 24 حرف' : 'ما تم، جرّب مرة ثانية'; renderCard(); $('c-name').focus(); }
 }
@@ -1886,6 +1886,7 @@ $('pop').addEventListener('input', (e) => {
   if (pop.nameErr) { pop.nameErr = null; $('c-name-err').hidden = true; }
 });
 $('pop').addEventListener('keydown', (e) => {
+  if (e.repeat && (e.key === 'Enter' || e.key === ' ') && e.target.closest('button')) { e.preventDefault(); return; }      // (a held key's repeats are not more presses: after a save a held Enter opened the field again on the pencil, reviewer B)
   if (e.target.id !== 'c-name') return;
   if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat && !e.isComposing) saveCamelName(); }
   else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); pop.naming = false; pop.nameErr = null; pop.typed = null; renderCard(); $('pop').querySelector('[data-rename]')?.focus(); }
@@ -2386,7 +2387,7 @@ const LOBBY = (() => {
   for (const id of ['lb-farm-name', 'lb-player-name']) {
     el(id).addEventListener('input', () => { el('lb-new-err').hidden = true; });
     el(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat && !e.isComposing) el('lb-new-go').click(); } });
-    el(id).addEventListener('focus', () => setTimeout(() => el(id).closest('.names').scrollIntoView({ block: 'start' }), 300));      // (the fields' row at the card's top: the button under it stays above the keyboard too, reviewer A)      // (in landscape the keyboard takes half the screen: the card scrolls the field into what is left)
+    el(id).addEventListener('focus', () => setTimeout(() => el(id).closest('.names').scrollIntoView({ block: 'start' }), 300));      // (in landscape the keyboard takes half the screen: the fields' row at the card's top, the button under it stays above the keyboard too, reviewer A)
   }
   el('lb-new-go').addEventListener('click', async () => {
     if (!engine) return;
@@ -2396,7 +2397,10 @@ const LOBBY = (() => {
     const b = el('lb-new-go'); b.disabled = true;
     try {
       const r = await engine.startOver({ playerName, farmName, ...(G ? { region: G.farm.region } : {}) });
-      if (!r || !r.ok) { b.disabled = false; el('lb-new-err').hidden = false; say(el('lb-new-err'), 'اكتب الاسم', el('lb-sr')); el('lb-farm-name').focus(); return; }      // (the engine's refusal: the card stays, reviewer B)
+      if (!r || !r.ok) {      // (the engine's refusal: the card stays; the field it names, or the words for a failure, reviewer B)
+        const d = String(r?.detail || ''), field = d.startsWith('playerName') ? 'lb-player-name' : d.startsWith('farmName') ? 'lb-farm-name' : null;
+        b.disabled = false; el('lb-new-err').hidden = false; say(el('lb-new-err'), field ? 'اكتب الاسم' : 'ما تم، جرّب مرة ثانية', el('lb-sr')); el(field || 'lb-farm-name').focus(); return;
+      }
       await engine.hold(true);
       LOBBY.rewarm();      // (the new game's yard made ready too)
     } catch (err) { console.warn('lobby: new game', err); }
