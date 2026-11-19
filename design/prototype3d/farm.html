@@ -1571,6 +1571,23 @@ const PLACES = [
     open() { return { sub: 'الطريق للمسراح 330 م', actions: [closer(this)] }; } },
   { key: 'camp', name: 'كرفان الراعي', facility: 'caravan', icon: 'camp', p: new THREE.Vector3(LAYOUT.camp.x - 2, 5.4, LAYOUT.camp.z - 22), max: 600, text: () => 'كرفان الراعي',
     open() { return { sub: 'على تريلة · في المسراح', actions: [{ label: 'روح له', primary: true, run: () => { closePop(); view('camp'); } }] }; } },
+  // the falcons' room once it stands (T18 part C, frames 4-5): the falcons, which want الدعو today, the moult; «ادعهم» is
+  // the phone's own one-tap care (CareFalcons), «نادي الصقور» opens the phone's club
+  { key: 'falconRoom', name: 'غرفة الصقور', facility: 'falconRoom', icon: 'falcon', p: new THREE.Vector3(34, 4.4, 6.5), max: 280,
+    text: () => { const n = GAME?.falcons?.room?.wantCare?.length || 0; return n ? `غرفة الصقور · ${n === 1 ? 'صقر يبي' : 'صقور تبي'} دعو` : 'غرفة الصقور'; },
+    cls: () => (GAME?.falcons?.room?.wantCare?.length ? 'warn' : ''),
+    open() {
+      const R = GAME?.falcons?.room;
+      if (!R) return { sub: 'يجهّز…' };
+      const home = (GAME.falcons.falcons || []).filter((f) => f.where === 'home'), want = new Set(R.wantCare), holds = HUNT.cat?.room?.holds;
+      const lines = home.map((f) => `${esc(f.name)} · ${esc(f.speciesName)} ${esc(f.age)}${want.has(f.id) ? (R.moult ? '' : ': يبي دعو اليوم') : ''}`);
+      const note = !home.length ? 'ما فيها صقور الحين. الصقور تشتريها من نادي الصقور.' : R.moult ? `${lines.join('. ')}. بالمقيض ما فيه دعو.` : `${lines.join('. ')}.`;
+      return { sub: `أوكار ومقيض${holds ? ` · تشيل ${holds} صقور` : ''}`,
+        stats: [['الصقور', String(home.length), ''], ['تبي دعو', String(R.moult ? 0 : want.size), '', !R.moult && want.size ? 'warn' : 'good'], ['المقيض', R.moult ? 'الحين' : 'بالصيف']],
+        html: `<div class="note">${note}</div>`,
+        actions: [...(want.size && !R.moult ? [{ label: want.size > 1 ? 'ادعهم' : 'ادعه', primary: true, run: () => careFalcons(this) }] : []),
+          { label: 'نادي الصقور', primary: !want.size || R.moult, run: () => { closePop(); phone.openApp('club'); } }] };
+    } },
   { key: 'asmar', name: 'أبان الأسمر', icon: 'mountain', p: new THREE.Vector3(6413, 520, -885), min: 900, cls: 'far', text: () => 'أبان الأسمر · 1225 م',
     open() { return { sub: 'جبل · شرق العزبة', stats: [['الارتفاع عن البحر', '1225', 'م'], ['المسافة', '6.4', 'كم']],
       actions: [{ label: 'منظر الجبل', primary: true, run: () => { closePop(); view('hill'); } }] }; } },
@@ -1602,7 +1619,7 @@ const ARROW = '<svg class="arr" viewBox="0 0 24 24" aria-hidden="true"><path d="
 // invisible boxes over the places, so tapping the building or the pen itself opens its card
 // (the water and the feed have two: the start's tank and shade, and the big tank and the store once built)
 const PLACE_BOXES = { water: [30, 4, -40, 5, 8, 5], feed: [32, 2, -24, 9, 4, 10], room: [6, 2, 4, 14, 4.5, 8], tent: [-12, 1.6, 6, 9, 3.2, 7],
-  gate: [24, 1.2, 14, 9, 2.6, 2], camp: [LAYOUT.camp.x - 2, 2, LAYOUT.camp.z - 22, 16, 4, 6],
+  gate: [24, 1.2, 14, 9, 2.6, 2], falconRoom: [34, 1.6, 5, 6.4, 3.4, 8], camp: [LAYOUT.camp.x - 2, 2, LAYOUT.camp.z - 22, 16, 4, 6],
   waterStart: [-35.6, 1.4, -13.5, 2.4, 2.8, 2.4], feedStart: [-28, 1.6, -2.6, 5, 3.2, 3.6] };
 const placeHits = [];
 {
@@ -1718,6 +1735,14 @@ function groundPlace(g) {
     },
   };
   return pl;
+}
+// «ادعهم» on the falcons' room's card: today's care for the room's falcons, one tap as on the phone (its words the
+// engine's, said by the card's refresh)
+async function careFalcons(pl) {
+  const e = window.marahEngine;
+  if (!e) return;
+  try { await e.dispatch({ type: 'careFalcons' }); } catch (err) { console.warn('care:', err); }
+  if (pop && pop.place === pl) renderCard();
 }
 // «اطلع» on the phone's card: the trip starts in the engine; the drive out is the calendar's jump (a day's outing on a
 // near ground has none: the clock brings him there)

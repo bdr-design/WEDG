@@ -513,12 +513,14 @@ export function buildWorld(scene, renderer, sandTex) {
   }
 
   // ---------- the farm room (غرفة العزبة): block walls, a glass front looking over the pens
+  let blockWall = null;
   {
     FAC = 'room';
     const room = new THREE.Group(); room.position.set(6, 0, 6.5);
     const blocks = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#e4d8c3'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(150,130,105,0.35)'; g.lineWidth = 1; for (let y = 0; y < h; y += 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let x = (y / 16) % 2 ? 0 : 20; x < w; x += 40) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 16); g.stroke(); } } });
     blocks.name = 'blocks'; blocks.wrapS = blocks.wrapT = THREE.RepeatWrapping; blocks.repeat.set(3, 1.2);
     const wallMat = new THREE.MeshStandardMaterial({ map: blocks, roughness: 0.92 });
+    blockWall = wallMat;      // (the falcons' room is of the same blocks: one texture, one material)
     const W = 10, D = 5.5, H = 3.2;
     const plinth = new THREE.Mesh(new THREE.BoxGeometry(W + 0.6, 0.35, D + 0.6), concrete); plinth.position.y = 0.17; plinth.receiveShadow = true; room.add(plinth);
     const back = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.25), wallMat); back.position.set(0, 0.35 + H / 2, D / 2); room.add(back);
@@ -551,6 +553,45 @@ export function buildWorld(scene, renderer, sandTex) {
     const bench = new THREE.Mesh(new RoundedBoxGeometry(W - 2.4, 0.2, 0.6, 2, 0.05), new THREE.MeshStandardMaterial({ color: '#2b3f5a', roughness: 0.9 })); bench.position.set(0, 0.12, -D / 2 - 0.6); room.add(bench);
     room.traverse((n) => { if (n.isMesh && n !== pane) { n.castShadow = true; n.receiveShadow = true; } });
     add(room);
+  }
+
+  // ---------- the falcons' room (غرفة الصقور, T18 part C; the owner's decision 5: a building in the yard with its pin
+  // and card). A provisional look built from real sizes, for his eye (no photo of his yet): a block room 6 x 4.5 m and
+  // 3 m high, kept cool (a split air conditioner on its east wall: falcons are kept out of the summer heat), its door
+  // to the west on the yard's road, high grilled windows; on its north side a sunning yard (المشمس) of sand behind a
+  // low wire fence with two block perches (الوكر), where falcons are set out in the morning sun
+  {
+    FAC = 'falconRoom';
+    const fr = new THREE.Group(); fr.position.set(34, 0, 6.5);
+    const W = 6, D = 4.5, H = 3.0, base = 0.3;
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(W + 0.4, base, D + 0.4), concrete); plinth.position.y = base / 2; fr.add(plinth);
+    for (const sz of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.22), blockWall); w.position.set(0, base + H / 2, sz * (D / 2 - 0.11)); fr.add(w); }
+    for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.22, H, D - 0.44), blockWall); w.position.set(sx * (W / 2 - 0.11), base + H / 2, 0); fr.add(w); }
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(W + 0.4, 0.22, D + 0.4), blockWall); slab.position.y = base + H + 0.11; fr.add(slab);
+    const dark = new THREE.MeshStandardMaterial({ color: '#2f2a24', roughness: 0.8 });
+    const grille = new THREE.MeshStandardMaterial({ color: '#56514a', metalness: 0.6, roughness: 0.45 });
+    // the door (west, on the road) and two high windows on the south, each a dark opening behind iron bars
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.1, 1.0), new THREE.MeshStandardMaterial({ color: '#6e6457', metalness: 0.5, roughness: 0.5 })); door.position.set(-W / 2 - 0.02, base + 1.05, 0.6); fr.add(door);
+    for (const x of [-1.4, 1.4]) {
+      const hole = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 0.05), dark); hole.position.set(x, base + 2.35, D / 2 + 0.01); fr.add(hole);
+      for (let i = 0; i < 5; i++) { const bar = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.5, 0.03), grille); bar.position.set(x - 0.4 + i * 0.2, base + 2.35, D / 2 + 0.04); fr.add(bar); }
+    }
+    const ac = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.55, 0.8), new THREE.MeshStandardMaterial({ color: '#d4d6d6', roughness: 0.5 })); ac.position.set(W / 2 + 0.2, 0.9, -0.6); fr.add(ac);
+    // the sunning yard on the north: sand, a wire fence 1.2 m high (posts and three rails), two block perches
+    const yd = { d: 3.2, h: 1.2 }, z0 = -D / 2, z1 = -D / 2 - yd.d;
+    const sand = new THREE.Mesh(new THREE.PlaneGeometry(W, yd.d).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#c79a6a', roughness: 1, polygonOffset: true, polygonOffsetFactor: -1 })); sand.position.set(0, 0.025, (z0 + z1) / 2); fr.add(sand);
+    for (const [x, z] of [[-W / 2, z0], [-W / 2, z1], [0, z1], [W / 2, z1], [W / 2, z0]]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, yd.h, 6), grille); post.position.set(x, yd.h / 2, z); fr.add(post); }
+    for (const y of [0.15, 0.65, yd.h]) {
+      const front = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, 0.02), grille); front.position.set(0, y, z1); fr.add(front);
+      for (const sx of [-1, 1]) { const side = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, yd.d), grille); side.position.set(sx * W / 2, y, (z0 + z1) / 2); fr.add(side); }
+    }
+    for (const x of [-1.3, 1.3]) {      // (الوكر: a block on a short post, its top padded, about 30 cm across)
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.25, 8), grille); stem.position.set(x, 0.125, (z0 + z1) / 2); fr.add(stem);
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.12, 14), new THREE.MeshStandardMaterial({ color: '#4a6b4f', roughness: 0.9 })); top.position.set(x, 0.31, (z0 + z1) / 2); fr.add(top);
+    }
+    fr.traverse((n) => { if (n.isMesh && n !== sand) { n.castShadow = true; n.receiveShadow = true; } });
+    sand.receiveShadow = true;
+    add(fr);
   }
 
   // ---------- the owner's majlis: goat-hair tent, Sadu rug, fire pit
